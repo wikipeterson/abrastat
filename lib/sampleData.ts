@@ -1,0 +1,154 @@
+import { parsedRowsToGrid } from './gridHelpers'
+import { GridState } from '@/types'
+
+export interface SampleDataset {
+  name: string
+  emoji: string
+  grid: GridState
+}
+
+const classSurveyHeaders = ['age', 'height_in', 'sleep_hrs', 'subject', 'gpa']
+const classSurveyRows = [
+  [16, 64, 7, 'Math', 3.8], [17, 70, 6, 'Science', 3.5], [16, 62, 8, 'English', 3.9],
+  [18, 68, 5, 'Math', 3.2], [17, 65, 7, 'History', 3.6], [16, 72, 9, 'Science', 4.0],
+  [17, 63, 6, 'Math', 3.4], [18, 71, 7, 'English', 3.7], [16, 66, 8, 'Science', 3.8],
+  [17, 69, 6, 'History', 3.1], [18, 64, 7, 'Math', 3.5], [16, 67, 8, 'Science', 3.9],
+  [17, 73, 6, 'English', 3.3], [18, 65, 9, 'Math', 4.0], [16, 68, 7, 'History', 3.6],
+  [17, 70, 6, 'Science', 3.7], [18, 62, 8, 'Math', 3.4], [16, 66, 7, 'English', 3.8],
+  [17, 71, 5, 'Science', 3.2], [18, 64, 8, 'History', 3.9], [16, 68, 7, 'Math', 3.5],
+  [17, 65, 6, 'English', 3.6], [18, 72, 8, 'Science', 4.0], [16, 69, 7, 'Math', 3.3],
+  [17, 63, 9, 'History', 3.7], [18, 67, 6, 'Science', 3.8], [16, 70, 7, 'Math', 3.4],
+  [17, 64, 8, 'English', 3.9], [18, 66, 6, 'Science', 3.5], [16, 71, 7, 'History', 3.6],
+]
+
+const weatherHeaders = ['city', 'state', 'avg_temp_f', 'rainfall_in', 'snow_days']
+const weatherRows = [
+  ['Phoenix', 'AZ', 75, 8, 0], ['Miami', 'FL', 77, 62, 0], ['Seattle', 'WA', 52, 38, 6],
+  ['Denver', 'CO', 51, 14, 33], ['Chicago', 'IL', 50, 37, 28], ['Houston', 'TX', 68, 49, 1],
+  ['New York', 'NY', 55, 47, 22], ['Los Angeles', 'CA', 64, 15, 0], ['Boston', 'MA', 52, 44, 42],
+  ['Atlanta', 'GA', 62, 52, 3], ['Minneapolis', 'MN', 45, 29, 45], ['Portland', 'OR', 54, 36, 4],
+  ['Las Vegas', 'NV', 70, 4, 0], ['Nashville', 'TN', 60, 48, 5], ['Detroit', 'MI', 49, 33, 38],
+  ['San Francisco', 'CA', 57, 24, 0], ['Dallas', 'TX', 66, 35, 2], ['Philadelphia', 'PA', 55, 42, 22],
+  ['San Diego', 'CA', 64, 10, 0], ['Salt Lake City', 'UT', 53, 16, 31], ['Kansas City', 'MO', 57, 38, 15],
+  ['Charlotte', 'NC', 61, 44, 4], ['Indianapolis', 'IN', 53, 42, 22], ['Columbus', 'OH', 52, 40, 28],
+  ['Memphis', 'TN', 63, 53, 3], ['Louisville', 'KY', 57, 46, 12], ['Richmond', 'VA', 58, 44, 9],
+  ['Oklahoma City', 'OK', 61, 35, 9], ['Albuquerque', 'NM', 57, 9, 10], ['Raleigh', 'NC', 60, 45, 5],
+  ['Omaha', 'NE', 51, 30, 26], ['Tucson', 'AZ', 69, 12, 0], ['Fresno', 'CA', 65, 11, 0],
+  ['Sacramento', 'CA', 61, 18, 0], ['Boise', 'ID', 52, 12, 21], ['Spokane', 'WA', 49, 17, 38],
+  ['Billings', 'MT', 47, 14, 40], ['Fargo', 'ND', 42, 20, 48], ['Anchorage', 'AK', 36, 16, 75],
+  ['Honolulu', 'HI', 77, 17, 0], ['El Paso', 'TX', 65, 9, 3], ['Tulsa', 'OK', 61, 38, 8],
+  ['Wichita', 'KS', 57, 28, 16], ['Sioux Falls', 'SD', 46, 25, 36], ['Des Moines', 'IA', 51, 34, 29],
+  ['Madison', 'WI', 46, 32, 38], ['Green Bay', 'WI', 44, 28, 42], ['Duluth', 'MN', 39, 31, 67],
+  ['Burlington', 'VT', 46, 36, 72], ['Portland', 'ME', 47, 44, 62],
+]
+
+const nbaHeaders = ['player', 'team', 'points', 'assists', 'rebounds', 'games']
+const nbaRows = [
+  ['Joel Embiid', 'PHI', 33.1, 4.2, 10.2, 39], ['Luka Doncic', 'DAL', 32.4, 8.0, 8.6, 66],
+  ['Giannis Antetokounmpo', 'MIL', 31.1, 5.7, 11.8, 63], ['Shai Gilgeous-Alexander', 'OKC', 30.1, 6.2, 5.5, 68],
+  ['Damian Lillard', 'MIL', 24.3, 7.0, 4.4, 73], ['Kevin Durant', 'PHX', 27.1, 5.0, 6.7, 47],
+  ['LeBron James', 'LAL', 25.7, 7.3, 7.3, 71], ['Stephen Curry', 'GSW', 26.4, 4.4, 4.5, 56],
+  ['Jayson Tatum', 'BOS', 26.9, 4.9, 8.1, 74], ['Nikola Jokic', 'DEN', 26.4, 9.0, 12.4, 79],
+  ['Anthony Edwards', 'MIN', 25.9, 5.1, 5.4, 79], ['Donovan Mitchell', 'CLE', 26.6, 6.1, 5.1, 55],
+  ['Tyrese Haliburton', 'IND', 20.1, 10.9, 3.7, 69], ['Devin Booker', 'PHX', 27.1, 6.9, 4.5, 68],
+  ['Kawhi Leonard', 'LAC', 23.7, 3.6, 6.1, 68], ['Paul George', 'LAC', 22.6, 3.5, 5.2, 74],
+  ['Bam Adebayo', 'MIA', 21.2, 3.3, 10.4, 71], ['De\'Aaron Fox', 'SAC', 25.2, 5.7, 4.4, 78],
+  ['Darius Garland', 'CLE', 21.6, 7.8, 3.3, 57], ['Trae Young', 'ATL', 25.7, 10.8, 3.0, 73],
+  ['Karl-Anthony Towns', 'MIN', 21.4, 3.4, 8.1, 61], ['Zion Williamson', 'NOP', 22.9, 4.6, 5.8, 29],
+  ['Lauri Markkanen', 'UTA', 23.2, 1.9, 8.6, 64], ['Julius Randle', 'NYK', 24.0, 5.0, 9.6, 73],
+  ['Jalen Brunson', 'NYK', 28.7, 6.7, 3.6, 77],
+]
+
+const olympicHeaders = ['country', 'year', 'gold', 'silver', 'bronze', 'total']
+const olympicRows = [
+  ['USA', 2020, 39, 41, 33, 113], ['China', 2020, 38, 32, 18, 88], ['GB', 2020, 22, 21, 22, 65],
+  ['ROC', 2020, 20, 28, 23, 71], ['Australia', 2020, 17, 7, 22, 46], ['Japan', 2020, 27, 14, 17, 58],
+  ['Germany', 2020, 10, 11, 16, 37], ['Netherlands', 2020, 10, 12, 14, 36], ['France', 2020, 10, 12, 11, 33],
+  ['Italy', 2020, 10, 10, 20, 40], ['Canada', 2020, 7, 6, 11, 24], ['Brazil', 2020, 7, 6, 8, 21],
+  ['New Zealand', 2020, 7, 6, 7, 20], ['Cuba', 2020, 7, 3, 5, 15], ['Hungary', 2020, 6, 7, 7, 20],
+  ['South Korea', 2020, 6, 4, 10, 20], ['Poland', 2020, 4, 5, 11, 20], ['Czech Republic', 2020, 4, 4, 3, 11],
+  ['Kenya', 2020, 4, 4, 2, 10], ['Norway', 2020, 4, 2, 2, 8], ['Jamaica', 2020, 4, 1, 4, 9],
+  ['Spain', 2020, 3, 8, 6, 17], ['Sweden', 2020, 3, 6, 0, 9], ['Switzerland', 2020, 3, 4, 6, 13],
+  ['Denmark', 2020, 3, 4, 4, 11], ['Croatia', 2020, 3, 3, 2, 8], ['Iran', 2020, 3, 2, 2, 7],
+  ['Serbia', 2020, 3, 1, 5, 9], ['Belgium', 2020, 3, 1, 3, 7], ['Bulgaria', 2020, 3, 1, 2, 6],
+  ['Slovakia', 2020, 3, 1, 1, 5], ['Georgia', 2020, 2, 5, 1, 8], ['Greece', 2020, 2, 1, 1, 4],
+  ['Ecuador', 2020, 2, 1, 0, 3], ['Ethiopia', 2020, 2, 0, 2, 4], ['Ireland', 2020, 2, 0, 2, 4],
+  ['Israel', 2020, 2, 0, 2, 4], ['Qatar', 2020, 2, 0, 1, 3], ['Bahamas', 2020, 2, 0, 0, 2],
+  ['Kosovo', 2020, 2, 0, 0, 2],
+]
+
+const carHeaders = ['make', 'mpg', 'cylinders', 'horsepower', 'weight_lbs']
+const carRows = [
+  ['Chevrolet', 18, 8, 307, 3504], ['Buick', 15, 8, 350, 3693], ['Plymouth', 18, 8, 318, 3436],
+  ['AMC', 16, 8, 304, 3433], ['Ford', 17, 8, 302, 3449], ['Pontiac', 15, 8, 429, 4341],
+  ['Chevrolet', 14, 8, 454, 4354], ['Plymouth', 14, 8, 440, 4312], ['Pontiac', 14, 8, 455, 4425],
+  ['AMC', 15, 8, 390, 3850], ['Chevrolet', 29, 4, 97, 1835], ['Toyota', 27, 4, 88, 2130],
+  ['Ford', 24, 4, 90, 2672], ['Dodge', 25, 4, 98, 2145], ['VW', 34, 4, 75, 1845],
+  ['Honda', 36, 4, 67, 1745], ['Toyota', 31, 4, 97, 2220], ['Datsun', 38, 4, 88, 2075],
+  ['VW', 33, 4, 60, 1615], ['BMW', 26, 4, 97, 2230], ['Subaru', 35, 4, 69, 1955],
+  ['Datsun', 38, 4, 80, 1985], ['Honda', 32, 4, 80, 1760], ['Mazda', 37, 4, 65, 1975],
+  ['Toyota', 33, 4, 65, 1955], ['Ford', 28, 4, 85, 2035], ['AMC', 21, 6, 200, 2875],
+  ['Chevrolet', 22, 6, 200, 2587], ['Ford', 21, 6, 200, 2130], ['Pontiac', 20, 6, 155, 2930],
+  ['Mercury', 19, 6, 175, 3440], ['Dodge', 21, 6, 225, 3121], ['Ford', 19, 6, 250, 3185],
+  ['Buick', 21, 6, 231, 3245], ['Oldsmobile', 19, 8, 260, 3609], ['Pontiac', 18, 8, 318, 3399],
+  ['Dodge', 17, 8, 302, 3351], ['Ford', 16, 8, 351, 3399], ['Chevrolet', 16, 8, 350, 3413],
+  ['Lincoln', 14, 8, 400, 4341], ['Plymouth', 15, 8, 318, 3952], ['Chrysler', 13, 8, 440, 4735],
+  ['Buick', 15, 8, 455, 4951], ['Oldsmobile', 14, 8, 455, 4815], ['Ford', 17, 8, 351, 3664],
+  ['Mercury', 16, 8, 400, 4033], ['Chevrolet', 15, 8, 400, 4997], ['Pontiac', 14, 8, 455, 4906],
+  ['Chevrolet', 13, 8, 360, 4654], ['Buick', 14, 8, 307, 4654],
+]
+
+const studentSurveyHeaders = ['grade', 'gender', 'sport', 'phone_hrs', 'gpa', 'lunch']
+const studentSurveyRows = [
+  ['9th', 'Female', 'Soccer', 3, 3.8, 'Packed'], ['10th', 'Male', 'Basketball', 4, 3.2, 'School'],
+  ['11th', 'Female', 'Swimming', 2, 3.9, 'Packed'], ['12th', 'Male', 'Track', 3, 3.5, 'School'],
+  ['9th', 'Male', 'Basketball', 5, 2.9, 'School'], ['10th', 'Female', 'Soccer', 2, 3.7, 'Packed'],
+  ['11th', 'Male', 'None', 6, 2.8, 'School'], ['12th', 'Female', 'Swimming', 1, 4.0, 'Packed'],
+  ['9th', 'Female', 'Track', 3, 3.6, 'School'], ['10th', 'Male', 'Soccer', 4, 3.1, 'School'],
+  ['11th', 'Female', 'Basketball', 2, 3.8, 'Packed'], ['12th', 'Male', 'None', 5, 2.7, 'School'],
+  ['9th', 'Male', 'Swimming', 3, 3.4, 'Packed'], ['10th', 'Female', 'Track', 2, 3.9, 'Packed'],
+  ['11th', 'Male', 'Basketball', 4, 3.0, 'School'], ['12th', 'Female', 'Soccer', 2, 3.7, 'Packed'],
+  ['9th', 'Female', 'None', 4, 3.3, 'School'], ['10th', 'Male', 'Swimming', 3, 3.5, 'Packed'],
+  ['11th', 'Female', 'Soccer', 2, 3.8, 'Packed'], ['12th', 'Male', 'Track', 3, 3.2, 'School'],
+  ['9th', 'Male', 'None', 6, 2.6, 'School'], ['10th', 'Female', 'Basketball', 3, 3.6, 'Packed'],
+  ['11th', 'Male', 'Soccer', 4, 3.1, 'School'], ['12th', 'Female', 'None', 2, 3.9, 'Packed'],
+  ['9th', 'Female', 'Swimming', 1, 4.0, 'Packed'], ['10th', 'Male', 'Track', 4, 3.3, 'School'],
+  ['11th', 'Female', 'Track', 2, 3.7, 'Packed'], ['12th', 'Male', 'Basketball', 5, 2.9, 'School'],
+  ['9th', 'Male', 'Soccer', 3, 3.5, 'School'], ['10th', 'Female', 'None', 3, 3.4, 'Packed'],
+  ['11th', 'Male', 'Swimming', 2, 3.8, 'Packed'], ['12th', 'Female', 'Track', 2, 3.9, 'Packed'],
+  ['9th', 'Female', 'Basketball', 4, 3.2, 'School'], ['10th', 'Male', 'None', 5, 2.8, 'School'],
+  ['11th', 'Female', 'None', 3, 3.6, 'Packed'], ['12th', 'Male', 'Swimming', 2, 3.7, 'School'],
+  ['9th', 'Male', 'Track', 3, 3.3, 'Packed'], ['10th', 'Female', 'Swimming', 1, 4.0, 'Packed'],
+  ['11th', 'Male', 'Track', 4, 3.1, 'School'], ['12th', 'Female', 'Basketball', 3, 3.5, 'Packed'],
+]
+
+const titanicHeaders = ['class', 'sex', 'survived', 'age', 'fare']
+const titanicRows = [
+  ['1st', 'male', 'Yes', 22, 71.28], ['1st', 'female', 'Yes', 38, 71.28], ['1st', 'female', 'Yes', 26, 7.92],
+  ['1st', 'female', 'Yes', 35, 53.10], ['1st', 'male', 'No', 35, 8.05], ['1st', 'male', 'Yes', 54, 51.86],
+  ['1st', 'male', 'No', 2, 21.08], ['1st', 'female', 'Yes', 27, 11.13], ['1st', 'female', 'Yes', 14, 30.07],
+  ['1st', 'female', 'Yes', 4, 16.70], ['1st', 'male', 'No', 58, 26.55], ['1st', 'male', 'Yes', 20, 13.00],
+  ['1st', 'male', 'No', 39, 31.68], ['1st', 'female', 'Yes', 14, 7.85], ['1st', 'female', 'Yes', 55, 16.00],
+  ['1st', 'male', 'No', 2, 29.12], ['1st', 'female', 'Yes', 31, 18.00], ['1st', 'male', 'No', 35, 26.00],
+  ['2nd', 'male', 'No', 34, 13.00], ['2nd', 'female', 'Yes', 15, 14.45], ['2nd', 'male', 'No', 28, 0.00],
+  ['2nd', 'female', 'Yes', 8, 26.55], ['2nd', 'male', 'Yes', 38, 0.00], ['2nd', 'female', 'Yes', 19, 13.00],
+  ['2nd', 'male', 'No', 40, 15.04], ['2nd', 'female', 'Yes', 18, 13.00], ['2nd', 'male', 'No', 35, 26.00],
+  ['2nd', 'female', 'Yes', 25, 13.00], ['2nd', 'male', 'No', 29, 13.86], ['2nd', 'female', 'Yes', 11, 46.90],
+  ['2nd', 'male', 'No', 2, 26.25], ['2nd', 'female', 'Yes', 36, 13.00], ['2nd', 'male', 'Yes', 26, 10.50],
+  ['3rd', 'male', 'No', 17, 8.66], ['3rd', 'female', 'Yes', 1, 11.13], ['3rd', 'male', 'No', 9, 15.25],
+  ['3rd', 'female', 'No', 45, 7.75], ['3rd', 'male', 'No', 8, 21.08], ['3rd', 'female', 'Yes', 19, 7.88],
+  ['3rd', 'male', 'No', 7, 21.08], ['3rd', 'female', 'Yes', 3, 21.08], ['3rd', 'male', 'No', 22, 7.25],
+  ['3rd', 'female', 'No', 16, 9.50], ['3rd', 'male', 'No', 36, 8.05], ['3rd', 'male', 'No', 24, 7.90],
+  ['3rd', 'female', 'Yes', 2, 10.46], ['3rd', 'male', 'No', 23, 8.68], ['3rd', 'female', 'Yes', 4, 13.42],
+  ['3rd', 'male', 'No', 29, 7.75], ['3rd', 'female', 'No', 31, 7.75],
+]
+
+export const SAMPLE_DATASETS: SampleDataset[] = [
+  { name: 'Class Survey', emoji: '📋', grid: parsedRowsToGrid(classSurveyHeaders, classSurveyRows) },
+  { name: 'Student Survey', emoji: '🎓', grid: parsedRowsToGrid(studentSurveyHeaders, studentSurveyRows) },
+  { name: 'Titanic', emoji: '🚢', grid: parsedRowsToGrid(titanicHeaders, titanicRows) },
+  { name: 'US Weather', emoji: '🌡️', grid: parsedRowsToGrid(weatherHeaders, weatherRows) },
+  { name: 'NBA Season', emoji: '🏀', grid: parsedRowsToGrid(nbaHeaders, nbaRows) },
+  { name: 'Olympic Medals', emoji: '🥇', grid: parsedRowsToGrid(olympicHeaders, olympicRows) },
+  { name: 'Car Data', emoji: '🚗', grid: parsedRowsToGrid(carHeaders, carRows) },
+]

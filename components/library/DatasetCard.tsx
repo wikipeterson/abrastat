@@ -1,0 +1,79 @@
+'use client'
+
+import { Trash2 } from 'lucide-react'
+import { DatasetMeta } from '@/types'
+import { DatasetCoverThumb } from './DatasetCoverThumb'
+
+function timeAgo(date: Date): string {
+  const secs = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (secs < 60) return 'just now'
+  const mins = Math.floor(secs / 60)
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days < 7) return `${days}d ago`
+  return date.toLocaleDateString()
+}
+
+interface DatasetCardProps {
+  dataset: DatasetMeta
+  currentUserId?: string
+  onOpen: (id: string) => void
+  onDelete?: (id: string) => void
+  view?: 'list' | 'card'
+}
+
+export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, view = 'list' }: DatasetCardProps) {
+  const isOwner = dataset.ownerId === currentUserId
+  const canDelete = isOwner && onDelete
+
+  if (view === 'card') {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-col gap-3 hover:shadow-md transition-shadow cursor-pointer group" onClick={() => onOpen(dataset.id)}>
+        <div className="flex items-start justify-between">
+          <DatasetCoverThumb cover={dataset.emoji} size="md" />
+          {canDelete && (
+            <button
+              onClick={e => { e.stopPropagation(); onDelete!(dataset.id) }}
+              className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-red-400 transition-all"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+        <div>
+          <p className="font-semibold text-[var(--color-text)] truncate">{dataset.name}</p>
+          {dataset.description && <p className="text-xs text-[var(--color-muted)] mt-0.5 line-clamp-2">{dataset.description}</p>}
+        </div>
+        <div className="flex items-center justify-between text-xs text-[var(--color-muted)] mt-auto">
+          <span>{dataset.ownerName}</span>
+          <span>{dataset.rowCount} rows</span>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-3 py-3 px-4 hover:bg-slate-50 rounded-xl group cursor-pointer" onClick={() => onOpen(dataset.id)}>
+      <DatasetCoverThumb cover={dataset.emoji} size="sm" />
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-[var(--color-text)] truncate">{dataset.name}</p>
+        {dataset.description && <p className="text-xs text-[var(--color-muted)] truncate">{dataset.description}</p>}
+      </div>
+      <div className="hidden sm:flex items-center gap-6 text-xs text-[var(--color-muted)] flex-shrink-0">
+        <span className="w-28 truncate">{dataset.ownerName}</span>
+        <span className="w-20">{timeAgo(dataset.updatedAt)}</span>
+        <span className="w-16 text-right">{dataset.rowCount} rows</span>
+      </div>
+      {canDelete && (
+        <button
+          onClick={e => { e.stopPropagation(); onDelete!(dataset.id) }}
+          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-red-400 transition-all"
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
+    </div>
+  )
+}

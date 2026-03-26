@@ -48,8 +48,8 @@ export function ImportPanel({ open, onClose }: ImportPanelProps) {
     if (!text.trim()) return
     try {
       setPreview(parsePastedText(text, hdr))
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Parse failed.')
     }
   }
 
@@ -66,8 +66,8 @@ export function ImportPanel({ open, onClose }: ImportPanelProps) {
     try {
       const parsed = await parseFile(file, hasHeaders)
       setPreview(parsed)
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Import failed.')
     }
     e.target.value = ''
   }
@@ -86,8 +86,8 @@ export function ImportPanel({ open, onClose }: ImportPanelProps) {
       const csv = await res.text()
       const { parsePastedText: parseCsv } = await import('@/lib/parse')
       setPreview(parseCsv(csv))
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Import failed.')
     } finally {
       setLoading(false)
     }
@@ -168,8 +168,8 @@ export function ImportPanel({ open, onClose }: ImportPanelProps) {
             <summary className="cursor-pointer font-medium">How to share your sheet publicly</summary>
             <ol className="list-decimal list-inside mt-2 space-y-1">
               <li>In Google Sheets, click Share (top right)</li>
-              <li>Change to "Anyone with the link"</li>
-              <li>Set role to "Viewer"</li>
+              <li>Change to &ldquo;Anyone with the link&rdquo;</li>
+              <li>Set role to &ldquo;Viewer&rdquo;</li>
               <li>Copy the link and paste it above</li>
             </ol>
           </details>

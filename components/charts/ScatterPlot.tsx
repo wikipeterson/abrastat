@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect, useRef } from 'react'
+import type { Data, Annotations } from 'plotly.js'
 import { useStore } from '@/lib/store'
 import { getNumericValues, getStringValues } from '@/lib/gridHelpers'
 import { linearRegression } from '@/lib/statistics'
@@ -62,13 +63,13 @@ export function ScatterPlot({ xColId, yColId, colorByColId }: ScatterPlotProps) 
   const xValues = useMemo(() => xColId ? getNumericValues(grid, xColId) : [], [grid, xColId])
   const rawYValues = useMemo(() => yColId ? getNumericValues(grid, yColId) : [], [grid, yColId])
 
-  // Detect transition from null → assigned yColId
+  // Detect transition from null → assigned yColId; defer setState to avoid synchronous call in effect
   useEffect(() => {
     if (yColId && prevYColIdRef.current === null) {
-      setShouldAnimate(true)
-      // Reset after animation completes
-      const id = window.setTimeout(() => setShouldAnimate(false), 2300)
-      return () => clearTimeout(id)
+      const triggerTimer = window.setTimeout(() => setShouldAnimate(true), 0)
+      const resetTimer = window.setTimeout(() => setShouldAnimate(false), 2300)
+      prevYColIdRef.current = yColId
+      return () => { clearTimeout(triggerTimer); clearTimeout(resetTimer) }
     }
     prevYColIdRef.current = yColId
   }, [yColId])
@@ -91,7 +92,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId }: ScatterPlotProps) 
       })()
     : undefined
 
-  let traces: any[]
+  let traces: Data[]
 
   if (colorByColId) {
     const groups = getStringValues(grid, colorByColId)
@@ -117,7 +118,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId }: ScatterPlotProps) 
     }]
   }
 
-  let annotations: any[] = []
+  let annotations: Partial<Annotations>[] = []
   if (showBestFit && xValues.length >= 2) {
     const { slope, intercept, r } = linearRegression(xValues, rawYValues)
     const xMin = Math.min(...xValues)
@@ -156,10 +157,10 @@ export function ScatterPlot({ xColId, yColId, colorByColId }: ScatterPlotProps) 
       </div>
       <div className="px-4">
         <PlotlyChart
-          data={traces}
+          data={traces as import("plotly.js").Data[]}
           layout={{
-            xaxis: { title: xCol.name },
-            yaxis: { title: yCol.name, ...(yAxisRange ? { range: yAxisRange } : {}) },
+            xaxis: { title: { text: xCol.name } },
+            yaxis: { title: { text: yCol.name }, ...(yAxisRange ? { range: yAxisRange } : {}) },
             showlegend: !!colorByColId,
             annotations,
           }}

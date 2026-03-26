@@ -29,7 +29,7 @@ interface AbraStatStore {
 
   // Grid mutations
   setGrid: (grid: GridState) => void
-  updateCell: (rowIndex: number, colId: string, value: any) => void
+  updateCell: (rowIndex: number, colId: string, value: string | number) => void
   addRow: (afterIndex?: number) => void
   deleteRows: (rowIndices: number[]) => void
   addColumn: (afterIndex?: number) => void
@@ -57,7 +57,7 @@ interface AbraStatStore {
   purgeExploreStaleIds: (validIds: Set<string>) => void
 }
 
-export const useStore = create<AbraStatStore>((set, get) => ({
+export const useStore = create<AbraStatStore>((set) => ({
   user: null,
   setUser: (user) => set({ user }),
 
@@ -106,10 +106,9 @@ export const useStore = create<AbraStatStore>((set, get) => ({
   deleteColumn: (colId) => set(state => {
     const stack = [...state.undoStack, snapshot(state.grid)].slice(-MAX_UNDO)
     const columns = state.grid.columns.filter(c => c.id !== colId)
-    const rows = state.grid.rows.map(r => {
-      const { [colId]: _, ...rest } = r
-      return rest
-    })
+    const rows = state.grid.rows.map(r =>
+      Object.fromEntries(Object.entries(r).filter(([k]) => k !== colId)) as Record<string, string | number>
+    )
     const selectedColumnIds = state.selectedColumnIds.filter(id => id !== colId)
     return { grid: { columns, rows }, isDirty: true, undoStack: stack, selectedColumnIds }
   }),

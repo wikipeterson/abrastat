@@ -113,7 +113,7 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
     showline: false,
     showgrid: false,
     zeroline: false,
-    ticks: '',
+    ticks: '' as const,
     range: [0, maxStack + 1.5],
     fixedrange: true,
   }
@@ -124,11 +124,11 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
   return (
     <div className="px-4">
       <PlotlyChart
-        data={traces}
+        data={traces as import("plotly.js").Data[]}
         height={chartHeight}
         layout={{
-          xaxis: vert ? stackAxis : { title: col.name },
-          yaxis: vert ? { title: col.name } : stackAxis,
+          xaxis: vert ? stackAxis : { title: { text: col.name } },
+          yaxis: vert ? { title: { text: col.name } } : stackAxis,
           showlegend: !!groupCol,
         }}
         title={`Dot plot — ${col.name}${groupCol ? ` by ${groupCol.name}` : ''}`}

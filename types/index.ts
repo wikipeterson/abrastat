@@ -12,7 +12,7 @@ export interface GridColumn extends ColumnMeta {
 
 export interface GridState {
   columns: GridColumn[]
-  rows: Record<string, any>[]
+  rows: Record<string, string | number>[]
 }
 
 export interface DatasetMeta {

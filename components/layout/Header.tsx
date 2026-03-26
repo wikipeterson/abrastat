@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Save, Library, LogOut, ChevronDown, FilePlus } from 'lucide-react'
@@ -68,7 +69,7 @@ export function Header({ onNew }: HeaderProps) {
                 aria-label="User menu"
               >
                 {user.photoURL ? (
-                  <img src={user.photoURL} alt="" className="w-6 h-6 rounded-full" referrerPolicy="no-referrer" />
+                  <Image src={user.photoURL} alt="" width={24} height={24} className="rounded-full" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="w-6 h-6 rounded-full bg-[var(--color-accent)] text-white text-xs flex items-center justify-center font-bold">
                     {user.displayName?.[0] ?? '?'}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useStore } from '@/lib/store'
 import { computeSummary, getFrequencyTable } from '@/lib/statistics'
 import { getNumericValues, getStringValues } from '@/lib/gridHelpers'
@@ -18,13 +18,10 @@ export function SummaryStats() {
     [grid.columns, selectedColumnIds]
   )
 
-  const groupCol = groupColId ? grid.columns.find(c => c.id === groupColId) ?? null : null
-
-  // Clear groupColId if the column is removed from the grid
-  useEffect(() => {
-    const ids = grid.columns.map(c => c.id)
-    if (groupColId && !ids.includes(groupColId)) setGroupColId(null)
-  }, [grid.columns, groupColId])
+  // Derive: if the column was removed, treat as unset (no setState needed)
+  const colIdSet = useMemo(() => new Set(grid.columns.map(c => c.id)), [grid.columns])
+  const effectiveGroupColId = groupColId && colIdSet.has(groupColId) ? groupColId : null
+  const groupCol = effectiveGroupColId ? grid.columns.find(c => c.id === effectiveGroupColId) ?? null : null
 
   const results = useMemo(() => {
     return selectedColumns.map(col => {

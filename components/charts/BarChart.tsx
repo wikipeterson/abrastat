@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import type { Data } from 'plotly.js'
 import { useStore } from '@/lib/store'
 import { getStringValues } from '@/lib/gridHelpers'
 import { getFrequencyTable } from '@/lib/statistics'
@@ -31,7 +32,7 @@ export function BarChart({ colId, orientation = 'h' }: BarChartProps) {
 
   // orientation='h': variable on x-axis → standard vertical bars (column chart)
   // orientation='v': variable on y-axis → horizontal bars
-  const traces: any[] = orientation === 'h'
+  const traces: Data[] = orientation === 'h'
     ? [{
         type: 'bar',
         x: freqTable.map(r => r.value || '(blank)'),
@@ -54,20 +55,20 @@ export function BarChart({ colId, orientation = 'h' }: BarChartProps) {
 
   const layout = orientation === 'h'
     ? {
-        xaxis: { title: col.name },
-        yaxis: { title: 'Count' },
+        xaxis: { title: { text: col.name } },
+        yaxis: { title: { text: 'Count' } },
         margin: { l: 60, r: 40, t: 36, b: 80 },
       }
     : {
-        xaxis: { title: 'Count' },
-        yaxis: { autorange: 'reversed' },
+        xaxis: { title: { text: 'Count' } },
+        yaxis: { autorange: 'reversed' as const },
         margin: { l: 130, r: 80, t: 36, b: 60 },
       }
 
   return (
     <div className="px-4">
       <PlotlyChart
-        data={traces}
+        data={traces as import("plotly.js").Data[]}
         layout={layout}
         title={`${col.name} — Frequency`}
       />

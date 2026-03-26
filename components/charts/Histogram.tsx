@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import type { Data } from 'plotly.js'
 import { useStore } from '@/lib/store'
 import { getNumericValues, getStringValues } from '@/lib/gridHelpers'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
@@ -28,7 +29,7 @@ export function Histogram({ colId, groupColId, orientation = 'h' }: HistogramPro
     return <EmptyState icon="📊" title="Drop a numeric variable" description="Drag a numeric variable to the horizontal axis to build a histogram." />
   }
 
-  let traces: any[]
+  let traces: Data[]
 
   const vert = orientation === 'v'
   const binKey = vert ? 'y' : 'x'
@@ -84,11 +85,11 @@ export function Histogram({ colId, groupColId, orientation = 'h' }: HistogramPro
       </div>
       <div className="px-4">
         <PlotlyChart
-          data={traces}
+          data={traces as import("plotly.js").Data[]}
           layout={{
             barmode: groupCol ? 'overlay' : 'relative',
-            xaxis: { title: vert ? 'Frequency' : col.name },
-            yaxis: { title: vert ? col.name : 'Frequency' },
+            xaxis: { title: { text: vert ? 'Frequency' : col.name } },
+            yaxis: { title: { text: vert ? col.name : 'Frequency' } },
             showlegend: !!groupCol,
           }}
           title={`Distribution of ${col.name}${groupCol ? ` by ${groupCol.name}` : ''}`}

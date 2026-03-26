@@ -3,7 +3,7 @@
 import { memo, useRef, useState, useEffect } from 'react'
 
 interface EditableCellProps {
-  value: any
+  value: string | number
   rowIndex: number
   colId: string
   isActive: boolean
@@ -25,8 +25,13 @@ export const EditableCell = memo(function EditableCell({
   const [draft, setDraft] = useState(String(value ?? ''))
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // When the cell loses active status, exit editing mode asynchronously
+  // to avoid a synchronous setState-in-effect cascade render.
   useEffect(() => {
-    if (!isActive) setEditing(false)
+    if (!isActive) {
+      const t = setTimeout(() => setEditing(false), 0)
+      return () => clearTimeout(t)
+    }
   }, [isActive])
 
   useEffect(() => {

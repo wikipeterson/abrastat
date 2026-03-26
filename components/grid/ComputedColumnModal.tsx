@@ -33,7 +33,10 @@ export function ComputedColumnModal({ open, onClose }: Props) {
   const formulaRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (open) { setName(''); setFormula('') }
+    if (open) {
+      const t = setTimeout(() => { setName(''); setFormula('') }, 0)
+      return () => clearTimeout(t)
+    }
   }, [open])
 
   const numericCols = grid.columns.filter(c => c.type === 'numeric')
@@ -43,7 +46,6 @@ export function ComputedColumnModal({ open, onClose }: Props) {
     return grid.rows.slice(0, 5).map(row => evaluateFormula(formula, grid.columns, row))
   }, [formula, grid])
 
-  const hasError = formula.trim().length > 0 && preview.some(v => v === null)
   const allNull = formula.trim().length > 0 && preview.every(v => v === null)
 
   function insertAtCursor(text: string) {
@@ -142,7 +144,7 @@ export function ComputedColumnModal({ open, onClose }: Props) {
             onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
           />
           {allNull && (
-            <p className="text-xs text-red-500 mt-1">Formula couldn't be evaluated. Check column names and syntax.</p>
+            <p className="text-xs text-red-500 mt-1">Formula couldn&apos;t be evaluated. Check column names and syntax.</p>
           )}
         </div>
 

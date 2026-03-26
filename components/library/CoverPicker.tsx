@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useEffect } from 'react'
-import { DATASET_COVERS, getCover, isCoverId } from '@/lib/datasetCovers'
+import { getCover } from '@/lib/datasetCovers'
 
 const GROUPS = [
   { label: 'Stats & Data',      ids: ['teal-chart', 'indigo-data', 'sky-numbers', 'cyan-stats'] },

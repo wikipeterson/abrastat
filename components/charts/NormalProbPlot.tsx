@@ -20,7 +20,8 @@ export function NormalProbPlot({ colId }: NormalProbPlotProps) {
     if (!colId) return { theoretical: [], actual: [] }
     const vals = [...getNumericValues(grid, colId)].sort((a, b) => a - b)
     const n = vals.length
-    const theoretical = vals.map((_, i) => (jStat as any).normal.inv((i + 0.5) / n, 0, 1))
+    const jStatDist = (jStat as unknown as { normal: { inv: (p: number, mu: number, sigma: number) => number } })
+    const theoretical = vals.map((_, i) => jStatDist.normal.inv((i + 0.5) / n, 0, 1))
     return { theoretical, actual: vals }
   }, [grid, colId])
 
@@ -61,8 +62,8 @@ export function NormalProbPlot({ colId }: NormalProbPlotProps) {
           },
         ]}
         layout={{
-          xaxis: { title: 'Theoretical Normal Quantiles' },
-          yaxis: { title: col.name },
+          xaxis: { title: { text: 'Theoretical Normal Quantiles' } },
+          yaxis: { title: { text: col.name } },
           showlegend: false,
           annotations: [{
             xref: 'paper', yref: 'paper',

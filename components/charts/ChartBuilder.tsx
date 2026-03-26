@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useStore } from '@/lib/store'
 import { Histogram } from './Histogram'
 import { BoxPlot } from './BoxPlot'
@@ -11,38 +11,37 @@ import { SegmentedBar } from './SegmentedBar'
 import { NormalProbPlot } from './NormalProbPlot'
 import { EmptyState } from '@/components/ui/EmptyState'
 
-import { ChartType, CHART_META, Orientation, inferCharts } from '@/lib/chartHelpers'
+import { ChartType, CHART_META, inferCharts } from '@/lib/chartHelpers'
 
 export function ChartBuilder() {
   const { grid } = useStore()
   const [hColId, setHColId] = useState<string | null>(null)
   const [vColId, setVColId] = useState<string | null>(null)
   const [groupColId, setGroupColId] = useState<string | null>(null)
-  const [activeChart, setActiveChart] = useState<ChartType | null>(null)
+  // Store chart override paired with the column key it was chosen for
+  const [chartOverride, setChartOverride] = useState<{ type: ChartType; forKey: string } | null>(null)
   const [dragOver, setDragOver] = useState<'h' | 'v' | 'group' | null>(null)
 
   const hasData = grid.rows.some(r => Object.values(r).some(v => String(v).trim()))
 
-  const hCol = grid.columns.find(c => c.id === hColId) ?? null
-  const vCol = grid.columns.find(c => c.id === vColId) ?? null
-  const groupCol = grid.columns.find(c => c.id === groupColId) ?? null
+  // Derive effective col IDs — if a column was deleted, treat as unset (no setState in effect needed)
+  const colIdSet = useMemo(() => new Set(grid.columns.map(c => c.id)), [grid.columns])
+  const effectiveHColId = hColId && colIdSet.has(hColId) ? hColId : null
+  const effectiveVColId = vColId && colIdSet.has(vColId) ? vColId : null
+  const effectiveGroupColId = groupColId && colIdSet.has(groupColId) ? groupColId : null
+
+  const hCol = grid.columns.find(c => c.id === effectiveHColId) ?? null
+  const vCol = grid.columns.find(c => c.id === effectiveVColId) ?? null
+  const groupCol = grid.columns.find(c => c.id === effectiveGroupColId) ?? null
 
   const { primary, alternatives, orientation } = useMemo(
     () => inferCharts(hCol?.type ?? null, vCol?.type ?? null, groupCol?.type ?? null),
     [hCol, vCol, groupCol]
   )
 
-  // Reset chart override when assignment changes
-  useEffect(() => { setActiveChart(null) }, [hColId, vColId, groupColId])
-
-  // Clear zone assignments if the column no longer exists in the grid
-  useEffect(() => {
-    const ids = grid.columns.map(c => c.id)
-    if (hColId && !ids.includes(hColId)) setHColId(null)
-    if (vColId && !ids.includes(vColId)) setVColId(null)
-    if (groupColId && !ids.includes(groupColId)) setGroupColId(null)
-  }, [grid.columns, hColId, vColId, groupColId])
-
+  // Chart override is only valid when columns match the key it was chosen for
+  const colKey = `${effectiveHColId}:${effectiveVColId}:${effectiveGroupColId}`
+  const activeChart = chartOverride?.forKey === colKey ? chartOverride.type : null
   const currentChart = activeChart ?? primary
 
   if (!hasData) {
@@ -79,26 +78,26 @@ export function ChartBuilder() {
 
   function renderChart() {
     // For single-axis charts the main variable lives on whichever axis was used
-    const mainColId = orientation === 'h' ? hColId : vColId
+    const mainColId = orientation === 'h' ? effectiveHColId : effectiveVColId
     const hCatAndVNum = hCol?.type === 'categorical' && vCol?.type === 'numeric'
 
     switch (currentChart) {
       case 'histogram':
-        return <Histogram colId={mainColId} groupColId={groupColId} orientation={orientation} />
+        return <Histogram colId={mainColId} groupColId={effectiveGroupColId} orientation={orientation} />
       case 'dot':
         return hCatAndVNum
-          ? <DotPlot colId={vColId} groupByColId={hColId} orientation="h" />
-          : <DotPlot colId={mainColId} groupByColId={groupColId} orientation={orientation} />
+          ? <DotPlot colId={effectiveVColId} groupByColId={effectiveHColId} orientation="h" />
+          : <DotPlot colId={mainColId} groupByColId={effectiveGroupColId} orientation={orientation} />
       case 'box':
         return hCatAndVNum
-          ? <BoxPlot colId={vColId} groupColId={hColId} />
-          : <BoxPlot colId={mainColId} groupColId={groupColId} />
+          ? <BoxPlot colId={effectiveVColId} groupColId={effectiveHColId} />
+          : <BoxPlot colId={mainColId} groupColId={effectiveGroupColId} />
       case 'scatter':
-        return <ScatterPlot xColId={hColId} yColId={vColId} colorByColId={groupColId} />
+        return <ScatterPlot xColId={effectiveHColId} yColId={effectiveVColId} colorByColId={effectiveGroupColId} />
       case 'bar':
         return <BarChart colId={mainColId} orientation={orientation} />
       case 'segmented':
-        return <SegmentedBar xColId={hColId} fillColId={groupColId} />
+        return <SegmentedBar xColId={effectiveHColId} fillColId={effectiveGroupColId} />
       case 'normalprob':
         return <NormalProbPlot colId={mainColId} />
       default:
@@ -113,9 +112,9 @@ export function ChartBuilder() {
   }
 
   const zones: { key: 'h' | 'v' | 'group'; label: string; hint: string; colId: string | null }[] = [
-    { key: 'h', label: 'Horizontal axis', hint: '← drag a variable here', colId: hColId },
-    { key: 'v', label: 'Vertical axis', hint: '← drag a numeric variable', colId: vColId },
-    { key: 'group', label: 'Grouping variable', hint: '← drag a categorical variable', colId: groupColId },
+    { key: 'h', label: 'Horizontal axis', hint: '← drag a variable here', colId: effectiveHColId },
+    { key: 'v', label: 'Vertical axis', hint: '← drag a numeric variable', colId: effectiveVColId },
+    { key: 'group', label: 'Grouping variable', hint: '← drag a categorical variable', colId: effectiveGroupColId },
   ]
 
   return (
@@ -173,7 +172,7 @@ export function ChartBuilder() {
           {[primary, ...alternatives].map(ct => (
             <button
               key={ct}
-              onClick={() => setActiveChart(ct)}
+              onClick={() => setChartOverride({ type: ct, forKey: colKey })}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
                 currentChart === ct
                   ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'

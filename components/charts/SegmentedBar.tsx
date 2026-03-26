@@ -70,11 +70,11 @@ export function SegmentedBar({ xColId, fillColId }: SegmentedBarProps) {
         ))}
       </div>
       <PlotlyChart
-        data={traces}
+        data={traces as import("plotly.js").Data[]}
         layout={{
           barmode: 'stack',
-          xaxis: { title: xCol.name },
-          yaxis: { title: mode === 'count' ? 'Count' : 'Percent', ticksuffix: mode === 'percent' ? '%' : '' },
+          xaxis: { title: { text: xCol.name } },
+          yaxis: { title: { text: mode === 'count' ? 'Count' : 'Percent' }, ticksuffix: mode === 'percent' ? '%' : '' },
           showlegend: true,
           legend: { title: { text: fillCol.name } },
         }}

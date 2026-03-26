@@ -80,12 +80,13 @@ async function parseExcelFile(file: File, hasHeaders: boolean): Promise<GridStat
   const buffer = await file.arrayBuffer()
   const workbook = XLSX.read(buffer)
   const sheet = workbook.Sheets[workbook.SheetNames[0]]
-  const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 })
+  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 })
   if (rows.length === 0) throw new Error('Empty spreadsheet.')
+  const allRows = rows as unknown[][]
   if (hasHeaders) {
-    const headers = (rows[0] as any[]).map((h, i) => String(h ?? '').trim() || `var${i + 1}`)
-    return parsedRowsToGrid(headers, rows.slice(1) as any[][])
+    const headers = allRows[0].map((h, i) => String(h ?? '').trim() || `var${i + 1}`)
+    return parsedRowsToGrid(headers, allRows.slice(1))
   } else {
-    return parsedRowsToGrid(autoHeaders((rows[0] as any[]).length), rows as any[][])
+    return parsedRowsToGrid(autoHeaders(allRows[0].length), allRows)
   }
 }

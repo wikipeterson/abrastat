@@ -12,12 +12,11 @@ import {
   onSnapshot,
   Unsubscribe,
   Timestamp,
-  writeBatch,
 } from 'firebase/firestore'
 import { User } from 'firebase/auth'
 import { v4 as uuid } from 'uuid'
 import { db } from './firebase'
-import { DatasetMeta, GridState } from '@/types'
+import { ColumnMeta, DatasetMeta, GridState } from '@/types'
 
 function gridToStorable(grid: GridState) {
   return {
@@ -75,7 +74,7 @@ export async function loadDataset(datasetId: string): Promise<{ meta: DatasetMet
     createdAt: (data.createdAt as Timestamp).toDate(),
     updatedAt: (data.updatedAt as Timestamp).toDate(),
   }
-  const columnsWithIds = (data.columns as any[]).map(c => ({
+  const columnsWithIds = (data.columns as (ColumnMeta & { id?: string })[]).map(c => ({
     id: c.id ?? uuid(),
     name: c.name,
     type: c.type,

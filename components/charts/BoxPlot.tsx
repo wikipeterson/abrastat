@@ -59,9 +59,9 @@ export function BoxPlot({ colId, groupColId }: BoxPlotProps) {
   return (
     <div className="px-4">
       <PlotlyChart
-        data={traces}
+        data={traces as import("plotly.js").Data[]}
         layout={{
-          yaxis: { title: col.name },
+          yaxis: { title: { text: col.name } },
           showlegend: !!groupCol,
         }}
         title={`Box plot — ${col.name}${groupCol ? ` by ${groupCol.name}` : ''}`}

@@ -12,7 +12,7 @@ export function SignInButton() {
     setError(null)
     try {
       await signInWithGoogle()
-    } catch (err: any) {
+    } catch {
       setError('Sign-in failed. Please try again.')
     } finally {
       setLoading(false)

@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import type { Data, Layout, Config } from 'plotly.js'
 import { basePlotlyLayout, plotlyConfig } from '@/lib/plotlyTheme'
 
 const Plot = dynamic(() => import('react-plotly.js'), {
@@ -13,8 +14,8 @@ const Plot = dynamic(() => import('react-plotly.js'), {
 })
 
 interface PlotlyChartProps {
-  data: any[]
-  layout?: Record<string, any>
+  data: Data[]
+  layout?: Partial<Layout>
   title?: string
   height?: number
 }
@@ -30,7 +31,7 @@ export function PlotlyChart({ data, layout, title, height = 420 }: PlotlyChartPr
           : undefined,
         ...layout,
       }}
-      config={plotlyConfig as any}
+      config={plotlyConfig as Partial<Config>}
       style={{ width: '100%', height: `${height}px` }}
       useResizeHandler
     />

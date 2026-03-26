@@ -3,7 +3,7 @@ import { GridColumn } from '@/types'
 export function evaluateFormula(
   formula: string,
   columns: GridColumn[],
-  row: Record<string, any>
+  row: Record<string, string | number>
 ): number | null {
   let expr = formula.trim()
 
@@ -26,8 +26,8 @@ export function evaluateFormula(
     .replace(/\^/g, '**')
 
   try {
-    // eslint-disable-next-line no-new-func
-    const result = new Function(`"use strict"; return (${expr})`)()
+    const fn = new Function(`"use strict"; return (${expr})`)
+    const result = fn()
     return typeof result === 'number' && isFinite(result) ? result : null
   } catch {
     return null
@@ -37,7 +37,7 @@ export function evaluateFormula(
 export function computeColumnValues(
   formula: string,
   columns: GridColumn[],
-  rows: Record<string, any>[]
+  rows: Record<string, string | number>[]
 ): (number | null)[] {
   return rows.map(row => evaluateFormula(formula, columns, row))
 }

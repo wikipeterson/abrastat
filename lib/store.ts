@@ -47,7 +47,6 @@ interface AbraStatStore {
   // Column selection for analysis
   selectedColumnIds: string[]
   toggleColumnSelection: (colId: string) => void
-  selectAllNumeric: () => void
   setSelectedColumnIds: (ids: string[]) => void
 
   // Explore canvas
@@ -156,7 +155,7 @@ export const useStore = create<AbraStatStore>((set, get) => ({
     const y = 20 + Math.floor(idx / 2) * 520
     const config: CardConfig =
       type === 'graph'   ? { type: 'graph',   xColId: null, yColId: null, groupColId: null } :
-      type === 'summary' ? { type: 'summary', variableColId: null, groupColId: null } :
+      type === 'summary' ? { type: 'summary', variableColIds: [], groupColId: null } :
                            { type: 'table',   rowsColId: null, colsColId: null }
     return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width: 620 }] }
   }),
@@ -171,7 +170,7 @@ export const useStore = create<AbraStatStore>((set, get) => ({
       const nil = (id: string | null) => (id && !validIds.has(id) ? null : id)
       const cfg = card.config
       if (cfg.type === 'graph')   return { ...card, config: { ...cfg, xColId: nil(cfg.xColId), yColId: nil(cfg.yColId), groupColId: nil(cfg.groupColId) } }
-      if (cfg.type === 'summary') return { ...card, config: { ...cfg, variableColId: nil(cfg.variableColId), groupColId: nil(cfg.groupColId) } }
+      if (cfg.type === 'summary') return { ...card, config: { ...cfg, variableColIds: cfg.variableColIds.filter(id => validIds.has(id)), groupColId: nil(cfg.groupColId) } }
       if (cfg.type === 'table')   return { ...card, config: { ...cfg, rowsColId: nil(cfg.rowsColId), colsColId: nil(cfg.colsColId) } }
       return card
     }),
@@ -184,8 +183,5 @@ export const useStore = create<AbraStatStore>((set, get) => ({
       : [...state.selectedColumnIds, colId]
     return { selectedColumnIds: ids }
   }),
-  selectAllNumeric: () => set(state => ({
-    selectedColumnIds: state.grid.columns.filter(c => c.type === 'numeric').map(c => c.id),
-  })),
   setSelectedColumnIds: (ids) => set({ selectedColumnIds: ids }),
 }))

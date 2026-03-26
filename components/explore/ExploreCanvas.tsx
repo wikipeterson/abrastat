@@ -14,7 +14,8 @@ import { CSS } from '@dnd-kit/utilities'
 import { useDraggable } from '@dnd-kit/core'
 import { useStore } from '@/lib/store'
 import { GridColumn } from '@/types'
-import { CardConfig } from '@/lib/exploreTypes'
+import { CardConfig, GraphCardConfig } from '@/lib/exploreTypes'
+import { ChartType } from '@/lib/chartHelpers'
 import { GraphCard } from './cards/GraphCard'
 import { SummaryCard } from './cards/SummaryCard'
 import { TableCard } from './cards/TableCard'
@@ -122,7 +123,13 @@ export function ExploreCanvas() {
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const id = String(event.active.id)
-    setActiveColId(id.startsWith('col:') ? id.slice(4) : null)
+    if (id.startsWith('col:')) {
+      setActiveColId(id.slice(4))
+    } else if (id.startsWith('zc:')) {
+      setActiveColId(event.active.data.current?.colId ?? null)
+    } else {
+      setActiveColId(null)
+    }
   }, [])
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -130,8 +137,20 @@ export function ExploreCanvas() {
     if (!event.over) return
     const activeId = String(event.active.id)
     const overId = String(event.over.id)
-    if (!activeId.startsWith('col:')) return
-    const colId = activeId.slice(4)
+
+    let colId: string
+    let sourceZoneId: string | null = null
+
+    if (activeId.startsWith('col:')) {
+      colId = activeId.slice(4)
+    } else if (activeId.startsWith('zc:')) {
+      colId = event.active.data.current?.colId
+      sourceZoneId = event.active.data.current?.sourceZoneId ?? null
+      if (!colId) return
+    } else {
+      return
+    }
+
     const colonIdx = overId.indexOf(':')
     if (colonIdx === -1) return
     const cardId = overId.slice(0, colonIdx)
@@ -140,19 +159,42 @@ export function ExploreCanvas() {
     const card = exploreCards.find(c => c.id === cardId)
     if (!card) return
     const cfg = card.config
+
+    // Determine source zone name (only for same-card zone-to-zone drags)
+    const sourceZone = (sourceZoneId && sourceZoneId.startsWith(cardId + ':'))
+      ? sourceZoneId.slice(cardId.length + 1)
+      : null
+
     let newConfig: CardConfig | null = null
     if (cfg.type === 'graph') {
-      if (zone === 'x')     newConfig = { ...cfg, xColId: colId }
-      if (zone === 'y')     newConfig = { ...cfg, yColId: colId }
-      if (zone === 'group') newConfig = { ...cfg, groupColId: colId }
+      let c = { ...cfg }
+      if (zone === 'x')     c = { ...c, xColId: colId }
+      if (zone === 'y')     c = { ...c, yColId: colId }
+      if (zone === 'group') c = { ...c, groupColId: colId }
+      // Clear source zone atomically so it looks like a move
+      if (sourceZone && sourceZone !== zone) {
+        if (sourceZone === 'x')     c = { ...c, xColId: null }
+        if (sourceZone === 'y')     c = { ...c, yColId: null }
+        if (sourceZone === 'group') c = { ...c, groupColId: null }
+      }
+      newConfig = c
     }
     if (cfg.type === 'summary') {
-      if (zone === 'variable') newConfig = { ...cfg, variableColId: colId }
-      if (zone === 'group')    newConfig = { ...cfg, groupColId: colId }
+      if (zone === 'variable') {
+        const ids = cfg.variableColIds.includes(colId) ? cfg.variableColIds : [...cfg.variableColIds, colId]
+        newConfig = { ...cfg, variableColIds: ids }
+      }
+      if (zone === 'group') newConfig = { ...cfg, groupColId: colId }
     }
     if (cfg.type === 'table') {
-      if (zone === 'rows') newConfig = { ...cfg, rowsColId: colId }
-      if (zone === 'cols') newConfig = { ...cfg, colsColId: colId }
+      let c = { ...cfg }
+      if (zone === 'rows') c = { ...c, rowsColId: colId }
+      if (zone === 'cols') c = { ...c, colsColId: colId }
+      if (sourceZone && sourceZone !== zone) {
+        if (sourceZone === 'rows') c = { ...c, rowsColId: null }
+        if (sourceZone === 'cols') c = { ...c, colsColId: null }
+      }
+      newConfig = c
     }
     if (newConfig) updateExploreCard(cardId, { config: newConfig })
   }, [exploreCards, updateExploreCard])
@@ -168,8 +210,11 @@ export function ExploreCanvas() {
       if (zone === 'group') newConfig = { ...cfg, groupColId: null }
     }
     if (cfg.type === 'summary') {
-      if (zone === 'variable') newConfig = { ...cfg, variableColId: null }
-      if (zone === 'group')    newConfig = { ...cfg, groupColId: null }
+      if (zone === 'group') newConfig = { ...cfg, groupColId: null }
+      if (zone.startsWith('variable:')) {
+        const removeId = zone.slice('variable:'.length)
+        newConfig = { ...cfg, variableColIds: cfg.variableColIds.filter(id => id !== removeId) }
+      }
     }
     if (cfg.type === 'table') {
       if (zone === 'rows') newConfig = { ...cfg, rowsColId: null }
@@ -303,7 +348,14 @@ export function ExploreCanvas() {
                     {/* Card content — no header since we have one above */}
                     <div className="p-4 space-y-3">
                       {card.config.type === 'graph' && (
-                        <GraphCard cardId={card.id} config={card.config} onClearZone={z => clearZone(card.id, z)} onRemove={() => removeExploreCard(card.id)} hideHeader />
+                        <GraphCard
+                          cardId={card.id}
+                          config={card.config}
+                          onClearZone={z => clearZone(card.id, z)}
+                          onSetChartType={(ct: ChartType) => updateExploreCard(card.id, { config: { ...(card.config as GraphCardConfig), chartType: ct } })}
+                          onRemove={() => removeExploreCard(card.id)}
+                          hideHeader
+                        />
                       )}
                       {card.config.type === 'summary' && (
                         <SummaryCard cardId={card.id} config={card.config} onClearZone={z => clearZone(card.id, z)} onRemove={() => removeExploreCard(card.id)} hideHeader />

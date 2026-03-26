@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { useStore } from '@/lib/store'
 import { ChartType, CHART_META, inferCharts } from '@/lib/chartHelpers'
 import { GraphCardConfig } from '@/lib/exploreTypes'
@@ -18,13 +17,13 @@ interface GraphCardProps {
   cardId: string
   config: GraphCardConfig
   onClearZone: (zone: string) => void
+  onSetChartType: (ct: ChartType) => void
   onRemove: () => void
   hideHeader?: boolean
 }
 
-export function GraphCard({ cardId, config, onClearZone, onRemove, hideHeader }: GraphCardProps) {
+export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemove, hideHeader }: GraphCardProps) {
   const { grid } = useStore()
-  const [activeChart, setActiveChart] = useState<ChartType | null>(null)
 
   const xCol = config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
   const yCol = config.yColId ? (grid.columns.find(c => c.id === config.yColId) ?? null) : null
@@ -36,9 +35,15 @@ export function GraphCard({ cardId, config, onClearZone, onRemove, hideHeader }:
     groupCol?.type ?? null,
   )
 
-  useEffect(() => { setActiveChart(null) }, [config.xColId, config.yColId, config.groupColId])
+  // If user has explicitly chosen a chart type, always honour it.
+  // Only fall back to the inferred primary when no choice has been stored.
+  const currentChart = config.chartType ?? primary
 
-  const currentChart = activeChart ?? primary
+  // Button list: inferred suggestions + current choice if it would otherwise be missing
+  const inferredList = primary ? [primary, ...alternatives] : []
+  const chartButtons: ChartType[] = (currentChart && !inferredList.includes(currentChart))
+    ? [currentChart, ...inferredList]
+    : inferredList
 
   function renderChart() {
     const mainColId = orientation === 'h' ? config.xColId : config.yColId
@@ -93,13 +98,13 @@ export function GraphCard({ cardId, config, onClearZone, onRemove, hideHeader }:
             assignedCol={groupCol} onClear={() => onClearZone('group')} />
         </div>
 
-        {primary && (
+        {chartButtons.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-medium text-[var(--color-muted)]">Chart type:</span>
-            {[primary, ...alternatives].map(ct => (
+            {chartButtons.map(ct => (
               <button
                 key={ct}
-                onClick={() => setActiveChart(ct)}
+                onClick={() => onSetChartType(ct)}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium border transition-all ${
                   currentChart === ct
                     ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'

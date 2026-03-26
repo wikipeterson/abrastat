@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useDroppable } from '@dnd-kit/core'
 import { useStore } from '@/lib/store'
 import { getNumericValues, getStringValues } from '@/lib/gridHelpers'
 import { computeSummary, getFrequencyTable } from '@/lib/statistics'
@@ -17,40 +18,107 @@ interface SummaryCardProps {
   hideHeader?: boolean
 }
 
+function MultiVarDropZone({ id, varCols, onClearVar }: {
+  id: string
+  varCols: { id: string; name: string; type: string }[]
+  onClearVar: (colId: string) => void
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+  return (
+    <div className="flex-1 min-w-0">
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-1">Variable</div>
+      <div
+        ref={setNodeRef}
+        className={`min-h-[2.25rem] flex flex-wrap gap-1 p-1.5 rounded-lg border transition-colors ${
+          isOver
+            ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
+            : varCols.length === 0
+              ? 'border-dashed border-[var(--color-border)] bg-slate-50'
+              : 'border-[var(--color-border)] bg-slate-50'
+        }`}
+      >
+        {varCols.length === 0 ? (
+          <span className="text-xs text-[var(--color-muted)] self-center px-1">drop variables here</span>
+        ) : (
+          varCols.map(col => (
+            <span
+              key={col.id}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+                col.type === 'numeric'
+                  ? 'bg-teal-100 text-teal-800 border border-teal-200'
+                  : 'bg-slate-100 text-slate-700 border border-slate-200'
+              }`}
+            >
+              <span className="font-mono opacity-60">{col.type === 'numeric' ? '#' : 'A'}</span>
+              {col.name}
+              <button
+                onPointerDown={e => e.stopPropagation()}
+                onClick={() => onClearVar(col.id)}
+                className="ml-0.5 opacity-50 hover:opacity-100 leading-none"
+              >×</button>
+            </span>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function SummaryCard({ cardId, config, onClearZone, onRemove, hideHeader }: SummaryCardProps) {
   const { grid } = useStore()
 
-  const varCol = config.variableColId ? (grid.columns.find(c => c.id === config.variableColId) ?? null) : null
+  const varCols = config.variableColIds
+    .map(id => grid.columns.find(c => c.id === id))
+    .filter((c): c is NonNullable<typeof c> => c != null)
+
   const groupCol = config.groupColId ? (grid.columns.find(c => c.id === config.groupColId) ?? null) : null
 
   const content = useMemo(() => {
-    if (!varCol) return null
+    if (varCols.length === 0) return null
 
-    if (varCol.type === 'numeric') {
+    const numericCols = varCols.filter(c => c.type === 'numeric')
+    const categoricalCols = varCols.filter(c => c.type === 'categorical')
+
+    const parts: React.ReactNode[] = []
+
+    if (numericCols.length > 0) {
       let rows: NumericTableRow[]
       if (groupCol) {
-        const allValues = getNumericValues(grid, varCol.id)
         const groups = getStringValues(grid, groupCol.id)
         const uniqueGroups = [...new Set(groups)].filter(Boolean).sort()
-        rows = uniqueGroups.map(group => ({
-          label: group,
-          summary: computeSummary(allValues.filter((_, i) => groups[i] === group), varCol.name),
-        }))
+        rows = numericCols.flatMap(col =>
+          uniqueGroups.map(group => ({
+            label: numericCols.length > 1 ? `${col.name} | ${group}` : group,
+            summary: computeSummary(
+              getNumericValues(grid, col.id).filter((_, i) => groups[i] === group),
+              col.name,
+            ),
+          }))
+        )
       } else {
-        rows = [{ label: null, summary: computeSummary(getNumericValues(grid, varCol.id), varCol.name) }]
+        rows = numericCols.map(col => ({
+          label: numericCols.length > 1 ? col.name : null,
+          summary: computeSummary(getNumericValues(grid, col.id), col.name),
+        }))
       }
-      return (
+      parts.push(
         <NumericStatsTable
-          colName={varCol.name}
+          key="numeric"
+          colName={numericCols.length === 1 ? numericCols[0].name : 'Variable'}
           rows={rows}
           groupColName={groupCol?.name}
+          rowLabelHeader={numericCols.length > 1 ? 'Variable' : undefined}
         />
       )
-    } else {
-      const values = getStringValues(grid, varCol.id).filter(v => v.trim())
-      return <CategoricalStatCard column={varCol.name} rows={getFrequencyTable(values)} />
     }
-  }, [grid, varCol, groupCol])
+
+    for (const col of categoricalCols) {
+      const values = getStringValues(grid, col.id).filter(v => v.trim())
+      parts.push(<CategoricalStatCard key={col.id} column={col.name} rows={getFrequencyTable(values)} />)
+    }
+
+    return parts
+  }, [grid, varCols, groupCol])
 
   return (
     <div className={hideHeader ? '' : 'bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden'}>
@@ -62,18 +130,22 @@ export function SummaryCard({ cardId, config, onClearZone, onRemove, hideHeader 
       )}
 
       <div className={hideHeader ? 'space-y-3' : 'p-4 space-y-3'}>
-        <div className="grid grid-cols-2 gap-2">
-          <DropZone id={`${cardId}:variable`} label="Variable" hint="any variable"
-            assignedCol={varCol} onClear={() => onClearZone('variable')} />
-          <DropZone id={`${cardId}:group`} label="Group by" hint="categorical (optional)"
-            assignedCol={groupCol} onClear={() => onClearZone('group')} />
+        <div className="flex gap-2">
+          <MultiVarDropZone
+            id={`${cardId}:variable`}
+            varCols={varCols}
+            onClearVar={colId => onClearZone(`variable:${colId}`)}
+          />
+          <div className="w-40 flex-shrink-0">
+            <DropZone id={`${cardId}:group`} label="Group by" hint="categorical (optional)"
+              assignedCol={groupCol} onClear={() => onClearZone('group')} />
+          </div>
         </div>
 
-        {!varCol ? (
+        {varCols.length === 0 ? (
           <EmptyState icon="📊" title="Drop a variable above" description="Drag any variable from the sidebar to see its statistics." />
         ) : content}
       </div>
     </div>
   )
 }
-

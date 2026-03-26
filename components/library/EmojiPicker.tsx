@@ -3,11 +3,14 @@
 import { useState, useRef, useEffect } from 'react'
 
 const DATASET_EMOJIS: Record<string, string[]> = {
-  'Data & Stats':  ['📊', '📈', '📉', '🔢', '📋', '📌', '📎', '🗂️'],
-  'Science':       ['🔬', '🧪', '🧬', '🌡️', '⚗️', '🔭', '🧲', '💡'],
-  'Sports':        ['🏀', '⚽', '🏈', '⚾', '🎾', '🏊', '🏃', '🥇'],
-  'Nature':        ['🌿', '🌊', '🌤️', '🌱', '🐾', '🦋', '🌍', '❄️'],
-  'Society':       ['👥', '🏫', '🗳️', '💰', '🚗', '✈️', '🍎', '🎬'],
+  'Data & Stats':  ['📊', '📈', '📉', '🔢', '📋', '📌', '📎', '🗂️', '🗃️', '📐', '📏', '🧮', '💹', '🔣', '📝', '🖩', '🔍', '📂', '💾', '🖨️', '📅', '🗓️', '📓', '🗒️', '📍', '💯', '➕', '➖', '✖️', '➗', '🔖'],
+  'Science':       ['🔬', '🧪', '🧬', '🌡️', '⚗️', '🔭', '🧲', '💡', '⚛️', '🧫', '🧿', '🔋', '🔌', '💊', '🩺', '🧠'],
+  'Sports':        ['🏀', '⚽', '🏈', '⚾', '🎾', '🏊', '🏃', '🥇', '🏆', '🥈', '🥉', '⚡', '🎽', '🏋️', '🤸', '🚴', '🏌️', '🎿', '🏒', '🎯'],
+  'Nature':        ['🌿', '🌊', '🌤️', '🌱', '🐾', '🦋', '🌍', '❄️', '🌋', '🌵', '🌸', '🍃', '🌙', '☀️', '🌈', '🦁', '🐬', '🦅', '🌾', '🏔️'],
+  'Society':       ['👥', '🏫', '🗳️', '💰', '🚗', '✈️', '🍎', '🎬', '🏙️', '👨‍👩‍👧‍👦', '🏥', '🏛️', '⚖️', '🎓', '📰', '🌐', '🤝', '💳', '🏠', '🚢'],
+  'Food & Health': ['🍕', '🍔', '🥗', '🍱', '☕', '🍷', '🥦', '🍓', '🧃', '🍞', '🥩', '🐟', '🫀', '🏃‍♂️', '💪', '😴'],
+  'Tech & Work':   ['💻', '📱', '🖥️', '⌨️', '🖱️', '📡', '🛰️', '🤖', '🔐', '📲', '🧑‍💻', '👩‍🔬', '👨‍🏫', '🏭', '🔧', '⚙️'],
+  'Fun & Random':  ['🎲', '🎮', '🃏', '🎭', '🎨', '🎵', '🎸', '🎤', '🚀', '👾', '🌟', '🔥', '💥', '🎊', '🦄', '🍀'],
 }
 
 interface EmojiPickerProps {
@@ -39,7 +42,7 @@ export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
         {value}
       </button>
       {open && (
-        <div className="absolute top-full left-0 z-50 mt-1 w-72 bg-white rounded-xl shadow-lg border border-[var(--color-border)] p-3">
+        <div className="absolute top-full left-0 z-50 mt-1 w-96 bg-white rounded-xl shadow-lg border border-[var(--color-border)] p-3 max-h-80 overflow-y-auto">
           {Object.entries(DATASET_EMOJIS).map(([group, emojis]) => (
             <div key={group} className="mb-2">
               <p className="text-xs text-[var(--color-muted)] mb-1">{group}</p>

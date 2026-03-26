@@ -1,13 +1,16 @@
+import type { ChartType } from './chartHelpers'
+
 export interface GraphCardConfig {
   type: 'graph'
   xColId: string | null
   yColId: string | null
   groupColId: string | null
+  chartType?: ChartType | null
 }
 
 export interface SummaryCardConfig {
   type: 'summary'
-  variableColId: string | null
+  variableColIds: string[]
   groupColId: string | null
 }
 

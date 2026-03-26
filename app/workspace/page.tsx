@@ -11,7 +11,7 @@ import { useStore } from '@/lib/store'
 type Tab = 'data' | 'explore' | 'more'
 
 function ColumnSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { grid, selectedColumnIds, toggleColumnSelection, selectAllNumeric } = useStore()
+  const { grid, selectedColumnIds, toggleColumnSelection } = useStore()
 
   return (
     <>
@@ -74,19 +74,16 @@ function ColumnSidebar({ open, onClose }: { open: boolean; onClose: () => void }
           })}
         </div>
 
-        <div className="px-3 py-2 border-t border-[var(--color-border)] space-y-1">
-          <button onClick={selectAllNumeric} className="text-xs text-[var(--color-accent)] hover:underline block">
-            Select all numeric
-          </button>
-          {selectedColumnIds.length > 0 && (
+        {selectedColumnIds.length > 0 && (
+          <div className="px-3 py-2 border-t border-[var(--color-border)]">
             <button
               onClick={() => selectedColumnIds.forEach(id => toggleColumnSelection(id))}
               className="text-xs text-[var(--color-muted)] hover:underline block"
             >
               Clear selection
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </aside>
     </>
   )

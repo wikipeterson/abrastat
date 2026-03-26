@@ -8,7 +8,7 @@ import { NumericStatsTable, NumericTableRow, CategoricalStatCard, LinearRegressi
 import { EmptyState } from '@/components/ui/EmptyState'
 
 export function SummaryStats() {
-  const { grid, selectedColumnIds, toggleColumnSelection, selectAllNumeric } = useStore()
+  const { grid, selectedColumnIds, toggleColumnSelection } = useStore()
   const [dragOver, setDragOver] = useState(false)
   const [groupDragOver, setGroupDragOver] = useState(false)
   const [groupColId, setGroupColId] = useState<string | null>(null)
@@ -117,9 +117,6 @@ export function SummaryStats() {
             </div>
             {selectedColumns.length > 0 && (
               <div className="flex items-center gap-3 mt-1.5">
-                <button onClick={selectAllNumeric} className="text-xs text-[var(--color-accent)] hover:underline">
-                  Add all numeric
-                </button>
                 <button
                   onClick={() => selectedColumnIds.forEach(id => toggleColumnSelection(id))}
                   className="text-xs text-[var(--color-muted)] hover:underline"

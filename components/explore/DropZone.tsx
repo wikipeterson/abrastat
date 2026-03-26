@@ -1,6 +1,7 @@
 'use client'
 
-import { useDroppable } from '@dnd-kit/core'
+import { useDroppable, useDraggable } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 import { GridColumn } from '@/types'
 
 interface DropZoneProps {
@@ -12,11 +13,17 @@ interface DropZoneProps {
 }
 
 export function DropZone({ id, label, hint, assignedCol, onClear }: DropZoneProps) {
-  const { setNodeRef, isOver } = useDroppable({ id })
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id })
+
+  const { setNodeRef: setDragRef, attributes, listeners, transform, isDragging } = useDraggable({
+    id: `zc:${id}`,
+    data: { colId: assignedCol?.id, sourceZoneId: id },
+    disabled: !assignedCol,
+  })
 
   return (
     <div
-      ref={setNodeRef}
+      ref={setDropRef}
       className={`rounded-xl border-2 p-2 min-h-[60px] flex flex-col gap-1.5 transition-colors ${
         isOver
           ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
@@ -27,10 +34,19 @@ export function DropZone({ id, label, hint, assignedCol, onClear }: DropZoneProp
         {label}
       </div>
       {assignedCol ? (
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium self-start">
+        <div
+          ref={setDragRef}
+          style={{ transform: CSS.Translate.toString(transform) }}
+          {...listeners}
+          {...attributes}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium self-start cursor-grab active:cursor-grabbing select-none transition-opacity ${
+            isDragging ? 'opacity-30' : 'opacity-100'
+          }`}
+        >
           <span className="opacity-70 text-xs font-mono">{assignedCol.type === 'numeric' ? '#' : 'A'}</span>
           <span>{assignedCol.name}</span>
           <button
+            onPointerDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onClear() }}
             className="ml-1 opacity-70 hover:opacity-100 text-base leading-none"
           >

@@ -299,15 +299,20 @@ export function NumericStatsTable({
   colName,
   rows,
   groupColName,
+  rowLabelHeader,
 }: {
   colName: string
   rows: NumericTableRow[]
   groupColName?: string | null
+  rowLabelHeader?: string
 }) {
+  const labelHeader = rowLabelHeader ?? groupColName ?? null
+  const showLabel = !!labelHeader
+
   function copyTable() {
-    const header = [...(groupColName ? [groupColName] : []), ...STAT_COLS.map(c => c.label)]
+    const header = [...(showLabel ? [labelHeader!] : []), ...STAT_COLS.map(c => c.label)]
     const dataRows = rows.filter(r => r.summary).map(r => [
-      ...(groupColName ? [r.label ?? '—'] : []),
+      ...(showLabel ? [r.label ?? '—'] : []),
       ...STAT_COLS.map(c => fmt(c.get(r.summary!))),
     ])
     navigator.clipboard.writeText([header, ...dataRows].map(r => r.join('\t')).join('\n'))
@@ -318,7 +323,7 @@ export function NumericStatsTable({
       <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
         <div>
           <h3 className="font-semibold text-[var(--color-text)]">{colName}</h3>
-          {groupColName && (
+          {groupColName && !rowLabelHeader && (
             <p className="text-xs text-[var(--color-muted)]">Group by: {groupColName}</p>
           )}
         </div>
@@ -333,8 +338,8 @@ export function NumericStatsTable({
         <table className="text-sm w-full border-collapse">
           <thead>
             <tr className="bg-[var(--color-grid-header)] text-white text-xs">
-              {groupColName && (
-                <th className="px-3 py-2 text-left font-medium whitespace-nowrap">{groupColName}</th>
+              {showLabel && (
+                <th className="px-3 py-2 text-left font-medium whitespace-nowrap">{labelHeader}</th>
               )}
               {STAT_COLS.map(c => (
                 <th
@@ -350,7 +355,7 @@ export function NumericStatsTable({
           <tbody>
             {rows.filter(r => r.summary).map((row, i) => (
               <tr key={i} className={`border-t border-[var(--color-border)] hover:bg-slate-50 ${i % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
-                {groupColName && (
+                {showLabel && (
                   <td className="px-3 py-2 font-medium text-[var(--color-text)] whitespace-nowrap">
                     {row.label ?? '—'}
                   </td>

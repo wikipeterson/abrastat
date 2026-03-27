@@ -284,25 +284,21 @@ export function ExploreCanvas() {
         </aside>
 
         {/* Canvas column */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          {/* Toolbar */}
-          <div className="flex items-center gap-1 px-2 py-1.5 border-b border-[var(--color-border)] bg-[var(--color-surface)] flex-wrap flex-shrink-0">
-            <AddCardMenu onAdd={addExploreCard} compact />
-            {exploreCards.length > 0 && (
-              <span className="ml-auto text-xs text-[var(--color-muted)]">
-                Drag header to move · drag edges or corner to resize
-              </span>
-            )}
-          </div>
-
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
           {/* Scrollable free-form canvas */}
           <div className="flex-1 overflow-auto bg-[var(--color-bg)] p-2">
             <div className="relative rounded-lg" style={{ minWidth: 1400, minHeight: 1800 }}>
+              {exploreCards.length > 0 && (
+                <div className="absolute top-3 right-4 z-10 text-xs text-[var(--color-muted)] pointer-events-none">
+                  Drag header to move · drag edges or corner to resize
+                </div>
+              )}
+
               {exploreCards.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
                     <div className="text-4xl mb-3 opacity-30">✦</div>
-                    <p className="text-[var(--color-muted)] text-sm">Click <strong>+ Add Card</strong> to get started</p>
+                    <p className="text-[var(--color-muted)] text-sm">Use <strong>Add Card</strong> to get started</p>
                   </div>
                 </div>
               )}
@@ -395,6 +391,10 @@ export function ExploreCanvas() {
                 )
               })}
             </div>
+          </div>
+
+          <div className="absolute bottom-5 right-5 z-20">
+            <AddCardMenu onAdd={addExploreCard} />
           </div>
         </div>
       </div>

@@ -67,22 +67,44 @@ export function PlotlyChart({ data, layout, title, height = 360, mode = 'fill' }
   const wrapStyle =
     mode === 'fixed'
       ? { width: '100%', height: `${height}px` }
-      : { width: '100%', height: '100%', minHeight: `${height}px` }
+      : { width: '100%', height: '100%' }
+
+  const mergedLayout: Partial<Layout> = {
+    ...basePlotlyLayout,
+    ...layout,
+    font: {
+      ...basePlotlyLayout.font,
+      ...layout?.font,
+    },
+    margin: {
+      ...basePlotlyLayout.margin,
+      ...layout?.margin,
+    },
+    hoverlabel: {
+      ...basePlotlyLayout.hoverlabel,
+      ...layout?.hoverlabel,
+    },
+    xaxis: {
+      ...basePlotlyLayout.xaxis,
+      ...layout?.xaxis,
+    },
+    yaxis: {
+      ...basePlotlyLayout.yaxis,
+      ...layout?.yaxis,
+    },
+    title: title
+      ? { text: title, font: { family: 'DM Sans, sans-serif', size: 14, color: '#475569' }, pad: { b: 4 } }
+      : undefined,
+    autosize: false,
+    ...(resolvedWidth ? { width: resolvedWidth } : {}),
+    height: resolvedHeight,
+  }
 
   return (
     <div ref={wrapRef} style={wrapStyle}>
       <Plot
         data={data}
-        layout={{
-          ...basePlotlyLayout,
-          title: title
-            ? { text: title, font: { family: 'DM Sans, sans-serif', size: 14, color: '#475569' }, pad: { b: 4 } }
-            : undefined,
-          ...layout,
-          autosize: false,
-          ...(resolvedWidth ? { width: resolvedWidth } : {}),
-          height: resolvedHeight,
-        }}
+        layout={mergedLayout}
         config={plotlyConfig as Partial<Config>}
         style={{ width: '100%', height: '100%' }}
         revision={revision}

@@ -97,30 +97,36 @@ function WorkspaceTabs({ active, onChange, onToggleSidebar, datasetName }: { act
     { id: 'more',    label: 'More'    },
   ]
   return (
-    <div className="flex items-center border-b border-[var(--color-border)] bg-white flex-shrink-0">
-      {active !== 'explore' && (
-        <button
-          onClick={onToggleSidebar}
-          className="md:hidden px-3 py-3 text-[var(--color-muted)] hover:text-[var(--color-text)]"
-          aria-label="Toggle column sidebar"
-        >
-          ☰
-        </button>
-      )}
-      {datasetName && (
-        <span className="font-display italic font-semibold text-[var(--color-text)] px-3 pr-4 border-r border-[var(--color-border)] mr-1 text-sm hidden sm:block">
-          {datasetName}
-        </span>
-      )}
-      {tabs.map(t => (
-        <button
-          key={t.id}
-          onClick={() => onChange(t.id)}
-          className={`px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${active === t.id ? 'border-[var(--color-accent)] text-[var(--color-accent)]' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
-        >
-          {t.label}
-        </button>
-      ))}
+    <div className="grid grid-cols-[12rem_minmax(0,1fr)] border-b border-[var(--color-border)] bg-white flex-shrink-0">
+      <div className="border-r border-[var(--color-border)] flex items-center min-w-0">
+        {active !== 'explore' && (
+          <button
+            onClick={onToggleSidebar}
+            className="md:hidden px-3 py-3 text-[var(--color-muted)] hover:text-[var(--color-text)]"
+            aria-label="Toggle column sidebar"
+          >
+            ☰
+          </button>
+        )}
+        <div className="hidden sm:block px-3 py-3 min-w-0">
+          {datasetName && (
+            <span className="font-display italic font-semibold text-[var(--color-text)] text-sm truncate block">
+              {datasetName}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center px-2 sm:px-3">
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => onChange(t.id)}
+            className={`px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${active === t.id ? 'border-[var(--color-accent)] text-[var(--color-accent)]' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

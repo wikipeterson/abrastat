@@ -113,6 +113,7 @@ function AddCardMenu({ onAdd, compact = false }: { onAdd: (type: CardConfig['typ
 export function ExploreCanvas() {
   const { grid, exploreCards, addExploreCard, removeExploreCard, updateExploreCard, purgeExploreStaleIds } = useStore()
   const [activeColId, setActiveColId] = useState<string | null>(null)
+  const [interactionCursor, setInteractionCursor] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -124,6 +125,18 @@ export function ExploreCanvas() {
   useEffect(() => {
     purgeExploreStaleIds(new Set(grid.columns.map(c => c.id)))
   }, [grid.columns, purgeExploreStaleIds])
+
+  useEffect(() => {
+    if (!interactionCursor) return
+    document.body.style.userSelect = 'none'
+    document.body.style.webkitUserSelect = 'none'
+    document.body.style.cursor = interactionCursor
+    return () => {
+      document.body.style.userSelect = ''
+      document.body.style.webkitUserSelect = ''
+      document.body.style.cursor = ''
+    }
+  }, [interactionCursor])
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const id = String(event.active.id)
@@ -219,11 +232,13 @@ export function ExploreCanvas() {
   // ─── Card movement ─────────────────────────────────────────────────────────
   function startMove(e: React.PointerEvent, cardId: string) {
     if (e.button !== 0) return
+    e.preventDefault()
     e.stopPropagation()
     const card = exploreCards.find(c => c.id === cardId)
     if (!card) return
     const startX = e.clientX, startY = e.clientY
     const startCardX = card.x, startCardY = card.y
+    setInteractionCursor('grabbing')
 
     function onMove(ev: PointerEvent) {
       updateExploreCard(cardId, {
@@ -232,6 +247,7 @@ export function ExploreCanvas() {
       })
     }
     function onUp() {
+      setInteractionCursor(null)
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
     }
@@ -241,11 +257,14 @@ export function ExploreCanvas() {
 
   // ─── Card resize ──────────────────────────────────────────────────────────
   function startResize(e: React.PointerEvent, cardId: string, dir: 'e' | 's' | 'se') {
+    e.preventDefault()
     e.stopPropagation()
     const card = exploreCards.find(c => c.id === cardId)
     if (!card) return
     const startX = e.clientX, startY = e.clientY
     const startW = card.width, startH = card.height ?? 520
+    const cursor = dir === 'e' ? 'ew-resize' : dir === 's' ? 'ns-resize' : 'nwse-resize'
+    setInteractionCursor(cursor)
 
     function onMove(ev: PointerEvent) {
       const updates: Partial<Omit<ExploreCard, 'id'>> = {}
@@ -254,6 +273,7 @@ export function ExploreCanvas() {
       updateExploreCard(cardId, updates)
     }
     function onUp() {
+      setInteractionCursor(null)
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
     }
@@ -285,21 +305,21 @@ export function ExploreCanvas() {
 
         {/* Canvas column */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+          {exploreCards.length === 0 && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+              <div className="text-center px-6">
+                <div className="text-4xl mb-3 opacity-30">✦</div>
+                <p className="text-[var(--color-muted)] text-sm">Use <strong>Add Card</strong> to get started</p>
+              </div>
+            </div>
+          )}
+
           {/* Scrollable free-form canvas */}
           <div className="flex-1 overflow-auto bg-[var(--color-bg)] p-2">
             <div className="relative rounded-lg" style={{ minWidth: 1400, minHeight: 1800 }}>
               {exploreCards.length > 0 && (
                 <div className="absolute top-3 right-4 z-10 text-xs text-[var(--color-muted)] pointer-events-none">
                   Drag header to move · drag edges or corner to resize
-                </div>
-              )}
-
-              {exploreCards.length === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-4xl mb-3 opacity-30">✦</div>
-                    <p className="text-[var(--color-muted)] text-sm">Use <strong>Add Card</strong> to get started</p>
-                  </div>
                 </div>
               )}
 
@@ -393,8 +413,10 @@ export function ExploreCanvas() {
             </div>
           </div>
 
-          <div className="absolute bottom-5 right-5 z-20">
-            <AddCardMenu onAdd={addExploreCard} />
+          <div className="absolute bottom-5 right-5 z-20 pointer-events-none">
+            <div className="pointer-events-auto">
+              <AddCardMenu onAdd={addExploreCard} />
+            </div>
           </div>
         </div>
       </div>

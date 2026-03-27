@@ -291,14 +291,13 @@ export function ExploreCanvas() {
       return
     }
 
-    const cardWidth = 620
-    const cardHeight = 520
-    const x = Math.max(20, scroller.scrollLeft + (scroller.clientWidth - cardWidth) / 2)
-    const y = Math.max(20, scroller.scrollTop + (scroller.clientHeight - cardHeight) / 2)
+    const margin = 40
+    const x = Math.max(20, scroller.scrollLeft + margin)
+    const y = Math.max(20, scroller.scrollTop + margin)
     addExploreCard(type, { x: Math.round(x), y: Math.round(y) })
 
-    const targetLeft = Math.max(0, Math.round(x - (scroller.clientWidth - cardWidth) / 2))
-    const targetTop = Math.max(0, Math.round(y - (scroller.clientHeight - cardHeight) / 2))
+    const targetLeft = Math.max(0, Math.round(x - 20))
+    const targetTop = Math.max(0, Math.round(y - 20))
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         scroller.scrollTo({ left: targetLeft, top: targetTop, behavior: 'smooth' })

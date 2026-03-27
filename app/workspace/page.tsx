@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/Header'
 import { DataGrid } from '@/components/grid/DataGrid'
 import { GridToolbar } from '@/components/grid/GridToolbar'
 import { ExploreCanvas } from '@/components/explore/ExploreCanvas'
+import { GameHub } from '@/components/games/GameHub'
 import { useStore } from '@/lib/store'
 
 type Tab = 'data' | 'explore' | 'more'
@@ -194,14 +195,8 @@ function WorkspaceContent() {
             </div>
           )}
           {tab === 'more' && (
-            <div className="flex-1 flex items-center justify-center text-center p-8">
-              <div>
-                <div className="text-5xl mb-4">🔬</div>
-                <h2 className="text-xl font-semibold text-[var(--color-text)] mb-2">More tools coming soon</h2>
-                <p className="text-[var(--color-muted)] text-sm max-w-xs mx-auto">
-                  Hypothesis tests, probability distributions, simulations, and more are on the way.
-                </p>
-              </div>
+            <div className="flex-1 overflow-auto bg-[var(--color-bg)]">
+              <GameHub />
             </div>
           )}
         </div>

@@ -4,11 +4,12 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Save, Library, LogOut, ChevronDown, FilePlus } from 'lucide-react'
+import { Save, Library, LogOut, ChevronDown, FilePlus, Share2 } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { signOut } from '@/lib/auth'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { SaveDatasetModal } from '@/components/library/SaveDatasetModal'
+import { ShareDatasetModal } from '@/components/library/ShareDatasetModal'
 
 interface HeaderProps {
   onNew?: () => void
@@ -16,10 +17,30 @@ interface HeaderProps {
 
 export function Header({ onNew }: HeaderProps) {
   const { user, isGuest } = useAuth()
-  const { isDirty, clearGrid } = useStore()
+  const { isDirty, clearGrid, activeDatasetId } = useStore()
   const [showSave, setShowSave] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showShare, setShowShare] = useState(false)
+  const [shareDatasetId, setShareDatasetId] = useState<string | null>(null)
+  const [shareIsPublic, setShareIsPublic] = useState(false)
   const router = useRouter()
+
+  function handleShareClick() {
+    if (activeDatasetId) {
+      setShareDatasetId(activeDatasetId)
+      setShareIsPublic(false)
+      setShowShare(true)
+    } else {
+      // Must save first
+      setShowSave(true)
+    }
+  }
+
+  function handleSaved(id: string, isPublic: boolean) {
+    setShareDatasetId(id)
+    setShareIsPublic(isPublic)
+    setShowShare(true)
+  }
 
   async function handleSignOut() {
     await signOut()
@@ -37,15 +58,25 @@ export function Header({ onNew }: HeaderProps) {
 
         <div className="flex items-center gap-1 sm:gap-2">
           {!isGuest && (
-            <button
-              onClick={() => setShowSave(true)}
-              className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isDirty ? 'bg-[var(--color-accent)] text-white' : 'bg-slate-100 text-[var(--color-muted)]'}`}
-              aria-label="Save dataset"
-            >
-              <Save size={14} />
-              <span className="hidden sm:inline">Save{isDirty ? ' ●' : ''}</span>
-              {isDirty && <span className="sm:hidden">●</span>}
-            </button>
+            <>
+              <button
+                onClick={() => setShowSave(true)}
+                className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isDirty ? 'bg-[var(--color-accent)] text-white' : 'bg-slate-100 text-[var(--color-muted)]'}`}
+                aria-label="Save dataset"
+              >
+                <Save size={14} />
+                <span className="hidden sm:inline">Save{isDirty ? ' ●' : ''}</span>
+                {isDirty && <span className="sm:hidden">●</span>}
+              </button>
+              <button
+                onClick={handleShareClick}
+                className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-slate-100 transition-colors"
+                aria-label="Share dataset"
+              >
+                <Share2 size={14} />
+                <span className="hidden sm:inline">Share</span>
+              </button>
+            </>
           )}
 
           {onNew && (
@@ -111,7 +142,15 @@ export function Header({ onNew }: HeaderProps) {
         </div>
       </header>
 
-      <SaveDatasetModal open={showSave} onClose={() => setShowSave(false)} />
+      <SaveDatasetModal open={showSave} onClose={() => setShowSave(false)} onSaved={handleSaved} />
+      {shareDatasetId && (
+        <ShareDatasetModal
+          open={showShare}
+          onClose={() => setShowShare(false)}
+          datasetId={shareDatasetId}
+          initialIsPublic={shareIsPublic}
+        />
+      )}
     </>
   )
 }

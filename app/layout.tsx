@@ -17,6 +17,10 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: 'AbraStat',
   description: 'Statistics made for students.',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({

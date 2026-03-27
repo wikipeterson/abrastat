@@ -1,0 +1,75 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { useAuth } from '@/components/auth/AuthProvider'
+import { loadDataset } from '@/lib/firestore'
+import { useStore } from '@/lib/store'
+
+type Status = 'loading' | 'error' | 'done'
+
+export default function ShareLinkPage() {
+  const { datasetId } = useParams<{ datasetId: string }>()
+  const { user, loading: authLoading, isGuest } = useAuth()
+  const router = useRouter()
+  const setGrid = useStore(s => s.setGrid)
+  const setActiveDatasetId = useStore(s => s.setActiveDatasetId)
+  const setActiveDatasetName = useStore(s => s.setActiveDatasetName)
+  const [status, setStatus] = useState<Status>('loading')
+  const [errorMsg, setErrorMsg] = useState('')
+
+  useEffect(() => {
+    if (authLoading) return
+
+    // Guests cannot use share links
+    if (!user || isGuest) {
+      router.replace(`/?next=/d/${datasetId}`)
+      return
+    }
+
+    loadDataset(datasetId)
+      .then(({ meta, grid }) => {
+        // Load as a working copy — activeDatasetId stays null so
+        // any subsequent Save creates a brand-new record.
+        setGrid(grid)
+        setActiveDatasetId(null)
+        setActiveDatasetName(`${meta.name} (Copy)`)
+        setStatus('done')
+        router.replace('/workspace')
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : 'Could not load dataset.'
+        setErrorMsg(msg)
+        setStatus('error')
+      })
+  }, [authLoading, user, isGuest, datasetId, router, setGrid, setActiveDatasetId, setActiveDatasetName])
+
+  if (status === 'error') {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--color-bg)' }}>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 max-w-sm w-full text-center space-y-4">
+          <div className="text-4xl">🔒</div>
+          <h2 className="font-semibold text-[var(--color-text)]">Dataset unavailable</h2>
+          <p className="text-sm text-[var(--color-muted)]">
+            {errorMsg || 'This dataset doesn\'t exist or you don\'t have access to it.'}
+          </p>
+          <button
+            onClick={() => router.replace('/home')}
+            className="px-4 py-2 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium"
+          >
+            Go to Home
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-bg)' }}>
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 rounded-full border-2 border-[var(--color-accent)] border-t-transparent animate-spin" />
+        <p className="text-sm text-[var(--color-muted)]">Loading dataset…</p>
+      </div>
+    </div>
+  )
+}

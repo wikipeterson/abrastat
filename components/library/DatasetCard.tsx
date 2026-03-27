@@ -1,6 +1,7 @@
 'use client'
 
-import { Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { Trash2, Link2 } from 'lucide-react'
 import { DatasetMeta } from '@/types'
 import { DatasetCoverThumb } from './DatasetCoverThumb'
 
@@ -24,6 +25,31 @@ interface DatasetCardProps {
   view?: 'list' | 'card'
 }
 
+function CopyLinkButton({ datasetId }: { datasetId: string }) {
+  const [copied, setCopied] = useState(false)
+
+  function handleCopy(e: React.MouseEvent) {
+    e.stopPropagation()
+    const url = `${window.location.origin}/d/${datasetId}`
+    navigator.clipboard?.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }).catch(() => {
+      window.prompt('Copy this link:', url)
+    })
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      title="Copy share link"
+      className="p-1 rounded hover:bg-[var(--color-accent-light)] text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-all"
+    >
+      {copied ? <span className="text-xs font-medium text-[var(--color-accent)] px-1">Copied!</span> : <Link2 size={14} />}
+    </button>
+  )
+}
+
 export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, view = 'list' }: DatasetCardProps) {
   const isOwner = dataset.ownerId === currentUserId
   const canDelete = isOwner && onDelete
@@ -33,14 +59,17 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, view = '
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-col gap-3 hover:shadow-md transition-shadow cursor-pointer group" onClick={() => onOpen(dataset.id)}>
         <div className="flex items-start justify-between">
           <DatasetCoverThumb cover={dataset.emoji} size="md" />
-          {canDelete && (
-            <button
-              onClick={e => { e.stopPropagation(); onDelete!(dataset.id) }}
-              className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-red-400 transition-all"
-            >
-              <Trash2 size={14} />
-            </button>
-          )}
+          <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all">
+            <CopyLinkButton datasetId={dataset.id} />
+            {canDelete && (
+              <button
+                onClick={e => { e.stopPropagation(); onDelete!(dataset.id) }}
+                className="p-1 rounded hover:bg-red-50 text-red-400 transition-all"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
         </div>
         <div>
           <p className="font-semibold text-[var(--color-text)] truncate">{dataset.name}</p>
@@ -66,14 +95,17 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, view = '
         <span className="w-20">{timeAgo(dataset.updatedAt)}</span>
         <span className="w-16 text-right">{dataset.rowCount} rows</span>
       </div>
-      {canDelete && (
-        <button
-          onClick={e => { e.stopPropagation(); onDelete!(dataset.id) }}
-          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-red-400 transition-all"
-        >
-          <Trash2 size={14} />
-        </button>
-      )}
+      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all">
+        <CopyLinkButton datasetId={dataset.id} />
+        {canDelete && (
+          <button
+            onClick={e => { e.stopPropagation(); onDelete!(dataset.id) }}
+            className="p-1 rounded hover:bg-red-50 text-red-400 transition-all"
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
     </div>
   )
 }

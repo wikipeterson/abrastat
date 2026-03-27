@@ -12,9 +12,10 @@ import { useToast, Toast } from '@/components/ui/Toast'
 interface SaveDatasetModalProps {
   open: boolean
   onClose: () => void
+  onSaved?: (id: string, isPublic: boolean) => void
 }
 
-export function SaveDatasetModal({ open, onClose }: SaveDatasetModalProps) {
+export function SaveDatasetModal({ open, onClose, onSaved }: SaveDatasetModalProps) {
   const { user, grid, activeDatasetId, setActiveDatasetId, markClean } = useStore()
   const [cover, setCover] = useState(() => randomCoverId())
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -33,16 +34,19 @@ export function SaveDatasetModal({ open, onClose }: SaveDatasetModalProps) {
     if (!user || !name.trim()) return
     setSaving(true)
     try {
+      let savedId: string
       if (activeDatasetId) {
         await updateDatasetMeta(activeDatasetId, { name: name.trim(), description, emoji: cover, isPublic })
         await updateDatasetRows(activeDatasetId, grid)
+        savedId = activeDatasetId
       } else {
-        const id = await saveDataset(user, name.trim(), description, cover, isPublic, grid)
-        setActiveDatasetId(id)
+        savedId = await saveDataset(user, name.trim(), description, cover, isPublic, grid)
+        setActiveDatasetId(savedId)
       }
       markClean()
       showToast('Saved to your library')
       onClose()
+      onSaved?.(savedId, isPublic)
     } catch {
       showToast('Save failed. Please try again.', 'error')
     } finally {

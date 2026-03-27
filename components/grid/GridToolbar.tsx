@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Columns, Upload, FunctionSquare } from 'lucide-react'
+import { Plus, Columns, ArrowDownToLine, FunctionSquare } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { ImportPanel } from '@/components/import/ImportPanel'
 import { ComputedColumnModal } from './ComputedColumnModal'
@@ -45,7 +45,7 @@ export function GridToolbar() {
             onClick={() => setShowImport(true)}
             className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"
           >
-            <Upload size={14} /> Import
+            <ArrowDownToLine size={14} /> Import
           </button>
         </div>
 

@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
   <title>AbraStat favicon</title>
-  <rect width="64" height="64" rx="14" fill="#1A8C80"/>
-  <rect x="10" y="33" width="8" height="21" rx="2.5" fill="#7FD9D3" opacity="0.72"/>
-  <rect x="21" y="26" width="8" height="28" rx="2.5" fill="#A6EEE8"/>
-  <rect x="32" y="18" width="8" height="36" rx="2.5" fill="#2EC4B6"/>
-  <rect x="43" y="23" width="8" height="31" rx="2.5" fill="#C9F7F3"/>
-  <rect x="54" y="12" width="8" height="42" rx="2.5" fill="#FFFFFF"/>
+  <rect x="4" y="4" width="56" height="56" rx="13" fill="#1A8C80"/>
+  <rect x="14" y="36" width="7" height="16" rx="2.5" fill="#8FE4DE"/>
+  <rect x="24" y="26" width="7" height="26" rx="2.5" fill="#71D8D0"/>
+  <rect x="34" y="18" width="7" height="34" rx="2.5" fill="#53CBC2"/>
+  <rect x="44" y="12" width="7" height="40" rx="2.5" fill="#FFFFFF"/>
+  <path d="M53.5 7.5l2.4 5.7 6.1.5-4.6 4 1.4 6-5.3-3.2-5.3 3.2 1.4-6-4.6-4 6.1-.5 2.4-5.7z" fill="#F5A623"/>
 </svg>

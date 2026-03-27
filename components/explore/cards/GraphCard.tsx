@@ -79,73 +79,83 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
     }
   }
 
-  return (
-    <div className={hideHeader ? '' : 'bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden'}>
-      {!hideHeader && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
-          <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">Graph</span>
-          <button onClick={onRemove} className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none">×</button>
-        </div>
-      )}
-
-      <div className={hideHeader ? '' : 'p-4'}>
-        {/* Top row: chart type pills on the left, Group zone compact on the right */}
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <div className="flex items-center gap-1.5 flex-wrap min-h-[56px]">
-            {chartButtons.length > 0 && (
-              <>
-                <span className="text-xs font-medium text-[var(--color-muted)]">Chart type:</span>
-                {chartButtons.map(ct => (
-                  <button
-                    key={ct}
-                    onClick={() => onSetChartType(ct)}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium border transition-all ${
-                      currentChart === ct
-                        ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
-                        : 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-slate-300'
-                    }`}
-                  >
-                    <span>{CHART_META[ct].icon}</span>
-                    {CHART_META[ct].label}
-                  </button>
-                ))}
-              </>
-            )}
-          </div>
-
-          {/* Group zone — compact square in upper right */}
-          <div className="flex-shrink-0 w-28">
-            <DropZone id={`${cardId}:group`} label="Group" hint="optional"
-              assignedCol={groupCol} onClear={() => onClearZone('group')} />
-          </div>
+  // Top control row + axis layout — shared between both render modes
+  const inner = (
+    <div className="flex flex-col h-full">
+      {/* Top row: chart type pills | Group zone (upper-right) */}
+      <div className="flex-shrink-0 flex items-start justify-between gap-2 mb-2">
+        <div className="flex items-center gap-1.5 flex-wrap min-h-[44px]">
+          {chartButtons.length > 0 && (
+            <>
+              <span className="text-xs font-medium text-[var(--color-muted)]">Chart type:</span>
+              {chartButtons.map(ct => (
+                <button
+                  key={ct}
+                  onClick={() => onSetChartType(ct)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                    currentChart === ct
+                      ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+                      : 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-slate-300'
+                  }`}
+                >
+                  <span>{CHART_META[ct].icon}</span>
+                  {CHART_META[ct].label}
+                </button>
+              ))}
+            </>
+          )}
         </div>
 
-        {/* Spatial axis layout: Y left | chart | X bottom */}
-        <div className="flex gap-2">
-          {/* Response Variable (Y) — vertical drop zone along left edge */}
-          <div className="flex-shrink-0 w-14 self-stretch">
-            <DropZone id={`${cardId}:y`} label="Response Variable" hint="drop here"
-              assignedCol={yCol} onClear={() => onClearZone('y')} variant="vertical" />
+        {/* Group zone — compact, upper right */}
+        <div className="flex-shrink-0 w-24">
+          <DropZone id={`${cardId}:group`} label="Group" hint="optional"
+            assignedCol={groupCol} onClear={() => onClearZone('group')} />
+        </div>
+      </div>
+
+      {/* Spatial axis layout: Y left | chart+X right */}
+      <div className="flex-1 min-h-0 flex gap-2">
+        {/* Response Variable (Y) — vertical zone, left edge */}
+        <div className="flex-shrink-0 w-10 self-stretch">
+          <DropZone id={`${cardId}:y`} label="Response Variable" hint="drop here"
+            assignedCol={yCol} onClear={() => onClearZone('y')} variant="vertical" />
+        </div>
+
+        {/* Chart area + Explanatory Variable below */}
+        <div className="flex-1 min-w-0 flex flex-col gap-2">
+          {/* Chart area — fills remaining vertical space */}
+          <div className={`flex-1 min-h-[200px] min-w-0 overflow-hidden rounded-xl ${
+            !currentChart ? 'bg-[var(--color-accent-light)]/40 border-2 border-dashed border-[var(--color-border)] flex items-center justify-center' : ''
+          }`}>
+            {renderChart()}
           </div>
 
-          {/* Chart area + Explanatory Variable below */}
-          <div className="flex-1 flex flex-col gap-2">
-            {/* Chart placeholder / rendered chart */}
-            <div className={`min-h-[280px] rounded-xl overflow-hidden flex items-center justify-center ${
-              !currentChart ? 'bg-[var(--color-accent-light)]/40 border-2 border-dashed border-[var(--color-border)]' : ''
-            }`}>
-              {renderChart()}
-            </div>
-
-            {/* Explanatory Variable (X) — horizontal, centered below chart */}
-            <div className="flex justify-center">
+          {/* Explanatory Variable (X) — hidden once filled, reappears when cleared */}
+          {!xCol && (
+            <div className="flex-shrink-0 flex justify-center">
               <div className="w-full max-w-xs">
                 <DropZone id={`${cardId}:x`} label="Explanatory Variable" hint="any variable"
                   assignedCol={xCol} onClear={() => onClearZone('x')} />
               </div>
             </div>
-          </div>
+          )}
         </div>
+      </div>
+    </div>
+  )
+
+  if (hideHeader) {
+    return <div className="h-full">{inner}</div>
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
+        <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">Graph</span>
+        <button onClick={onRemove} className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none">×</button>
+      </div>
+      <div className="p-4" style={{ minHeight: 480 }}>
+        {inner}
       </div>
     </div>
   )

@@ -14,7 +14,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { useDraggable } from '@dnd-kit/core'
 import { useStore } from '@/lib/store'
 import { GridColumn } from '@/types'
-import { CardConfig, GraphCardConfig } from '@/lib/exploreTypes'
+import { CardConfig, GraphCardConfig, ExploreCard } from '@/lib/exploreTypes'
 import { ChartType } from '@/lib/chartHelpers'
 import { GraphCard } from './cards/GraphCard'
 import { SummaryCard } from './cards/SummaryCard'
@@ -231,15 +231,18 @@ export function ExploreCanvas() {
   }
 
   // ─── Card resize ──────────────────────────────────────────────────────────
-  function startResize(e: React.PointerEvent, cardId: string) {
+  function startResize(e: React.PointerEvent, cardId: string, dir: 'e' | 's' | 'se') {
     e.stopPropagation()
     const card = exploreCards.find(c => c.id === cardId)
     if (!card) return
-    const startX = e.clientX
-    const startWidth = card.width
+    const startX = e.clientX, startY = e.clientY
+    const startW = card.width, startH = card.height ?? 520
 
     function onMove(ev: PointerEvent) {
-      updateExploreCard(cardId, { width: Math.max(340, startWidth + ev.clientX - startX) })
+      const updates: Partial<Omit<ExploreCard, 'id'>> = {}
+      if (dir === 'e' || dir === 'se') updates.width  = Math.max(340, startW + ev.clientX - startX)
+      if (dir === 's' || dir === 'se') updates.height = Math.max(300, startH + ev.clientY - startY)
+      updateExploreCard(cardId, updates)
     }
     function onUp() {
       window.removeEventListener('pointermove', onMove)
@@ -278,7 +281,7 @@ export function ExploreCanvas() {
             <AddCardMenu onAdd={addExploreCard} />
             {exploreCards.length > 0 && (
               <span className="text-xs text-[var(--color-muted)]">
-                Drag card headers to move · drag right edge to resize
+                Drag header to move · drag edges or corner to resize
               </span>
             )}
           </div>
@@ -295,68 +298,93 @@ export function ExploreCanvas() {
                 </div>
               )}
 
-              {exploreCards.map(card => (
-                <div
-                  key={card.id}
-                  style={{
-                    position: 'absolute',
-                    left: card.x,
-                    top: card.y,
-                    width: card.width,
-                  }}
-                  className="group"
-                >
-                  {/* Card shell with resize handle */}
-                  <div className="relative bg-white rounded-2xl shadow-sm border border-slate-100 overflow-visible">
+              {exploreCards.map(card => {
+                const cardH = card.height ?? 520
+                return (
+                  <div
+                    key={card.id}
+                    style={{
+                      position: 'absolute',
+                      left: card.x,
+                      top: card.y,
+                      width: card.width,
+                      height: cardH,
+                    }}
+                    className="group"
+                  >
+                    {/* Outer shell — overflow-visible so resize handles can poke out */}
+                    <div className="relative h-full bg-white rounded-2xl shadow-sm border border-slate-100">
 
-                    {/* Move handle — drag this to reposition the card */}
-                    <div
-                      onPointerDown={e => startMove(e, card.id)}
-                      className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] cursor-grab active:cursor-grabbing select-none"
-                    >
-                      <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">
-                        {card.config.type === 'graph' ? 'Graph' : 'Summary Stats'}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-300 text-xs select-none opacity-0 group-hover:opacity-100 transition-opacity">⠿ drag to move</span>
-                        <button
-                          onPointerDown={e => e.stopPropagation()}
-                          onClick={() => removeExploreCard(card.id)}
-                          className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none"
+                      {/* Inner clip layer — contains all content within card bounds */}
+                      <div className="absolute inset-0 rounded-2xl overflow-hidden flex flex-col">
+                        {/* Move handle */}
+                        <div
+                          onPointerDown={e => startMove(e, card.id)}
+                          className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] cursor-grab active:cursor-grabbing select-none"
                         >
-                          ×
-                        </button>
+                          <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">
+                            {card.config.type === 'graph' ? 'Graph' : 'Summary Stats'}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-300 text-xs select-none opacity-0 group-hover:opacity-100 transition-opacity">⠿ drag to move</span>
+                            <button
+                              onPointerDown={e => e.stopPropagation()}
+                              onClick={() => removeExploreCard(card.id)}
+                              className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Card content */}
+                        <div className="flex-1 min-h-0 overflow-hidden p-4">
+                          {card.config.type === 'graph' && (
+                            <GraphCard
+                              cardId={card.id}
+                              config={card.config}
+                              onClearZone={z => clearZone(card.id, z)}
+                              onSetChartType={(ct: ChartType) => updateExploreCard(card.id, { config: { ...(card.config as GraphCardConfig), chartType: ct } })}
+                              onRemove={() => removeExploreCard(card.id)}
+                              hideHeader
+                            />
+                          )}
+                          {card.config.type === 'summary' && (
+                            <SummaryCard cardId={card.id} config={card.config} onClearZone={z => clearZone(card.id, z)} onRemove={() => removeExploreCard(card.id)} hideHeader />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right-edge resize handle */}
+                      <div
+                        onPointerDown={e => startResize(e, card.id, 'e')}
+                        className="absolute top-0 w-3 h-full cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ right: -5 }}
+                      >
+                        <div className="absolute top-1/2 -translate-y-1/2 left-0.5 w-1.5 h-8 bg-slate-300 rounded-full" />
+                      </div>
+
+                      {/* Bottom-edge resize handle */}
+                      <div
+                        onPointerDown={e => startResize(e, card.id, 's')}
+                        className="absolute left-0 h-3 w-full cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ bottom: -5 }}
+                      >
+                        <div className="absolute left-1/2 -translate-x-1/2 bottom-0.5 h-1.5 w-8 bg-slate-300 rounded-full" />
+                      </div>
+
+                      {/* SE corner resize handle */}
+                      <div
+                        onPointerDown={e => startResize(e, card.id, 'se')}
+                        className="absolute w-5 h-5 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-end"
+                        style={{ right: -5, bottom: -5 }}
+                      >
+                        <div className="w-2.5 h-2.5 rounded-sm bg-slate-400" />
                       </div>
                     </div>
-
-                    {/* Card content — no header since we have one above */}
-                    <div className="p-4 space-y-3">
-                      {card.config.type === 'graph' && (
-                        <GraphCard
-                          cardId={card.id}
-                          config={card.config}
-                          onClearZone={z => clearZone(card.id, z)}
-                          onSetChartType={(ct: ChartType) => updateExploreCard(card.id, { config: { ...(card.config as GraphCardConfig), chartType: ct } })}
-                          onRemove={() => removeExploreCard(card.id)}
-                          hideHeader
-                        />
-                      )}
-                      {card.config.type === 'summary' && (
-                        <SummaryCard cardId={card.id} config={card.config} onClearZone={z => clearZone(card.id, z)} onRemove={() => removeExploreCard(card.id)} hideHeader />
-                      )}
-                    </div>
-
-                    {/* Right-edge resize handle */}
-                    <div
-                      onPointerDown={e => startResize(e, card.id)}
-                      className="absolute top-0 right-0 w-2 h-full cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ right: -4 }}
-                    >
-                      <div className="absolute top-1/2 -translate-y-1/2 right-0 w-1.5 h-8 bg-slate-300 rounded-full" />
-                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </div>

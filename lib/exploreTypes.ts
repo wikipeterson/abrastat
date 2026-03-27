@@ -28,4 +28,5 @@ export interface ExploreCard {
   x: number
   y: number
   width: number
+  height: number
 }

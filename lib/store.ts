@@ -156,7 +156,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'graph'   ? { type: 'graph',   xColId: null, yColId: null, groupColId: null } :
       type === 'summary' ? { type: 'summary', variableColIds: [], groupColId: null } :
                            { type: 'table',   rowsColId: null, colsColId: null }
-    return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width: 620 }] }
+    return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width: 620, height: 520 }] }
   }),
   removeExploreCard: (id) => set(state => ({
     exploreCards: state.exploreCards.filter(c => c.id !== id),

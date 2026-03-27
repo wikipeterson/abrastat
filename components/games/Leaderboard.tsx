@@ -5,12 +5,13 @@ import { getLeaderboard, LeaderboardEntry, GameId } from '@/lib/leaderboard'
 
 interface LeaderboardProps {
   gameId: GameId
-  highlightInitials?: string  // highlight the row that just submitted
+  highlightInitials?: string
+  compact?: boolean  // hide the title bar when embedded in a card
 }
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
-export function Leaderboard({ gameId, highlightInitials }: LeaderboardProps) {
+export function Leaderboard({ gameId, highlightInitials, compact }: LeaderboardProps) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -24,15 +25,20 @@ export function Leaderboard({ gameId, highlightInitials }: LeaderboardProps) {
   }, [gameId])
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
-        <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">
-          Top Scores · Last 2 Weeks
-        </span>
-        {loading && <span className="text-xs text-[var(--color-muted)]">Loading…</span>}
-      </div>
+    <div className={compact ? '' : 'bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden'}>
+      {!compact && (
+        <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
+          <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">
+            Top Scores · Last 2 Weeks
+          </span>
+          {loading && <span className="text-xs text-[var(--color-muted)]">Loading…</span>}
+        </div>
+      )}
 
       <div className="divide-y divide-[var(--color-border)]">
+        {loading && compact && (
+          <div className="px-4 py-4 text-xs text-center text-[var(--color-muted)]">Loading…</div>
+        )}
         {!loading && entries.length === 0 && (
           <div className="px-4 py-6 text-sm text-center text-[var(--color-muted)]">
             No scores yet — be the first!

@@ -95,31 +95,33 @@ export function GameHub() {
 
   if (state.view === 'hub') {
     return (
-      <div className="max-w-3xl mx-auto py-6 px-4 space-y-4">
+      <div className="max-w-5xl mx-auto py-6 px-4 space-y-4">
         <div>
-          <h2 className="text-2xl font-bold text-[var(--color-text)]">Stats Games</h2>
-          <p className="text-sm text-[var(--color-muted)] mt-1">
+          <p className="text-sm text-[var(--color-muted)]">
             Practice your statistical intuition. Top scores refresh every 2 weeks.
           </p>
         </div>
-        <div className="grid gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {GAMES.map(game => (
-            <div
-              key={game.id}
-              className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-4"
-            >
-              <span className="text-3xl flex-shrink-0">{game.icon}</span>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-[var(--color-text)]">{game.title}</div>
-                <div className="text-xs text-[var(--color-muted)] mt-0.5">{game.description}</div>
-                <div className="text-xs text-[var(--color-muted)] mt-0.5">Max score: {game.maxScore}</div>
+            <div key={game.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+              {/* Game card header */}
+              <div className="p-4 flex items-center gap-3 border-b border-[var(--color-border)]">
+                <span className="text-2xl flex-shrink-0">{game.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-[var(--color-text)] text-sm">{game.title}</div>
+                  <div className="text-xs text-[var(--color-muted)] mt-0.5 leading-snug">{game.description}</div>
+                </div>
+                <button
+                  onClick={() => startGame(game.id)}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Play
+                </button>
               </div>
-              <button
-                onClick={() => startGame(game.id)}
-                className="flex-shrink-0 px-4 py-2 rounded-xl bg-[var(--color-accent)] text-white text-sm font-semibold hover:opacity-90 transition-opacity"
-              >
-                Play
-              </button>
+              {/* Inline leaderboard */}
+              <div className="flex-1">
+                <Leaderboard gameId={game.id} compact />
+              </div>
             </div>
           ))}
         </div>

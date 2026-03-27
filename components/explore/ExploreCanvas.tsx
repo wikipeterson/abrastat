@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -114,6 +114,7 @@ export function ExploreCanvas() {
   const { grid, exploreCards, addExploreCard, removeExploreCard, updateExploreCard, purgeExploreStaleIds } = useStore()
   const [activeColId, setActiveColId] = useState<string | null>(null)
   const [interactionCursor, setInteractionCursor] = useState<string | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -283,6 +284,20 @@ export function ExploreCanvas() {
 
   const activeCol = activeColId ? (grid.columns.find(c => c.id === activeColId) ?? null) : null
 
+  function handleAddCard(type: CardConfig['type']) {
+    const scroller = scrollRef.current
+    if (!scroller) {
+      addExploreCard(type)
+      return
+    }
+
+    const cardWidth = 620
+    const cardHeight = 520
+    const x = Math.max(20, scroller.scrollLeft + (scroller.clientWidth - cardWidth) / 2)
+    const y = Math.max(20, scroller.scrollTop + (scroller.clientHeight - cardHeight) / 2)
+    addExploreCard(type, { x: Math.round(x), y: Math.round(y) })
+  }
+
   if (!hasData) {
     return <EmptyState icon="📈" title="No data loaded" description="Add data in the Data tab to start exploring." />
   }
@@ -305,17 +320,16 @@ export function ExploreCanvas() {
 
         {/* Canvas column */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-          {exploreCards.length === 0 && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-              <div className="text-center px-6">
-                <div className="text-4xl mb-3 opacity-30">✦</div>
-                <p className="text-[var(--color-muted)] text-sm">Use <strong>Add Card</strong> to get started</p>
-              </div>
-            </div>
-          )}
-
           {/* Scrollable free-form canvas */}
-          <div className="flex-1 overflow-auto bg-[var(--color-bg)] p-2">
+          <div ref={scrollRef} className="flex-1 overflow-auto bg-[var(--color-bg)] p-2 relative">
+            {exploreCards.length === 0 && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+                <div className="text-center px-6">
+                  <div className="text-4xl mb-3 opacity-30">✦</div>
+                  <p className="text-[var(--color-muted)] text-sm">Use <strong>Add Card</strong> to get started</p>
+                </div>
+              </div>
+            )}
             <div className="relative rounded-lg" style={{ minWidth: 1400, minHeight: 1800 }}>
               {exploreCards.length > 0 && (
                 <div className="absolute top-3 right-4 z-10 text-xs text-[var(--color-muted)] pointer-events-none">
@@ -415,7 +429,7 @@ export function ExploreCanvas() {
 
           <div className="absolute bottom-5 right-5 z-20 pointer-events-none">
             <div className="pointer-events-auto">
-              <AddCardMenu onAdd={addExploreCard} />
+              <AddCardMenu onAdd={handleAddCard} />
             </div>
           </div>
         </div>

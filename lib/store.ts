@@ -51,7 +51,7 @@ interface AbraStatStore {
 
   // Explore canvas
   exploreCards: ExploreCard[]
-  addExploreCard: (type: CardConfig['type']) => void
+  addExploreCard: (type: CardConfig['type'], position?: { x: number; y: number }) => void
   removeExploreCard: (id: string) => void
   updateExploreCard: (id: string, updates: Partial<Omit<ExploreCard, 'id'>>) => void
   purgeExploreStaleIds: (validIds: Set<string>) => void
@@ -148,10 +148,10 @@ export const useStore = create<AbraStatStore>((set) => ({
   clearGrid: () => set({ grid: createEmptyGrid(), activeDatasetId: null, activeDatasetName: '', isDirty: false, undoStack: [], selectedColumnIds: [] }),
 
   exploreCards: [],
-  addExploreCard: (type) => set(state => {
+  addExploreCard: (type, position) => set(state => {
     const idx = state.exploreCards.length
-    const x = 20 + (idx % 2) * 660
-    const y = 20 + Math.floor(idx / 2) * 520
+    const x = position?.x ?? 20 + (idx % 2) * 660
+    const y = position?.y ?? 20 + Math.floor(idx / 2) * 520
     const config: CardConfig =
       type === 'graph'   ? { type: 'graph',   xColId: null, yColId: null, groupColId: null } :
       type === 'summary' ? { type: 'summary', variableColIds: [], groupColId: null } :

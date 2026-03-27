@@ -8,6 +8,7 @@ import { linearRegression } from '@/lib/statistics'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useGraphCardContext } from '@/lib/graphCardContext'
 
 interface ScatterPlotProps {
   xColId: string | null
@@ -53,6 +54,7 @@ function useAnimatedY(targetY: number[], animate: boolean): number[] {
 
 export function ScatterPlot({ xColId, yColId, colorByColId }: ScatterPlotProps) {
   const { grid } = useStore()
+  const { hideAxisTitles } = useGraphCardContext()
   const [showBestFit, setShowBestFit] = useState(false)
   const prevYColIdRef = useRef<string | null>(null)
   const [shouldAnimate, setShouldAnimate] = useState(false)
@@ -148,23 +150,24 @@ export function ScatterPlot({ xColId, yColId, colorByColId }: ScatterPlotProps) 
   }
 
   return (
-    <div className="space-y-2">
-      <div className="px-4 pt-2">
+    <div className="h-full flex flex-col">
+      <div className="flex-shrink-0 px-4 pt-2">
         <label className="flex items-center gap-2 text-sm text-[var(--color-muted)] cursor-pointer">
           <input type="checkbox" checked={showBestFit} onChange={e => setShowBestFit(e.target.checked)} className="accent-[var(--color-accent)]" />
           Show best-fit line
         </label>
       </div>
-      <div className="px-4">
+      <div className="flex-1 min-h-0 px-4">
         <PlotlyChart
           data={traces as import("plotly.js").Data[]}
           layout={{
-            xaxis: { title: { text: xCol.name } },
-            yaxis: { title: { text: yCol.name }, ...(yAxisRange ? { range: yAxisRange } : {}) },
+            xaxis: { title: hideAxisTitles ? undefined : { text: xCol.name } },
+            yaxis: { title: hideAxisTitles ? undefined : { text: yCol.name }, ...(yAxisRange ? { range: yAxisRange } : {}) },
             showlegend: !!colorByColId,
             annotations,
+            ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
           }}
-          title={`${yCol.name} vs ${xCol.name}`}
+          title={hideAxisTitles ? undefined : `${yCol.name} vs ${xCol.name}`}
         />
       </div>
     </div>

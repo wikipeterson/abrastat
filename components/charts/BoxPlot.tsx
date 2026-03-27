@@ -6,6 +6,7 @@ import { getNumericValues, getStringValues } from '@/lib/gridHelpers'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useGraphCardContext } from '@/lib/graphCardContext'
 
 interface BoxPlotProps {
   colId: string | null
@@ -15,6 +16,7 @@ interface BoxPlotProps {
 
 export function BoxPlot({ colId, groupColId, orientation = 'v' }: BoxPlotProps) {
   const { grid } = useStore()
+  const { hideAxisTitles } = useGraphCardContext()
   const col = grid.columns.find(c => c.id === colId) ?? null
   const groupCol = groupColId ? (grid.columns.find(c => c.id === groupColId) ?? null) : null
   const isH = orientation === 'h'
@@ -63,17 +65,20 @@ export function BoxPlot({ colId, groupColId, orientation = 'v' }: BoxPlotProps) 
   }
 
   return (
-    <div className="px-4">
-      <PlotlyChart
-        data={traces as import("plotly.js").Data[]}
-        layout={{
-          ...(isH
-            ? { xaxis: { title: { text: col.name } } }
-            : { yaxis: { title: { text: col.name } } }),
-          showlegend: !!groupCol,
-        }}
-        title={`Box plot — ${col.name}${groupCol ? ` by ${groupCol.name}` : ''}`}
-      />
+    <div className="h-full flex flex-col">
+      <div className="flex-1 min-h-0 px-4">
+        <PlotlyChart
+          data={traces as import("plotly.js").Data[]}
+          layout={{
+            ...(isH
+              ? { xaxis: { title: hideAxisTitles ? undefined : { text: col.name } } }
+              : { yaxis: { title: hideAxisTitles ? undefined : { text: col.name } } }),
+            showlegend: !!groupCol,
+            ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
+          }}
+          title={hideAxisTitles ? undefined : `Box plot — ${col.name}${groupCol ? ` by ${groupCol.name}` : ''}`}
+        />
+      </div>
     </div>
   )
 }

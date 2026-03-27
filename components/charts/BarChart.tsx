@@ -8,6 +8,7 @@ import { getFrequencyTable } from '@/lib/statistics'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useGraphCardContext } from '@/lib/graphCardContext'
 
 interface BarChartProps {
   colId: string | null
@@ -16,6 +17,7 @@ interface BarChartProps {
 
 export function BarChart({ colId, orientation = 'h' }: BarChartProps) {
   const { grid } = useStore()
+  const { hideAxisTitles } = useGraphCardContext()
   const col = grid.columns.find(c => c.id === colId)
 
   const freqTable = useMemo(() => {
@@ -55,23 +57,25 @@ export function BarChart({ colId, orientation = 'h' }: BarChartProps) {
 
   const layout = orientation === 'h'
     ? {
-        xaxis: { title: { text: col.name } },
-        yaxis: { title: { text: 'Count' } },
-        margin: { l: 60, r: 40, t: 36, b: 80 },
+        xaxis: { title: hideAxisTitles ? undefined : { text: col.name } },
+        yaxis: { title: hideAxisTitles ? undefined : { text: 'Count' } },
+        margin: hideAxisTitles ? { t: 8, r: 16, b: 44, l: 52 } : { l: 60, r: 40, t: 36, b: 80 },
       }
     : {
-        xaxis: { title: { text: 'Count' } },
+        xaxis: { title: hideAxisTitles ? undefined : { text: 'Count' } },
         yaxis: { autorange: 'reversed' as const },
-        margin: { l: 130, r: 80, t: 36, b: 60 },
+        margin: hideAxisTitles ? { t: 8, r: 16, b: 44, l: 52 } : { l: 130, r: 80, t: 36, b: 60 },
       }
 
   return (
-    <div className="px-4">
-      <PlotlyChart
-        data={traces as import("plotly.js").Data[]}
-        layout={layout}
-        title={`${col.name} — Frequency`}
-      />
+    <div className="h-full flex flex-col">
+      <div className="flex-1 min-h-0 px-4">
+        <PlotlyChart
+          data={traces as import("plotly.js").Data[]}
+          layout={layout}
+          title={hideAxisTitles ? undefined : `${col.name} — Frequency`}
+        />
+      </div>
     </div>
   )
 }

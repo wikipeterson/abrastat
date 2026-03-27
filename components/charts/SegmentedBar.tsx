@@ -6,6 +6,7 @@ import { getStringValues } from '@/lib/gridHelpers'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useGraphCardContext } from '@/lib/graphCardContext'
 
 interface SegmentedBarProps {
   xColId: string | null
@@ -14,6 +15,7 @@ interface SegmentedBarProps {
 
 export function SegmentedBar({ xColId, fillColId }: SegmentedBarProps) {
   const { grid } = useStore()
+  const { hideAxisTitles } = useGraphCardContext()
   const [mode, setMode] = useState<'count' | 'percent'>('count')
 
   const xCol = grid.columns.find(c => c.id === xColId)
@@ -57,8 +59,8 @@ export function SegmentedBar({ xColId, fillColId }: SegmentedBarProps) {
   }
 
   return (
-    <div className="space-y-2 px-4">
-      <div className="flex gap-2">
+    <div className="h-full flex flex-col">
+      <div className="flex-shrink-0 flex gap-2 px-4 pt-2">
         {(['count', 'percent'] as const).map(m => (
           <button
             key={m}
@@ -69,17 +71,20 @@ export function SegmentedBar({ xColId, fillColId }: SegmentedBarProps) {
           </button>
         ))}
       </div>
-      <PlotlyChart
-        data={traces as import("plotly.js").Data[]}
-        layout={{
-          barmode: 'stack',
-          xaxis: { title: { text: xCol.name } },
-          yaxis: { title: { text: mode === 'count' ? 'Count' : 'Percent' }, ticksuffix: mode === 'percent' ? '%' : '' },
-          showlegend: true,
-          legend: { title: { text: fillCol.name } },
-        }}
-        title={`${xCol.name} by ${fillCol.name}`}
-      />
+      <div className="flex-1 min-h-0 px-4">
+        <PlotlyChart
+          data={traces as import("plotly.js").Data[]}
+          layout={{
+            barmode: 'stack',
+            xaxis: { title: hideAxisTitles ? undefined : { text: xCol.name } },
+            yaxis: { title: hideAxisTitles ? undefined : { text: mode === 'count' ? 'Count' : 'Percent' }, ticksuffix: mode === 'percent' ? '%' : '' },
+            showlegend: true,
+            legend: { title: { text: fillCol.name } },
+            ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
+          }}
+          title={hideAxisTitles ? undefined : `${xCol.name} by ${fillCol.name}`}
+        />
+      </div>
     </div>
   )
 }

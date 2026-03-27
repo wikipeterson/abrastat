@@ -64,18 +64,22 @@ const CARD_OPTIONS: { type: CardConfig['type']; icon: string; label: string; des
   { type: 'summary', icon: '📊', label: 'Summary Stats', description: '' },
 ]
 
-function AddCardMenu({ onAdd }: { onAdd: (type: CardConfig['type']) => void }) {
+function AddCardMenu({ onAdd, compact = false }: { onAdd: (type: CardConfig['type']) => void; compact?: boolean }) {
   const [open, setOpen] = useState(false)
 
   return (
     <div className="relative">
       <button
         onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[var(--color-border)]
-          text-sm font-medium text-[var(--color-text)] hover:border-[var(--color-accent)]
-          hover:text-[var(--color-accent)] shadow-sm transition-colors"
+        className={
+          compact
+            ? 'flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors'
+            : `flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[var(--color-border)]
+              text-sm font-medium text-[var(--color-text)] hover:border-[var(--color-accent)]
+              hover:text-[var(--color-accent)] shadow-sm transition-colors`
+        }
       >
-        <span className="text-lg leading-none text-[var(--color-accent)]">+</span>
+        <span className={compact ? 'text-base leading-none text-[var(--color-accent)]' : 'text-lg leading-none text-[var(--color-accent)]'}>+</span>
         Add Card
       </button>
       {open && (
@@ -91,7 +95,9 @@ function AddCardMenu({ onAdd }: { onAdd: (type: CardConfig['type']) => void }) {
                 <span className="text-xl">{o.icon}</span>
                 <div>
                   <div className="text-sm font-medium text-[var(--color-text)]">{o.label}</div>
-                  <div className="text-xs text-[var(--color-muted)]">{o.description}</div>
+                  {o.description && (
+                    <div className="text-xs text-[var(--color-muted)]">{o.description}</div>
+                  )}
                 </div>
               </button>
             ))}
@@ -266,8 +272,8 @@ export function ExploreCanvas() {
       <div className="flex h-full min-h-0">
 
         {/* Variable sidebar */}
-        <aside className="w-44 flex-shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col">
-          <div className="px-3 py-2 border-b border-[var(--color-border)]">
+        <aside className="w-48 flex-shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col">
+          <div className="px-3 py-2 border-b border-[var(--color-border)] flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Variables</span>
           </div>
           <div className="flex-1 overflow-y-auto py-2 px-2 space-y-1">
@@ -280,23 +286,23 @@ export function ExploreCanvas() {
         {/* Canvas column */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Toolbar */}
-          <div className="flex-shrink-0 px-4 py-3 border-b border-[var(--color-border)] bg-white flex items-center gap-3">
-            <AddCardMenu onAdd={addExploreCard} />
+          <div className="flex items-center gap-1 px-2 py-1.5 border-b border-[var(--color-border)] bg-[var(--color-surface)] flex-wrap flex-shrink-0">
+            <AddCardMenu onAdd={addExploreCard} compact />
             {exploreCards.length > 0 && (
-              <span className="text-xs text-[var(--color-muted)]">
+              <span className="ml-auto text-xs text-[var(--color-muted)]">
                 Drag header to move · drag edges or corner to resize
               </span>
             )}
           </div>
 
           {/* Scrollable free-form canvas */}
-          <div className="flex-1 overflow-auto bg-slate-50/60">
-            <div className="relative" style={{ minWidth: 1400, minHeight: 1800 }}>
+          <div className="flex-1 overflow-auto bg-[var(--color-bg)] p-2">
+            <div className="relative rounded-lg" style={{ minWidth: 1400, minHeight: 1800 }}>
               {exploreCards.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
                     <div className="text-4xl mb-3 opacity-30">✦</div>
-                    <p className="text-[var(--color-muted)] text-sm">Click <strong>+ Add Card</strong> in the toolbar to get started</p>
+                    <p className="text-[var(--color-muted)] text-sm">Click <strong>+ Add Card</strong> to get started</p>
                   </div>
                 </div>
               )}

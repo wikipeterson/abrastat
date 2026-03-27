@@ -4,6 +4,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { useStore } from '@/lib/store'
 import { ChartType, CHART_META, inferCharts } from '@/lib/chartHelpers'
 import { GraphCardConfig } from '@/lib/exploreTypes'
+import { GraphCardContext } from '@/lib/graphCardContext'
 import { DropZone } from '../DropZone'
 import { Histogram } from '@/components/charts/Histogram'
 import { BoxPlot } from '@/components/charts/BoxPlot'
@@ -49,13 +50,13 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
   })
 
   function renderChart() {
-    // Y-only: render as a horizontal single-variable chart regardless of orientation
+    // Y-only: render vertically (values on y-axis)
     if (config.yColId && !config.xColId) {
       switch (currentChart) {
-        case 'histogram':  return <Histogram colId={config.yColId} groupColId={config.groupColId} orientation="h" />
-        case 'dot':        return <DotPlot colId={config.yColId} groupByColId={config.groupColId} orientation="h" />
-        case 'box':        return <BoxPlot colId={config.yColId} groupColId={config.groupColId} orientation="h" />
-        case 'bar':        return <BarChart colId={config.yColId} orientation="h" />
+        case 'histogram':  return <Histogram colId={config.yColId} groupColId={config.groupColId} orientation="v" />
+        case 'dot':        return <DotPlot colId={config.yColId} groupByColId={config.groupColId} orientation="v" />
+        case 'box':        return <BoxPlot colId={config.yColId} groupColId={config.groupColId} orientation="v" />
+        case 'bar':        return <BarChart colId={config.yColId} orientation="v" />
         case 'normalprob': return <NormalProbPlot colId={config.yColId} />
         default: break
       }
@@ -171,7 +172,9 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
               </p>
             </div>
           ) : (
-            renderChart()
+            <GraphCardContext.Provider value={{ hideAxisTitles: true }}>
+              {renderChart()}
+            </GraphCardContext.Provider>
           )}
         </div>
 

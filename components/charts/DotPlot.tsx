@@ -6,6 +6,7 @@ import { getNumericValues, getStringValues } from '@/lib/gridHelpers'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useGraphCardContext } from '@/lib/graphCardContext'
 
 interface DotPlotProps {
   colId: string | null
@@ -56,6 +57,7 @@ function stackDots(values: number[]): { x: number[]; y: number[]; binWidth: numb
 
 export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps) {
   const { grid } = useStore()
+  const { hideAxisTitles } = useGraphCardContext()
   const col = grid.columns.find(c => c.id === colId) ?? null
   const groupCol = groupByColId ? (grid.columns.find(c => c.id === groupByColId) ?? null) : null
 
@@ -122,17 +124,20 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
   const chartHeight = vert ? 420 : Math.min(420, Math.max(180, maxStack * 20 + 90))
 
   return (
-    <div className="px-4">
-      <PlotlyChart
-        data={traces as import("plotly.js").Data[]}
-        height={chartHeight}
-        layout={{
-          xaxis: vert ? stackAxis : { title: { text: col.name } },
-          yaxis: vert ? { title: { text: col.name } } : stackAxis,
-          showlegend: !!groupCol,
-        }}
-        title={`Dot plot — ${col.name}${groupCol ? ` by ${groupCol.name}` : ''}`}
-      />
+    <div className="h-full flex flex-col">
+      <div className="flex-1 min-h-0 px-4">
+        <PlotlyChart
+          data={traces as import("plotly.js").Data[]}
+          height={chartHeight}
+          layout={{
+            xaxis: vert ? stackAxis : { title: hideAxisTitles ? undefined : { text: col.name } },
+            yaxis: vert ? { title: hideAxisTitles ? undefined : { text: col.name } } : stackAxis,
+            showlegend: !!groupCol,
+            ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
+          }}
+          title={hideAxisTitles ? undefined : `Dot plot — ${col.name}${groupCol ? ` by ${groupCol.name}` : ''}`}
+        />
+      </div>
     </div>
   )
 }

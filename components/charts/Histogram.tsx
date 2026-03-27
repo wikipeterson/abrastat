@@ -7,6 +7,7 @@ import { getNumericValues, getStringValues } from '@/lib/gridHelpers'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useGraphCardContext } from '@/lib/graphCardContext'
 
 interface HistogramProps {
   colId: string | null
@@ -16,6 +17,7 @@ interface HistogramProps {
 
 export function Histogram({ colId, groupColId, orientation = 'h' }: HistogramProps) {
   const { grid } = useStore()
+  const { hideAxisTitles } = useGraphCardContext()
   const [showNormal, setShowNormal] = useState(false)
 
   const col = grid.columns.find(c => c.id === colId)
@@ -70,8 +72,8 @@ export function Histogram({ colId, groupColId, orientation = 'h' }: HistogramPro
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4 px-4 pt-2">
+    <div className="h-full flex flex-col">
+      <div className="flex-shrink-0 flex items-center gap-4 px-4 pt-2">
         <label className="flex items-center gap-2 text-sm text-[var(--color-muted)]">
           <span>Bins: {bins}</span>
           <input type="range" min={5} max={50} value={bins} onChange={e => setBins(Number(e.target.value))} className="w-32 accent-[var(--color-accent)]" />
@@ -83,16 +85,17 @@ export function Histogram({ colId, groupColId, orientation = 'h' }: HistogramPro
           </label>
         )}
       </div>
-      <div className="px-4">
+      <div className="flex-1 min-h-0 px-4">
         <PlotlyChart
           data={traces as import("plotly.js").Data[]}
           layout={{
             barmode: groupCol ? 'overlay' : 'relative',
-            xaxis: { title: { text: vert ? 'Frequency' : col.name } },
-            yaxis: { title: { text: vert ? col.name : 'Frequency' } },
+            xaxis: { title: hideAxisTitles ? undefined : { text: vert ? 'Frequency' : col.name } },
+            yaxis: { title: hideAxisTitles ? undefined : { text: vert ? col.name : 'Frequency' } },
             showlegend: !!groupCol,
+            ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
           }}
-          title={`Distribution of ${col.name}${groupCol ? ` by ${groupCol.name}` : ''}`}
+          title={hideAxisTitles ? undefined : `Distribution of ${col.name}${groupCol ? ` by ${groupCol.name}` : ''}`}
         />
       </div>
     </div>

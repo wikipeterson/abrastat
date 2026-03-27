@@ -15,7 +15,7 @@ interface HeaderProps {
 }
 
 export function Header({ onNew }: HeaderProps) {
-  const { user } = useAuth()
+  const { user, isGuest } = useAuth()
   const { isDirty, clearGrid } = useStore()
   const [showSave, setShowSave] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -30,20 +30,22 @@ export function Header({ onNew }: HeaderProps) {
   return (
     <>
       <header className="h-16 flex items-center justify-between px-4 border-b border-[var(--color-border)] bg-white flex-shrink-0">
-        <Link href="/library" className="font-display italic text-4xl font-bold text-[var(--color-accent)]">
-          AbraStat
+        <Link href="/library">
+          <Image src="/logo.svg" alt="AbraStat" width={200} height={37} priority />
         </Link>
 
         <div className="flex items-center gap-1 sm:gap-2">
-          <button
-            onClick={() => setShowSave(true)}
-            className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isDirty ? 'bg-[var(--color-accent)] text-white' : 'bg-slate-100 text-[var(--color-muted)]'}`}
-            aria-label="Save dataset"
-          >
-            <Save size={14} />
-            <span className="hidden sm:inline">Save{isDirty ? ' ●' : ''}</span>
-            {isDirty && <span className="sm:hidden">●</span>}
-          </button>
+          {!isGuest && (
+            <button
+              onClick={() => setShowSave(true)}
+              className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isDirty ? 'bg-[var(--color-accent)] text-white' : 'bg-slate-100 text-[var(--color-muted)]'}`}
+              aria-label="Save dataset"
+            >
+              <Save size={14} />
+              <span className="hidden sm:inline">Save{isDirty ? ' ●' : ''}</span>
+              {isDirty && <span className="sm:hidden">●</span>}
+            </button>
+          )}
 
           {onNew && (
             <button
@@ -56,10 +58,12 @@ export function Header({ onNew }: HeaderProps) {
             </button>
           )}
 
-          <Link href="/library" className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-slate-100 transition-colors">
-            <Library size={14} />
-            <span className="hidden sm:inline">Library</span>
-          </Link>
+          {!isGuest && (
+            <Link href="/library" className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-slate-100 transition-colors">
+              <Library size={14} />
+              <span className="hidden sm:inline">Library</span>
+            </Link>
+          )}
 
           {user && (
             <div className="relative">
@@ -68,11 +72,11 @@ export function Header({ onNew }: HeaderProps) {
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
                 aria-label="User menu"
               >
-                {user.photoURL ? (
+                {!isGuest && user.photoURL ? (
                   <Image src={user.photoURL} alt="" width={24} height={24} className="rounded-full" referrerPolicy="no-referrer" />
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-[var(--color-accent)] text-white text-xs flex items-center justify-center font-bold">
-                    {user.displayName?.[0] ?? '?'}
+                  <div className={`w-6 h-6 rounded-full text-white text-xs flex items-center justify-center font-bold ${isGuest ? 'bg-slate-400' : 'bg-[var(--color-accent)]'}`}>
+                    {isGuest ? '?' : (user.displayName?.[0] ?? '?')}
                   </div>
                 )}
                 <ChevronDown size={12} className="text-[var(--color-muted)] hidden sm:block" />
@@ -80,15 +84,25 @@ export function Header({ onNew }: HeaderProps) {
               {showUserMenu && (
                 <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-[var(--color-border)] py-1 z-50">
                   <div className="px-3 py-2 text-xs text-[var(--color-muted)] border-b border-[var(--color-border)] truncate">
-                    {user.displayName}
+                    {isGuest ? 'Guest — changes not saved' : user.displayName}
                   </div>
-                  <button
-                    onClick={handleSignOut}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-text)] hover:bg-slate-50"
-                  >
-                    <LogOut size={14} />
-                    Sign Out
-                  </button>
+                  {isGuest ? (
+                    <Link
+                      href="/"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-accent)] font-medium hover:bg-slate-50"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      Sign in to save your work
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-text)] hover:bg-slate-50"
+                    >
+                      <LogOut size={14} />
+                      Sign Out
+                    </button>
+                  )}
                 </div>
               )}
             </div>

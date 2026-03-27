@@ -58,8 +58,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
           : <DotPlot colId={mainColId} groupByColId={config.groupColId} orientation={orientation} />
       case 'box':
         return hCatAndVNum
-          ? <BoxPlot colId={config.yColId} groupColId={config.xColId} />
-          : <BoxPlot colId={mainColId} groupColId={config.groupColId} />
+          ? <BoxPlot colId={config.yColId} groupColId={config.xColId} orientation="v" />
+          : <BoxPlot colId={mainColId} groupColId={config.groupColId} orientation={orientation} />
       case 'scatter':
         return <ScatterPlot xColId={config.xColId} yColId={config.yColId} colorByColId={config.groupColId} />
       case 'bar':

@@ -5,7 +5,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { useStore } from '@/lib/store'
 import { getNumericValues, getStringValues } from '@/lib/gridHelpers'
 import { computeSummary, getFrequencyTable } from '@/lib/statistics'
-import { NumericStatsTable, NumericTableRow, CategoricalStatCard } from '@/components/stats/StatCard'
+import { NumericStatsTable, NumericTableRow, CategoricalStatCard, TwoWayTableCard } from '@/components/stats/StatCard'
 import { SummaryCardConfig } from '@/lib/exploreTypes'
 import { DropZone } from '../DropZone'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -78,6 +78,18 @@ export function SummaryCard({ cardId, config, onClearZone, onRemove, hideHeader 
 
     const numericCols = varCols.filter(c => c.type === 'numeric')
     const categoricalCols = varCols.filter(c => c.type === 'categorical')
+
+    // Two categorical variables → two-way table
+    if (numericCols.length === 0 && categoricalCols.length === 2) {
+      const [colA, colB] = categoricalCols
+      return [<TwoWayTableCard
+        key="twoway"
+        colAName={colA.name}
+        colBName={colB.name}
+        colAValues={getStringValues(grid, colA.id).filter(v => v.trim())}
+        colBValues={getStringValues(grid, colB.id).filter(v => v.trim())}
+      />]
+    }
 
     const parts: React.ReactNode[] = []
 

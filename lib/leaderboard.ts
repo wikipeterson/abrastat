@@ -22,8 +22,8 @@ export type GameId = (typeof GAME_IDS)[keyof typeof GAME_IDS]
 export interface LeaderboardEntry {
   id: string
   userId: string
-  displayName: string
-  photoURL: string | null
+  initials: string
+  emoji: string
   score: number
   createdAt: Date
 }
@@ -33,14 +33,14 @@ const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000
 export async function submitScore(
   gameId: GameId,
   userId: string,
-  displayName: string,
-  photoURL: string | null,
+  initials: string,
+  emoji: string,
   score: number
 ): Promise<void> {
   await addDoc(collection(db, 'leaderboards', gameId, 'scores'), {
     userId,
-    displayName,
-    photoURL: photoURL ?? null,
+    initials,
+    emoji,
     score,
     createdAt: Timestamp.now(),
   })
@@ -57,8 +57,8 @@ export async function getLeaderboard(gameId: GameId): Promise<LeaderboardEntry[]
   const entries: LeaderboardEntry[] = snap.docs.map(d => ({
     id: d.id,
     userId: d.data().userId as string,
-    displayName: d.data().displayName as string,
-    photoURL: d.data().photoURL as string | null,
+    initials: d.data().initials as string,
+    emoji: d.data().emoji as string,
     score: d.data().score as number,
     createdAt: (d.data().createdAt as Timestamp).toDate(),
   }))

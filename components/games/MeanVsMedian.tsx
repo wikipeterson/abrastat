@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import { PlotlyChart } from '@/components/charts/PlotlyChart'
-import { generateNormal, generateSkewed, ROUNDS_PER_GAME } from '@/lib/gameData'
+import { generateSkewed, ROUNDS_PER_GAME } from '@/lib/gameData'
 
 interface Props { onDone: (score: number) => void }
 
 type Phase = 'choosing' | 'revealed'
-type Answer = 'mean-greater' | 'median-greater' | 'equal'
+type Answer = 'mean-greater' | 'median-greater'
 
 function stat(values: number[], fn: (v: number[]) => number) { return fn(values) }
 function mean(v: number[]) { return v.reduce((a, b) => a + b, 0) / v.length }
@@ -17,27 +17,19 @@ function median(v: number[]) {
   return s.length % 2 === 0 ? (s[m - 1] + s[m]) / 2 : s[m]
 }
 
-function generateRound() {
-  const type = Math.random() < 0.33 ? 'right' : Math.random() < 0.5 ? 'left' : 'symmetric'
-  let data: number[]
-  if (type === 'right') data = generateSkewed(60, 'right')
-  else if (type === 'left') data = generateSkewed(60, 'left')
-  else data = generateNormal(60, 10, 2)
-
+function generateRound(): { data: number[]; mean: number; median: number; correct: Answer } {
+  // Always generate a clearly skewed distribution so mean ≠ median
+  const type = Math.random() < 0.5 ? 'right' : 'left'
+  const data = generateSkewed(60, type)
   const m = stat(data, mean)
   const med = stat(data, median)
-  const diff = m - med
-  const correct: Answer =
-    Math.abs(diff) < 0.15 * stat(data, v => Math.max(...v) - Math.min(...v))
-      ? 'equal'
-      : diff > 0 ? 'mean-greater' : 'median-greater'
+  const correct: Answer = m > med ? 'mean-greater' : 'median-greater'
   return { data, mean: m, median: med, correct }
 }
 
 const ANSWER_OPTIONS: { value: Answer; label: string }[] = [
   { value: 'mean-greater',   label: 'Mean > Median' },
   { value: 'median-greater', label: 'Median > Mean' },
-  { value: 'equal',          label: 'About Equal' },
 ]
 
 export function MeanVsMedian({ onDone }: Props) {
@@ -112,7 +104,7 @@ export function MeanVsMedian({ onDone }: Props) {
       )}
 
       {phase === 'choosing' ? (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {ANSWER_OPTIONS.map(opt => (
             <button
               key={opt.value}

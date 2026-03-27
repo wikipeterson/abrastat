@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { GAME_IDS, GameId } from '@/lib/leaderboard'
+import { GAME_IDS, GameId, submitScore } from '@/lib/leaderboard'
 import { ROUNDS_PER_GAME } from '@/lib/gameData'
+import { useStore } from '@/lib/store'
+import { ScoreEntry } from './ScoreEntry'
 import { Leaderboard } from './Leaderboard'
 import { GuessCorrelation } from './GuessCorrelation'
 import { MoreVariability } from './MoreVariability'
@@ -49,7 +51,7 @@ const GAMES: {
     id: GAME_IDS.meanVsMedian,
     icon: '⚖️',
     title: 'Compare Mean and Median',
-    description: `Look at a histogram. Is the mean greater than, less than, or about equal to the median?`,
+    description: `Look at a histogram. Is the mean greater than or less than the median?`,
     maxScore: ROUNDS_PER_GAME * 100,
   },
 ]
@@ -57,17 +59,38 @@ const GAMES: {
 type State =
   | { view: 'hub' }
   | { view: 'playing'; gameId: GameId }
-  | { view: 'done'; gameId: GameId; score: number }
+  | { view: 'done'; gameId: GameId; score: number; submittedInitials: string | null }
 
 export function GameHub() {
+  const { user } = useStore()
   const [state, setState] = useState<State>({ view: 'hub' })
+  const [submitting, setSubmitting] = useState(false)
 
   function startGame(gameId: GameId) {
     setState({ view: 'playing', gameId })
   }
 
   function handleDone(gameId: GameId, score: number) {
-    setState({ view: 'done', gameId, score })
+    setState({ view: 'done', gameId, score, submittedInitials: null })
+  }
+
+  async function handleSubmit(initials: string, emoji: string) {
+    if (state.view !== 'done') return
+    setSubmitting(true)
+    try {
+      await submitScore(
+        state.gameId,
+        user?.uid ?? 'guest',
+        initials,
+        emoji,
+        state.score,
+      )
+      setState({ ...state, submittedInitials: initials })
+    } catch {
+      // silently ignore — leaderboard won't update but don't crash
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (state.view === 'hub') {
@@ -143,39 +166,44 @@ export function GameHub() {
   }
 
   // Done screen
-  const pct = Math.round((state.score / gameMeta.maxScore) * 100)
-  const emoji = pct === 100 ? '🏆' : pct >= 80 ? '🌟' : pct >= 60 ? '👍' : pct >= 40 ? '📚' : '💪'
-
   return (
-    <div className="max-w-lg mx-auto py-6 px-4 space-y-5">
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 text-center space-y-3">
-        <div className="text-5xl">{emoji}</div>
-        <h3 className="text-xl font-bold text-[var(--color-text)]">Game Over!</h3>
-        <div className="text-4xl font-bold text-[var(--color-accent)] tabular-nums">
-          {state.score} <span className="text-lg font-normal text-[var(--color-muted)]">/ {gameMeta.maxScore}</span>
-        </div>
-        <div className="text-sm text-[var(--color-muted)]">{pct}% accuracy</div>
-        <div className="flex gap-3 pt-2">
-          <button
-            onClick={() => setState({ view: 'playing', gameId: state.gameId })}
-            className="flex-1 py-2.5 rounded-xl border border-[var(--color-border)] text-sm font-medium hover:border-[var(--color-accent)] transition-colors"
-          >
-            Play Again
-          </button>
-          <button
-            onClick={() => setState({ view: 'hub' })}
-            className="flex-1 py-2.5 rounded-xl bg-[var(--color-accent)] text-white text-sm font-semibold hover:opacity-90 transition-opacity"
-          >
-            All Games
-          </button>
-        </div>
+    <div className="max-w-lg mx-auto py-6 px-4 space-y-4">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+        {state.submittedInitials === null ? (
+          <ScoreEntry
+            score={state.score}
+            maxScore={gameMeta.maxScore}
+            onSubmit={handleSubmit}
+            submitting={submitting}
+          />
+        ) : (
+          <div className="text-center space-y-1 py-2">
+            <div className="text-green-600 font-semibold">✓ Score submitted!</div>
+            <div className="text-4xl font-bold text-[var(--color-accent)] tabular-nums">
+              {state.score} <span className="text-lg font-normal text-[var(--color-muted)]">/ {gameMeta.maxScore}</span>
+            </div>
+          </div>
+        )}
       </div>
 
-      <Leaderboard
-        gameId={state.gameId}
-        pendingScore={state.score}
-        onSubmitted={() => {}}
-      />
+      {state.submittedInitials !== null && (
+        <Leaderboard gameId={state.gameId} highlightInitials={state.submittedInitials} />
+      )}
+
+      <div className="flex gap-3">
+        <button
+          onClick={() => setState({ view: 'playing', gameId: state.gameId })}
+          className="flex-1 py-2.5 rounded-xl border border-[var(--color-border)] text-sm font-medium hover:border-[var(--color-accent)] transition-colors"
+        >
+          Play Again
+        </button>
+        <button
+          onClick={() => setState({ view: 'hub' })}
+          className="flex-1 py-2.5 rounded-xl bg-[var(--color-accent)] text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+        >
+          All Games
+        </button>
+      </div>
     </div>
   )
 }

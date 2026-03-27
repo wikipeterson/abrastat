@@ -53,6 +53,10 @@ function LibraryContent() {
 
   useEffect(() => {
     if (!user) return
+    if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') {
+      setLoading(false)
+      return
+    }
     const unsub1 = subscribeToPublicDatasets(data => { setPublicDatasets(data); setLoading(false) })
     const unsub2 = subscribeToMyDatasets(user.uid, setMyDatasets)
     return () => { unsub1(); unsub2() }

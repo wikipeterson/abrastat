@@ -90,8 +90,8 @@ export function ChartBuilder() {
           : <DotPlot colId={mainColId} groupByColId={effectiveGroupColId} orientation={orientation} />
       case 'box':
         return hCatAndVNum
-          ? <BoxPlot colId={effectiveVColId} groupColId={effectiveHColId} />
-          : <BoxPlot colId={mainColId} groupColId={effectiveGroupColId} />
+          ? <BoxPlot colId={effectiveVColId} groupColId={effectiveHColId} orientation="v" />
+          : <BoxPlot colId={mainColId} groupColId={effectiveGroupColId} orientation={orientation} />
       case 'scatter':
         return <ScatterPlot xColId={effectiveHColId} yColId={effectiveVColId} colorByColId={effectiveGroupColId} />
       case 'bar':

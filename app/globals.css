@@ -5,15 +5,15 @@ html {
 }
 
 :root {
-  --color-bg: #FAFAF7;
+  --color-bg: #E8FAF8;
   --color-surface: #FFFFFF;
-  --color-text: #0F1B2D;
-  --color-muted: #64748B;
-  --color-accent: #0EA5A0;
-  --color-accent-light: #CCEFEE;
-  --color-border: #E2E8F0;
-  --color-grid-header: #1E293B;
-  --color-grid-selected: #E0F7F6;
+  --color-text: #0D4F49;
+  --color-muted: #1A8C80;
+  --color-accent: #2EC4B6;
+  --color-accent-light: #D6F5F2;
+  --color-border: #7FD9D3;
+  --color-grid-header: #0D4F49;
+  --color-grid-selected: #D6F5F2;
 }
 
 body {

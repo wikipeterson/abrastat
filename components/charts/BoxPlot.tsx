@@ -10,12 +10,14 @@ import { EmptyState } from '@/components/ui/EmptyState'
 interface BoxPlotProps {
   colId: string | null
   groupColId?: string | null
+  orientation?: 'h' | 'v'
 }
 
-export function BoxPlot({ colId, groupColId }: BoxPlotProps) {
+export function BoxPlot({ colId, groupColId, orientation = 'v' }: BoxPlotProps) {
   const { grid } = useStore()
   const col = grid.columns.find(c => c.id === colId) ?? null
   const groupCol = groupColId ? (grid.columns.find(c => c.id === groupColId) ?? null) : null
+  const isH = orientation === 'h'
 
   const traces = useMemo(() => {
     if (!col || !colId) return []
@@ -27,7 +29,10 @@ export function BoxPlot({ colId, groupColId }: BoxPlotProps) {
       return uniqueGroups.map((group, i) => ({
         type: 'box',
         name: group,
-        y: numericValues.filter((_, idx) => groups[idx] === group),
+        orientation,
+        ...(isH
+          ? { x: numericValues.filter((_, idx) => groups[idx] === group) }
+          : { y: numericValues.filter((_, idx) => groups[idx] === group) }),
         marker: { color: ABRA_COLORS[i % ABRA_COLORS.length], outliercolor: '#EF4444', size: 5, line: { width: 0 } },
         line: { color: ABRA_COLORS[i % ABRA_COLORS.length], width: 1.5 },
         fillcolor: ABRA_COLORS[i % ABRA_COLORS.length] + '28',
@@ -40,7 +45,8 @@ export function BoxPlot({ colId, groupColId }: BoxPlotProps) {
     return [{
       type: 'box',
       name: col.name,
-      y: numericValues,
+      orientation,
+      ...(isH ? { x: numericValues } : { y: numericValues }),
       marker: { color: ABRA_COLORS[0], outliercolor: '#EF4444', size: 5, line: { width: 0 } },
       line: { color: ABRA_COLORS[0], width: 1.5 },
       fillcolor: ABRA_COLORS[0] + '28',
@@ -50,10 +56,10 @@ export function BoxPlot({ colId, groupColId }: BoxPlotProps) {
       hovertemplate:
         'Max: %{upperfence}<br>Q3: %{q3}<br>Median: %{median}<br>Q1: %{q1}<br>Min: %{lowerfence}<extra></extra>',
     }]
-  }, [grid, colId, col, groupColId, groupCol])
+  }, [grid, colId, col, groupColId, groupCol, orientation, isH])
 
   if (!col) {
-    return <EmptyState icon="📦" title="Drop a numeric variable" description="Drag a numeric variable to the horizontal axis to build a box plot." />
+    return <EmptyState icon="📦" title="Drop a numeric variable" description="Drag a numeric variable to build a box plot." />
   }
 
   return (
@@ -61,7 +67,9 @@ export function BoxPlot({ colId, groupColId }: BoxPlotProps) {
       <PlotlyChart
         data={traces as import("plotly.js").Data[]}
         layout={{
-          yaxis: { title: { text: col.name } },
+          ...(isH
+            ? { xaxis: { title: { text: col.name } } }
+            : { yaxis: { title: { text: col.name } } }),
           showlegend: !!groupCol,
         }}
         title={`Box plot — ${col.name}${groupCol ? ` by ${groupCol.name}` : ''}`}

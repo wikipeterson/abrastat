@@ -18,7 +18,6 @@ import { CardConfig, GraphCardConfig } from '@/lib/exploreTypes'
 import { ChartType } from '@/lib/chartHelpers'
 import { GraphCard } from './cards/GraphCard'
 import { SummaryCard } from './cards/SummaryCard'
-import { TableCard } from './cards/TableCard'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 // ─── Draggable variable chip (sidebar) ────────────────────────────────────────
@@ -62,8 +61,7 @@ function GhostChip({ col }: { col: GridColumn }) {
 
 const CARD_OPTIONS: { type: CardConfig['type']; icon: string; label: string; description: string }[] = [
   { type: 'graph',   icon: '📈', label: 'Graph',         description: 'Auto-selects chart from variables' },
-  { type: 'summary', icon: '📊', label: 'Summary Stats', description: 'Stats table for one variable' },
-  { type: 'table',   icon: '🔢', label: 'Two-Way Table', description: 'Cross-tabulation of two categorical variables' },
+  { type: 'summary', icon: '📊', label: 'Summary Stats', description: 'Stats table — drop 2 categorical vars for a two-way table' },
 ]
 
 function AddCardMenu({ onAdd }: { onAdd: (type: CardConfig['type']) => void }) {
@@ -186,16 +184,6 @@ export function ExploreCanvas() {
       }
       if (zone === 'group') newConfig = { ...cfg, groupColId: colId }
     }
-    if (cfg.type === 'table') {
-      let c = { ...cfg }
-      if (zone === 'rows') c = { ...c, rowsColId: colId }
-      if (zone === 'cols') c = { ...c, colsColId: colId }
-      if (sourceZone && sourceZone !== zone) {
-        if (sourceZone === 'rows') c = { ...c, rowsColId: null }
-        if (sourceZone === 'cols') c = { ...c, colsColId: null }
-      }
-      newConfig = c
-    }
     if (newConfig) updateExploreCard(cardId, { config: newConfig })
   }, [exploreCards, updateExploreCard])
 
@@ -215,10 +203,6 @@ export function ExploreCanvas() {
         const removeId = zone.slice('variable:'.length)
         newConfig = { ...cfg, variableColIds: cfg.variableColIds.filter(id => id !== removeId) }
       }
-    }
-    if (cfg.type === 'table') {
-      if (zone === 'rows') newConfig = { ...cfg, rowsColId: null }
-      if (zone === 'cols') newConfig = { ...cfg, colsColId: null }
     }
     if (newConfig) updateExploreCard(cardId, { config: newConfig })
   }
@@ -331,7 +315,7 @@ export function ExploreCanvas() {
                       className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] cursor-grab active:cursor-grabbing select-none"
                     >
                       <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">
-                        {card.config.type === 'graph' ? 'Graph' : card.config.type === 'summary' ? 'Summary Stats' : 'Two-Way Table'}
+                        {card.config.type === 'graph' ? 'Graph' : 'Summary Stats'}
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="text-slate-300 text-xs select-none opacity-0 group-hover:opacity-100 transition-opacity">⠿ drag to move</span>
@@ -359,9 +343,6 @@ export function ExploreCanvas() {
                       )}
                       {card.config.type === 'summary' && (
                         <SummaryCard cardId={card.id} config={card.config} onClearZone={z => clearZone(card.id, z)} onRemove={() => removeExploreCard(card.id)} hideHeader />
-                      )}
-                      {card.config.type === 'table' && (
-                        <TableCard cardId={card.id} config={card.config} onClearZone={z => clearZone(card.id, z)} onRemove={() => removeExploreCard(card.id)} hideHeader />
                       )}
                     </div>
 

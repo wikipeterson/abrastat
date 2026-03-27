@@ -1,21 +1,21 @@
 export const ABRA_COLORS = [
-  '#0EA5A0',   // teal
-  '#F59E0B',   // amber
+  '#2EC4B6',   // brand teal (primary)
+  '#F5A623',   // brand amber
+  '#1A8C80',   // brand dark teal
+  '#0D4F49',   // brand forest
+  '#7FD9D3',   // brand light teal
   '#6366F1',   // indigo
   '#EF4444',   // red
-  '#10B981',   // emerald
   '#EC4899',   // pink
-  '#8B5CF6',   // violet
-  '#F97316',   // orange
 ]
 
 const axis = {
   showgrid: false,
   showline: true,
-  linecolor: '#334155',
+  linecolor: '#0D4F49',
   linewidth: 1.5,
   ticks: 'outside' as const,
-  tickcolor: '#334155',
+  tickcolor: '#0D4F49',
   ticklen: 5,
   zeroline: false,
   automargin: true,
@@ -26,14 +26,14 @@ export const basePlotlyLayout = {
   plot_bgcolor: '#FFFFFF',
   font: {
     family: 'DM Sans, sans-serif',
-    color: '#1E293B',
+    color: '#0D4F49',
     size: 12,
   },
   margin: { t: 36, r: 24, b: 56, l: 60 },
   hoverlabel: {
-    bgcolor: '#1E293B',
+    bgcolor: '#0D4F49',
     font: { color: '#FFFFFF', family: 'DM Sans, sans-serif', size: 12 },
-    bordercolor: '#1E293B',
+    bordercolor: '#0D4F49',
   },
   xaxis: axis,
   yaxis: axis,

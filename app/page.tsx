@@ -1,17 +1,18 @@
 'use client'
 
 import { useEffect } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { SignInButton } from '@/components/auth/SignInButton'
 
 export default function LandingPage() {
-  const { user, loading } = useAuth()
+  const { user, loading, isGuest, continueAsGuest } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && user) router.replace('/library')
-  }, [user, loading, router])
+    if (!loading && user) router.replace(isGuest ? '/workspace' : '/library')
+  }, [user, loading, isGuest, router])
 
   if (loading) {
     return (
@@ -25,16 +26,22 @@ export default function LandingPage() {
     <main className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
       {/* Hero */}
       <section className="flex-1 flex flex-col items-center justify-center text-center px-4 py-20">
-        <h1 className="font-display italic text-5xl sm:text-6xl font-bold text-[var(--color-accent)] mb-4">
-          AbraStat
-        </h1>
+        <Image src="/logo.svg" alt="AbraStat" width={360} height={67} priority className="mb-4" />
         <p className="text-2xl sm:text-3xl font-semibold text-[var(--color-text)] mb-3">
           Statistics made for students.
         </p>
         <p className="text-[var(--color-muted)] max-w-md mb-10">
           Enter or upload data, run summary stats, build beautiful interactive charts, and save datasets to share with your class.
         </p>
-        <SignInButton />
+        <div className="flex flex-col items-center gap-3">
+          <SignInButton />
+          <button
+            onClick={() => continueAsGuest()}
+            className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] underline underline-offset-2 transition-colors"
+          >
+            Continue as guest
+          </button>
+        </div>
       </section>
 
       {/* Feature strip */}

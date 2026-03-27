@@ -30,21 +30,39 @@ interface PlotlyChartProps {
 
 export function PlotlyChart({ data, layout, title, height = 360, mode = 'fill' }: PlotlyChartProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
-  const [plotPx, setPlotPx] = useState(height)
+  const [plotSize, setPlotSize] = useState({ width: 0, height })
 
   useEffect(() => {
-    if (mode !== 'fill') return
     const el = wrapRef.current
     if (!el) return
+
+    function updateSize(width: number, nextHeight: number) {
+      if (width <= 0 || nextHeight <= 0) return
+      setPlotSize(prev =>
+        prev.width === Math.floor(width) && prev.height === Math.floor(nextHeight)
+          ? prev
+          : { width: Math.floor(width), height: Math.floor(nextHeight) }
+      )
+    }
+
     const ro = new ResizeObserver(entries => {
-      const h = entries[0]?.contentRect.height
-      if (h && h > 50) setPlotPx(Math.floor(h))
+      const rect = entries[0]?.contentRect
+      if (!rect) return
+      const nextHeight = mode === 'fixed' ? height : rect.height
+      if (rect.width > 50 && nextHeight > 50) updateSize(rect.width, nextHeight)
     })
     ro.observe(el)
     return () => ro.disconnect()
-  }, [mode])
+  }, [height, mode])
 
-  const resolvedHeight = mode === 'fixed' ? height : plotPx
+  const resolvedWidth = plotSize.width > 0 ? plotSize.width : undefined
+  const resolvedHeight =
+    mode === 'fixed'
+      ? height
+      : plotSize.height > 0
+        ? plotSize.height
+        : height
+  const revision = (resolvedWidth ?? 0) * 10000 + resolvedHeight
 
   const wrapStyle =
     mode === 'fixed'
@@ -61,9 +79,13 @@ export function PlotlyChart({ data, layout, title, height = 360, mode = 'fill' }
             ? { text: title, font: { family: 'DM Sans, sans-serif', size: 14, color: '#475569' }, pad: { b: 4 } }
             : undefined,
           ...layout,
+          autosize: false,
+          ...(resolvedWidth ? { width: resolvedWidth } : {}),
+          height: resolvedHeight,
         }}
         config={plotlyConfig as Partial<Config>}
-        style={{ width: '100%', height: `${resolvedHeight}px` }}
+        style={{ width: '100%', height: '100%' }}
+        revision={revision}
         useResizeHandler
       />
     </div>

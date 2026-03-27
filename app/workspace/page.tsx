@@ -170,36 +170,37 @@ function WorkspaceContent() {
   return (
     <div className="flex flex-col h-screen">
       <Header onNew={handleNewDataset} />
+      <WorkspaceTabs
+        active={tab}
+        onChange={setTab}
+        onToggleSidebar={() => setSidebarOpen(v => !v)}
+        datasetName={activeDatasetName}
+      />
+
       <div className="flex flex-1 min-h-0">
-        {tab !== 'explore' && (
-          <ColumnSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        )}
-        <div className="flex-1 flex flex-col min-h-0">
-          <WorkspaceTabs
-            active={tab}
-            onChange={setTab}
-            onToggleSidebar={() => setSidebarOpen(v => !v)}
-            datasetName={activeDatasetName}
-          />
-          {tab === 'data' && (
+        {tab === 'data' && (
+          <>
+            <ColumnSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <GridToolbar />
               <div className="flex-1 overflow-auto p-2">
                 <DataGrid />
               </div>
             </div>
-          )}
-          {tab === 'explore' && (
-            <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-              <ExploreCanvas />
-            </div>
-          )}
-          {tab === 'more' && (
-            <div className="flex-1 overflow-auto bg-[var(--color-bg)]">
-              <GameHub />
-            </div>
-          )}
-        </div>
+          </>
+        )}
+
+        {tab === 'explore' && (
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+            <ExploreCanvas />
+          </div>
+        )}
+
+        {tab === 'more' && (
+          <div className="flex-1 overflow-auto bg-[var(--color-bg)]">
+            <GameHub />
+          </div>
+        )}
       </div>
 
       {confirmNew && (

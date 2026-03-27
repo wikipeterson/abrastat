@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { DM_Sans, Fraunces } from 'next/font/google'
 import { AuthProvider } from '@/components/auth/AuthProvider'
+import { BuildStamp } from '@/components/dev/BuildStamp'
 import './globals.css'
 
 const dmSans = DM_Sans({
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <AuthProvider>
           {children}
+          <BuildStamp />
         </AuthProvider>
       </body>
     </html>

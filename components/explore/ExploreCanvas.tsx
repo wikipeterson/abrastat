@@ -85,7 +85,7 @@ function AddCardMenu({ onAdd, compact = false }: { onAdd: (type: CardConfig['typ
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-1 z-20 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden min-w-[220px]">
+          <div className="absolute left-0 bottom-full mb-1 z-20 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden min-w-[220px]">
             {CARD_OPTIONS.map(o => (
               <button
                 key={o.type}
@@ -114,8 +114,8 @@ export function ExploreCanvas() {
   const { grid, exploreCards, addExploreCard, removeExploreCard, updateExploreCard, purgeExploreStaleIds } = useStore()
   const [activeColId, setActiveColId] = useState<string | null>(null)
   const [interactionCursor, setInteractionCursor] = useState<string | null>(null)
-  const [pendingRevealId, setPendingRevealId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const innerRef = useRef<HTMLDivElement>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -139,18 +139,6 @@ export function ExploreCanvas() {
       document.body.style.cursor = ''
     }
   }, [interactionCursor])
-
-  useEffect(() => {
-    if (!pendingRevealId) return
-    const scroller = scrollRef.current
-    const el = scroller?.querySelector<HTMLElement>(`[data-card-id="${pendingRevealId}"]`)
-    if (!scroller || !el) return
-
-    requestAnimationFrame(() => {
-      el.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'smooth' })
-      setPendingRevealId(null)
-    })
-  }, [exploreCards, pendingRevealId])
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const id = String(event.active.id)
@@ -299,17 +287,26 @@ export function ExploreCanvas() {
 
   function handleAddCard(type: CardConfig['type']) {
     const scroller = scrollRef.current
-    if (!scroller) {
-      addExploreCard(type)
+    const inner = innerRef.current
+
+    if (!scroller || !inner) {
+      addExploreCard(type, { x: 24, y: 24 })
       return
     }
 
-    const margin = 40
-    const x = Math.max(20, scroller.scrollLeft + margin)
-    const y = Math.max(20, scroller.scrollTop + margin)
-    addExploreCard(type, { x: Math.round(x), y: Math.round(y) })
-    const nextCardId = useStore.getState().exploreCards.at(-1)?.id ?? null
-    setPendingRevealId(nextCardId)
+    // Use bounding rects so coordinate conversion is correct regardless of
+    // which ancestor element is actually scrolling. A point `margin` px from
+    // the scroller's visible top-left corner maps to canvas coords:
+    //   canvas_x = (scroller.left + margin) - inner.left
+    //   canvas_y = (scroller.top  + margin) - inner.top
+    // inner.getBoundingClientRect() already reflects the current scroll offset.
+    const margin = 24
+    const scrollerRect = scroller.getBoundingClientRect()
+    const innerRect = inner.getBoundingClientRect()
+    const x = Math.max(0, Math.round(scrollerRect.left + margin - innerRect.left))
+    const y = Math.max(0, Math.round(scrollerRect.top  + margin - innerRect.top))
+
+    addExploreCard(type, { x, y })
   }
 
   if (!hasData) {
@@ -344,7 +341,7 @@ export function ExploreCanvas() {
                 </div>
               </div>
             )}
-            <div className="relative rounded-lg" style={{ minWidth: 1400, minHeight: 1800 }}>
+            <div ref={innerRef} className="relative rounded-lg" style={{ minWidth: 1400, minHeight: 1800 }}>
               {exploreCards.length > 0 && (
                 <div className="absolute top-3 right-4 z-10 text-xs text-[var(--color-muted)] pointer-events-none">
                   Drag header to move · drag edges or corner to resize

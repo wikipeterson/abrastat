@@ -30,7 +30,7 @@ export function Header({ onNew }: HeaderProps) {
   return (
     <>
       <header className="h-16 flex items-center justify-between px-4 border-b border-[var(--color-border)] bg-white flex-shrink-0">
-        <Link href="/library">
+        <Link href="/home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="AbraStat" style={{ width: 200, height: 'auto' }} />
         </Link>
@@ -60,9 +60,9 @@ export function Header({ onNew }: HeaderProps) {
           )}
 
           {!isGuest && (
-            <Link href="/library" className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-slate-100 transition-colors">
+            <Link href="/home" className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-slate-100 transition-colors">
               <Library size={14} />
-              <span className="hidden sm:inline">Library</span>
+              <span className="hidden sm:inline">Home</span>
             </Link>
           )}
 

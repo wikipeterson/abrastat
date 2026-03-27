@@ -10,7 +10,7 @@ export default function LandingPage() {
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && user) router.replace(isGuest ? '/workspace' : '/library')
+    if (!loading && user) router.replace(isGuest ? '/workspace' : '/home')
   }, [user, loading, isGuest, router])
 
   if (loading) {

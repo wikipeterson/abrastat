@@ -104,6 +104,7 @@ export function GuessResidual({ onDone }: Props) {
           margin: { t: 16, b: 32, l: 32, r: 16 },
         }}
         height={220}
+        mode="fixed"
       />
 
       <div className="grid grid-cols-2 gap-2">
@@ -139,6 +140,7 @@ export function GuessResidual({ onDone }: Props) {
                   margin: { t: 4, b: 4, l: 4, r: 4 },
                 }}
                 height={120}
+                mode="fixed"
               />
             </button>
           )

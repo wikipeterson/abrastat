@@ -163,14 +163,17 @@ export function ExploreCanvas() {
       ? sourceZoneId.slice(cardId.length + 1)
       : null
 
+    // Canvas drop (main graph rectangle in blank state) → assign to x (Explanatory Variable)
+    const targetZone = zone === 'canvas' ? 'x' : zone
+
     let newConfig: CardConfig | null = null
     if (cfg.type === 'graph') {
       let c = { ...cfg }
-      if (zone === 'x')     c = { ...c, xColId: colId }
-      if (zone === 'y')     c = { ...c, yColId: colId }
-      if (zone === 'group') c = { ...c, groupColId: colId }
+      if (targetZone === 'x')     c = { ...c, xColId: colId }
+      if (targetZone === 'y')     c = { ...c, yColId: colId }
+      if (targetZone === 'group') c = { ...c, groupColId: colId }
       // Clear source zone atomically so it looks like a move
-      if (sourceZone && sourceZone !== zone) {
+      if (sourceZone && sourceZone !== targetZone) {
         if (sourceZone === 'x')     c = { ...c, xColId: null }
         if (sourceZone === 'y')     c = { ...c, yColId: null }
         if (sourceZone === 'group') c = { ...c, groupColId: null }

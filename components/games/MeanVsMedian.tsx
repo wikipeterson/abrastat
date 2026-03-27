@@ -94,6 +94,7 @@ export function MeanVsMedian({ onDone }: Props) {
           } : {}),
         }}
         height={240}
+        mode="fixed"
       />
 
       {phase === 'revealed' && (

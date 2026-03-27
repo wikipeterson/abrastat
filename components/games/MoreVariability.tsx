@@ -110,6 +110,7 @@ export function MoreVariability({ onDone }: Props) {
                 margin: { t: 8, b: 8, l: 8, r: 8 },
               }}
               height={150}
+              mode="fixed"
             />
           </button>
         ))}

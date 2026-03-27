@@ -21,3 +21,13 @@ body {
   color: var(--color-text);
   font-family: var(--font-body);
 }
+
+/* Variable chip rotation animations for zone transitions */
+@keyframes chip-to-vertical {
+  from { transform: rotate(90deg); opacity: 0.5; }
+  to   { transform: rotate(180deg); opacity: 1; }
+}
+@keyframes chip-to-horizontal {
+  from { transform: rotate(-90deg); opacity: 0.5; }
+  to   { transform: rotate(0deg); opacity: 1; }
+}

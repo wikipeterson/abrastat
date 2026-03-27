@@ -63,6 +63,7 @@ export function RealOrRandom({ onDone }: Props) {
           margin: { t: 20, b: 20, l: 20, r: 20 },
         }}
         height={260}
+        mode="fixed"
       />
 
       {phase === 'choosing' ? (

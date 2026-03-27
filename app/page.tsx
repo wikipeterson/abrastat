@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect } from 'react'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { SignInButton } from '@/components/auth/SignInButton'
@@ -26,7 +25,8 @@ export default function LandingPage() {
     <main className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
       {/* Hero */}
       <section className="flex-1 flex flex-col items-center justify-center text-center px-4 py-20">
-        <Image src="/logo.svg" alt="AbraStat" width={360} height={67} priority className="mb-4" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.svg" alt="AbraStat" style={{ width: 360, height: 'auto' }} className="mb-4" />
         <p className="text-2xl sm:text-3xl font-semibold text-[var(--color-text)] mb-3">
           Statistics made for students.
         </p>

@@ -31,7 +31,8 @@ export function Header({ onNew }: HeaderProps) {
     <>
       <header className="h-16 flex items-center justify-between px-4 border-b border-[var(--color-border)] bg-white flex-shrink-0">
         <Link href="/library">
-          <Image src="/logo.svg" alt="AbraStat" width={200} height={37} priority />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="AbraStat" style={{ width: 200, height: 'auto' }} />
         </Link>
 
         <div className="flex items-center gap-1 sm:gap-2">
@@ -72,7 +73,7 @@ export function Header({ onNew }: HeaderProps) {
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
                 aria-label="User menu"
               >
-                {!isGuest && user.photoURL ? (
+                {user.photoURL && !isGuest ? (
                   <Image src={user.photoURL} alt="" width={24} height={24} className="rounded-full" referrerPolicy="no-referrer" />
                 ) : (
                   <div className={`w-6 h-6 rounded-full text-white text-xs flex items-center justify-center font-bold ${isGuest ? 'bg-slate-400' : 'bg-[var(--color-accent)]'}`}>

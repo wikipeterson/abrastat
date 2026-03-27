@@ -73,7 +73,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
           <EmptyState
             icon="📈"
             title="Drop a variable to get started"
-            description="Drag a variable from the sidebar into the X axis zone."
+            description="Drag a variable from the sidebar into the Explanatory Variable zone below."
           />
         )
     }
@@ -88,37 +88,64 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
         </div>
       )}
 
-      <div className={hideHeader ? 'space-y-3' : 'p-4 space-y-3'}>
-        <div className="grid grid-cols-3 gap-2">
-          <DropZone id={`${cardId}:x`} label="X axis" hint="any variable"
-            assignedCol={xCol} onClear={() => onClearZone('x')} />
-          <DropZone id={`${cardId}:y`} label="Y axis" hint="optional"
-            assignedCol={yCol} onClear={() => onClearZone('y')} />
-          <DropZone id={`${cardId}:group`} label="Group" hint="optional"
-            assignedCol={groupCol} onClear={() => onClearZone('group')} />
+      <div className={hideHeader ? '' : 'p-4'}>
+        {/* Top row: chart type pills on the left, Group zone compact on the right */}
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="flex items-center gap-1.5 flex-wrap min-h-[56px]">
+            {chartButtons.length > 0 && (
+              <>
+                <span className="text-xs font-medium text-[var(--color-muted)]">Chart type:</span>
+                {chartButtons.map(ct => (
+                  <button
+                    key={ct}
+                    onClick={() => onSetChartType(ct)}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium border transition-all ${
+                      currentChart === ct
+                        ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+                        : 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-slate-300'
+                    }`}
+                  >
+                    <span>{CHART_META[ct].icon}</span>
+                    {CHART_META[ct].label}
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+
+          {/* Group zone — compact square in upper right */}
+          <div className="flex-shrink-0 w-28">
+            <DropZone id={`${cardId}:group`} label="Group" hint="optional"
+              assignedCol={groupCol} onClear={() => onClearZone('group')} />
+          </div>
         </div>
 
-        {chartButtons.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-medium text-[var(--color-muted)]">Chart type:</span>
-            {chartButtons.map(ct => (
-              <button
-                key={ct}
-                onClick={() => onSetChartType(ct)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium border transition-all ${
-                  currentChart === ct
-                    ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
-                    : 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-slate-300'
-                }`}
-              >
-                <span>{CHART_META[ct].icon}</span>
-                {CHART_META[ct].label}
-              </button>
-            ))}
+        {/* Spatial axis layout: Y left | chart | X bottom */}
+        <div className="flex gap-2">
+          {/* Response Variable (Y) — vertical drop zone along left edge */}
+          <div className="flex-shrink-0 w-14 self-stretch">
+            <DropZone id={`${cardId}:y`} label="Response Variable" hint="drop here"
+              assignedCol={yCol} onClear={() => onClearZone('y')} variant="vertical" />
           </div>
-        )}
 
-        <div>{renderChart()}</div>
+          {/* Chart area + Explanatory Variable below */}
+          <div className="flex-1 flex flex-col gap-2">
+            {/* Chart placeholder / rendered chart */}
+            <div className={`min-h-[280px] rounded-xl overflow-hidden flex items-center justify-center ${
+              !currentChart ? 'bg-[var(--color-accent-light)]/40 border-2 border-dashed border-[var(--color-border)]' : ''
+            }`}>
+              {renderChart()}
+            </div>
+
+            {/* Explanatory Variable (X) — horizontal, centered below chart */}
+            <div className="flex justify-center">
+              <div className="w-full max-w-xs">
+                <DropZone id={`${cardId}:x`} label="Explanatory Variable" hint="any variable"
+                  assignedCol={xCol} onClear={() => onClearZone('x')} />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

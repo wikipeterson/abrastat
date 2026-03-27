@@ -60,8 +60,8 @@ function GhostChip({ col }: { col: GridColumn }) {
 // ─── Add Card menu ─────────────────────────────────────────────────────────────
 
 const CARD_OPTIONS: { type: CardConfig['type']; icon: string; label: string; description: string }[] = [
-  { type: 'graph',   icon: '📈', label: 'Graph',         description: 'Auto-selects chart from variables' },
-  { type: 'summary', icon: '📊', label: 'Summary Stats', description: 'Stats table — drop 2 categorical vars for a two-way table' },
+  { type: 'graph',   icon: '📈', label: 'Graph',         description: '' },
+  { type: 'summary', icon: '📊', label: 'Summary Stats', description: '' },
 ]
 
 function AddCardMenu({ onAdd }: { onAdd: (type: CardConfig['type']) => void }) {

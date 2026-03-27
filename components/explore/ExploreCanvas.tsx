@@ -114,6 +114,7 @@ export function ExploreCanvas() {
   const { grid, exploreCards, addExploreCard, removeExploreCard, updateExploreCard, purgeExploreStaleIds } = useStore()
   const [activeColId, setActiveColId] = useState<string | null>(null)
   const [interactionCursor, setInteractionCursor] = useState<string | null>(null)
+  const [pendingRevealId, setPendingRevealId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const sensors = useSensors(
@@ -138,6 +139,18 @@ export function ExploreCanvas() {
       document.body.style.cursor = ''
     }
   }, [interactionCursor])
+
+  useEffect(() => {
+    if (!pendingRevealId) return
+    const scroller = scrollRef.current
+    const el = scroller?.querySelector<HTMLElement>(`[data-card-id="${pendingRevealId}"]`)
+    if (!scroller || !el) return
+
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'smooth' })
+      setPendingRevealId(null)
+    })
+  }, [exploreCards, pendingRevealId])
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const id = String(event.active.id)
@@ -295,14 +308,8 @@ export function ExploreCanvas() {
     const x = Math.max(20, scroller.scrollLeft + margin)
     const y = Math.max(20, scroller.scrollTop + margin)
     addExploreCard(type, { x: Math.round(x), y: Math.round(y) })
-
-    const targetLeft = Math.max(0, Math.round(x - 20))
-    const targetTop = Math.max(0, Math.round(y - 20))
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        scroller.scrollTo({ left: targetLeft, top: targetTop, behavior: 'smooth' })
-      })
-    })
+    const nextCardId = useStore.getState().exploreCards.at(-1)?.id ?? null
+    setPendingRevealId(nextCardId)
   }
 
   if (!hasData) {
@@ -349,6 +356,7 @@ export function ExploreCanvas() {
                 return (
                   <div
                     key={card.id}
+                    data-card-id={card.id}
                     style={{
                       position: 'absolute',
                       left: card.x,

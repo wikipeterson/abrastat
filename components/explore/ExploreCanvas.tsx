@@ -283,6 +283,45 @@ export function ExploreCanvas() {
     window.addEventListener('pointerup', onUp)
   }
 
+  function startPan(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.button !== 0) return
+    const target = e.target as HTMLElement
+    if (
+      target.closest('[data-card-id]') ||
+      target.closest('button') ||
+      target.closest('input') ||
+      target.closest('label') ||
+      target.closest('a')
+    ) {
+      return
+    }
+
+    const scroller = scrollRef.current
+    if (!scroller) return
+    const scrollerEl: HTMLDivElement = scroller
+
+    e.preventDefault()
+    const startX = e.clientX
+    const startY = e.clientY
+    const startLeft = scrollerEl.scrollLeft
+    const startTop = scrollerEl.scrollTop
+    setInteractionCursor('grabbing')
+
+    function onMove(ev: PointerEvent) {
+      scrollerEl.scrollLeft = startLeft - (ev.clientX - startX)
+      scrollerEl.scrollTop = startTop - (ev.clientY - startY)
+    }
+
+    function onUp() {
+      setInteractionCursor(null)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+
   const activeCol = activeColId ? (grid.columns.find(c => c.id === activeColId) ?? null) : null
 
   function handleAddCard(type: CardConfig['type']) {
@@ -332,7 +371,7 @@ export function ExploreCanvas() {
         {/* Canvas column */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
           {/* Scrollable free-form canvas */}
-          <div ref={scrollRef} className="flex-1 overflow-auto bg-[var(--color-bg)] p-2 relative">
+          <div ref={scrollRef} className="flex-1 overflow-auto bg-[var(--color-bg)] p-2 relative cursor-grab">
             {exploreCards.length === 0 && (
               <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
                 <div className="text-center px-6">
@@ -341,7 +380,12 @@ export function ExploreCanvas() {
                 </div>
               </div>
             )}
-            <div ref={innerRef} className="relative rounded-lg" style={{ minWidth: 1400, minHeight: 1800 }}>
+            <div
+              ref={innerRef}
+              onPointerDown={startPan}
+              className="relative rounded-lg"
+              style={{ minWidth: 1400, minHeight: 1800 }}
+            >
               {exploreCards.length > 0 && (
                 <div className="absolute top-3 right-4 z-10 text-xs text-[var(--color-muted)] pointer-events-none">
                   Drag header to move · drag edges or corner to resize

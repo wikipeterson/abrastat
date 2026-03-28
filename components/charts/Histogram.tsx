@@ -103,6 +103,8 @@ interface HistogramInnerProps {
 
 function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideAxisTitles }: HistogramInnerProps) {
   const [showNormal, setShowNormal] = useState(false)
+  const [showMean, setShowMean] = useState(false)
+  const [showMedian, setShowMedian] = useState(false)
   const [binWidth, setBinWidth] = useState(stats.defaultWidth)
   const [binWidthInput, setBinWidthInput] = useState(formatBinWidth(stats.defaultWidth))
   let traces: Data[]
@@ -116,6 +118,11 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
     end: rangeEnd,
     size: binWidth,
   }
+  const mean = values.reduce((a, b) => a + b, 0) / values.length
+  const sorted = [...values].sort((a, b) => a - b)
+  const median = sorted.length % 2 === 0
+    ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+    : sorted[Math.floor(sorted.length / 2)]
 
   if (groupCol) {
     const groups = getStringValues(grid, groupCol.id)
@@ -141,7 +148,6 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
     }]
 
     if (!vert && showNormal && values.length > 1) {
-      const mean = values.reduce((a, b) => a + b, 0) / values.length
       const std = Math.sqrt(values.reduce((a, b) => a + (b - mean) ** 2, 0) / (values.length - 1))
       const xMin = Math.min(...values) - std
       const xMax = Math.max(...values) + std
@@ -190,10 +196,20 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
           />
         </label>
         {!groupCol && !vert && (
-          <label className="flex items-center gap-2 text-sm text-[var(--color-muted)] cursor-pointer">
-            <input type="checkbox" checked={showNormal} onChange={e => setShowNormal(e.target.checked)} className="accent-[var(--color-accent)]" />
-            Normal curve
-          </label>
+          <>
+            <label className="flex items-center gap-2 text-sm text-[var(--color-muted)] cursor-pointer">
+              <input type="checkbox" checked={showNormal} onChange={e => setShowNormal(e.target.checked)} className="accent-[var(--color-accent)]" />
+              Normal curve
+            </label>
+            <label className="flex items-center gap-2 text-sm text-[var(--color-muted)] cursor-pointer">
+              <input type="checkbox" checked={showMean} onChange={e => setShowMean(e.target.checked)} className="accent-[var(--color-accent)]" />
+              Mean
+            </label>
+            <label className="flex items-center gap-2 text-sm text-[var(--color-muted)] cursor-pointer">
+              <input type="checkbox" checked={showMedian} onChange={e => setShowMedian(e.target.checked)} className="accent-[var(--color-accent)]" />
+              Median
+            </label>
+          </>
         )}
       </div>
       <div className="flex-1 min-h-0 px-4">
@@ -204,6 +220,58 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
             xaxis: { title: hideAxisTitles ? undefined : { text: vert ? 'Frequency' : col.name } },
             yaxis: { title: hideAxisTitles ? undefined : { text: vert ? col.name : 'Frequency' } },
             showlegend: !!groupCol,
+            shapes: !groupCol && !vert
+              ? [
+                  ...(showMean
+                    ? [{
+                        type: 'line' as const,
+                        x0: mean,
+                        x1: mean,
+                        y0: 0,
+                        y1: 1,
+                        yref: 'paper' as const,
+                        line: { color: '#F59E0B', width: 2, dash: 'dash' as const },
+                      }]
+                    : []),
+                  ...(showMedian
+                    ? [{
+                        type: 'line' as const,
+                        x0: median,
+                        x1: median,
+                        y0: 0,
+                        y1: 1,
+                        yref: 'paper' as const,
+                        line: { color: '#8B5CF6', width: 2, dash: 'dot' as const },
+                      }]
+                    : []),
+                ]
+              : undefined,
+            annotations: !groupCol && !vert
+              ? [
+                  ...(showMean
+                    ? [{
+                        x: mean,
+                        y: 1,
+                        yref: 'paper' as const,
+                        text: 'Mean',
+                        showarrow: false,
+                        yshift: 10,
+                        font: { size: 11, color: '#B45309' },
+                      }]
+                    : []),
+                  ...(showMedian
+                    ? [{
+                        x: median,
+                        y: 1,
+                        yref: 'paper' as const,
+                        text: 'Median',
+                        showarrow: false,
+                        yshift: 24,
+                        font: { size: 11, color: '#6D28D9' },
+                      }]
+                    : []),
+                ]
+              : undefined,
             ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
           }}
           title={hideAxisTitles ? undefined : `Distribution of ${col.name}${groupCol ? ` by ${groupCol.name}` : ''}`}

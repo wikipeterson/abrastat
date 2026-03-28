@@ -258,11 +258,25 @@ export function ExploreCanvas() {
   }
 
   // ─── Card resize ──────────────────────────────────────────────────────────
+  function getCardMinSize(card: ExploreCard) {
+    switch (card.config.type) {
+      case 'graph':
+        // Graph cards need enough room for chart-type controls, axis drop zones,
+        // the central plotting region, and the resize handles without clipping.
+        return { minWidth: 520, minHeight: 460 }
+      case 'summary':
+        return { minWidth: 360, minHeight: 300 }
+      default:
+        return { minWidth: 340, minHeight: 300 }
+    }
+  }
+
   function startResize(e: React.PointerEvent, cardId: string, dir: 'e' | 's' | 'se') {
     e.preventDefault()
     e.stopPropagation()
     const card = exploreCards.find(c => c.id === cardId)
     if (!card) return
+    const { minWidth, minHeight } = getCardMinSize(card)
     const startX = e.clientX, startY = e.clientY
     const startW = card.width, startH = card.height ?? 520
     const cursor = dir === 'e' ? 'ew-resize' : dir === 's' ? 'ns-resize' : 'nwse-resize'
@@ -270,8 +284,8 @@ export function ExploreCanvas() {
 
     function onMove(ev: PointerEvent) {
       const updates: Partial<Omit<ExploreCard, 'id'>> = {}
-      if (dir === 'e' || dir === 'se') updates.width  = Math.max(340, startW + ev.clientX - startX)
-      if (dir === 's' || dir === 'se') updates.height = Math.max(300, startH + ev.clientY - startY)
+      if (dir === 'e' || dir === 'se') updates.width  = Math.max(minWidth, startW + ev.clientX - startX)
+      if (dir === 's' || dir === 'se') updates.height = Math.max(minHeight, startH + ev.clientY - startY)
       updateExploreCard(cardId, updates)
     }
     function onUp() {

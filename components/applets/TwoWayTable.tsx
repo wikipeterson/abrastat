@@ -1,0 +1,576 @@
+'use client'
+
+import { useMemo, useState } from 'react'
+import { useStore } from '@/lib/store'
+import { getStringValues } from '@/lib/gridHelpers'
+import { ABRA_COLORS } from '@/lib/plotlyTheme'
+import { PlotlyChart } from '@/components/charts/PlotlyChart'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type InputMode = 'raw' | 'manual'
+type TableView = 'counts' | 'row' | 'col'
+type GraphType = 'segmented' | 'sidebyside'
+type ChartMode = 'counts' | 'row'
+
+interface TwoWayData {
+  explName: string
+  respName: string
+  rowLabels: string[] // explanatory variable categories
+  colLabels: string[] // response variable categories
+  cells: number[][]  // cells[rowIdx][colIdx]
+}
+
+// ─── Stat helpers ─────────────────────────────────────────────────────────────
+
+function getRowTotals(cells: number[][]): number[] {
+  return cells.map(row => row.reduce((a, b) => a + b, 0))
+}
+
+function getColTotals(cells: number[][], numCols: number): number[] {
+  return Array.from({ length: numCols }, (_, ci) =>
+    cells.reduce((sum, row) => sum + (row[ci] ?? 0), 0)
+  )
+}
+
+function getGrandTotal(cells: number[][]): number {
+  return cells.flat().reduce((a, b) => a + b, 0)
+}
+
+// ─── Chart traces ─────────────────────────────────────────────────────────────
+
+function buildTraces(data: TwoWayData, chartMode: ChartMode) {
+  const rTotals = getRowTotals(data.cells)
+  const values =
+    chartMode === 'row'
+      ? data.cells.map((row, ri) =>
+          row.map(c => (rTotals[ri] ? (c / rTotals[ri]) * 100 : 0))
+        )
+      : data.cells
+
+  return data.colLabels.map((col, ci) => ({
+    type: 'bar' as const,
+    name: col,
+    x: data.rowLabels,
+    y: values.map(row => row[ci]),
+    marker: { color: ABRA_COLORS[ci % ABRA_COLORS.length], opacity: 0.9 },
+    hovertemplate:
+      chartMode === 'row'
+        ? `${col}: %{y:.1f}%<extra></extra>`
+        : `${col}: %{y}<extra></extra>`,
+  }))
+}
+
+// ─── Manual table input ───────────────────────────────────────────────────────
+
+interface ManualInputProps {
+  explName: string
+  respName: string
+  rowLabels: string[]
+  colLabels: string[]
+  cells: number[][]
+  onExplName: (v: string) => void
+  onRespName: (v: string) => void
+  onRowLabel: (ri: number, v: string) => void
+  onColLabel: (ci: number, v: string) => void
+  onCell: (ri: number, ci: number, v: string) => void
+  onAddRow: () => void
+  onRemoveRow: (ri: number) => void
+  onAddCol: () => void
+  onRemoveCol: (ci: number) => void
+}
+
+function ManualInput({
+  explName, respName, rowLabels, colLabels, cells,
+  onExplName, onRespName, onRowLabel, onColLabel, onCell,
+  onAddRow, onRemoveRow, onAddCol, onRemoveCol,
+}: ManualInputProps) {
+  const textInput =
+    'rounded border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:border-[var(--color-accent)]'
+  const numInput =
+    'w-20 text-center rounded border border-slate-200 px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:border-[var(--color-accent)]'
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-5">
+      {/* Variable name inputs */}
+      <div className="flex flex-wrap gap-4">
+        <div>
+          <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
+            Explanatory Variable Name
+          </div>
+          <input
+            value={explName}
+            onChange={e => onExplName(e.target.value)}
+            className={`${textInput} w-48`}
+            placeholder="e.g. Gender"
+          />
+        </div>
+        <div>
+          <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
+            Response Variable Name
+          </div>
+          <input
+            value={respName}
+            onChange={e => onRespName(e.target.value)}
+            className={`${textInput} w-48`}
+            placeholder="e.g. Preferred Sport"
+          />
+        </div>
+      </div>
+
+      {/* Editable count grid */}
+      <div className="overflow-x-auto">
+        <table className="border-collapse">
+          <thead>
+            <tr>
+              {/* Top-left corner */}
+              <th className="pr-3 pb-1.5 text-left w-36">
+                <span className="text-[10px] text-[var(--color-muted)] font-normal leading-tight">
+                  {explName || 'Explanatory'}<br />
+                  <span className="opacity-60">\ {respName || 'Response'}</span>
+                </span>
+              </th>
+              {colLabels.map((cl, ci) => (
+                <th key={ci} className="px-1 pb-1.5">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <input
+                      value={cl}
+                      onChange={e => onColLabel(ci, e.target.value)}
+                      className={`${textInput} w-24 text-center text-xs`}
+                      placeholder={`Col ${ci + 1}`}
+                    />
+                    <button
+                      onClick={() => onRemoveCol(ci)}
+                      disabled={colLabels.length <= 1}
+                      className="text-slate-300 hover:text-red-400 text-[11px] leading-none disabled:opacity-20 transition-colors"
+                      title="Remove column"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </th>
+              ))}
+              <th className="px-1 pb-1.5 align-bottom">
+                <button
+                  onClick={onAddCol}
+                  className="text-xs text-[var(--color-accent)] font-semibold px-2 py-1 rounded border border-dashed border-[var(--color-accent)] hover:opacity-75 transition-opacity"
+                >
+                  + Col
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rowLabels.map((rl, ri) => (
+              <tr key={ri}>
+                <td className="pr-3 py-1">
+                  <div className="flex items-center gap-1">
+                    <input
+                      value={rl}
+                      onChange={e => onRowLabel(ri, e.target.value)}
+                      className={`${textInput} w-28 text-xs`}
+                      placeholder={`Row ${ri + 1}`}
+                    />
+                    <button
+                      onClick={() => onRemoveRow(ri)}
+                      disabled={rowLabels.length <= 1}
+                      className="text-slate-300 hover:text-red-400 text-sm leading-none disabled:opacity-20 transition-colors"
+                      title="Remove row"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </td>
+                {colLabels.map((_, ci) => (
+                  <td key={ci} className="px-1 py-1">
+                    <input
+                      type="number"
+                      min={0}
+                      value={cells[ri]?.[ci] ?? 0}
+                      onChange={e => onCell(ri, ci, e.target.value)}
+                      className={numInput}
+                    />
+                  </td>
+                ))}
+                <td />
+              </tr>
+            ))}
+            <tr>
+              <td className="pt-2">
+                <button
+                  onClick={onAddRow}
+                  className="text-xs text-[var(--color-accent)] font-semibold px-2 py-1 rounded border border-dashed border-[var(--color-accent)] hover:opacity-75 transition-opacity"
+                >
+                  + Row
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ─── Output table ─────────────────────────────────────────────────────────────
+
+function OutputTable({ data, view }: { data: TwoWayData; view: TableView }) {
+  const rTotals = getRowTotals(data.cells)
+  const cTotals = getColTotals(data.cells, data.colLabels.length)
+  const grand = getGrandTotal(data.cells)
+
+  function fmt(n: number, isPercent: boolean) {
+    return isPercent ? `${n.toFixed(1)}%` : String(n)
+  }
+
+  function cellDisplay(ri: number, ci: number): string {
+    const raw = data.cells[ri][ci]
+    if (view === 'counts') return String(raw)
+    if (view === 'row') return rTotals[ri] ? fmt((raw / rTotals[ri]) * 100, true) : '—'
+    return cTotals[ci] ? fmt((raw / cTotals[ci]) * 100, true) : '—'
+  }
+
+  function rowTotalDisplay(ri: number): string {
+    if (view === 'counts') return String(rTotals[ri])
+    if (view === 'row') return '100%'
+    return grand ? fmt((rTotals[ri] / grand) * 100, true) : '—'
+  }
+
+  function colTotalDisplay(ci: number): string {
+    if (view === 'counts') return String(cTotals[ci])
+    if (view === 'col') return '100%'
+    return grand ? fmt((cTotals[ci] / grand) * 100, true) : '—'
+  }
+
+  const th = 'px-3 py-2 text-xs font-semibold text-[var(--color-muted)] border border-slate-200'
+  const td = 'px-3 py-2 text-sm text-center tabular-nums border border-slate-200'
+
+  return (
+    <table className="border-collapse min-w-full">
+      <thead>
+        <tr>
+          <th className={`${th} text-left bg-slate-50 whitespace-nowrap`}>
+            {data.explName}
+            <span className="block font-normal text-slate-400 text-[10px]">\ {data.respName}</span>
+          </th>
+          {data.colLabels.map(cl => (
+            <th key={cl} className={`${th} text-center bg-slate-50`}>{cl}</th>
+          ))}
+          <th className={`${th} text-center bg-slate-100`}>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.rowLabels.map((rl, ri) => (
+          <tr key={rl}>
+            <td className={`${td} text-left font-semibold bg-slate-50`}>{rl}</td>
+            {data.colLabels.map((_, ci) => (
+              <td key={ci} className={`${td} bg-white`}>{cellDisplay(ri, ci)}</td>
+            ))}
+            <td className={`${td} font-semibold bg-slate-50`}>{rowTotalDisplay(ri)}</td>
+          </tr>
+        ))}
+        <tr>
+          <td className={`${td} text-left font-semibold bg-slate-100`}>Total</td>
+          {data.colLabels.map((_, ci) => (
+            <td key={ci} className={`${td} font-semibold bg-slate-100`}>{colTotalDisplay(ci)}</td>
+          ))}
+          <td className={`${td} font-bold bg-slate-200`}>
+            {view === 'counts' ? grand : '100%'}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  )
+}
+
+// ─── Applet ───────────────────────────────────────────────────────────────────
+
+export function TwoWayTable() {
+  const { grid } = useStore()
+
+  const [inputMode, setInputMode] = useState<InputMode>('raw')
+  const [explColId, setExplColId] = useState('')
+  const [respColId, setRespColId] = useState('')
+  const [tableView, setTableView] = useState<TableView>('counts')
+  const [graphType, setGraphType] = useState<GraphType>('segmented')
+  const [chartMode, setChartMode] = useState<ChartMode>('row')
+
+  // Manual table state
+  const [mExplName, setMExplName] = useState('Group')
+  const [mRespName, setMRespName] = useState('Category')
+  const [mRowLabels, setMRowLabels] = useState(['Group A', 'Group B'])
+  const [mColLabels, setMColLabels] = useState(['Category 1', 'Category 2'])
+  const [mCells, setMCells] = useState<number[][]>([[0, 0], [0, 0]])
+
+  const categoricalCols = grid.columns.filter(c => c.type === 'categorical')
+  const hasGridData = grid.rows.some(r => Object.values(r).some(v => String(v).trim()))
+
+  // ── Derive TwoWayData ────────────────────────────────────────────────────
+
+  const data = useMemo<TwoWayData | null>(() => {
+    if (inputMode === 'raw') {
+      if (!explColId || !respColId) return null
+      const explCol = grid.columns.find(c => c.id === explColId)
+      const respCol = grid.columns.find(c => c.id === respColId)
+      if (!explCol || !respCol) return null
+      const explVals = getStringValues(grid, explColId)
+      const respVals = getStringValues(grid, respColId)
+      const pairs = explVals
+        .map((e, i) => [e.trim(), respVals[i].trim()] as [string, string])
+        .filter(([e, r]) => e && r)
+      if (pairs.length === 0) return null
+      const rowLabels = [...new Set(pairs.map(p => p[0]))].sort()
+      const colLabels = [...new Set(pairs.map(p => p[1]))].sort()
+      const cells = rowLabels.map(rl =>
+        colLabels.map(cl => pairs.filter(([e, r]) => e === rl && r === cl).length)
+      )
+      return { explName: explCol.name, respName: respCol.name, rowLabels, colLabels, cells }
+    }
+
+    // Manual mode
+    if (mRowLabels.length === 0 || mColLabels.length === 0) return null
+    if (mCells.some(row => row.some(c => !Number.isFinite(c) || c < 0))) return null
+    return {
+      explName: mExplName || 'Explanatory',
+      respName: mRespName || 'Response',
+      rowLabels: mRowLabels,
+      colLabels: mColLabels,
+      cells: mCells,
+    }
+  }, [
+    inputMode, grid, explColId, respColId,
+    mExplName, mRespName, mRowLabels, mColLabels, mCells,
+  ])
+
+  const traces = useMemo(() => (data ? buildTraces(data, chartMode) : []), [data, chartMode])
+
+  // ── Manual table mutations ───────────────────────────────────────────────
+
+  function resizeCells(rows: number, cols: number, prev: number[][]): number[][] {
+    return Array.from({ length: rows }, (_, ri) =>
+      Array.from({ length: cols }, (_, ci) => prev[ri]?.[ci] ?? 0)
+    )
+  }
+
+  function handleRowLabel(ri: number, v: string) {
+    setMRowLabels(prev => prev.map((l, i) => (i === ri ? v : l)))
+  }
+  function handleColLabel(ci: number, v: string) {
+    setMColLabels(prev => prev.map((l, i) => (i === ci ? v : l)))
+  }
+  function handleCell(ri: number, ci: number, v: string) {
+    const n = parseInt(v, 10)
+    setMCells(prev =>
+      prev.map((row, r) =>
+        r === ri ? row.map((c, c2) => (c2 === ci ? (isNaN(n) ? 0 : Math.max(0, n)) : c)) : row
+      )
+    )
+  }
+  function handleAddRow() {
+    const newLabels = [...mRowLabels, `Group ${String.fromCharCode(65 + mRowLabels.length)}`]
+    setMRowLabels(newLabels)
+    setMCells(prev => resizeCells(newLabels.length, mColLabels.length, prev))
+  }
+  function handleRemoveRow(ri: number) {
+    if (mRowLabels.length <= 1) return
+    const newLabels = mRowLabels.filter((_, i) => i !== ri)
+    setMRowLabels(newLabels)
+    setMCells(prev => resizeCells(newLabels.length, mColLabels.length, prev.filter((_, i) => i !== ri)))
+  }
+  function handleAddCol() {
+    const newLabels = [...mColLabels, `Category ${mColLabels.length + 1}`]
+    setMColLabels(newLabels)
+    setMCells(prev => resizeCells(mRowLabels.length, newLabels.length, prev))
+  }
+  function handleRemoveCol(ci: number) {
+    if (mColLabels.length <= 1) return
+    const newLabels = mColLabels.filter((_, i) => i !== ci)
+    setMColLabels(newLabels)
+    setMCells(prev =>
+      resizeCells(mRowLabels.length, newLabels.length, prev.map(row => row.filter((_, i) => i !== ci)))
+    )
+  }
+
+  // ── Pill button helper ───────────────────────────────────────────────────
+
+  function pill(active: boolean, accent = true) {
+    return `px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+      active
+        ? accent
+          ? 'bg-[var(--color-accent)] text-white'
+          : 'bg-slate-600 text-white'
+        : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
+    }`
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────────
+
+  return (
+    <div className="max-w-5xl mx-auto py-6 px-4 space-y-5">
+
+      {/* Top control bar */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+        <div className="flex flex-wrap items-end gap-5">
+
+          {/* Input mode toggle */}
+          <div>
+            <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
+              Input
+            </div>
+            <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden">
+              {(['raw', 'manual'] as InputMode[]).map(m => (
+                <button
+                  key={m}
+                  onClick={() => setInputMode(m)}
+                  className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                    inputMode === m
+                      ? 'bg-[var(--color-accent)] text-white'
+                      : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                  }`}
+                >
+                  {m === 'raw' ? 'Raw Data' : 'Enter Table'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Column selectors — raw mode */}
+          {inputMode === 'raw' && (
+            <>
+              <div>
+                <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
+                  Explanatory Variable
+                </div>
+                <select
+                  value={explColId}
+                  onChange={e => setExplColId(e.target.value)}
+                  className="text-sm border border-[var(--color-border)] rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-[var(--color-accent)]"
+                >
+                  <option value="">— select —</option>
+                  {categoricalCols.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
+                  Response Variable
+                </div>
+                <select
+                  value={respColId}
+                  onChange={e => setRespColId(e.target.value)}
+                  className="text-sm border border-[var(--color-border)] rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-[var(--color-accent)]"
+                >
+                  <option value="">— select —</option>
+                  {categoricalCols.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              {!hasGridData && (
+                <p className="text-sm text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg self-center">
+                  Load data in the Data tab first.
+                </p>
+              )}
+              {hasGridData && categoricalCols.length < 2 && (
+                <p className="text-sm text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg self-center">
+                  Need at least two categorical (A) columns.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Manual entry grid */}
+      {inputMode === 'manual' && (
+        <ManualInput
+          explName={mExplName} respName={mRespName}
+          rowLabels={mRowLabels} colLabels={mColLabels} cells={mCells}
+          onExplName={setMExplName} onRespName={setMRespName}
+          onRowLabel={handleRowLabel} onColLabel={handleColLabel}
+          onCell={handleCell}
+          onAddRow={handleAddRow} onRemoveRow={handleRemoveRow}
+          onAddCol={handleAddCol} onRemoveCol={handleRemoveCol}
+        />
+      )}
+
+      {/* Empty state */}
+      {!data && (
+        <div className="text-center py-14 text-[var(--color-muted)]">
+          <div className="text-4xl mb-3 opacity-25">📋</div>
+          <p className="text-sm">
+            {inputMode === 'raw'
+              ? !hasGridData
+                ? 'Load a dataset with categorical columns in the Data tab.'
+                : 'Select an Explanatory Variable and a Response Variable above.'
+              : 'Enter counts in the table above to get started.'}
+          </p>
+        </div>
+      )}
+
+      {/* ── Output ── */}
+      {data && (
+        <div className="space-y-4">
+
+          {/* Table view controls */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-[var(--color-muted)]">Table:</span>
+            {([['counts', 'Counts'], ['row', 'Row %'], ['col', 'Column %']] as [TableView, string][]).map(
+              ([v, label]) => (
+                <button key={v} onClick={() => setTableView(v)} className={pill(tableView === v)}>
+                  {label}
+                </button>
+              )
+            )}
+          </div>
+
+          {/* Two-way table */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 overflow-x-auto">
+            <OutputTable data={data} view={tableView} />
+          </div>
+
+          {/* Graph card */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+            <div className="flex flex-wrap items-center gap-4 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-[var(--color-muted)]">Graph:</span>
+                {([['segmented', 'Segmented Bar'], ['sidebyside', 'Side-by-Side Bar']] as [GraphType, string][]).map(
+                  ([g, label]) => (
+                    <button key={g} onClick={() => setGraphType(g)} className={pill(graphType === g)}>
+                      {label}
+                    </button>
+                  )
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-[var(--color-muted)]">Values:</span>
+                {([['counts', 'Counts'], ['row', 'Row %']] as [ChartMode, string][]).map(([m, label]) => (
+                  <button key={m} onClick={() => setChartMode(m)} className={pill(chartMode === m, false)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <PlotlyChart
+              data={traces as import('plotly.js').Data[]}
+              height={320}
+              mode="fixed"
+              layout={{
+                barmode: graphType === 'segmented' ? 'stack' : 'group',
+                xaxis: { title: { text: data.explName } },
+                yaxis: {
+                  title: { text: chartMode === 'counts' ? 'Count' : 'Row %' },
+                  ticksuffix: chartMode === 'row' ? '%' : '',
+                },
+                showlegend: true,
+                legend: { title: { text: data.respName } },
+                margin: { t: 12, r: 20, b: 56, l: 56 },
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

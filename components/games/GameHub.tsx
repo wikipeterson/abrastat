@@ -11,6 +11,7 @@ import { MoreVariability } from './MoreVariability'
 import { RealOrRandom } from './RealOrRandom'
 import { GuessResidual } from './GuessResidual'
 import { MeanVsMedian } from './MeanVsMedian'
+import { TwoWayTable } from '@/components/applets/TwoWayTable'
 
 const GAMES: {
   id: GameId
@@ -60,6 +61,7 @@ type State =
   | { view: 'hub' }
   | { view: 'playing'; gameId: GameId }
   | { view: 'done'; gameId: GameId; score: number; submittedInitials: string | null }
+  | { view: 'applet'; id: 'twoWayTable' }
 
 export function GameHub() {
   const { user } = useStore()
@@ -95,40 +97,86 @@ export function GameHub() {
 
   if (state.view === 'hub') {
     return (
-      <div className="max-w-5xl mx-auto py-6 px-4 space-y-4">
-        <div>
+      <div className="max-w-5xl mx-auto py-6 px-4 space-y-6">
+        {/* Statistical Tools */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">Statistical Tools</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="p-4 flex items-center gap-3">
+                <span className="text-2xl flex-shrink-0">📊</span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-[var(--color-text)] text-sm">Two-Way Table</div>
+                  <div className="text-xs text-[var(--color-muted)] mt-0.5 leading-snug">
+                    Explore relationships between two categorical variables with counts, row %, and column %.
+                  </div>
+                </div>
+                <button
+                  onClick={() => setState({ view: 'applet', id: 'twoWayTable' })}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Open
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Games */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">Games</h2>
           <p className="text-sm text-[var(--color-muted)]">
             Practice your statistical intuition. Top scores refresh every 2 weeks.
           </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {GAMES.map(game => (
-            <div key={game.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
-              {/* Game card header */}
-              <div className="p-4 flex items-center gap-3 border-b border-[var(--color-border)]">
-                <span className="text-2xl flex-shrink-0">{game.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-[var(--color-text)] text-sm">{game.title}</div>
-                  <div className="text-xs text-[var(--color-muted)] mt-0.5 leading-snug">{game.description}</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {GAMES.map(game => (
+              <div key={game.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+                {/* Game card header */}
+                <div className="p-4 flex items-center gap-3 border-b border-[var(--color-border)]">
+                  <span className="text-2xl flex-shrink-0">{game.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-[var(--color-text)] text-sm">{game.title}</div>
+                    <div className="text-xs text-[var(--color-muted)] mt-0.5 leading-snug">{game.description}</div>
+                  </div>
+                  <button
+                    onClick={() => startGame(game.id)}
+                    className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+                  >
+                    Play
+                  </button>
                 </div>
-                <button
-                  onClick={() => startGame(game.id)}
-                  className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-semibold hover:opacity-90 transition-opacity"
-                >
-                  Play
-                </button>
+                {/* Inline leaderboard */}
+                <div className="flex-1">
+                  <Leaderboard gameId={game.id} compact />
+                </div>
               </div>
-              {/* Inline leaderboard */}
-              <div className="flex-1">
-                <Leaderboard gameId={game.id} compact />
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     )
   }
 
+  if (state.view === 'applet') {
+    return (
+      <div className="max-w-5xl mx-auto py-6 px-4 space-y-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setState({ view: 'hub' })}
+            className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
+          >
+            ← Back
+          </button>
+          <span className="text-lg font-semibold text-[var(--color-text)]">
+            📊 Two-Way Table
+          </span>
+        </div>
+        <TwoWayTable />
+      </div>
+    )
+  }
+
+  if (state.view !== 'playing' && state.view !== 'done') return null
   const gameMeta = GAMES.find(g => g.id === state.gameId)!
 
   if (state.view === 'playing') {

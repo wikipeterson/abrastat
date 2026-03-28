@@ -85,7 +85,7 @@ function AddCardMenu({ onAdd, compact = false }: { onAdd: (type: CardConfig['typ
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 bottom-full mb-1 z-20 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden min-w-[220px]">
+          <div className="absolute right-0 bottom-full mb-1 z-20 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden min-w-[220px]">
             {CARD_OPTIONS.map(o => (
               <button
                 key={o.type}

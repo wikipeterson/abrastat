@@ -15,7 +15,7 @@ import { useDraggable } from '@dnd-kit/core'
 import { useStore } from '@/lib/store'
 import { GridColumn } from '@/types'
 import { CardConfig, GraphCardConfig, ExploreCard } from '@/lib/exploreTypes'
-import { ChartType } from '@/lib/chartHelpers'
+import { ChartType, inferCharts } from '@/lib/chartHelpers'
 import { GraphCard } from './cards/GraphCard'
 import { SummaryCard } from './cards/SummaryCard'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -199,6 +199,20 @@ export function ExploreCanvas() {
         if (sourceZone === 'y')     c = { ...c, yColId: null }
         if (sourceZone === 'group') c = { ...c, groupColId: null }
       }
+
+      const nextXCol = c.xColId ? (grid.columns.find(col => col.id === c.xColId) ?? null) : null
+      const nextYCol = c.yColId ? (grid.columns.find(col => col.id === c.yColId) ?? null) : null
+      const nextGroupCol = c.groupColId ? (grid.columns.find(col => col.id === c.groupColId) ?? null) : null
+      const { primary, alternatives } = inferCharts(
+        nextXCol?.type ?? null,
+        nextYCol?.type ?? null,
+        nextGroupCol?.type ?? null,
+      )
+      const validChartTypes = primary ? [primary, ...alternatives] : []
+
+      if (!c.chartType || (validChartTypes.length > 0 && !validChartTypes.includes(c.chartType))) {
+        c = { ...c, chartType: primary }
+      }
       newConfig = c
     }
     if (cfg.type === 'summary') {
@@ -209,7 +223,7 @@ export function ExploreCanvas() {
       if (zone === 'group') newConfig = { ...cfg, groupColId: colId }
     }
     if (newConfig) updateExploreCard(cardId, { config: newConfig })
-  }, [exploreCards, updateExploreCard])
+  }, [exploreCards, grid.columns, updateExploreCard])
 
   function clearZone(cardId: string, zone: string) {
     const card = exploreCards.find(c => c.id === cardId)

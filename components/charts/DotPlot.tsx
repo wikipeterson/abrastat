@@ -59,27 +59,24 @@ function stackDots(values: number[]): { x: number[]; y: number[]; binWidth: numb
 export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps) {
   const { grid } = useStore()
   const { hideAxisTitles } = useGraphCardContext()
-  const [showNormal, setShowNormal] = useState(false)
   const [showMean, setShowMean] = useState(false)
   const [showMedian, setShowMedian] = useState(false)
   const col = grid.columns.find(c => c.id === colId) ?? null
   const groupCol = groupByColId ? (grid.columns.find(c => c.id === groupByColId) ?? null) : null
   const values = useMemo(() => colId ? getNumericValues(grid, colId) : [], [grid, colId])
 
-  const { traces, maxStack, binWidth } = useMemo(() => {
-    if (!col || !colId) return { traces: [], maxStack: 1, binWidth: 1 }
+  const { traces, maxStack } = useMemo(() => {
+    if (!col || !colId) return { traces: [], maxStack: 1 }
     const vert = orientation === 'v'
 
     if (groupCol && groupByColId) {
       const groups = getStringValues(grid, groupByColId)
       const uniqueGroups = [...new Set(groups)].filter(Boolean)
       let globalMax = 1
-      let sharedBinWidth = 1
 
       const traces = uniqueGroups.map((group, gi) => {
         const groupValues = values.filter((_, idx) => groups[idx] === group)
-        const { x, y, binWidth } = stackDots(groupValues)
-        sharedBinWidth = binWidth
+        const { x, y } = stackDots(groupValues)
         globalMax = Math.max(globalMax, ...y)
         return {
           type: 'scatter',
@@ -91,10 +88,10 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
           hovertemplate: `${group}: %{${vert ? 'y' : 'x'}}<extra></extra>`,
         }
       })
-      return { traces, maxStack: globalMax, binWidth: sharedBinWidth }
+      return { traces, maxStack: globalMax }
     }
 
-    const { x, y, binWidth } = stackDots(values)
+    const { x, y } = stackDots(values)
     const maxStack = Math.max(...y, 1)
 
     return {
@@ -108,7 +105,6 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
           hovertemplate: `${col.name}: %{${vert ? 'y' : 'x'}}<extra></extra>`,
       }],
       maxStack,
-      binWidth,
     }
   }, [grid, values, colId, col, groupByColId, groupCol, orientation])
 
@@ -124,9 +120,6 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
     : sorted.length % 2 === 0
       ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
       : sorted[Math.floor(sorted.length / 2)]
-  const std = values.length > 1
-    ? Math.sqrt(values.reduce((a, b) => a + (b - mean) ** 2, 0) / (values.length - 1))
-    : 0
   const stackAxis = {
     showticklabels: false,
     showline: false,
@@ -139,22 +132,6 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
 
   const overlayTraces: Data[] = []
   if (!groupCol && values.length > 1) {
-    if (showNormal && std > 0) {
-      const valueMin = Math.min(...values) - std
-      const valueMax = Math.max(...values) + std
-      const sampleXs = Array.from({ length: 100 }, (_, i) => valueMin + (i / 99) * (valueMax - valueMin))
-      const scaled = sampleXs.map(x => (values.length * binWidth) * (1 / (std * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((x - mean) / std) ** 2))
-      overlayTraces.push({
-        type: 'scatter',
-        mode: 'lines',
-        name: 'Normal curve',
-        x: vert ? scaled : sampleXs,
-        y: vert ? sampleXs : scaled,
-        line: { color: '#EF4444', width: 2 },
-        hoverinfo: 'skip',
-      })
-    }
-
     if (showMean) {
       overlayTraces.push({
         type: 'scatter',
@@ -187,10 +164,6 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
     <div className="h-full flex flex-col">
       {!groupCol && (
         <div className="flex-shrink-0 flex items-center gap-4 px-4 pt-2 flex-wrap">
-          <label className="flex items-center gap-2 text-sm text-[var(--color-muted)] cursor-pointer">
-            <input type="checkbox" checked={showNormal} onChange={e => setShowNormal(e.target.checked)} className="accent-[var(--color-accent)]" />
-            Normal curve
-          </label>
           <label className="flex items-center gap-2 text-sm text-[var(--color-muted)] cursor-pointer">
             <input type="checkbox" checked={showMean} onChange={e => setShowMean(e.target.checked)} className="accent-[var(--color-accent)]" />
             Mean

@@ -18,6 +18,7 @@ import { CardConfig, GraphCardConfig, ExploreCard } from '@/lib/exploreTypes'
 import { ChartType, inferCharts } from '@/lib/chartHelpers'
 import { GraphCard } from './cards/GraphCard'
 import { SummaryCard } from './cards/SummaryCard'
+import { TwoWayTable } from '@/components/applets/TwoWayTable'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 // ─── Draggable variable chip (sidebar) ────────────────────────────────────────
@@ -57,61 +58,52 @@ function GhostChip({ col }: { col: GridColumn }) {
   )
 }
 
-// ─── Add Card menu ─────────────────────────────────────────────────────────────
+// ─── Card label ───────────────────────────────────────────────────────────────
 
-const CARD_OPTIONS: { type: CardConfig['type']; icon: string; label: string; description: string }[] = [
-  { type: 'graph',   icon: '📈', label: 'Graph',         description: '' },
-  { type: 'summary', icon: '📊', label: 'Summary Stats', description: '' },
-]
+function cardLabel(type: CardConfig['type']): string {
+  switch (type) {
+    case 'graph':        return 'Graph'
+    case 'summary':      return 'Summary Stats'
+    case 'table':        return 'Two-Way Table'
+    case 'regression':   return 'Regression'
+    case 'distribution': return 'Distribution'
+    case 'testinterval': return 'Test / Interval'
+    case 'simulation':   return 'Simulation'
+    default:             return 'Card'
+  }
+}
 
-function AddCardMenu({ onAdd, compact = false }: { onAdd: (type: CardConfig['type']) => void; compact?: boolean }) {
-  const [open, setOpen] = useState(false)
+// ─── Placeholder for unimplemented card types ─────────────────────────────────
 
+function PlaceholderCard({ label }: { label: string }) {
   return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(v => !v)}
-        className={
-          compact
-            ? 'flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors'
-            : `flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[var(--color-border)]
-              text-sm font-medium text-[var(--color-text)] hover:border-[var(--color-accent)]
-              hover:text-[var(--color-accent)] shadow-sm transition-colors`
-        }
-      >
-        <span className={compact ? 'text-base leading-none text-[var(--color-accent)]' : 'text-lg leading-none text-[var(--color-accent)]'}>+</span>
-        Add Card
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 bottom-full mb-1 z-20 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden min-w-[220px]">
-            {CARD_OPTIONS.map(o => (
-              <button
-                key={o.type}
-                onClick={() => { onAdd(o.type); setOpen(false) }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 text-left border-b border-[var(--color-border)] last:border-0"
-              >
-                <span className="text-xl">{o.icon}</span>
-                <div>
-                  <div className="text-sm font-medium text-[var(--color-text)]">{o.label}</div>
-                  {o.description && (
-                    <div className="text-xs text-[var(--color-muted)]">{o.description}</div>
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+    <div className="h-full flex flex-col items-center justify-center gap-3 text-center p-6">
+      <span className="text-4xl opacity-20 select-none">🚧</span>
+      <div>
+        <p className="text-sm font-semibold text-[var(--color-text)]">{label}</p>
+        <p className="text-xs text-[var(--color-muted)] mt-1">Coming soon</p>
+      </div>
     </div>
   )
 }
 
 // ─── Main canvas ──────────────────────────────────────────────────────────────
 
-export function ExploreCanvas() {
-  const { grid, exploreCards, addExploreCard, removeExploreCard, updateExploreCard, purgeExploreStaleIds } = useStore()
+interface ExploreCanvasProps {
+  mode: 'explore' | 'inference'
+}
+
+export function ExploreCanvas({ mode }: ExploreCanvasProps) {
+  const {
+    grid,
+    exploreCards, removeExploreCard, updateExploreCard, purgeExploreStaleIds,
+    inferenceCards, removeInferenceCard, updateInferenceCard, purgeInferenceStaleIds,
+  } = useStore()
+
+  const cards        = mode === 'explore' ? exploreCards    : inferenceCards
+  const removeCard   = mode === 'explore' ? removeExploreCard : removeInferenceCard
+  const updateCard   = mode === 'explore' ? updateExploreCard : updateInferenceCard
+
   const [activeColId, setActiveColId] = useState<string | null>(null)
   const [interactionCursor, setInteractionCursor] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -125,8 +117,10 @@ export function ExploreCanvas() {
 
   // Clear stale column IDs when columns change
   useEffect(() => {
-    purgeExploreStaleIds(new Set(grid.columns.map(c => c.id)))
-  }, [grid.columns, purgeExploreStaleIds])
+    const validIds = new Set(grid.columns.map(c => c.id))
+    purgeExploreStaleIds(validIds)
+    purgeInferenceStaleIds()
+  }, [grid.columns, purgeExploreStaleIds, purgeInferenceStaleIds])
 
   useEffect(() => {
     if (!interactionCursor) return
@@ -175,16 +169,17 @@ export function ExploreCanvas() {
     const cardId = overId.slice(0, colonIdx)
     const zone = overId.slice(colonIdx + 1)
 
-    const card = exploreCards.find(c => c.id === cardId)
+    const card = cards.find(c => c.id === cardId)
     if (!card) return
     const cfg = card.config
 
-    // Determine source zone name (only for same-card zone-to-zone drags)
+    // Only graph and summary cards have drop zones
+    if (cfg.type !== 'graph' && cfg.type !== 'summary') return
+
     const sourceZone = (sourceZoneId && sourceZoneId.startsWith(cardId + ':'))
       ? sourceZoneId.slice(cardId.length + 1)
       : null
 
-    // Canvas drop (main graph rectangle in blank state) → assign to x (Explanatory Variable)
     const targetZone = zone === 'canvas' ? 'x' : zone
 
     let newConfig: CardConfig | null = null
@@ -193,15 +188,14 @@ export function ExploreCanvas() {
       if (targetZone === 'x')     c = { ...c, xColId: colId }
       if (targetZone === 'y')     c = { ...c, yColId: colId }
       if (targetZone === 'group') c = { ...c, groupColId: colId }
-      // Clear source zone atomically so it looks like a move
       if (sourceZone && sourceZone !== targetZone) {
         if (sourceZone === 'x')     c = { ...c, xColId: null }
         if (sourceZone === 'y')     c = { ...c, yColId: null }
         if (sourceZone === 'group') c = { ...c, groupColId: null }
       }
 
-      const nextXCol = c.xColId ? (grid.columns.find(col => col.id === c.xColId) ?? null) : null
-      const nextYCol = c.yColId ? (grid.columns.find(col => col.id === c.yColId) ?? null) : null
+      const nextXCol     = c.xColId     ? (grid.columns.find(col => col.id === c.xColId) ?? null)     : null
+      const nextYCol     = c.yColId     ? (grid.columns.find(col => col.id === c.yColId) ?? null)     : null
       const nextGroupCol = c.groupColId ? (grid.columns.find(col => col.id === c.groupColId) ?? null) : null
       const { primary, alternatives } = inferCharts(
         nextXCol?.type ?? null,
@@ -209,7 +203,6 @@ export function ExploreCanvas() {
         nextGroupCol?.type ?? null,
       )
       const validChartTypes = primary ? [primary, ...alternatives] : []
-
       if (!c.chartType || (validChartTypes.length > 0 && !validChartTypes.includes(c.chartType))) {
         c = { ...c, chartType: primary }
       }
@@ -222,11 +215,11 @@ export function ExploreCanvas() {
       }
       if (zone === 'group') newConfig = { ...cfg, groupColId: colId }
     }
-    if (newConfig) updateExploreCard(cardId, { config: newConfig })
-  }, [exploreCards, grid.columns, updateExploreCard])
+    if (newConfig) updateCard(cardId, { config: newConfig })
+  }, [cards, grid.columns, updateCard])
 
   function clearZone(cardId: string, zone: string) {
-    const card = exploreCards.find(c => c.id === cardId)
+    const card = cards.find(c => c.id === cardId)
     if (!card) return
     const cfg = card.config
     let newConfig: CardConfig | null = null
@@ -242,7 +235,7 @@ export function ExploreCanvas() {
         newConfig = { ...cfg, variableColIds: cfg.variableColIds.filter(id => id !== removeId) }
       }
     }
-    if (newConfig) updateExploreCard(cardId, { config: newConfig })
+    if (newConfig) updateCard(cardId, { config: newConfig })
   }
 
   // ─── Card movement ─────────────────────────────────────────────────────────
@@ -250,14 +243,14 @@ export function ExploreCanvas() {
     if (e.button !== 0) return
     e.preventDefault()
     e.stopPropagation()
-    const card = exploreCards.find(c => c.id === cardId)
+    const card = cards.find(c => c.id === cardId)
     if (!card) return
     const startX = e.clientX, startY = e.clientY
     const startCardX = card.x, startCardY = card.y
     setInteractionCursor('grabbing')
 
     function onMove(ev: PointerEvent) {
-      updateExploreCard(cardId, {
+      updateCard(cardId, {
         x: Math.max(0, startCardX + ev.clientX - startX),
         y: Math.max(0, startCardY + ev.clientY - startY),
       })
@@ -274,21 +267,18 @@ export function ExploreCanvas() {
   // ─── Card resize ──────────────────────────────────────────────────────────
   function getCardMinSize(card: ExploreCard) {
     switch (card.config.type) {
-      case 'graph':
-        // Graph cards need enough room for chart-type controls, axis drop zones,
-        // the central plotting region, and the resize handles without clipping.
-        return { minWidth: 520, minHeight: 460 }
-      case 'summary':
-        return { minWidth: 360, minHeight: 300 }
-      default:
-        return { minWidth: 340, minHeight: 300 }
+      case 'graph':      return { minWidth: 520, minHeight: 460 }
+      case 'summary':    return { minWidth: 360, minHeight: 300 }
+      case 'table':      return { minWidth: 520, minHeight: 500 }
+      case 'regression': return { minWidth: 400, minHeight: 340 }
+      default:           return { minWidth: 360, minHeight: 280 }
     }
   }
 
   function startResize(e: React.PointerEvent, cardId: string, dir: 'e' | 's' | 'se') {
     e.preventDefault()
     e.stopPropagation()
-    const card = exploreCards.find(c => c.id === cardId)
+    const card = cards.find(c => c.id === cardId)
     if (!card) return
     const { minWidth, minHeight } = getCardMinSize(card)
     const startX = e.clientX, startY = e.clientY
@@ -300,7 +290,7 @@ export function ExploreCanvas() {
       const updates: Partial<Omit<ExploreCard, 'id'>> = {}
       if (dir === 'e' || dir === 'se') updates.width  = Math.max(minWidth, startW + ev.clientX - startX)
       if (dir === 's' || dir === 'se') updates.height = Math.max(minHeight, startH + ev.clientY - startY)
-      updateExploreCard(cardId, updates)
+      updateCard(cardId, updates)
     }
     function onUp() {
       setInteractionCursor(null)
@@ -352,32 +342,22 @@ export function ExploreCanvas() {
 
   const activeCol = activeColId ? (grid.columns.find(c => c.id === activeColId) ?? null) : null
 
-  function handleAddCard(type: CardConfig['type']) {
-    const scroller = scrollRef.current
-    const inner = innerRef.current
-
-    if (!scroller || !inner) {
-      addExploreCard(type, { x: 24, y: 24 })
-      return
-    }
-
-    // Use bounding rects so coordinate conversion is correct regardless of
-    // which ancestor element is actually scrolling. A point `margin` px from
-    // the scroller's visible top-left corner maps to canvas coords:
-    //   canvas_x = (scroller.left + margin) - inner.left
-    //   canvas_y = (scroller.top  + margin) - inner.top
-    // inner.getBoundingClientRect() already reflects the current scroll offset.
-    const margin = 24
-    const scrollerRect = scroller.getBoundingClientRect()
-    const innerRect = inner.getBoundingClientRect()
-    const x = Math.max(0, Math.round(scrollerRect.left + margin - innerRect.left))
-    const y = Math.max(0, Math.round(scrollerRect.top  + margin - innerRect.top))
-
-    addExploreCard(type, { x, y })
-  }
-
   if (!hasData) {
-    return <EmptyState icon="📈" title="No data loaded" description="Add data in the Data tab to start exploring." />
+    return (
+      <div className="flex h-full min-h-0">
+        <aside className="w-48 flex-shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col">
+          <div className="px-3 py-2 border-b border-[var(--color-border)]">
+            <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Variables</span>
+          </div>
+          <div className="flex-1 overflow-y-auto py-2 px-2">
+            <p className="text-xs text-[var(--color-muted)] px-1 py-2">No data loaded</p>
+          </div>
+        </aside>
+        <div className="flex-1 flex items-center justify-center">
+          <EmptyState icon="📈" title="No data loaded" description="Add data in the Data tab to start exploring." />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -398,9 +378,8 @@ export function ExploreCanvas() {
 
         {/* Canvas column */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-          {/* Scrollable free-form canvas */}
           <div ref={scrollRef} className="flex-1 overflow-auto bg-[var(--color-bg)] p-2 relative cursor-grab">
-            {exploreCards.length === 0 && (
+            {cards.length === 0 && (
               <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
                 <div className="text-center px-6">
                   <div className="text-4xl mb-3 opacity-30">✦</div>
@@ -414,13 +393,13 @@ export function ExploreCanvas() {
               className="relative rounded-lg"
               style={{ minWidth: 1400, minHeight: 1800 }}
             >
-              {exploreCards.length > 0 && (
+              {cards.length > 0 && (
                 <div className="absolute top-3 right-4 z-10 text-xs text-[var(--color-muted)] pointer-events-none">
                   Drag header to move · drag edges or corner to resize
                 </div>
               )}
 
-              {exploreCards.map(card => {
+              {cards.map(card => {
                 const cardH = card.height ?? 520
                 return (
                   <div
@@ -435,10 +414,9 @@ export function ExploreCanvas() {
                     }}
                     className="group"
                   >
-                    {/* Outer shell — overflow-visible so resize handles can poke out */}
                     <div className="relative h-full bg-white rounded-2xl shadow-sm border border-slate-100">
 
-                      {/* Inner clip layer — contains all content within card bounds */}
+                      {/* Inner clip layer */}
                       <div className="absolute inset-0 rounded-2xl overflow-hidden flex flex-col">
                         {/* Move handle */}
                         <div
@@ -446,13 +424,13 @@ export function ExploreCanvas() {
                           className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] cursor-grab active:cursor-grabbing select-none"
                         >
                           <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">
-                            {card.config.type === 'graph' ? 'Graph' : 'Summary Stats'}
+                            {cardLabel(card.config.type)}
                           </span>
                           <div className="flex items-center gap-2">
                             <span className="text-slate-300 text-xs select-none opacity-0 group-hover:opacity-100 transition-opacity">⠿ drag to move</span>
                             <button
                               onPointerDown={e => e.stopPropagation()}
-                              onClick={() => removeExploreCard(card.id)}
+                              onClick={() => removeCard(card.id)}
                               className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none"
                             >
                               ×
@@ -467,13 +445,30 @@ export function ExploreCanvas() {
                               cardId={card.id}
                               config={card.config}
                               onClearZone={z => clearZone(card.id, z)}
-                              onSetChartType={(ct: ChartType) => updateExploreCard(card.id, { config: { ...(card.config as GraphCardConfig), chartType: ct } })}
-                              onRemove={() => removeExploreCard(card.id)}
+                              onSetChartType={(ct: ChartType) => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), chartType: ct } })}
+                              onRemove={() => removeCard(card.id)}
                               hideHeader
                             />
                           )}
                           {card.config.type === 'summary' && (
-                            <SummaryCard cardId={card.id} config={card.config} onClearZone={z => clearZone(card.id, z)} onRemove={() => removeExploreCard(card.id)} hideHeader />
+                            <SummaryCard cardId={card.id} config={card.config} onClearZone={z => clearZone(card.id, z)} onRemove={() => removeCard(card.id)} hideHeader />
+                          )}
+                          {card.config.type === 'table' && (
+                            <div className="h-full overflow-auto">
+                              <TwoWayTable />
+                            </div>
+                          )}
+                          {card.config.type === 'regression' && (
+                            <PlaceholderCard label="Regression" />
+                          )}
+                          {card.config.type === 'distribution' && (
+                            <PlaceholderCard label="Distribution" />
+                          )}
+                          {card.config.type === 'testinterval' && (
+                            <PlaceholderCard label="Test / Interval" />
+                          )}
+                          {card.config.type === 'simulation' && (
+                            <PlaceholderCard label="Simulation" />
                           )}
                         </div>
                       </div>
@@ -508,12 +503,6 @@ export function ExploreCanvas() {
                   </div>
                 )
               })}
-            </div>
-          </div>
-
-          <div className="absolute bottom-5 right-5 z-20 pointer-events-none">
-            <div className="pointer-events-auto">
-              <AddCardMenu onAdd={handleAddCard} />
             </div>
           </div>
         </div>

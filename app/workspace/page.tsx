@@ -6,17 +6,148 @@ import { Header } from '@/components/layout/Header'
 import { DataGrid } from '@/components/grid/DataGrid'
 import { GridToolbar } from '@/components/grid/GridToolbar'
 import { ExploreCanvas } from '@/components/explore/ExploreCanvas'
-import { GameHub } from '@/components/games/GameHub'
 import { useStore } from '@/lib/store'
+import { CardConfig } from '@/lib/exploreTypes'
 
-type Tab = 'data' | 'explore' | 'more'
+type Tab = 'data' | 'explore' | 'inference'
+
+// ─── Add Card menu (workspace header) ─────────────────────────────────────────
+
+interface CardOption {
+  type: CardConfig['type']
+  icon: string
+  label: string
+}
+
+const EXPLORE_CARD_OPTIONS: CardOption[] = [
+  { type: 'graph',      icon: '📈', label: 'Graph' },
+  { type: 'summary',    icon: '📊', label: 'Summary Stats' },
+  { type: 'table',      icon: '⊞',  label: 'Two-Way Table' },
+  { type: 'regression', icon: '📉', label: 'Regression' },
+]
+
+const INFERENCE_CARD_OPTIONS: CardOption[] = [
+  { type: 'distribution', icon: '🔔', label: 'Distribution' },
+  { type: 'testinterval', icon: '⚖️',  label: 'Test / Interval' },
+  { type: 'simulation',   icon: '🎲', label: 'Simulation' },
+]
+
+function AddCardMenu({ options, onAdd }: { options: CardOption[]; onAdd: (type: CardConfig['type']) => void }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium hover:opacity-90 transition-opacity"
+      >
+        <span className="text-base leading-none">+</span>
+        Add Card
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden min-w-[200px]">
+            {options.map(o => (
+              <button
+                key={o.type}
+                onClick={() => { onAdd(o.type); setOpen(false) }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 text-left border-b border-[var(--color-border)] last:border-0"
+              >
+                <span className="text-lg">{o.icon}</span>
+                <span className="text-sm font-medium text-[var(--color-text)]">{o.label}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─── Workspace header (stable shell row) ──────────────────────────────────────
+
+function WorkspaceHeader({
+  active,
+  onChange,
+  onToggleSidebar,
+  datasetName,
+}: {
+  active: Tab
+  onChange: (t: Tab) => void
+  onToggleSidebar: () => void
+  datasetName: string
+}) {
+  const { addExploreCard, addInferenceCard } = useStore()
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'data',      label: 'Data'      },
+    { id: 'explore',   label: 'Explore'   },
+    { id: 'inference', label: 'Inference' },
+  ]
+
+  function handleAddCard(type: CardConfig['type']) {
+    if (active === 'explore')   addExploreCard(type)
+    if (active === 'inference') addInferenceCard(type)
+  }
+
+  return (
+    <div className="flex-shrink-0 flex items-stretch border-b border-[var(--color-border)] bg-white min-h-[44px]">
+      {/* Left: sidebar toggle + dataset name */}
+      <div className="w-48 flex-shrink-0 border-r border-[var(--color-border)] flex items-center min-w-0 px-3">
+        {active === 'data' && (
+          <button
+            onClick={onToggleSidebar}
+            className="md:hidden mr-2 text-[var(--color-muted)] hover:text-[var(--color-text)]"
+            aria-label="Toggle column sidebar"
+          >
+            ☰
+          </button>
+        )}
+        {datasetName && (
+          <span className="font-display italic font-semibold text-[var(--color-text)] text-sm truncate block">
+            {datasetName}
+          </span>
+        )}
+      </div>
+
+      {/* Middle: tabs */}
+      <div className="flex items-center px-2 sm:px-3 flex-1 min-w-0">
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => onChange(t.id)}
+            className={`px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              active === t.id
+                ? 'border-[var(--color-accent)] text-[var(--color-accent)]'
+                : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-text)]'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Right: mode-specific action area */}
+      <div className="flex items-center px-3 flex-shrink-0">
+        {active === 'explore' && (
+          <AddCardMenu options={EXPLORE_CARD_OPTIONS} onAdd={handleAddCard} />
+        )}
+        {active === 'inference' && (
+          <AddCardMenu options={INFERENCE_CARD_OPTIONS} onAdd={handleAddCard} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Column sidebar (Data tab) ────────────────────────────────────────────────
 
 function ColumnSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { grid, selectedColumnIds, toggleColumnSelection } = useStore()
 
   return (
     <>
-      {/* Mobile overlay */}
       {open && (
         <div className="fixed inset-0 bg-black/30 z-20 md:hidden" onClick={onClose} />
       )}
@@ -43,8 +174,6 @@ function ColumnSidebar({ open, onClose }: { open: boolean; onClose: () => void }
                 onDragStart={e => {
                   e.dataTransfer.setData('text/plain', col.id)
                   e.dataTransfer.effectAllowed = 'copy'
-                  // Directly manipulate DOM style — more reliable than React state
-                  // during a drag (avoids re-render timing issues with drag ghost capture)
                   const el = e.currentTarget as HTMLElement
                   window.setTimeout(() => { el.style.opacity = '0.25' }, 0)
                 }}
@@ -52,10 +181,10 @@ function ColumnSidebar({ open, onClose }: { open: boolean; onClose: () => void }
                   (e.currentTarget as HTMLElement).style.opacity = ''
                 }}
                 onClick={() => toggleColumnSelection(col.id)}
-                title="Drag to Statistics or Charts · click to select for stats"
+                title="Click to select for stats"
                 className={`
                   flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm font-medium
-                  cursor-grab active:cursor-grabbing select-none transition-colors
+                  cursor-pointer select-none transition-colors
                   ${isSelected
                     ? isNumeric
                       ? 'bg-[var(--color-accent)] text-white'
@@ -90,46 +219,7 @@ function ColumnSidebar({ open, onClose }: { open: boolean; onClose: () => void }
   )
 }
 
-function WorkspaceTabs({ active, onChange, onToggleSidebar, datasetName }: { active: Tab; onChange: (t: Tab) => void; onToggleSidebar: () => void; datasetName: string }) {
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'data',    label: 'Data'    },
-    { id: 'explore', label: 'Explore' },
-    { id: 'more',    label: 'More'    },
-  ]
-  return (
-    <div className="grid grid-cols-[12rem_minmax(0,1fr)] border-b border-[var(--color-border)] bg-white flex-shrink-0">
-      <div className="border-r border-[var(--color-border)] flex items-center min-w-0">
-        {active !== 'explore' && (
-          <button
-            onClick={onToggleSidebar}
-            className="md:hidden px-3 py-3 text-[var(--color-muted)] hover:text-[var(--color-text)]"
-            aria-label="Toggle column sidebar"
-          >
-            ☰
-          </button>
-        )}
-        <div className="hidden sm:block px-3 py-3 min-w-0">
-          {datasetName && (
-            <span className="font-display italic font-semibold text-[var(--color-text)] text-sm truncate block">
-              {datasetName}
-            </span>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center px-2 sm:px-3">
-        {tabs.map(t => (
-          <button
-            key={t.id}
-            onClick={() => onChange(t.id)}
-            className={`px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${active === t.id ? 'border-[var(--color-accent)] text-[var(--color-accent)]' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
+// ─── Unsaved changes guard ─────────────────────────────────────────────────────
 
 function UnsavedGuard({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
@@ -147,13 +237,14 @@ function UnsavedGuard({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
   )
 }
 
+// ─── Main workspace ───────────────────────────────────────────────────────────
+
 function WorkspaceContent() {
   const [tab, setTab] = useState<Tab>('data')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [confirmNew, setConfirmNew] = useState(false)
   const { isDirty, clearGrid, activeDatasetName } = useStore()
 
-  // Warn on browser back/refresh
   useEffect(() => {
     function handleBeforeUnload(e: BeforeUnloadEvent) {
       if (isDirty) {
@@ -176,7 +267,8 @@ function WorkspaceContent() {
   return (
     <div className="flex flex-col h-screen">
       <Header onNew={handleNewDataset} />
-      <WorkspaceTabs
+
+      <WorkspaceHeader
         active={tab}
         onChange={setTab}
         onToggleSidebar={() => setSidebarOpen(v => !v)}
@@ -184,6 +276,7 @@ function WorkspaceContent() {
       />
 
       <div className="flex flex-1 min-h-0">
+        {/* Data tab */}
         {tab === 'data' && (
           <>
             <ColumnSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -196,15 +289,12 @@ function WorkspaceContent() {
           </>
         )}
 
-        {tab === 'explore' && (
+        {/* Explore + Inference share one ExploreCanvas instance so the
+            variables sidebar stays mounted (no layout shift) when switching
+            between the two canvas modes. */}
+        {(tab === 'explore' || tab === 'inference') && (
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-            <ExploreCanvas />
-          </div>
-        )}
-
-        {tab === 'more' && (
-          <div className="flex-1 overflow-auto bg-[var(--color-bg)]">
-            <GameHub />
+            <ExploreCanvas mode={tab} />
           </div>
         )}
       </div>

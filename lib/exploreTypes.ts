@@ -20,7 +20,34 @@ export interface TableCardConfig {
   colsColId: string | null
 }
 
-export type CardConfig = GraphCardConfig | SummaryCardConfig | TableCardConfig
+export interface RegressionCardConfig {
+  type: 'regression'
+  xColId: string | null
+  yColId: string | null
+}
+
+// ─── Inference card configs (scaffolded) ──────────────────────────────────────
+
+export interface DistributionCardConfig {
+  type: 'distribution'
+}
+
+export interface TestIntervalCardConfig {
+  type: 'testinterval'
+}
+
+export interface SimulationCardConfig {
+  type: 'simulation'
+}
+
+export type CardConfig =
+  | GraphCardConfig
+  | SummaryCardConfig
+  | TableCardConfig
+  | RegressionCardConfig
+  | DistributionCardConfig
+  | TestIntervalCardConfig
+  | SimulationCardConfig
 
 export interface ExploreCard {
   id: string

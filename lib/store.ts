@@ -55,6 +55,13 @@ interface AbraStatStore {
   removeExploreCard: (id: string) => void
   updateExploreCard: (id: string, updates: Partial<Omit<ExploreCard, 'id'>>) => void
   purgeExploreStaleIds: (validIds: Set<string>) => void
+
+  // Inference canvas (separate state, same canvas model)
+  inferenceCards: ExploreCard[]
+  addInferenceCard: (type: CardConfig['type'], position?: { x: number; y: number }) => void
+  removeInferenceCard: (id: string) => void
+  updateInferenceCard: (id: string, updates: Partial<Omit<ExploreCard, 'id'>>) => void
+  purgeInferenceStaleIds: () => void
 }
 
 export const useStore = create<AbraStatStore>((set) => ({
@@ -147,15 +154,17 @@ export const useStore = create<AbraStatStore>((set) => ({
   markClean: () => set({ isDirty: false }),
   clearGrid: () => set({ grid: createEmptyGrid(), activeDatasetId: null, activeDatasetName: '', isDirty: false, undoStack: [], selectedColumnIds: [] }),
 
+  // ─── Explore canvas ──────────────────────────────────────────────────────────
   exploreCards: [],
   addExploreCard: (type, position) => set(state => {
     const idx = state.exploreCards.length
     const x = position?.x ?? 20 + (idx % 2) * 660
     const y = position?.y ?? 20 + Math.floor(idx / 2) * 520
     const config: CardConfig =
-      type === 'graph'   ? { type: 'graph',   xColId: null, yColId: null, groupColId: null } :
-      type === 'summary' ? { type: 'summary', variableColIds: [], groupColId: null } :
-                           { type: 'table',   rowsColId: null, colsColId: null }
+      type === 'graph'      ? { type: 'graph',      xColId: null, yColId: null, groupColId: null } :
+      type === 'summary'    ? { type: 'summary',     variableColIds: [], groupColId: null } :
+      type === 'regression' ? { type: 'regression',  xColId: null, yColId: null } :
+                               { type: 'table',       rowsColId: null, colsColId: null }
     return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width: 620, height: 520 }] }
   }),
   removeExploreCard: (id) => set(state => ({
@@ -168,11 +177,36 @@ export const useStore = create<AbraStatStore>((set) => ({
     exploreCards: state.exploreCards.map(card => {
       const nil = (id: string | null) => (id && !validIds.has(id) ? null : id)
       const cfg = card.config
-      if (cfg.type === 'graph')   return { ...card, config: { ...cfg, xColId: nil(cfg.xColId), yColId: nil(cfg.yColId), groupColId: nil(cfg.groupColId) } }
-      if (cfg.type === 'summary') return { ...card, config: { ...cfg, variableColIds: cfg.variableColIds.filter(id => validIds.has(id)), groupColId: nil(cfg.groupColId) } }
-      if (cfg.type === 'table')   return { ...card, config: { ...cfg, rowsColId: nil(cfg.rowsColId), colsColId: nil(cfg.colsColId) } }
+      if (cfg.type === 'graph')      return { ...card, config: { ...cfg, xColId: nil(cfg.xColId), yColId: nil(cfg.yColId), groupColId: nil(cfg.groupColId) } }
+      if (cfg.type === 'summary')    return { ...card, config: { ...cfg, variableColIds: cfg.variableColIds.filter(id => validIds.has(id)), groupColId: nil(cfg.groupColId) } }
+      if (cfg.type === 'table')      return { ...card, config: { ...cfg, rowsColId: nil(cfg.rowsColId), colsColId: nil(cfg.colsColId) } }
+      if (cfg.type === 'regression') return { ...card, config: { ...cfg, xColId: nil(cfg.xColId), yColId: nil(cfg.yColId) } }
       return card
     }),
+  })),
+
+  // ─── Inference canvas ────────────────────────────────────────────────────────
+  inferenceCards: [],
+  addInferenceCard: (type, position) => set(state => {
+    const idx = state.inferenceCards.length
+    const x = position?.x ?? 20 + (idx % 2) * 660
+    const y = position?.y ?? 20 + Math.floor(idx / 2) * 520
+    const config: CardConfig =
+      type === 'distribution' ? { type: 'distribution' } :
+      type === 'testinterval' ? { type: 'testinterval' } :
+                                 { type: 'simulation' }
+    return { inferenceCards: [...state.inferenceCards, { id: uuid(), config, x, y, width: 620, height: 520 }] }
+  }),
+  removeInferenceCard: (id) => set(state => ({
+    inferenceCards: state.inferenceCards.filter(c => c.id !== id),
+  })),
+  updateInferenceCard: (id, updates) => set(state => ({
+    inferenceCards: state.inferenceCards.map(c => c.id === id ? { ...c, ...updates } : c),
+  })),
+  purgeInferenceStaleIds: () => set(state => ({
+    // Inference cards in their current scaffolded form don't hold column references,
+    // so purging is a no-op. Implement when inference cards gain column bindings.
+    inferenceCards: state.inferenceCards,
   })),
 
   selectedColumnIds: [],

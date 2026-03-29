@@ -1,13 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Columns, ArrowDownToLine, FunctionSquare } from 'lucide-react'
+import { Plus, Columns, ArrowDownToLine, FunctionSquare, Share2 } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { ImportPanel } from '@/components/import/ImportPanel'
 import { ComputedColumnModal } from './ComputedColumnModal'
+import { useAuth } from '@/components/auth/AuthProvider'
 
-export function GridToolbar() {
+export function GridToolbar({ onShare }: { onShare?: () => void }) {
   const { grid, addRow, addColumn } = useStore()
+  const { isGuest } = useAuth()
   const [showImport, setShowImport] = useState(false)
   const [showComputed, setShowComputed] = useState(false)
 
@@ -47,6 +49,14 @@ export function GridToolbar() {
           >
             <ArrowDownToLine size={14} /> Import
           </button>
+          {!isGuest && onShare && (
+            <button
+              onClick={onShare}
+              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"
+            >
+              <Share2 size={14} /> Share
+            </button>
+          )}
         </div>
 
         <div className="ml-auto text-xs text-[var(--color-muted)]">

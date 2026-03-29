@@ -18,7 +18,9 @@ import { CardConfig, GraphCardConfig, ExploreCard } from '@/lib/exploreTypes'
 import { ChartType, inferCharts } from '@/lib/chartHelpers'
 import { GraphCard } from './cards/GraphCard'
 import { SummaryCard } from './cards/SummaryCard'
+import { RegressionCard } from './cards/RegressionCard'
 import { TwoWayTable } from '@/components/applets/TwoWayTable'
+import { DistributionCard } from '@/components/inference/DistributionCard'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 // ─── Draggable variable chip (sidebar) ────────────────────────────────────────
@@ -63,7 +65,7 @@ function GhostChip({ col }: { col: GridColumn }) {
 function cardLabel(type: CardConfig['type']): string {
   switch (type) {
     case 'graph':        return 'Graph'
-    case 'summary':      return 'Summary Stats'
+    case 'summary':      return 'Summary Statistics'
     case 'table':        return 'Two-Way Table'
     case 'regression':   return 'Regression'
     case 'distribution': return 'Distribution'
@@ -168,8 +170,8 @@ export function ExploreCanvas() {
     if (!card) return
     const cfg = card.config
 
-    // Only graph and summary cards have drop zones
-    if (cfg.type !== 'graph' && cfg.type !== 'summary') return
+    // Only graph, regression, and summary cards have drop zones
+    if (cfg.type !== 'graph' && cfg.type !== 'summary' && cfg.type !== 'regression') return
 
     const sourceZone = (sourceZoneId && sourceZoneId.startsWith(cardId + ':'))
       ? sourceZoneId.slice(cardId.length + 1)
@@ -210,6 +212,16 @@ export function ExploreCanvas() {
       }
       if (zone === 'group') newConfig = { ...cfg, groupColId: colId }
     }
+    if (cfg.type === 'regression') {
+      let c = { ...cfg }
+      if (targetZone === 'x') c = { ...c, xColId: colId }
+      if (targetZone === 'y') c = { ...c, yColId: colId }
+      if (sourceZone && sourceZone !== targetZone) {
+        if (sourceZone === 'x') c = { ...c, xColId: null }
+        if (sourceZone === 'y') c = { ...c, yColId: null }
+      }
+      newConfig = c
+    }
     if (newConfig) updateCard(cardId, { config: newConfig })
   }, [cards, grid.columns, updateCard])
 
@@ -229,6 +241,10 @@ export function ExploreCanvas() {
         const removeId = zone.slice('variable:'.length)
         newConfig = { ...cfg, variableColIds: cfg.variableColIds.filter(id => id !== removeId) }
       }
+    }
+    if (cfg.type === 'regression') {
+      if (zone === 'x') newConfig = { ...cfg, xColId: null }
+      if (zone === 'y') newConfig = { ...cfg, yColId: null }
     }
     if (newConfig) updateCard(cardId, { config: newConfig })
   }
@@ -262,11 +278,12 @@ export function ExploreCanvas() {
   // ─── Card resize ──────────────────────────────────────────────────────────
   function getCardMinSize(card: ExploreCard) {
     switch (card.config.type) {
-      case 'graph':      return { minWidth: 520, minHeight: 460 }
-      case 'summary':    return { minWidth: 360, minHeight: 300 }
-      case 'table':      return { minWidth: 520, minHeight: 500 }
-      case 'regression': return { minWidth: 400, minHeight: 340 }
-      default:           return { minWidth: 360, minHeight: 280 }
+      case 'graph':        return { minWidth: 520, minHeight: 460 }
+      case 'summary':      return { minWidth: 360, minHeight: 300 }
+      case 'table':        return { minWidth: 780, minHeight: 500 }
+      case 'regression':   return { minWidth: 400, minHeight: 340 }
+      case 'distribution': return { minWidth: 460, minHeight: 480 }
+      default:             return { minWidth: 360, minHeight: 280 }
     }
   }
 
@@ -448,10 +465,16 @@ export function ExploreCanvas() {
                             </div>
                           )}
                           {card.config.type === 'regression' && (
-                            <PlaceholderCard label="Regression" />
+                            <RegressionCard
+                              cardId={card.id}
+                              config={card.config}
+                              onClearZone={z => clearZone(card.id, z)}
+                              onRemove={() => removeCard(card.id)}
+                              hideHeader
+                            />
                           )}
                           {card.config.type === 'distribution' && (
-                            <PlaceholderCard label="Distribution" />
+                            <DistributionCard preFill={card.config.preFill} />
                           )}
                           {card.config.type === 'testinterval' && (
                             <PlaceholderCard label="Test / Interval" />

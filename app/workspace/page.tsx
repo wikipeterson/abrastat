@@ -23,7 +23,7 @@ interface CardOption {
 
 const EXPLORE_CARD_OPTIONS: CardOption[] = [
   { type: 'graph',      icon: '📈', label: 'Graph' },
-  { type: 'summary',    icon: '📊', label: 'Summary Stats' },
+  { type: 'summary',    icon: '📊', label: 'Summary Statistics' },
   { type: 'table',      icon: '⊞',  label: 'Two-Way Table' },
   { type: 'regression', icon: '📉', label: 'Regression' },
 ]

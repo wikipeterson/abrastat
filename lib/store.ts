@@ -2,9 +2,57 @@ import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import { User as FirebaseUser } from 'firebase/auth'
 import { ColumnType, GridState } from '@/types'
-import { ExploreCard, CardConfig } from './exploreTypes'
-import { createEmptyGrid } from './gridHelpers'
+import { ExploreCard, CardConfig, DistributionPreFill } from './exploreTypes'
+import { createEmptyGrid, getStringValues } from './gridHelpers'
 import { computeColumnValues } from './formulaEval'
+
+// ─── Chi-square context scanner ───────────────────────────────────────────────
+// Scans the most recent Two-Way Table card for a chi² test statistic so the
+// Distribution card can be pre-populated as a one-time snapshot.
+
+function scanChiSquareContext(
+  cards: ExploreCard[],
+  grid: GridState,
+): DistributionPreFill | undefined {
+  const tableCard = [...cards].reverse().find(c => c.config.type === 'table')
+  if (!tableCard || tableCard.config.type !== 'table') return undefined
+  const { rowsColId, colsColId } = tableCard.config
+  if (!rowsColId || !colsColId) return undefined
+
+  const rowVals = getStringValues(grid, rowsColId).filter(v => v.trim())
+  const colVals = getStringValues(grid, colsColId).filter(v => v.trim())
+  if (rowVals.length < 2 || colVals.length < 2) return undefined
+
+  // Build observed counts
+  const rowLabels = [...new Set(rowVals)].sort()
+  const colLabels = [...new Set(colVals)].sort()
+  const O: number[][] = rowLabels.map(r =>
+    colLabels.map(c => rowVals.filter((rv, i) => rv === r && colVals[i] === c).length)
+  )
+  const rowTotals = O.map(row => row.reduce((a, b) => a + b, 0))
+  const colTotals = colLabels.map((_, ci) => O.reduce((sum, row) => sum + row[ci], 0))
+  const grand = rowTotals.reduce((a, b) => a + b, 0)
+  if (grand === 0) return undefined
+
+  let chiSq = 0
+  for (let ri = 0; ri < rowLabels.length; ri++) {
+    for (let ci = 0; ci < colLabels.length; ci++) {
+      const expected = (rowTotals[ri] * colTotals[ci]) / grand
+      if (expected > 0) chiSq += Math.pow(O[ri][ci] - expected, 2) / expected
+    }
+  }
+  const df = (rowLabels.length - 1) * (colLabels.length - 1)
+  if (df < 1 || !isFinite(chiSq)) return undefined
+
+  return {
+    dist: 'chi2',
+    df,
+    calcMode: 'area',
+    areaTail: 'right',
+    bound: parseFloat(chiSq.toFixed(4)),
+    sourceLabel: 'Two-Way Table',
+  }
+}
 
 const MAX_UNDO = 20
 
@@ -165,11 +213,13 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'summary'      ? { type: 'summary',     variableColIds: [], groupColId: null } :
       type === 'table'        ? { type: 'table',       rowsColId: null, colsColId: null } :
       type === 'regression'   ? { type: 'regression',  xColId: null, yColId: null } :
-      type === 'distribution' ? { type: 'distribution' } :
+      type === 'distribution' ? { type: 'distribution', preFill: scanChiSquareContext(state.exploreCards, state.grid) } :
       type === 'generator'    ? { type: 'generator' } :
       type === 'testinterval' ? { type: 'testinterval' } :
                                  { type: 'simulation' }
-    return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width: 620, height: 520 }] }
+    const width =
+      type === 'table' ? 780 : 620
+    return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width, height: 520 }] }
   }),
   removeExploreCard: (id) => set(state => ({
     exploreCards: state.exploreCards.filter(c => c.id !== id),

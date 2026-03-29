@@ -89,7 +89,6 @@ export function ColumnHeader({ column, colIndex }: ColumnHeaderProps) {
         <div ref={menuRef} className="absolute top-full left-0 z-50 mt-0.5 w-44 bg-white rounded-lg shadow-lg border border-[var(--color-border)] py-1 text-[var(--color-text)] text-xs">
           {[
             { label: 'Rename', action: () => { setDraft(column.name); setRenaming(true) } },
-            { label: `Change to ${isNumeric ? 'Categorical' : 'Numeric'}`, action: () => setColumnType(column.id, isNumeric ? 'categorical' : 'numeric') },
             { label: 'Insert column left', action: () => addColumn(colIndex - 1) },
             { label: 'Insert column right', action: () => addColumn(colIndex) },
             { label: 'Delete column', action: () => deleteColumn(column.id), danger: true },

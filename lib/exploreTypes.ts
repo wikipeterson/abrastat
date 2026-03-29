@@ -26,10 +26,27 @@ export interface RegressionCardConfig {
   yColId: string | null
 }
 
-// ─── Inference card configs (scaffolded) ──────────────────────────────────────
+// ─── Distribution pre-fill context ───────────────────────────────────────────
+// A one-time snapshot of canvas context used to pre-populate the Distribution
+// card when it is first created (e.g. chi² params from a Two-Way Table card).
+
+export interface DistributionPreFill {
+  dist: 'normal' | 't' | 'chi2' | 'binomial' | 'geometric'
+  df?: number
+  mean?: number
+  sd?: number
+  calcMode: 'area' | 'inverse'
+  areaTail: 'left' | 'between' | 'right'
+  /** Pre-filled bound value (right-tail lower bound, or left-tail upper bound) */
+  bound?: number
+  sourceLabel: string
+}
+
+// ─── Inference card configs ───────────────────────────────────────────────────
 
 export interface DistributionCardConfig {
   type: 'distribution'
+  preFill?: DistributionPreFill
 }
 
 export interface RandomGeneratorCardConfig {

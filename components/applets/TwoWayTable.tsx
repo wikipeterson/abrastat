@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import type { Data, Layout } from 'plotly.js'
 import { useStore } from '@/lib/store'
 import { getStringValues } from '@/lib/gridHelpers'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
@@ -10,7 +11,7 @@ import { PlotlyChart } from '@/components/charts/PlotlyChart'
 
 type InputMode = 'raw' | 'manual'
 type TableView = 'counts' | 'row' | 'col'
-type GraphType = 'segmented' | 'sidebyside'
+type GraphType = 'segmented' | 'sidebyside' | 'mosaic'
 type ChartMode = 'counts' | 'row'
 
 interface TwoWayData {
@@ -39,7 +40,7 @@ function getGrandTotal(cells: number[][]): number {
 
 // ─── Chart traces ─────────────────────────────────────────────────────────────
 
-function buildTraces(data: TwoWayData, chartMode: ChartMode) {
+function buildBarTraces(data: TwoWayData, chartMode: ChartMode) {
   const rTotals = getRowTotals(data.cells)
   const values =
     chartMode === 'row'
@@ -59,6 +60,53 @@ function buildTraces(data: TwoWayData, chartMode: ChartMode) {
         ? `${col}: %{y:.1f}%<extra></extra>`
         : `${col}: %{y}<extra></extra>`,
   }))
+}
+
+function buildMosaicTraces(data: TwoWayData): Data[] {
+  const rowTotals = getRowTotals(data.cells)
+  const grandTotal = getGrandTotal(data.cells)
+  if (!grandTotal) return []
+
+  let xStart = 0
+  const traces: Data[] = []
+
+  data.rowLabels.forEach((rowLabel, ri) => {
+    const rowTotal = rowTotals[ri]
+    const rowWidth = rowTotal / grandTotal
+    const xEnd = xStart + rowWidth
+    let yStart = 0
+
+    data.colLabels.forEach((colLabel, ci) => {
+      const cell = data.cells[ri][ci]
+      const segmentHeight = rowTotal ? cell / rowTotal : 0
+      const yEnd = yStart + segmentHeight
+
+      traces.push({
+        type: 'scatter',
+        mode: 'lines',
+        x: [xStart, xEnd, xEnd, xStart, xStart],
+        y: [yStart, yStart, yEnd, yEnd, yStart],
+        fill: 'toself',
+        name: colLabel,
+        legendgroup: colLabel,
+        showlegend: ri === 0,
+        line: { color: 'white', width: 1 },
+        fillcolor: ABRA_COLORS[ci % ABRA_COLORS.length],
+        hovertemplate:
+          `${data.explName}: ${rowLabel}<br>` +
+          `${data.respName}: ${colLabel}<br>` +
+          `Count: ${cell}<br>` +
+          `Row %: ${rowTotal ? ((cell / rowTotal) * 100).toFixed(1) : '0.0'}%<br>` +
+          `Total %: ${((cell / grandTotal) * 100).toFixed(1)}%<extra></extra>`,
+      })
+
+      yStart = yEnd
+    })
+
+    xStart = xEnd
+  })
+
+  return traces
 }
 
 // ─── Manual table input ───────────────────────────────────────────────────────
@@ -342,7 +390,58 @@ export function TwoWayTable() {
     mExplName, mRespName, mRowLabels, mColLabels, mCells,
   ])
 
-  const traces = useMemo(() => (data ? buildTraces(data, chartMode) : []), [data, chartMode])
+  const traces = useMemo(() => {
+    if (!data) return []
+    return graphType === 'mosaic' ? buildMosaicTraces(data) : buildBarTraces(data, chartMode)
+  }, [data, chartMode, graphType])
+
+  const chartLayout = useMemo<Partial<Layout>>(() => {
+    if (!data) return {}
+
+    if (graphType === 'mosaic') {
+      const rowTotals = getRowTotals(data.cells)
+      const grandTotal = getGrandTotal(data.cells)
+      let running = 0
+      const centers = rowTotals.map(total => {
+        const width = grandTotal ? total / grandTotal : 0
+        const center = running + width / 2
+        running += width
+        return center
+      })
+
+      return {
+        xaxis: {
+          title: { text: data.explName },
+          range: [0, 1],
+          tickmode: 'array',
+          tickvals: centers,
+          ticktext: data.rowLabels,
+          fixedrange: true,
+        },
+        yaxis: {
+          title: { text: `Proportion within ${data.explName}` },
+          range: [0, 1],
+          tickformat: '.0%',
+          fixedrange: true,
+        },
+        showlegend: true,
+        legend: { title: { text: data.respName } },
+        margin: { t: 12, r: 20, b: 56, l: 72 },
+      }
+    }
+
+    return {
+      barmode: graphType === 'segmented' ? 'stack' : 'group',
+      xaxis: { title: { text: data.explName } },
+      yaxis: {
+        title: { text: chartMode === 'counts' ? 'Count' : 'Row %' },
+        ticksuffix: chartMode === 'row' ? '%' : '',
+      },
+      showlegend: true,
+      legend: { title: { text: data.respName } },
+      margin: { t: 12, r: 20, b: 56, l: 56 },
+    }
+  }, [data, graphType, chartMode])
 
   // ── Manual table mutations ───────────────────────────────────────────────
 
@@ -535,7 +634,7 @@ export function TwoWayTable() {
             <div className="flex flex-wrap items-center gap-4 mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-[var(--color-muted)]">Graph:</span>
-                {([['segmented', 'Segmented Bar'], ['sidebyside', 'Side-by-Side Bar']] as [GraphType, string][]).map(
+                {([['segmented', 'Segmented Bar'], ['sidebyside', 'Side-by-Side Bar'], ['mosaic', 'Mosaic Plot']] as [GraphType, string][]).map(
                   ([g, label]) => (
                     <button key={g} onClick={() => setGraphType(g)} className={pill(graphType === g)}>
                       {label}
@@ -546,27 +645,22 @@ export function TwoWayTable() {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-[var(--color-muted)]">Values:</span>
                 {([['counts', 'Counts'], ['row', 'Row %']] as [ChartMode, string][]).map(([m, label]) => (
-                  <button key={m} onClick={() => setChartMode(m)} className={pill(chartMode === m, false)}>
+                  <button
+                    key={m}
+                    onClick={() => setChartMode(m)}
+                    disabled={graphType === 'mosaic'}
+                    className={`${pill(chartMode === m, false)} ${graphType === 'mosaic' ? 'opacity-40 cursor-not-allowed hover:bg-slate-100' : ''}`}
+                  >
                     {label}
                   </button>
                 ))}
               </div>
             </div>
             <PlotlyChart
-              data={traces as import('plotly.js').Data[]}
+              data={traces as Data[]}
               height={320}
               mode="fixed"
-              layout={{
-                barmode: graphType === 'segmented' ? 'stack' : 'group',
-                xaxis: { title: { text: data.explName } },
-                yaxis: {
-                  title: { text: chartMode === 'counts' ? 'Count' : 'Row %' },
-                  ticksuffix: chartMode === 'row' ? '%' : '',
-                },
-                showlegend: true,
-                legend: { title: { text: data.respName } },
-                margin: { t: 12, r: 20, b: 56, l: 56 },
-              }}
+              layout={chartLayout}
             />
           </div>
         </div>

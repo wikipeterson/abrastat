@@ -32,6 +32,10 @@ export interface DistributionCardConfig {
   type: 'distribution'
 }
 
+export interface RandomGeneratorCardConfig {
+  type: 'generator'
+}
+
 export interface TestIntervalCardConfig {
   type: 'testinterval'
 }
@@ -46,6 +50,7 @@ export type CardConfig =
   | TableCardConfig
   | RegressionCardConfig
   | DistributionCardConfig
+  | RandomGeneratorCardConfig
   | TestIntervalCardConfig
   | SimulationCardConfig
 

@@ -161,10 +161,14 @@ export const useStore = create<AbraStatStore>((set) => ({
     const x = position?.x ?? 20 + (idx % 2) * 660
     const y = position?.y ?? 20 + Math.floor(idx / 2) * 520
     const config: CardConfig =
-      type === 'graph'      ? { type: 'graph',      xColId: null, yColId: null, groupColId: null } :
-      type === 'summary'    ? { type: 'summary',     variableColIds: [], groupColId: null } :
-      type === 'regression' ? { type: 'regression',  xColId: null, yColId: null } :
-                               { type: 'table',       rowsColId: null, colsColId: null }
+      type === 'graph'        ? { type: 'graph',       xColId: null, yColId: null, groupColId: null } :
+      type === 'summary'      ? { type: 'summary',     variableColIds: [], groupColId: null } :
+      type === 'table'        ? { type: 'table',       rowsColId: null, colsColId: null } :
+      type === 'regression'   ? { type: 'regression',  xColId: null, yColId: null } :
+      type === 'distribution' ? { type: 'distribution' } :
+      type === 'generator'    ? { type: 'generator' } :
+      type === 'testinterval' ? { type: 'testinterval' } :
+                                 { type: 'simulation' }
     return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width: 620, height: 520 }] }
   }),
   removeExploreCard: (id) => set(state => ({
@@ -185,7 +189,7 @@ export const useStore = create<AbraStatStore>((set) => ({
     }),
   })),
 
-  // ─── Inference canvas ────────────────────────────────────────────────────────
+  // ─── Inference canvas (legacy, currently unused) ────────────────────────────
   inferenceCards: [],
   addInferenceCard: (type, position) => set(state => {
     const idx = state.inferenceCards.length

@@ -67,6 +67,7 @@ function cardLabel(type: CardConfig['type']): string {
     case 'table':        return 'Two-Way Table'
     case 'regression':   return 'Regression'
     case 'distribution': return 'Distribution'
+    case 'generator':    return 'Random Generator'
     case 'testinterval': return 'Test / Interval'
     case 'simulation':   return 'Simulation'
     default:             return 'Card'
@@ -89,20 +90,15 @@ function PlaceholderCard({ label }: { label: string }) {
 
 // ─── Main canvas ──────────────────────────────────────────────────────────────
 
-interface ExploreCanvasProps {
-  mode: 'explore' | 'inference'
-}
-
-export function ExploreCanvas({ mode }: ExploreCanvasProps) {
+export function ExploreCanvas() {
   const {
     grid,
     exploreCards, removeExploreCard, updateExploreCard, purgeExploreStaleIds,
-    inferenceCards, removeInferenceCard, updateInferenceCard, purgeInferenceStaleIds,
   } = useStore()
 
-  const cards        = mode === 'explore' ? exploreCards    : inferenceCards
-  const removeCard   = mode === 'explore' ? removeExploreCard : removeInferenceCard
-  const updateCard   = mode === 'explore' ? updateExploreCard : updateInferenceCard
+  const cards = exploreCards
+  const removeCard = removeExploreCard
+  const updateCard = updateExploreCard
 
   const [activeColId, setActiveColId] = useState<string | null>(null)
   const [interactionCursor, setInteractionCursor] = useState<string | null>(null)
@@ -119,8 +115,7 @@ export function ExploreCanvas({ mode }: ExploreCanvasProps) {
   useEffect(() => {
     const validIds = new Set(grid.columns.map(c => c.id))
     purgeExploreStaleIds(validIds)
-    purgeInferenceStaleIds()
-  }, [grid.columns, purgeExploreStaleIds, purgeInferenceStaleIds])
+  }, [grid.columns, purgeExploreStaleIds])
 
   useEffect(() => {
     if (!interactionCursor) return
@@ -393,12 +388,6 @@ export function ExploreCanvas({ mode }: ExploreCanvasProps) {
               className="relative rounded-lg"
               style={{ minWidth: 1400, minHeight: 1800 }}
             >
-              {cards.length > 0 && (
-                <div className="absolute top-3 right-4 z-10 text-xs text-[var(--color-muted)] pointer-events-none">
-                  Drag header to move · drag edges or corner to resize
-                </div>
-              )}
-
               {cards.map(card => {
                 const cardH = card.height ?? 520
                 return (

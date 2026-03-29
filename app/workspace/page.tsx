@@ -6,10 +6,12 @@ import { Header } from '@/components/layout/Header'
 import { DataGrid } from '@/components/grid/DataGrid'
 import { GridToolbar } from '@/components/grid/GridToolbar'
 import { ExploreCanvas } from '@/components/explore/ExploreCanvas'
+import { SaveDatasetModal } from '@/components/library/SaveDatasetModal'
+import { ShareDatasetModal } from '@/components/library/ShareDatasetModal'
 import { useStore } from '@/lib/store'
 import { CardConfig } from '@/lib/exploreTypes'
 
-type Tab = 'data' | 'explore' | 'inference'
+type Tab = 'data' | 'explore' | 'probability' | 'inference'
 
 // ─── Add Card menu (workspace header) ─────────────────────────────────────────
 
@@ -26,10 +28,14 @@ const EXPLORE_CARD_OPTIONS: CardOption[] = [
   { type: 'regression', icon: '📉', label: 'Regression' },
 ]
 
-const INFERENCE_CARD_OPTIONS: CardOption[] = [
+const PROBABILITY_CARD_OPTIONS: CardOption[] = [
   { type: 'distribution', icon: '🔔', label: 'Distribution' },
-  { type: 'testinterval', icon: '⚖️',  label: 'Test / Interval' },
+  { type: 'generator',    icon: '🎛️', label: 'Random Generator' },
   { type: 'simulation',   icon: '🎲', label: 'Simulation' },
+]
+
+const INFERENCE_CARD_OPTIONS: CardOption[] = [
+  { type: 'testinterval', icon: '⚖️',  label: 'Test / Interval' },
 ]
 
 function AddCardMenu({ options, onAdd }: { options: CardOption[]; onAdd: (type: CardConfig['type']) => void }) {
@@ -78,17 +84,17 @@ function WorkspaceHeader({
   onToggleSidebar: () => void
   datasetName: string
 }) {
-  const { addExploreCard, addInferenceCard } = useStore()
+  const { addExploreCard } = useStore()
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'data',      label: 'Data'      },
-    { id: 'explore',   label: 'Explore'   },
-    { id: 'inference', label: 'Inference' },
+    { id: 'data',        label: 'Data'        },
+    { id: 'explore',     label: 'Explore'     },
+    { id: 'probability', label: 'Probability' },
+    { id: 'inference',   label: 'Inference'   },
   ]
 
   function handleAddCard(type: CardConfig['type']) {
-    if (active === 'explore')   addExploreCard(type)
-    if (active === 'inference') addInferenceCard(type)
+    if (active !== 'data') addExploreCard(type)
   }
 
   return (
@@ -132,6 +138,9 @@ function WorkspaceHeader({
       <div className="flex items-center px-3 flex-shrink-0">
         {active === 'explore' && (
           <AddCardMenu options={EXPLORE_CARD_OPTIONS} onAdd={handleAddCard} />
+        )}
+        {active === 'probability' && (
+          <AddCardMenu options={PROBABILITY_CARD_OPTIONS} onAdd={handleAddCard} />
         )}
         {active === 'inference' && (
           <AddCardMenu options={INFERENCE_CARD_OPTIONS} onAdd={handleAddCard} />
@@ -243,7 +252,11 @@ function WorkspaceContent() {
   const [tab, setTab] = useState<Tab>('data')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [confirmNew, setConfirmNew] = useState(false)
-  const { isDirty, clearGrid, activeDatasetName } = useStore()
+  const [showSave, setShowSave] = useState(false)
+  const [showShare, setShowShare] = useState(false)
+  const [shareDatasetId, setShareDatasetId] = useState<string | null>(null)
+  const [shareIsPublic, setShareIsPublic] = useState(false)
+  const { isDirty, clearGrid, activeDatasetName, activeDatasetId } = useStore()
 
   useEffect(() => {
     function handleBeforeUnload(e: BeforeUnloadEvent) {
@@ -264,9 +277,29 @@ function WorkspaceContent() {
     }
   }
 
+  function handleSaveClick() {
+    setShowSave(true)
+  }
+
+  function handleShareClick() {
+    if (activeDatasetId) {
+      setShareDatasetId(activeDatasetId)
+      setShareIsPublic(false)
+      setShowShare(true)
+    } else {
+      setShowSave(true)
+    }
+  }
+
+  function handleSaved(id: string, isPublic: boolean) {
+    setShareDatasetId(id)
+    setShareIsPublic(isPublic)
+    setShowShare(true)
+  }
+
   return (
     <div className="flex flex-col h-screen">
-      <Header onNew={handleNewDataset} />
+      <Header onNew={handleNewDataset} onSave={handleSaveClick} />
 
       <WorkspaceHeader
         active={tab}
@@ -281,7 +314,7 @@ function WorkspaceContent() {
           <>
             <ColumnSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <GridToolbar />
+              <GridToolbar onShare={handleShareClick} />
               <div className="flex-1 overflow-auto p-2">
                 <DataGrid />
               </div>
@@ -289,12 +322,12 @@ function WorkspaceContent() {
           </>
         )}
 
-        {/* Explore + Inference share one ExploreCanvas instance so the
-            variables sidebar stays mounted (no layout shift) when switching
-            between the two canvas modes. */}
-        {(tab === 'explore' || tab === 'inference') && (
+        {/* Explore, Probability, and Inference now share the same underlying
+            canvas contents; the active tab only changes which card types can
+            be added. */}
+        {(tab === 'explore' || tab === 'probability' || tab === 'inference') && (
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-            <ExploreCanvas mode={tab} />
+            <ExploreCanvas />
           </div>
         )}
       </div>
@@ -303,6 +336,16 @@ function WorkspaceContent() {
         <UnsavedGuard
           onConfirm={() => { clearGrid(); setConfirmNew(false) }}
           onCancel={() => setConfirmNew(false)}
+        />
+      )}
+
+      <SaveDatasetModal open={showSave} onClose={() => setShowSave(false)} onSaved={handleSaved} />
+      {shareDatasetId && (
+        <ShareDatasetModal
+          open={showShare}
+          onClose={() => setShowShare(false)}
+          datasetId={shareDatasetId}
+          initialIsPublic={shareIsPublic}
         />
       )}
     </div>

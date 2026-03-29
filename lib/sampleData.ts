@@ -1,5 +1,6 @@
 import { parsedRowsToGrid } from './gridHelpers'
 import { DatasetVariableInfo, GridState } from '@/types'
+import { BIRTH_WEIGHTS_HEADERS, BIRTH_WEIGHTS_META, BIRTH_WEIGHTS_ROWS } from './sampleBirthWeights'
 import { PENGUINS_HEADERS, PENGUINS_META, PENGUINS_ROWS } from './samplePenguins'
 import { TITANIC_STUDENT_HEADERS, TITANIC_STUDENT_META, TITANIC_STUDENT_ROWS } from './sampleTitanic'
 
@@ -175,6 +176,29 @@ export const SAMPLE_DATASETS: SampleDataset[] = [
       { name: 'year', description: 'Year of observation.' },
     ],
     grid: parsedRowsToGrid([...PENGUINS_HEADERS], PENGUINS_ROWS.map(row => [...row] as unknown[])),
+  },
+  {
+    name: 'Birth Weights',
+    emoji: '👶',
+    description: BIRTH_WEIGHTS_META.description,
+    tags: [...BIRTH_WEIGHTS_META.tags],
+    source: BIRTH_WEIGHTS_META.source,
+    sourceUrl: BIRTH_WEIGHTS_META.sourceUrl,
+    citation: BIRTH_WEIGHTS_META.citation,
+    notes: BIRTH_WEIGHTS_META.notes,
+    variableInfo: [
+      { name: 'birth_weight_g', description: 'Infant birth weight in grams.' },
+      { name: 'low_birth_weight', description: 'Whether the infant had low birth weight.' },
+      { name: 'mother_age', description: 'Mother age in years.' },
+      { name: 'mother_weight_lb', description: 'Mother weight in pounds at the last menstrual period.' },
+      { name: 'mother_race', description: 'Mother race category as coded in the original study.' },
+      { name: 'smoker', description: 'Whether the mother smoked during pregnancy.' },
+      { name: 'previous_premature_labors', description: 'Number of previous premature labors.' },
+      { name: 'hypertension', description: 'Whether the mother had a history of hypertension.' },
+      { name: 'uterine_irritability', description: 'Whether uterine irritability was present.' },
+      { name: 'first_trimester_visits', description: 'Number of physician visits during the first trimester.' },
+    ],
+    grid: parsedRowsToGrid([...BIRTH_WEIGHTS_HEADERS], BIRTH_WEIGHTS_ROWS.map(row => [...row] as unknown[])),
   },
   { name: 'US Weather', emoji: '🌡️', description: 'Average temperature, rainfall, and snowfall patterns for U.S. cities.', grid: parsedRowsToGrid(weatherHeaders, weatherRows) },
   { name: 'NBA Season', emoji: '🏀', description: 'Scoring and performance stats for NBA players.', grid: parsedRowsToGrid(nbaHeaders, nbaRows) },

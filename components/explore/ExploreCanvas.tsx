@@ -15,13 +15,14 @@ import { CSS } from '@dnd-kit/utilities'
 import { useDraggable } from '@dnd-kit/core'
 import { useStore } from '@/lib/store'
 import { GridColumn } from '@/types'
-import { CardConfig, GraphCardConfig, ExploreCard } from '@/lib/exploreTypes'
+import { CardConfig, GraphCardConfig, MeansCardConfig, ExploreCard } from '@/lib/exploreTypes'
 import { ChartType, inferCharts } from '@/lib/chartHelpers'
 import { GraphCard } from './cards/GraphCard'
 import { SummaryCard } from './cards/SummaryCard'
 import { RegressionCard } from './cards/RegressionCard'
 import { TwoWayTable } from '@/components/applets/TwoWayTable'
 import { DistributionCard } from '@/components/inference/DistributionCard'
+import { MeansCard } from '@/components/inference/MeansCard'
 import { RandomGeneratorCard } from '@/components/probability/RandomGeneratorCard'
 import { EmptyState } from '@/components/ui/EmptyState'
 
@@ -74,6 +75,7 @@ function cardLabel(type: CardConfig['type']): string {
     case 'generator':    return 'Random Generator'
     case 'testinterval': return 'Test / Interval'
     case 'simulation':   return 'Simulation'
+    case 'means':        return 'Means'
     default:             return 'Card'
   }
 }
@@ -183,8 +185,8 @@ export function ExploreCanvas() {
     if (!card) return
     const cfg = card.config
 
-    // Only graph, regression, and summary cards have drop zones
-    if (cfg.type !== 'graph' && cfg.type !== 'summary' && cfg.type !== 'regression') return
+    // Only these card types have drop zones
+    if (cfg.type !== 'graph' && cfg.type !== 'summary' && cfg.type !== 'regression' && cfg.type !== 'means') return
 
     const sourceZone = (sourceZoneId && sourceZoneId.startsWith(cardId + ':'))
       ? sourceZoneId.slice(cardId.length + 1)
@@ -235,6 +237,19 @@ export function ExploreCanvas() {
       }
       newConfig = c
     }
+    if (cfg.type === 'means') {
+      // Reject categorical columns
+      const droppedCol = grid.columns.find(c => c.id === colId)
+      if (!droppedCol || droppedCol.type !== 'numeric') return
+      let c: MeansCardConfig = { ...cfg }
+      if (targetZone === 'var1') c = { ...c, var1ColId: colId }
+      if (targetZone === 'var2') c = { ...c, var2ColId: colId }
+      if (sourceZone && sourceZone !== targetZone) {
+        if (sourceZone === 'var1') c = { ...c, var1ColId: null }
+        if (sourceZone === 'var2') c = { ...c, var2ColId: null }
+      }
+      newConfig = c
+    }
     if (newConfig) updateCard(cardId, { config: newConfig })
   }, [cards, grid.columns, updateCard])
 
@@ -258,6 +273,10 @@ export function ExploreCanvas() {
     if (cfg.type === 'regression') {
       if (zone === 'x') newConfig = { ...cfg, xColId: null }
       if (zone === 'y') newConfig = { ...cfg, yColId: null }
+    }
+    if (cfg.type === 'means') {
+      if (zone === 'var1') newConfig = { ...cfg, var1ColId: null }
+      if (zone === 'var2') newConfig = { ...cfg, var2ColId: null }
     }
     if (newConfig) updateCard(cardId, { config: newConfig })
   }
@@ -297,6 +316,7 @@ export function ExploreCanvas() {
       case 'regression':   return { minWidth: 400, minHeight: 340 }
       case 'distribution': return { minWidth: 460, minHeight: 480 }
       case 'generator':    return { minWidth: 460, minHeight: 440 }
+      case 'means':        return { minWidth: 520, minHeight: 520 }
       default:             return { minWidth: 360, minHeight: 280 }
     }
   }
@@ -525,6 +545,13 @@ export function ExploreCanvas() {
                           )}
                           {card.config.type === 'generator' && (
                             <RandomGeneratorCard />
+                          )}
+                          {card.config.type === 'means' && (
+                            <MeansCard
+                              cardId={card.id}
+                              config={card.config}
+                              onClearZone={z => clearZone(card.id, z)}
+                            />
                           )}
                           {card.config.type === 'testinterval' && (
                             <PlaceholderCard label="Test / Interval" />

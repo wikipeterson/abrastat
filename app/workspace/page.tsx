@@ -35,6 +35,7 @@ const PROBABILITY_CARD_OPTIONS: CardOption[] = [
 ]
 
 const INFERENCE_CARD_OPTIONS: CardOption[] = [
+  { type: 'means',        icon: '📐', label: 'Means' },
   { type: 'testinterval', icon: '⚖️',  label: 'Test / Interval' },
 ]
 

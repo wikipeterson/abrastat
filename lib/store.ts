@@ -227,10 +227,12 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'distribution' ? { type: 'distribution', preFill: scanChiSquareContext(state.exploreCards, state.grid) } :
       type === 'generator'    ? { type: 'generator' } :
       type === 'testinterval' ? { type: 'testinterval' } :
+      type === 'means'        ? { type: 'means', var1ColId: null, var2ColId: null } :
                                  { type: 'simulation' }
     const { width, height } =
       type === 'table'   ? { width: 780, height: 520 } :
       type === 'summary' ? { width: 700, height: 620 } :
+      type === 'means'   ? { width: 580, height: 580 } :
                            { width: 620, height: 520 }
     return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width, height }] }
   }),
@@ -248,6 +250,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       if (cfg.type === 'summary')    return { ...card, config: { ...cfg, variableColIds: cfg.variableColIds.filter(id => validIds.has(id)), groupColId: nil(cfg.groupColId) } }
       if (cfg.type === 'table')      return { ...card, config: { ...cfg, rowsColId: nil(cfg.rowsColId), colsColId: nil(cfg.colsColId) } }
       if (cfg.type === 'regression') return { ...card, config: { ...cfg, xColId: nil(cfg.xColId), yColId: nil(cfg.yColId) } }
+      if (cfg.type === 'means')      return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }
       return card
     }),
   })),

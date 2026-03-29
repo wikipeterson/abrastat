@@ -61,6 +61,12 @@ export interface SimulationCardConfig {
   type: 'simulation'
 }
 
+export interface MeansCardConfig {
+  type: 'means'
+  var1ColId: string | null
+  var2ColId: string | null
+}
+
 export type CardConfig =
   | GraphCardConfig
   | SummaryCardConfig
@@ -70,6 +76,7 @@ export type CardConfig =
   | RandomGeneratorCardConfig
   | TestIntervalCardConfig
   | SimulationCardConfig
+  | MeansCardConfig
 
 export interface ExploreCard {
   id: string

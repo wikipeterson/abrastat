@@ -217,9 +217,11 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'generator'    ? { type: 'generator' } :
       type === 'testinterval' ? { type: 'testinterval' } :
                                  { type: 'simulation' }
-    const width =
-      type === 'table' ? 780 : 620
-    return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width, height: 520 }] }
+    const { width, height } =
+      type === 'table'   ? { width: 780, height: 520 } :
+      type === 'summary' ? { width: 700, height: 620 } :
+                           { width: 620, height: 520 }
+    return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width, height }] }
   }),
   removeExploreCard: (id) => set(state => ({
     exploreCards: state.exploreCards.filter(c => c.id !== id),

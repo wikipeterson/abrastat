@@ -82,8 +82,6 @@ export function NumericStatCard({ result }: { result: SummaryResult }) {
       ['Median', result.median],
       ['Q3', result.q3],
       ['Max', result.max],
-      ['IQR', result.iqr],
-      ['Range', result.range],
     ]
     navigator.clipboard.writeText(rows.map(r => r.join('\t')).join('\n'))
   }
@@ -121,8 +119,6 @@ export function NumericStatCard({ result }: { result: SummaryResult }) {
           <StatRow label="Median" value={result.median} highlight />
           <StatRow label="Q3" value={result.q3} />
           <StatRow label="Max" value={result.max} />
-          <StatRow label="IQR" value={result.iqr} />
-          <StatRow label="Range" value={result.range} />
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import type { WheelEvent as ReactWheelEvent } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -104,8 +105,20 @@ export function ExploreCanvas() {
 
   const [activeColId, setActiveColId] = useState<string | null>(null)
   const [interactionCursor, setInteractionCursor] = useState<string | null>(null)
+  const [zoom, setZoom] = useState(1)
   const scrollRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
+  const zoomRef = useRef(1)
+
+  const BASE_CANVAS_WIDTH = 1400
+  const BASE_CANVAS_HEIGHT = 1800
+  const MIN_ZOOM = 0.6
+  const MAX_ZOOM = 1.8
+  const ZOOM_STEP = 0.1
+
+  useEffect(() => {
+    zoomRef.current = zoom
+  }, [zoom])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -262,8 +275,8 @@ export function ExploreCanvas() {
 
     function onMove(ev: PointerEvent) {
       updateCard(cardId, {
-        x: Math.max(0, startCardX + ev.clientX - startX),
-        y: Math.max(0, startCardY + ev.clientY - startY),
+        x: Math.max(0, startCardX + (ev.clientX - startX) / zoomRef.current),
+        y: Math.max(0, startCardY + (ev.clientY - startY) / zoomRef.current),
       })
     }
     function onUp() {
@@ -279,7 +292,7 @@ export function ExploreCanvas() {
   function getCardMinSize(card: ExploreCard) {
     switch (card.config.type) {
       case 'graph':        return { minWidth: 520, minHeight: 460 }
-      case 'summary':      return { minWidth: 360, minHeight: 300 }
+      case 'summary':      return { minWidth: 700, minHeight: 620 }
       case 'table':        return { minWidth: 780, minHeight: 500 }
       case 'regression':   return { minWidth: 400, minHeight: 340 }
       case 'distribution': return { minWidth: 460, minHeight: 480 }
@@ -300,8 +313,8 @@ export function ExploreCanvas() {
 
     function onMove(ev: PointerEvent) {
       const updates: Partial<Omit<ExploreCard, 'id'>> = {}
-      if (dir === 'e' || dir === 'se') updates.width  = Math.max(minWidth, startW + ev.clientX - startX)
-      if (dir === 's' || dir === 'se') updates.height = Math.max(minHeight, startH + ev.clientY - startY)
+      if (dir === 'e' || dir === 'se') updates.width  = Math.max(minWidth, startW + (ev.clientX - startX) / zoomRef.current)
+      if (dir === 's' || dir === 'se') updates.height = Math.max(minHeight, startH + (ev.clientY - startY) / zoomRef.current)
       updateCard(cardId, updates)
     }
     function onUp() {
@@ -352,6 +365,45 @@ export function ExploreCanvas() {
     window.addEventListener('pointerup', onUp)
   }
 
+  function applyZoom(nextZoom: number, origin?: { clientX: number; clientY: number }) {
+    const scroller = scrollRef.current
+    if (!scroller) {
+      setZoom(nextZoom)
+      return
+    }
+
+    const rect = scroller.getBoundingClientRect()
+    const originX = origin?.clientX ?? rect.left + rect.width / 2
+    const originY = origin?.clientY ?? rect.top + rect.height / 2
+    const localX = originX - rect.left
+    const localY = originY - rect.top
+    const currentZoom = zoomRef.current
+    const worldX = (scroller.scrollLeft + localX) / currentZoom
+    const worldY = (scroller.scrollTop + localY) / currentZoom
+
+    setZoom(nextZoom)
+
+    requestAnimationFrame(() => {
+      scroller.scrollLeft = Math.max(0, worldX * nextZoom - localX)
+      scroller.scrollTop = Math.max(0, worldY * nextZoom - localY)
+    })
+  }
+
+  function nudgeZoom(direction: 1 | -1) {
+    const current = zoomRef.current
+    const nextZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, parseFloat((current + direction * ZOOM_STEP).toFixed(2))))
+    if (nextZoom !== current) applyZoom(nextZoom)
+  }
+
+  function handleWheel(e: ReactWheelEvent<HTMLDivElement>) {
+    if (!e.ctrlKey) return
+    e.preventDefault()
+    const current = zoomRef.current
+    const rawNext = current * (e.deltaY < 0 ? 1.1 : 0.9)
+    const nextZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, parseFloat(rawNext.toFixed(3))))
+    if (nextZoom !== current) applyZoom(nextZoom, { clientX: e.clientX, clientY: e.clientY })
+  }
+
   const activeCol = activeColId ? (grid.columns.find(c => c.id === activeColId) ?? null) : null
 
   if (!hasData) {
@@ -390,7 +442,7 @@ export function ExploreCanvas() {
 
         {/* Canvas column */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-          <div ref={scrollRef} className="flex-1 overflow-auto bg-[var(--color-bg)] p-2 relative cursor-grab">
+          <div ref={scrollRef} onWheel={handleWheel} className="flex-1 overflow-auto bg-[var(--color-bg)] p-2 relative cursor-grab">
             {cards.length === 0 && (
               <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
                 <div className="text-center px-6">
@@ -403,7 +455,7 @@ export function ExploreCanvas() {
               ref={innerRef}
               onPointerDown={startPan}
               className="relative rounded-lg"
-              style={{ minWidth: 1400, minHeight: 1800 }}
+              style={{ width: BASE_CANVAS_WIDTH * zoom, minWidth: BASE_CANVAS_WIDTH * zoom, height: BASE_CANVAS_HEIGHT * zoom, minHeight: BASE_CANVAS_HEIGHT * zoom }}
             >
               {cards.map(card => {
                 const cardH = card.height ?? 520
@@ -413,10 +465,10 @@ export function ExploreCanvas() {
                     data-card-id={card.id}
                     style={{
                       position: 'absolute',
-                      left: card.x,
-                      top: card.y,
-                      width: card.width,
-                      height: cardH,
+                      left: card.x * zoom,
+                      top: card.y * zoom,
+                      width: card.width * zoom,
+                      height: cardH * zoom,
                     }}
                     className="group"
                   >
@@ -515,6 +567,30 @@ export function ExploreCanvas() {
                   </div>
                 )
               })}
+            </div>
+
+            <div className="absolute bottom-4 left-4 z-20 flex items-center rounded-xl border border-slate-200 bg-white/95 shadow-sm backdrop-blur-sm overflow-hidden">
+              <button
+                type="button"
+                onClick={() => nudgeZoom(-1)}
+                disabled={zoom <= MIN_ZOOM}
+                className="h-10 w-10 text-xl text-[var(--color-text)] hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Zoom out"
+              >
+                −
+              </button>
+              <div className="min-w-16 px-3 text-center text-xs font-medium text-[var(--color-muted)] border-x border-slate-200">
+                {Math.round(zoom * 100)}%
+              </div>
+              <button
+                type="button"
+                onClick={() => nudgeZoom(1)}
+                disabled={zoom >= MAX_ZOOM}
+                className="h-10 w-10 text-xl text-[var(--color-text)] hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Zoom in"
+              >
+                +
+              </button>
             </div>
           </div>
         </div>

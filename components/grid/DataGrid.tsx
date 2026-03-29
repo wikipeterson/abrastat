@@ -10,10 +10,12 @@ const COL_WIDTH = 140
 const ROW_NUM_WIDTH = 48
 
 export function DataGrid() {
-  const { grid, updateCell, addRow, deleteRows, undo } = useStore()
+  const { grid, updateCell, addRow, deleteRows, undo, reorderColumns } = useStore()
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null)
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; rowIndex: number } | null>(null)
+  const [dragColIdx, setDragColIdx] = useState<number | null>(null)
+  const [dropTargetIdx, setDropTargetIdx] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Ensure enough empty rows
@@ -95,11 +97,43 @@ export function DataGrid() {
             className="flex-shrink-0 bg-[var(--color-grid-header)]"
             style={{ width: ROW_NUM_WIDTH }}
           />
-          {columns.map((col, colIndex) => (
-            <div key={col.id} style={{ width: COL_WIDTH, minWidth: COL_WIDTH }}>
-              <ColumnHeader column={col} colIndex={colIndex} />
-            </div>
-          ))}
+          {columns.map((col, colIndex) => {
+            const isTarget = dropTargetIdx === colIndex && dragColIdx !== null && dragColIdx !== colIndex
+            return (
+              <div
+                key={col.id}
+                style={{ width: COL_WIDTH, minWidth: COL_WIDTH }}
+                className={`group/col relative transition-colors ${isTarget ? 'ring-2 ring-inset ring-[var(--color-accent)]' : ''}`}
+                draggable
+                onDragStart={e => {
+                  setDragColIdx(colIndex)
+                  e.dataTransfer.effectAllowed = 'move'
+                  // Needed for Firefox
+                  e.dataTransfer.setData('text/plain', String(colIndex))
+                }}
+                onDragOver={e => {
+                  e.preventDefault()
+                  e.dataTransfer.dropEffect = 'move'
+                  if (dropTargetIdx !== colIndex) setDropTargetIdx(colIndex)
+                }}
+                onDragLeave={() => setDropTargetIdx(null)}
+                onDrop={e => {
+                  e.preventDefault()
+                  if (dragColIdx !== null && dragColIdx !== colIndex) {
+                    reorderColumns(dragColIdx, colIndex)
+                  }
+                  setDragColIdx(null)
+                  setDropTargetIdx(null)
+                }}
+                onDragEnd={() => {
+                  setDragColIdx(null)
+                  setDropTargetIdx(null)
+                }}
+              >
+                <ColumnHeader column={col} colIndex={colIndex} />
+              </div>
+            )
+          })}
         </div>
 
         {/* Data rows */}

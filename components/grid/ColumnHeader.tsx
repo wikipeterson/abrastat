@@ -46,6 +46,8 @@ export function ColumnHeader({ column, colIndex }: ColumnHeaderProps) {
 
   return (
     <div className="relative flex items-center h-8 px-2 gap-1 bg-[var(--color-grid-header)] text-white text-xs font-medium border-r border-slate-600 select-none">
+      {/* Drag-to-reorder grip — visual affordance only; drag is handled by the DataGrid wrapper */}
+      <span className="flex-shrink-0 text-slate-500 opacity-0 group-hover/col:opacity-60 transition-opacity cursor-grab text-[11px] leading-none" aria-hidden>⠿</span>
       {renaming ? (
         <input
           ref={inputRef}

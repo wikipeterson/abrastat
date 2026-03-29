@@ -115,7 +115,6 @@ export function ExploreCanvas() {
   const BASE_CANVAS_HEIGHT = 1800
   const MIN_ZOOM = 0.6
   const MAX_ZOOM = 1.8
-  const ZOOM_STEP = 0.1
 
   useEffect(() => {
     zoomRef.current = zoom
@@ -391,12 +390,6 @@ export function ExploreCanvas() {
     })
   }
 
-  function nudgeZoom(direction: 1 | -1) {
-    const current = zoomRef.current
-    const nextZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, parseFloat((current + direction * ZOOM_STEP).toFixed(2))))
-    if (nextZoom !== current) applyZoom(nextZoom)
-  }
-
   function handleWheel(e: ReactWheelEvent<HTMLDivElement>) {
     if (!e.ctrlKey) return
     e.preventDefault()
@@ -576,31 +569,6 @@ export function ExploreCanvas() {
 
           </div>
 
-          <div className="pointer-events-none absolute bottom-20 left-4 z-20">
-            <div className="pointer-events-auto flex items-center rounded-xl border border-slate-200 bg-white/95 shadow-sm backdrop-blur-sm overflow-hidden">
-              <button
-                type="button"
-                onClick={() => nudgeZoom(-1)}
-                disabled={zoom <= MIN_ZOOM}
-                className="h-10 w-10 text-xl text-[var(--color-text)] hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label="Zoom out"
-              >
-                −
-              </button>
-              <div className="min-w-16 px-3 text-center text-xs font-medium text-[var(--color-muted)] border-x border-slate-200">
-                {Math.round(zoom * 100)}%
-              </div>
-              <button
-                type="button"
-                onClick={() => nudgeZoom(1)}
-                disabled={zoom >= MAX_ZOOM}
-                className="h-10 w-10 text-xl text-[var(--color-text)] hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label="Zoom in"
-              >
-                +
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 

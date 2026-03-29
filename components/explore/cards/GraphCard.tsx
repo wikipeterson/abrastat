@@ -58,7 +58,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
         case 'dot':        return <DotPlot colId={config.yColId} groupByColId={config.groupColId} orientation="v" />
         case 'box':        return <BoxPlot colId={config.yColId} groupColId={config.groupColId} orientation="v" />
         case 'bar':        return <BarChart colId={config.yColId} orientation="v" />
-        case 'pie':        return <PieChart colId={config.yColId} />
+        case 'pie':        return <PieChart colId={config.yColId} groupColId={config.groupColId} />
         case 'normalprob': return <NormalProbPlot colId={config.yColId} />
         default: break
       }
@@ -79,7 +79,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
           : <BoxPlot colId={mainColId} groupColId={config.groupColId} orientation={orientation} />
       case 'scatter':    return <ScatterPlot xColId={config.xColId} yColId={config.yColId} colorByColId={config.groupColId} />
       case 'bar':        return <BarChart colId={mainColId} orientation={orientation} />
-      case 'pie':        return <PieChart colId={mainColId} />
+      case 'pie':        return <PieChart colId={mainColId} groupColId={config.groupColId} />
       case 'segmented':  return <SegmentedBar xColId={config.xColId} fillColId={config.groupColId} />
       case 'normalprob': return <NormalProbPlot colId={mainColId} />
       default:           return null

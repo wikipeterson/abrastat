@@ -82,6 +82,7 @@ interface AbraStatStore {
   deleteRows: (rowIndices: number[]) => void
   addColumn: (afterIndex?: number) => void
   deleteColumn: (colId: string) => void
+  reorderColumns: (fromIndex: number, toIndex: number) => void
   renameColumn: (colId: string, newName: string) => void
   setColumnType: (colId: string, type: ColumnType) => void
   addComputedColumn: (name: string, formula: string) => void
@@ -156,6 +157,16 @@ export const useStore = create<AbraStatStore>((set) => ({
     const columns = [...state.grid.columns.slice(0, idx), newCol, ...state.grid.columns.slice(idx)]
     const rows = state.grid.rows.map(r => ({ ...r, [id]: '' }))
     return { grid: { columns, rows }, isDirty: true, undoStack: stack }
+  }),
+
+  reorderColumns: (fromIndex, toIndex) => set(state => {
+    if (fromIndex === toIndex) return state
+    const stack = [...state.undoStack, snapshot(state.grid)].slice(-MAX_UNDO)
+    const columns = [...state.grid.columns]
+    const [moved] = columns.splice(fromIndex, 1)
+    columns.splice(toIndex, 0, moved)
+    // rows are keyed by column ID so no row data changes
+    return { grid: { ...state.grid, columns }, isDirty: true, undoStack: stack }
   }),
 
   deleteColumn: (colId) => set(state => {

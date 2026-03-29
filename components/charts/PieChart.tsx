@@ -1,8 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useStore } from '@/lib/store'
-import { getStringValues } from '@/lib/gridHelpers'
 import { getFrequencyTable } from '@/lib/statistics'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
@@ -11,47 +10,139 @@ import { useGraphCardContext } from '@/lib/graphCardContext'
 
 interface PieChartProps {
   colId: string | null
+  groupColId?: string | null
 }
 
-export function PieChart({ colId }: PieChartProps) {
+export function PieChart({ colId, groupColId }: PieChartProps) {
   const { grid } = useStore()
   const { hideAxisTitles } = useGraphCardContext()
-  const col = grid.columns.find(c => c.id === colId)
+  const col      = grid.columns.find(c => c.id === colId)
+  const groupCol = groupColId ? (grid.columns.find(c => c.id === groupColId) ?? null) : null
 
-  const freqTable = useMemo(() => {
-    if (!colId) return []
-    const values = getStringValues(grid, colId).filter(v => v.trim())
-    return getFrequencyTable(values).slice(0, 20)
-  }, [grid, colId])
+  const [showPercent, setShowPercent] = useState(false)
+
+  // All category values (filtered to non-empty rows)
+  const { allValues, allGroups } = useMemo(() => {
+    if (!colId) return { allValues: [], allGroups: [] }
+    const raw = grid.rows.map(r => ({
+      value: String(r[colId] ?? '').trim(),
+      group: groupColId ? String(r[groupColId] ?? '').trim() : '',
+    })).filter(r => r.value)
+    const allGroups = groupColId
+      ? [...new Set(raw.map(r => r.group))].filter(g => g).sort()
+      : []
+    return { allValues: raw, allGroups }
+  }, [grid, colId, groupColId])
+
+  // Build a stable color map so the same category always gets the same color
+  const categoryColors = useMemo(() => {
+    const cats = [...new Set(allValues.map(r => r.value))].sort()
+    return Object.fromEntries(cats.map((cat, i) => [cat, ABRA_COLORS[i % ABRA_COLORS.length]]))
+  }, [allValues])
 
   if (!colId || !col) {
     return <EmptyState icon="🥧" title="Drop a categorical variable" description="Drag a categorical variable to see a pie chart of frequencies." />
   }
-
-  if (freqTable.length === 0) {
+  if (allValues.length === 0) {
     return <EmptyState icon="🥧" title="No data" description="No non-empty values found in this column." />
   }
 
+  const hasGroups = allGroups.length > 1
+
+  // Build traces — one per group (or one total if no grouping)
+  const groups = hasGroups ? allGroups : ['']
+  const MAX_GROUPS = 6
+
+  const traces = groups.slice(0, MAX_GROUPS).map((group, gi) => {
+    const subset = hasGroups
+      ? allValues.filter(r => r.group === group).map(r => r.value)
+      : allValues.map(r => r.value)
+
+    const freq = getFrequencyTable(subset).slice(0, 20)
+    const labels = freq.map(r => r.value)
+    const values = freq.map(r => r.count)
+    const colors = labels.map(l => categoryColors[l] ?? ABRA_COLORS[0])
+
+    // Domain: lay groups out in a row (up to 3 per row, then wrap)
+    const perRow = Math.min(groups.length, 3)
+    const rows = Math.ceil(groups.length / perRow)
+    const col_ = gi % perRow
+    const row  = Math.floor(gi / perRow)
+    const gap = 0.04
+    const cellW = (1 - gap * (perRow - 1)) / perRow
+    const cellH = (1 - gap * (rows - 1)) / rows
+    const xStart = col_ * (cellW + gap)
+    const yStart = 1 - (row + 1) * (cellH + gap) + gap
+    const domain = hasGroups
+      ? { x: [xStart, xStart + cellW] as [number, number], y: [Math.max(0, yStart), yStart + cellH] as [number, number] }
+      : { x: [0, 1] as [number, number], y: [0, 1] as [number, number] }
+
+    return {
+      type: 'pie' as const,
+      labels,
+      values,
+      name: group || col.name,
+      title: hasGroups ? { text: group, font: { size: 12 } } : undefined,
+      domain,
+      marker: { colors },
+      textinfo: (showPercent ? 'percent' : 'value') as 'percent' | 'value',
+      hovertemplate: showPercent
+        ? '%{label}: %{percent}<extra></extra>'
+        : '%{label}: %{value}<extra></extra>',
+      textfont: { size: 11 },
+      hole: 0,
+      // Show legend only on first trace to avoid duplication
+      showlegend: gi === 0 && !hasGroups,
+    }
+  })
+
+  const tooManyGroups = hasGroups && allGroups.length > MAX_GROUPS
+
+  const margin = hideAxisTitles
+    ? { t: 40, r: 16, b: 8, l: 16 }   // t:40 gives room for outside slice labels
+    : { t: 40, r: 120, b: 16, l: 16 }
+
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col gap-2">
+
+      {/* Controls */}
+      <div className="flex-shrink-0 flex items-center gap-2 px-4 pt-1">
+        <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+          <button
+            onClick={() => setShowPercent(false)}
+            className={`px-2.5 py-1 font-medium transition-colors ${!showPercent ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}
+          >
+            Count
+          </button>
+          <button
+            onClick={() => setShowPercent(true)}
+            className={`px-2.5 py-1 font-medium transition-colors border-l border-[var(--color-border)] ${showPercent ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}
+          >
+            Percent
+          </button>
+        </div>
+
+        {groupCol && (
+          <span className="text-xs text-[var(--color-muted)]">
+            by <span className="font-medium text-[var(--color-text)]">{groupCol.name}</span>
+          </span>
+        )}
+
+        {tooManyGroups && (
+          <span className="text-xs text-amber-600">Showing first {MAX_GROUPS} of {allGroups.length} groups</span>
+        )}
+      </div>
+
+      {/* Chart */}
       <div className="flex-1 min-h-0 px-4">
         <PlotlyChart
-          data={[{
-            type: 'pie',
-            labels: freqTable.map(r => r.value),
-            values: freqTable.map(r => r.count),
-            marker: { colors: ABRA_COLORS },
-            textinfo: 'label+percent',
-            hovertemplate: '%{label}: %{value} (%{percent})<extra></extra>',
-            textfont: { size: 12 },
-            hole: 0,
-          }]}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          data={traces as any}
           layout={{
-            showlegend: freqTable.length <= 8,
-            legend: { orientation: 'v', x: 1, y: 0.5 },
-            margin: hideAxisTitles
-              ? { t: 8, r: 16, b: 8, l: 16 }
-              : { t: 16, r: 120, b: 16, l: 16 },
+            showlegend: !hasGroups,
+            legend: { orientation: 'v', x: 1.02, y: 0.5 },
+            margin,
+            // When showing multiple pies, annotations serve as group titles (already set via trace title)
           }}
           title={hideAxisTitles ? undefined : col.name}
         />

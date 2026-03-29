@@ -59,12 +59,14 @@ export function BarChart({ colId, orientation = 'h' }: BarChartProps) {
     ? {
         xaxis: { title: hideAxisTitles ? undefined : { text: col.name } },
         yaxis: { title: hideAxisTitles ? undefined : { text: 'Count' } },
-        margin: hideAxisTitles ? { t: 8, r: 16, b: 44, l: 52 } : { l: 60, r: 40, t: 36, b: 80 },
+        // t: 36 gives room for 'outside' text labels above the tallest bar
+        margin: hideAxisTitles ? { t: 36, r: 16, b: 44, l: 52 } : { l: 60, r: 40, t: 36, b: 80 },
       }
     : {
         xaxis: { title: hideAxisTitles ? undefined : { text: 'Count' } },
         yaxis: { autorange: 'reversed' as const },
-        margin: hideAxisTitles ? { t: 8, r: 16, b: 44, l: 52 } : { l: 130, r: 80, t: 36, b: 60 },
+        // r: 48 gives room for 'outside' text labels to the right of the longest bar
+        margin: hideAxisTitles ? { t: 8, r: 48, b: 44, l: 52 } : { l: 130, r: 80, t: 36, b: 60 },
       }
 
   return (

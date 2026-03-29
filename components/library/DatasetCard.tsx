@@ -74,6 +74,11 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, view = '
         <div>
           <p className="font-semibold text-[var(--color-text)] truncate">{dataset.name}</p>
           {dataset.description && <p className="text-xs text-[var(--color-muted)] mt-0.5 line-clamp-2">{dataset.description}</p>}
+          {dataset.source && (
+            <p className="text-[11px] text-[var(--color-muted)] mt-1 truncate" title={dataset.citation || dataset.source}>
+              Source: {dataset.source}
+            </p>
+          )}
         </div>
         <div className="flex items-center justify-between text-xs text-[var(--color-muted)] mt-auto">
           <span>{dataset.ownerName}</span>
@@ -89,6 +94,11 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, view = '
       <div className="flex-1 min-w-0">
         <p className="font-medium text-[var(--color-text)] truncate">{dataset.name}</p>
         {dataset.description && <p className="text-xs text-[var(--color-muted)] truncate">{dataset.description}</p>}
+        {dataset.source && (
+          <p className="text-[11px] text-[var(--color-muted)] truncate" title={dataset.citation || dataset.source}>
+            Source: {dataset.source}
+          </p>
+        )}
       </div>
       <div className="hidden sm:flex items-center gap-6 text-xs text-[var(--color-muted)] flex-shrink-0">
         <span className="w-28 truncate">{dataset.ownerName}</span>

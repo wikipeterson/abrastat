@@ -16,7 +16,7 @@ import {
 import { User } from 'firebase/auth'
 import { v4 as uuid } from 'uuid'
 import { db } from './firebase'
-import { ColumnMeta, DatasetMeta, GridState } from '@/types'
+import { ColumnMeta, DatasetMeta, DatasetVariableInfo, GridState } from '@/types'
 
 function gridToStorable(grid: GridState) {
   return {
@@ -31,7 +31,15 @@ export async function saveDataset(
   description: string,
   emoji: string,
   isPublic: boolean,
-  grid: GridState
+  grid: GridState,
+  extras?: {
+    tags?: string[]
+    source?: string
+    sourceUrl?: string
+    citation?: string
+    notes?: string
+    variableInfo?: DatasetVariableInfo[]
+  }
 ): Promise<string> {
   const ref = doc(collection(db, 'datasets'))
   const now = Timestamp.now()
@@ -46,7 +54,12 @@ export async function saveDataset(
     isPublic,
     rowCount: grid.rows.length,
     columnCount: grid.columns.length,
-    tags: [],
+    tags: extras?.tags ?? [],
+    source: extras?.source ?? '',
+    sourceUrl: extras?.sourceUrl ?? '',
+    citation: extras?.citation ?? '',
+    notes: extras?.notes ?? '',
+    variableInfo: extras?.variableInfo ?? [],
     createdAt: now,
     updatedAt: now,
     ...gridToStorable(grid),
@@ -71,6 +84,11 @@ export async function loadDataset(datasetId: string): Promise<{ meta: DatasetMet
     columnCount: data.columnCount,
     columns: data.columns,
     tags: data.tags ?? [],
+    source: data.source ?? '',
+    sourceUrl: data.sourceUrl ?? '',
+    citation: data.citation ?? '',
+    notes: data.notes ?? '',
+    variableInfo: data.variableInfo ?? [],
     createdAt: (data.createdAt as Timestamp).toDate(),
     updatedAt: (data.updatedAt as Timestamp).toDate(),
   }
@@ -85,7 +103,7 @@ export async function loadDataset(datasetId: string): Promise<{ meta: DatasetMet
 
 export async function updateDatasetMeta(
   datasetId: string,
-  updates: Partial<Pick<DatasetMeta, 'name' | 'description' | 'emoji' | 'isPublic'>>
+  updates: Partial<Pick<DatasetMeta, 'name' | 'description' | 'emoji' | 'isPublic' | 'tags' | 'source' | 'sourceUrl' | 'citation' | 'notes' | 'variableInfo'>>
 ): Promise<void> {
   await updateDoc(doc(db, 'datasets', datasetId), { ...updates, updatedAt: Timestamp.now() })
 }

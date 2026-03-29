@@ -1,9 +1,17 @@
 import { parsedRowsToGrid } from './gridHelpers'
-import { GridState } from '@/types'
+import { DatasetVariableInfo, GridState } from '@/types'
+import { TITANIC_STUDENT_HEADERS, TITANIC_STUDENT_META, TITANIC_STUDENT_ROWS } from './sampleTitanic'
 
 export interface SampleDataset {
   name: string
   emoji: string
+  description?: string
+  tags?: string[]
+  source?: string
+  sourceUrl?: string
+  citation?: string
+  notes?: string
+  variableInfo?: DatasetVariableInfo[]
   grid: GridState
 }
 
@@ -122,33 +130,32 @@ const studentSurveyRows = [
   ['11th', 'Male', 'Track', 4, 3.1, 'School'], ['12th', 'Female', 'Basketball', 3, 3.5, 'Packed'],
 ]
 
-const titanicHeaders = ['class', 'sex', 'survived', 'age', 'fare']
-const titanicRows = [
-  ['1st', 'male', 'Yes', 22, 71.28], ['1st', 'female', 'Yes', 38, 71.28], ['1st', 'female', 'Yes', 26, 7.92],
-  ['1st', 'female', 'Yes', 35, 53.10], ['1st', 'male', 'No', 35, 8.05], ['1st', 'male', 'Yes', 54, 51.86],
-  ['1st', 'male', 'No', 2, 21.08], ['1st', 'female', 'Yes', 27, 11.13], ['1st', 'female', 'Yes', 14, 30.07],
-  ['1st', 'female', 'Yes', 4, 16.70], ['1st', 'male', 'No', 58, 26.55], ['1st', 'male', 'Yes', 20, 13.00],
-  ['1st', 'male', 'No', 39, 31.68], ['1st', 'female', 'Yes', 14, 7.85], ['1st', 'female', 'Yes', 55, 16.00],
-  ['1st', 'male', 'No', 2, 29.12], ['1st', 'female', 'Yes', 31, 18.00], ['1st', 'male', 'No', 35, 26.00],
-  ['2nd', 'male', 'No', 34, 13.00], ['2nd', 'female', 'Yes', 15, 14.45], ['2nd', 'male', 'No', 28, 0.00],
-  ['2nd', 'female', 'Yes', 8, 26.55], ['2nd', 'male', 'Yes', 38, 0.00], ['2nd', 'female', 'Yes', 19, 13.00],
-  ['2nd', 'male', 'No', 40, 15.04], ['2nd', 'female', 'Yes', 18, 13.00], ['2nd', 'male', 'No', 35, 26.00],
-  ['2nd', 'female', 'Yes', 25, 13.00], ['2nd', 'male', 'No', 29, 13.86], ['2nd', 'female', 'Yes', 11, 46.90],
-  ['2nd', 'male', 'No', 2, 26.25], ['2nd', 'female', 'Yes', 36, 13.00], ['2nd', 'male', 'Yes', 26, 10.50],
-  ['3rd', 'male', 'No', 17, 8.66], ['3rd', 'female', 'Yes', 1, 11.13], ['3rd', 'male', 'No', 9, 15.25],
-  ['3rd', 'female', 'No', 45, 7.75], ['3rd', 'male', 'No', 8, 21.08], ['3rd', 'female', 'Yes', 19, 7.88],
-  ['3rd', 'male', 'No', 7, 21.08], ['3rd', 'female', 'Yes', 3, 21.08], ['3rd', 'male', 'No', 22, 7.25],
-  ['3rd', 'female', 'No', 16, 9.50], ['3rd', 'male', 'No', 36, 8.05], ['3rd', 'male', 'No', 24, 7.90],
-  ['3rd', 'female', 'Yes', 2, 10.46], ['3rd', 'male', 'No', 23, 8.68], ['3rd', 'female', 'Yes', 4, 13.42],
-  ['3rd', 'male', 'No', 29, 7.75], ['3rd', 'female', 'No', 31, 7.75],
-]
-
 export const SAMPLE_DATASETS: SampleDataset[] = [
-  { name: 'Class Survey', emoji: '📋', grid: parsedRowsToGrid(classSurveyHeaders, classSurveyRows) },
-  { name: 'Student Survey', emoji: '🎓', grid: parsedRowsToGrid(studentSurveyHeaders, studentSurveyRows) },
-  { name: 'Titanic', emoji: '🚢', grid: parsedRowsToGrid(titanicHeaders, titanicRows) },
-  { name: 'US Weather', emoji: '🌡️', grid: parsedRowsToGrid(weatherHeaders, weatherRows) },
-  { name: 'NBA Season', emoji: '🏀', grid: parsedRowsToGrid(nbaHeaders, nbaRows) },
-  { name: 'Olympic Medals', emoji: '🥇', grid: parsedRowsToGrid(olympicHeaders, olympicRows) },
-  { name: 'Car Data', emoji: '🚗', grid: parsedRowsToGrid(carHeaders, carRows) },
+  { name: 'Class Survey', emoji: '📋', description: 'A small sample of student measurements, sleep, GPA, and favorite subject.', grid: parsedRowsToGrid(classSurveyHeaders, classSurveyRows) },
+  { name: 'Student Survey', emoji: '🎓', description: 'Categorical and quantitative survey responses from high school students.', grid: parsedRowsToGrid(studentSurveyHeaders, studentSurveyRows) },
+  {
+    name: 'Titanic Passengers',
+    emoji: '🚢',
+    description: TITANIC_STUDENT_META.description,
+    tags: [...TITANIC_STUDENT_META.tags],
+    source: TITANIC_STUDENT_META.source,
+    sourceUrl: TITANIC_STUDENT_META.sourceUrl,
+    citation: TITANIC_STUDENT_META.citation,
+    notes: TITANIC_STUDENT_META.notes,
+    variableInfo: [
+      { name: 'survived', description: 'Whether the passenger survived the disaster (Yes or No).' },
+      { name: 'ticket_class', description: 'Passenger ticket class: First, Second, or Third.' },
+      { name: 'sex', description: 'Passenger sex.' },
+      { name: 'age', description: 'Passenger age in years. Some values are missing.' },
+      { name: 'adult_child', description: 'Derived from age: Child if under 18, Adult if 18 or older. Blank when age is missing.' },
+      { name: 'fare', description: 'Ticket fare in British pounds.' },
+      { name: 'family_size', description: 'Total family-group size traveling together on the ship, including the passenger.' },
+      { name: 'embarked', description: 'Port where the passenger boarded: Southampton, Cherbourg, or Queenstown.' },
+    ],
+    grid: parsedRowsToGrid([...TITANIC_STUDENT_HEADERS], TITANIC_STUDENT_ROWS.map(row => [...row] as unknown[])),
+  },
+  { name: 'US Weather', emoji: '🌡️', description: 'Average temperature, rainfall, and snowfall patterns for U.S. cities.', grid: parsedRowsToGrid(weatherHeaders, weatherRows) },
+  { name: 'NBA Season', emoji: '🏀', description: 'Scoring and performance stats for NBA players.', grid: parsedRowsToGrid(nbaHeaders, nbaRows) },
+  { name: 'Olympic Medals', emoji: '🥇', description: 'Country medal counts from the 2020 Olympic Games.', grid: parsedRowsToGrid(olympicHeaders, olympicRows) },
+  { name: 'Car Data', emoji: '🚗', description: 'Classic car data with fuel economy, cylinders, horsepower, and weight.', grid: parsedRowsToGrid(carHeaders, carRows) },
 ]

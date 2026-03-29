@@ -41,7 +41,14 @@ function DatasetsSection() {
     setSeeding(true)
     try {
       for (const s of SAMPLE_DATASETS) {
-        await saveDataset(user, s.name, '', s.emoji, true, s.grid)
+        await saveDataset(user, s.name, s.description ?? '', s.emoji, true, s.grid, {
+          tags: s.tags,
+          source: s.source,
+          sourceUrl: s.sourceUrl,
+          citation: s.citation,
+          notes: s.notes,
+          variableInfo: s.variableInfo,
+        })
       }
     } finally {
       setSeeding(false)
@@ -64,7 +71,11 @@ function DatasetsSection() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
     let result = datasets.filter(d =>
-      !q || d.name.toLowerCase().includes(q) || d.description?.toLowerCase().includes(q)
+      !q ||
+      d.name.toLowerCase().includes(q) ||
+      d.description?.toLowerCase().includes(q) ||
+      d.source?.toLowerCase().includes(q) ||
+      d.tags?.some(tag => tag.toLowerCase().includes(q))
     )
     result = [...result].sort((a, b) => {
       if (sort === 'newest') return b.updatedAt.getTime() - a.updatedAt.getTime()

@@ -15,6 +15,11 @@ export interface GridState {
   rows: Record<string, string | number>[]
 }
 
+export interface DatasetVariableInfo {
+  name: string
+  description: string
+}
+
 export interface DatasetMeta {
   id: string
   ownerId: string
@@ -28,6 +33,11 @@ export interface DatasetMeta {
   columnCount: number
   columns: ColumnMeta[]
   tags: string[]
+  source?: string
+  sourceUrl?: string
+  citation?: string
+  notes?: string
+  variableInfo?: DatasetVariableInfo[]
   createdAt: Date
   updatedAt: Date
 }

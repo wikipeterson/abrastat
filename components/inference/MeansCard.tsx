@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import jStat from 'jstat'
 import { useStore } from '@/lib/store'
 import { DropZone } from '@/components/explore/DropZone'
+import { PlotlyChart } from '@/components/charts/PlotlyChart'
 import { MeansCardConfig } from '@/lib/exploreTypes'
 
 // ─── jStat type shim ──────────────────────────────────────────────────────────
 
 const jS = jStat as unknown as {
-  normal:   { cdf: (x: number, m: number, s: number) => number; inv: (p: number, m: number, s: number) => number }
-  studentt: { cdf: (x: number, df: number) => number; inv: (p: number, df: number) => number }
+  normal:   { pdf: (x: number, m: number, s: number) => number; cdf: (x: number, m: number, s: number) => number; inv: (p: number, m: number, s: number) => number }
+  studentt: { pdf: (x: number, df: number) => number; cdf: (x: number, df: number) => number; inv: (p: number, df: number) => number }
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -27,7 +28,7 @@ interface TestResult {
   p: number
   ci: [number, number]
   se: number
-  diffN?: number    // for paired-t: number of valid pairs
+  diffN?: number
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -43,28 +44,22 @@ function fmtP(p: number): string {
   return p.toFixed(4)
 }
 
-function summaryStats(values: number[]): SummaryStats | null {
+function summaryOf(values: number[]): SummaryStats | null {
   if (values.length < 2) return null
   const n = values.length
   const mean = values.reduce((s, v) => s + v, 0) / n
   const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / (n - 1)
   const sd = Math.sqrt(variance)
-  const se = sd / Math.sqrt(n)
-  return { n, mean, sd, se }
+  return { n, mean, sd, se: sd / Math.sqrt(n) }
 }
 
-function calcPValue(stat: number, df: number | null, alt: Alternative): number {
-  if (df !== null) {
-    const cdf = jS.studentt.cdf(stat, df)
-    if (alt === 'less')      return cdf
-    if (alt === 'greater')   return 1 - cdf
-    return 2 * Math.min(cdf, 1 - cdf)
-  } else {
-    const cdf = jS.normal.cdf(stat, 0, 1)
-    if (alt === 'less')      return cdf
-    if (alt === 'greater')   return 1 - cdf
-    return 2 * Math.min(cdf, 1 - cdf)
-  }
+function calcP(stat: number, df: number | null, alt: Alternative): number {
+  const cdf = df !== null
+    ? jS.studentt.cdf(stat, df)
+    : jS.normal.cdf(stat, 0, 1)
+  if (alt === 'less')    return cdf
+  if (alt === 'greater') return 1 - cdf
+  return 2 * Math.min(cdf, 1 - cdf)
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -81,22 +76,47 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
   const var1Col = config.var1ColId ? (grid.columns.find(c => c.id === config.var1ColId) ?? null) : null
   const var2Col = config.var2ColId ? (grid.columns.find(c => c.id === config.var2ColId) ?? null) : null
 
+  const var2IsCategorical = var2Col?.type === 'categorical'
+  const var2IsNumeric      = var2Col?.type === 'numeric'
   const hasBoth = var1Col !== null && var2Col !== null
 
-  const [procedure, setProcedure]     = useState<Procedure>('one-sample-t')
+  // Groups (only relevant when var2 is categorical)
+  const allGroups = useMemo(() => {
+    if (!config.var2ColId || !var2IsCategorical) return []
+    return [...new Set(
+      grid.rows.map(r => String(r[config.var2ColId!] ?? '').trim()).filter(v => v)
+    )].sort()
+  }, [grid.rows, config.var2ColId, var2IsCategorical])
+
+  const [groupA, setGroupA] = useState<string>('')
+  const [groupB, setGroupB] = useState<string>('')
+
+  // Auto-populate group pickers when groups change
+  useEffect(() => {
+    if (allGroups.length >= 2) {
+      setGroupA(g => (g && allGroups.includes(g)) ? g : allGroups[0])
+      setGroupB(g => (g && allGroups.includes(g) && g !== groupA) ? g : allGroups[1])
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allGroups.join(',')])
+
+  // Procedure options
+  const validProcedures: Procedure[] = (() => {
+    if (!hasBoth || var2IsCategorical) return ['one-sample-t', 'one-sample-z']
+    return ['two-sample-t', 'paired-t']
+  })()
+
+  const [procedure, setProcedure] = useState<Procedure>('one-sample-t')
+  const effectiveProcedure: Procedure = (() => {
+    if (hasBoth && var2IsCategorical) return 'two-sample-t'
+    if (validProcedures.includes(procedure)) return procedure
+    return hasBoth ? 'two-sample-t' : 'one-sample-t'
+  })()
+
   const [h0, setH0]                   = useState('0')
   const [alternative, setAlternative] = useState<Alternative>('two-sided')
   const [alpha, setAlpha]             = useState('0.05')
-  const [sigma, setSigma]             = useState('')   // known σ for one-sample z
-
-  // Auto-switch to a valid procedure when variable count changes
-  const validProcedures: Procedure[] = hasBoth
-    ? ['two-sample-t', 'paired-t']
-    : ['one-sample-t', 'one-sample-z']
-
-  const effectiveProcedure: Procedure = validProcedures.includes(procedure)
-    ? procedure
-    : (hasBoth ? 'two-sample-t' : 'one-sample-t')
+  const [sigma, setSigma]             = useState('')
 
   // Extract numeric data
   const data1 = useMemo(() => {
@@ -105,25 +125,57 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
   }, [grid.rows, config.var1ColId])
 
   const data2 = useMemo(() => {
-    if (!config.var2ColId) return []
+    if (!config.var2ColId || !var2IsNumeric) return []
     return grid.rows.map(r => Number(r[config.var2ColId!])).filter(v => isFinite(v))
-  }, [grid.rows, config.var2ColId])
+  }, [grid.rows, config.var2ColId, var2IsNumeric])
 
-  const stats1 = useMemo(() => summaryStats(data1), [data1])
-  const stats2 = useMemo(() => summaryStats(data2), [data2])
+  // Group-split data for categorical var2
+  const { dataA, dataB } = useMemo(() => {
+    if (!config.var1ColId || !config.var2ColId || !var2IsCategorical) return { dataA: [] as number[], dataB: [] as number[] }
+    const a: number[] = [], b: number[] = []
+    for (const row of grid.rows) {
+      const group = String(row[config.var2ColId] ?? '').trim()
+      const val   = Number(row[config.var1ColId])
+      if (!isFinite(val)) continue
+      if (group === groupA) a.push(val)
+      else if (group === groupB) b.push(val)
+    }
+    return { dataA: a, dataB: b }
+  }, [grid.rows, config.var1ColId, config.var2ColId, var2IsCategorical, groupA, groupB])
 
-  // Compute test result
+  const stats1 = useMemo(() => summaryOf(data1), [data1])
+  const stats2 = useMemo(() => summaryOf(data2), [data2])
+  const statsA = useMemo(() => summaryOf(dataA), [dataA])
+  const statsB = useMemo(() => summaryOf(dataB), [dataB])
+
+  // ─── Compute test ─────────────────────────────────────────────────────────
   const result = useMemo((): TestResult | null => {
     const h0Val    = parseFloat(h0)
     const alphaVal = parseFloat(alpha)
     if (!isFinite(h0Val) || !isFinite(alphaVal) || alphaVal <= 0 || alphaVal >= 1) return null
+
+    // Two-sample via grouping variable
+    if (var2IsCategorical && statsA && statsB) {
+      const { n: n1, mean: m1, sd: s1 } = statsA
+      const { n: n2, mean: m2, sd: s2 } = statsB
+      const se  = Math.sqrt(s1 ** 2 / n1 + s2 ** 2 / n2)
+      if (!isFinite(se) || se === 0) return null
+      const t   = ((m1 - m2) - h0Val) / se
+      const num = (s1 ** 2 / n1 + s2 ** 2 / n2) ** 2
+      const den = (s1 ** 2 / n1) ** 2 / (n1 - 1) + (s2 ** 2 / n2) ** 2 / (n2 - 1)
+      const df  = num / den
+      const p   = calcP(t, df, alternative)
+      const tStar = jS.studentt.inv(1 - alphaVal / 2, df)
+      const diff  = m1 - m2
+      return { stat: t, statLabel: 't', df, p, ci: [diff - tStar * se, diff + tStar * se], se }
+    }
 
     if (effectiveProcedure === 'one-sample-t') {
       if (!stats1) return null
       const { n, mean, se } = stats1
       const df = n - 1
       const t  = (mean - h0Val) / se
-      const p  = calcPValue(t, df, alternative)
+      const p  = calcP(t, df, alternative)
       const tStar = jS.studentt.inv(1 - alphaVal / 2, df)
       return { stat: t, statLabel: 't', df, p, ci: [mean - tStar * se, mean + tStar * se], se }
     }
@@ -134,7 +186,7 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
       const { n, mean } = stats1
       const se   = sigmaVal / Math.sqrt(n)
       const z    = (mean - h0Val) / se
-      const p    = calcPValue(z, null, alternative)
+      const p    = calcP(z, null, alternative)
       const zStar = jS.normal.inv(1 - alphaVal / 2, 0, 1)
       return { stat: z, statLabel: 'z', df: null, p, ci: [mean - zStar * se, mean + zStar * se], se }
     }
@@ -144,11 +196,12 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
       const { n: n1, mean: m1, sd: s1 } = stats1
       const { n: n2, mean: m2, sd: s2 } = stats2
       const se  = Math.sqrt(s1 ** 2 / n1 + s2 ** 2 / n2)
+      if (!isFinite(se) || se === 0) return null
       const t   = ((m1 - m2) - h0Val) / se
       const num = (s1 ** 2 / n1 + s2 ** 2 / n2) ** 2
       const den = (s1 ** 2 / n1) ** 2 / (n1 - 1) + (s2 ** 2 / n2) ** 2 / (n2 - 1)
       const df  = num / den
-      const p   = calcPValue(t, df, alternative)
+      const p   = calcP(t, df, alternative)
       const tStar = jS.studentt.inv(1 - alphaVal / 2, df)
       const diff  = m1 - m2
       return { stat: t, statLabel: 't', df, p, ci: [diff - tStar * se, diff + tStar * se], se }
@@ -162,35 +215,101 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
         const v2 = Number(row[config.var2ColId])
         if (isFinite(v1) && isFinite(v2)) diffs.push(v1 - v2)
       }
-      const diffStats = summaryStats(diffs)
-      if (!diffStats) return null
-      const { n, mean, se } = diffStats
+      const ds = summaryOf(diffs)
+      if (!ds) return null
+      const { n, mean, se } = ds
       const df = n - 1
       const t  = (mean - h0Val) / se
-      const p  = calcPValue(t, df, alternative)
+      const p  = calcP(t, df, alternative)
       const tStar = jS.studentt.inv(1 - alphaVal / 2, df)
       return { stat: t, statLabel: 't', df, p, ci: [mean - tStar * se, mean + tStar * se], se, diffN: n }
     }
 
     return null
-  }, [effectiveProcedure, stats1, stats2, h0, alpha, alternative, sigma, config.var1ColId, config.var2ColId, grid.rows])
+  }, [effectiveProcedure, var2IsCategorical, stats1, stats2, statsA, statsB,
+      h0, alpha, alternative, sigma, config.var1ColId, config.var2ColId, grid.rows])
 
-  const alphaVal  = parseFloat(alpha)
-  const rejected  = result ? result.p < alphaVal : false
+  // ─── Distribution chart ────────────────────────────────────────────────────
+  const chartTraces = useMemo(() => {
+    if (!result) return null
+    const { stat, df } = result
+    const absMax = Math.max(4.5, Math.abs(stat) * 1.4 + 0.5)
+    const nPts = 300
+    const xs = Array.from({ length: nPts }, (_, i) => -absMax + (2 * absMax) * i / (nPts - 1))
 
-  // ─── H₀ label ──────────────────────────────────────────────────────────────
-  const h0Label = hasBoth
+    const pdf = df !== null
+      ? (x: number) => { try { return jS.studentt.pdf(x, df) } catch { return 0 } }
+      : (x: number) => jS.normal.pdf(x, 0, 1)
+
+    const ys = xs.map(pdf)
+    const yMax = Math.max(...ys)
+
+    // Build a shaded fill-to-zero trace for a given x window
+    function shadeTrace(fromX: number, toX: number) {
+      const pts = xs.filter(x => x >= fromX && x <= toX)
+      if (pts.length === 0) return null
+      return {
+        type: 'scatter' as const,
+        mode: 'lines' as const,
+        x: [fromX, ...pts, toX],
+        y: [0, ...pts.map(pdf), 0],
+        fill: 'tozeroy' as const,
+        fillcolor: 'rgba(239,68,68,0.20)',
+        line: { color: 'rgba(239,68,68,0.4)', width: 1 },
+        hoverinfo: 'skip' as const,
+        showlegend: false,
+      }
+    }
+
+    const shades = []
+    const absStat = Math.abs(stat)
+    if (alternative === 'less') {
+      const t = shadeTrace(-absMax, stat); if (t) shades.push(t)
+    } else if (alternative === 'greater') {
+      const t = shadeTrace(stat, absMax); if (t) shades.push(t)
+    } else {
+      const t1 = shadeTrace(-absMax, -absStat); if (t1) shades.push(t1)
+      const t2 = shadeTrace(absStat, absMax);   if (t2) shades.push(t2)
+    }
+
+    const curveLine = {
+      type: 'scatter' as const,
+      mode: 'lines' as const,
+      x: xs,
+      y: ys,
+      line: { color: '#475569', width: 2 },
+      hoverinfo: 'skip' as const,
+      showlegend: false,
+    }
+
+    // Vertical dashed line at test statistic
+    const statLine = {
+      type: 'scatter' as const,
+      mode: 'lines' as const,
+      x: [stat, stat],
+      y: [0, Math.min(pdf(stat) * 1.05, yMax)],
+      line: { color: '#EF4444', width: 2, dash: 'dash' as const },
+      hoverinfo: 'skip' as const,
+      showlegend: false,
+    }
+
+    return { traces: [...shades, curveLine, statLine], absMax, yMax }
+  }, [result, alternative])
+
+  const alphaVal = parseFloat(alpha)
+  const rejected = result ? result.p < alphaVal : false
+
+  // ─── Labels ────────────────────────────────────────────────────────────────
+  const label1 = var2IsCategorical ? (groupA || 'Group A') : (var1Col?.name ?? 'Variable')
+  const label2 = var2IsCategorical ? (groupB || 'Group B') : (var2Col?.name ?? 'Variable 2')
+
+  const h0Label = (hasBoth || var2IsCategorical)
     ? 'μ₁ − μ₂ ='
-    : effectiveProcedure === 'paired-t'
-      ? 'μ_d ='
-      : 'μ ='
-
+    : effectiveProcedure === 'paired-t' ? 'μ_d =' : 'μ ='
+  const altMu   = (hasBoth || var2IsCategorical)
+    ? 'μ₁ − μ₂'
+    : effectiveProcedure === 'paired-t' ? 'μ_d' : 'μ'
   const altSymbol = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
-  const h0Display = hasBoth
-    ? `μ₁ − μ₂ ${altSymbol} ${h0}`
-    : effectiveProcedure === 'paired-t'
-      ? `μ_d ${altSymbol} ${h0}`
-      : `μ ${altSymbol} ${h0}`
 
   const procLabels: Record<Procedure, string> = {
     'one-sample-t': '1-sample t',
@@ -199,15 +318,16 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
     'paired-t':     'Paired t',
   }
 
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="h-full flex flex-col gap-3 overflow-y-auto text-sm">
 
-      {/* ── Drop zones ──────────────────────────────────────────────────────── */}
+      {/* Drop zones */}
       <div className="flex gap-2 flex-shrink-0">
         <div className="flex-1">
           <DropZone
             id={`${cardId}:var1`}
-            label={hasBoth ? 'Variable 1' : 'Variable'}
+            label="Variable"
             hint="numeric only"
             assignedCol={var1Col}
             onClear={() => onClearZone('var1')}
@@ -216,39 +336,61 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
         <div className="flex-1">
           <DropZone
             id={`${cardId}:var2`}
-            label="Variable 2"
-            hint="optional — for 2-sample / paired"
+            label="2nd Variable or Group By"
+            hint="numeric or categorical"
             assignedCol={var2Col}
             onClear={() => onClearZone('var2')}
           />
         </div>
       </div>
 
-      {/* ── Procedure selector ──────────────────────────────────────────────── */}
-      <div className="flex gap-1 flex-shrink-0 flex-wrap">
-        {validProcedures.map(p => (
-          <button
-            key={p}
-            onClick={() => setProcedure(p)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
-              effectiveProcedure === p
-                ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]'
-                : 'bg-white text-[var(--color-muted)] border-[var(--color-border)] hover:bg-slate-50'
-            }`}
-          >
-            {procLabels[p]}
-          </button>
-        ))}
-      </div>
+      {/* Group picker when var2 is categorical with >2 groups */}
+      {var2IsCategorical && allGroups.length > 2 && (
+        <div className="flex gap-2 flex-shrink-0">
+          {([['Compare', groupA, setGroupA, groupB], ['vs.', groupB, setGroupB, groupA]] as [string, string, (v: string) => void, string][]).map(
+            ([lbl, val, setter, other]) => (
+              <div key={lbl} className="flex-1 flex items-center gap-1.5">
+                <span className="text-[10px] font-semibold text-[var(--color-muted)] flex-shrink-0">{lbl}</span>
+                <select
+                  value={val}
+                  onChange={e => setter(e.target.value)}
+                  className="flex-1 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                >
+                  {allGroups.filter(g => g !== other).map(g => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+            )
+          )}
+        </div>
+      )}
 
-      {/* ── Setup ───────────────────────────────────────────────────────────── */}
-      <div className="bg-slate-50 rounded-xl p-3 flex-shrink-0 space-y-2.5">
-        {/* Known σ (z-test only) */}
+      {/* Procedure selector (hidden when using grouping variable — always two-sample t) */}
+      {!var2IsCategorical && (
+        <div className="flex gap-1 flex-shrink-0 flex-wrap">
+          {validProcedures.map(p => (
+            <button
+              key={p}
+              onClick={() => setProcedure(p)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                effectiveProcedure === p
+                  ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]'
+                  : 'bg-white text-[var(--color-muted)] border-[var(--color-border)] hover:bg-slate-50'
+              }`}
+            >
+              {procLabels[p]}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Setup */}
+      <div className="bg-slate-50 rounded-xl p-3 flex-shrink-0 space-y-2">
+
         {effectiveProcedure === 'one-sample-z' && (
           <div className="flex items-center gap-2">
-            <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">
-              σ (known)
-            </label>
+            <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">σ (known)</label>
             <input
               type="number"
               value={sigma}
@@ -259,20 +401,16 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
           </div>
         )}
 
-        {/* H₀ */}
         <div className="flex items-center gap-2">
-          <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">
-            H₀: {h0Label}
-          </label>
+          <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">H₀: {h0Label}</label>
           <input
             type="number"
             value={h0}
             onChange={e => setH0(e.target.value)}
-            className="w-24 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+            className="w-20 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
           />
         </div>
 
-        {/* Hₐ direction */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Hₐ:</span>
           <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
@@ -281,9 +419,7 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
                 key={a}
                 onClick={() => setAlternative(a)}
                 className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${
-                  alternative === a
-                    ? 'bg-slate-700 text-white'
-                    : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                  alternative === a ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
                 }`}
               >
                 {a === 'less' ? '< (left)' : a === 'two-sided' ? '≠ (two)' : '> (right)'}
@@ -292,18 +428,15 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
           </div>
         </div>
 
-        {/* α */}
         <div className="flex items-center gap-2">
-          <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">α =</label>
+          <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">α =</span>
           <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
             {['0.01', '0.05', '0.10'].map((a, i) => (
               <button
                 key={a}
                 onClick={() => setAlpha(a)}
                 className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${
-                  alpha === a
-                    ? 'bg-slate-700 text-white'
-                    : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                  alpha === a ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
                 }`}
               >
                 {a}
@@ -313,8 +446,8 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
         </div>
       </div>
 
-      {/* ── Summary statistics ──────────────────────────────────────────────── */}
-      {(stats1 || stats2) && (
+      {/* Summary statistics */}
+      {(stats1 || statsA) && (
         <div className="flex-shrink-0">
           <p className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
             Summary Statistics
@@ -330,35 +463,55 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border)]">
-              {stats1 && var1Col && (
-                <tr>
-                  <td className="py-1 pr-2 font-medium text-[var(--color-text)] truncate max-w-[100px]">{var1Col.name}</td>
-                  <td className="py-1 px-2 text-right text-[var(--color-text)]">{stats1.n}</td>
-                  <td className="py-1 px-2 text-right text-[var(--color-text)]">{fmt(stats1.mean)}</td>
-                  <td className="py-1 px-2 text-right text-[var(--color-text)]">{fmt(stats1.sd)}</td>
-                  <td className="py-1 pl-2 text-right text-[var(--color-text)]">{fmt(stats1.se)}</td>
-                </tr>
-              )}
-              {stats2 && var2Col && (
-                <tr>
-                  <td className="py-1 pr-2 font-medium text-[var(--color-text)] truncate max-w-[100px]">{var2Col.name}</td>
-                  <td className="py-1 px-2 text-right text-[var(--color-text)]">{stats2.n}</td>
-                  <td className="py-1 px-2 text-right text-[var(--color-text)]">{fmt(stats2.mean)}</td>
-                  <td className="py-1 px-2 text-right text-[var(--color-text)]">{fmt(stats2.sd)}</td>
-                  <td className="py-1 pl-2 text-right text-[var(--color-text)]">{fmt(stats2.se)}</td>
-                </tr>
+              {var2IsCategorical ? (
+                <>
+                  {statsA && <SummaryRow label={label1} s={statsA} />}
+                  {statsB && <SummaryRow label={label2} s={statsB} />}
+                </>
+              ) : (
+                <>
+                  {stats1 && var1Col && <SummaryRow label={var1Col.name} s={stats1} />}
+                  {stats2 && var2Col && <SummaryRow label={var2Col.name} s={stats2} />}
+                </>
               )}
             </tbody>
           </table>
           {effectiveProcedure === 'paired-t' && result?.diffN !== undefined && (
-            <p className="text-[10px] text-[var(--color-muted)] mt-1 italic">
-              {result.diffN} matched pairs used
-            </p>
+            <p className="text-[10px] text-[var(--color-muted)] mt-1 italic">{result.diffN} matched pairs used</p>
           )}
         </div>
       )}
 
-      {/* ── Test results ────────────────────────────────────────────────────── */}
+      {/* Distribution chart */}
+      {chartTraces && (
+        <div className="flex-shrink-0 rounded-xl overflow-hidden border border-[var(--color-border)]">
+          <PlotlyChart
+            data={chartTraces.traces as never}
+            layout={{
+              xaxis: {
+                range: [-chartTraces.absMax, chartTraces.absMax],
+                title: { text: result?.statLabel === 'z' ? 'z' : `t (df = ${fmt(result?.df ?? 0, 3)})`, font: { size: 11 } },
+                zeroline: false,
+                showgrid: false,
+              },
+              yaxis: { visible: false, range: [0, chartTraces.yMax * 1.12] },
+              margin: { t: 8, r: 8, b: 32, l: 8 },
+              height: 160,
+              showlegend: false,
+              annotations: [{
+                x: result!.stat,
+                y: chartTraces.yMax * 1.08,
+                text: `${result!.statLabel} = ${fmt(result!.stat, 3)}`,
+                showarrow: false,
+                font: { size: 11, color: '#EF4444' },
+                xanchor: result!.stat >= 0 ? 'right' : 'left',
+              }],
+            }}
+          />
+        </div>
+      )}
+
+      {/* Test results */}
       {!var1Col ? (
         <div className="flex-1 flex items-center justify-center text-center">
           <div>
@@ -367,49 +520,32 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
           </div>
         </div>
       ) : result ? (
-        <div className="space-y-3 flex-shrink-0">
+        <div className="space-y-2.5 flex-shrink-0">
           {/* Hypotheses */}
           <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 space-y-1">
             <div className="flex items-center gap-3">
               <span className="text-xs text-[var(--color-muted)] w-6">H₀</span>
-              <span className="text-xs font-mono font-medium text-[var(--color-text)]">
-                {h0Label} {h0}
-              </span>
+              <span className="text-xs font-mono font-medium">{h0Label} {h0}</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-xs text-[var(--color-muted)] w-6">Hₐ</span>
-              <span className="text-xs font-mono font-medium text-[var(--color-text)]">
-                {h0Display}
-              </span>
+              <span className="text-xs font-mono font-medium">{altMu} {altSymbol} {h0}</span>
             </div>
           </div>
 
-          {/* Test statistic + df */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-xl bg-slate-50 p-3 text-center">
-              <p className="text-[10px] text-[var(--color-muted)] mb-0.5">{result.statLabel}-statistic</p>
-              <p className="text-lg font-semibold text-[var(--color-text)] font-mono">{fmt(result.stat, 4)}</p>
-            </div>
-            {result.df !== null && (
-              <div className="rounded-xl bg-slate-50 p-3 text-center">
-                <p className="text-[10px] text-[var(--color-muted)] mb-0.5">df</p>
-                <p className="text-lg font-semibold text-[var(--color-text)] font-mono">{fmt(result.df, 4)}</p>
-              </div>
-            )}
-            <div className={`rounded-xl p-3 text-center ${rejected ? 'bg-red-50' : 'bg-green-50'}`}>
-              <p className="text-[10px] text-[var(--color-muted)] mb-0.5">p-value</p>
-              <p className={`text-lg font-semibold font-mono ${rejected ? 'text-red-600' : 'text-green-700'}`}>
-                {fmtP(result.p)}
-              </p>
-            </div>
+          {/* Stat grid */}
+          <div className={`grid gap-2 ${result.df !== null ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            <StatBox label={`${result.statLabel}-statistic`} value={fmt(result.stat, 4)} />
+            {result.df !== null && <StatBox label="df" value={fmt(result.df, 4)} />}
+            <StatBox label="p-value" value={fmtP(result.p)} highlight={rejected ? 'reject' : 'keep'} />
           </div>
 
-          {/* Confidence interval */}
+          {/* CI */}
           <div className="rounded-xl border border-[var(--color-border)] bg-white p-3">
             <p className="text-[10px] text-[var(--color-muted)] mb-1">
               {Math.round((1 - alphaVal) * 100)}% Confidence Interval
             </p>
-            <p className="text-xs font-mono text-[var(--color-text)] font-medium">
+            <p className="text-xs font-mono font-medium">
               ({fmt(result.ci[0])}, {fmt(result.ci[1])})
             </p>
           </div>
@@ -421,22 +557,49 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
             </p>
             <p className="text-xs text-[var(--color-muted)] leading-relaxed">
               {rejected
-                ? `At α = ${alpha}, there is sufficient evidence to conclude ${h0Display}.`
-                : `At α = ${alpha}, there is not sufficient evidence to conclude ${h0Display}.`
+                ? `At α = ${alpha}, there is sufficient evidence to conclude ${altMu} ${altSymbol} ${h0}.`
+                : `At α = ${alpha}, there is not sufficient evidence to conclude ${altMu} ${altSymbol} ${h0}.`
               }
             </p>
           </div>
         </div>
-      ) : (
-        <div className="text-xs text-[var(--color-muted)] italic px-1">
+      ) : var1Col && (
+        <p className="text-xs text-[var(--color-muted)] italic flex-shrink-0">
           {effectiveProcedure === 'one-sample-z' && (!sigma || !isFinite(parseFloat(sigma)) || parseFloat(sigma) <= 0)
             ? 'Enter the known population standard deviation (σ) above.'
-            : effectiveProcedure === 'paired-t' && (!stats1 || !stats2)
-              ? 'Drop two variables with matching row counts to run a paired t-test.'
-              : 'Not enough data to compute results (need n ≥ 2).'
+            : var2IsCategorical && (!groupA || !groupB)
+              ? 'Assign a grouping variable with at least 2 distinct values.'
+              : 'Need n ≥ 2 to compute results.'
           }
-        </div>
+        </p>
       )}
+    </div>
+  )
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function SummaryRow({ label, s }: { label: string; s: SummaryStats }) {
+  return (
+    <tr>
+      <td className="py-1 pr-2 font-medium text-[var(--color-text)] truncate max-w-[100px]">{label}</td>
+      <td className="py-1 px-2 text-right">{s.n}</td>
+      <td className="py-1 px-2 text-right">{fmt(s.mean)}</td>
+      <td className="py-1 px-2 text-right">{fmt(s.sd)}</td>
+      <td className="py-1 pl-2 text-right">{fmt(s.se)}</td>
+    </tr>
+  )
+}
+
+function StatBox({ label, value, highlight }: { label: string; value: string; highlight?: 'reject' | 'keep' }) {
+  return (
+    <div className={`rounded-xl p-3 text-center ${
+      highlight === 'reject' ? 'bg-red-50' : highlight === 'keep' ? 'bg-green-50' : 'bg-slate-50'
+    }`}>
+      <p className="text-[10px] text-[var(--color-muted)] mb-0.5">{label}</p>
+      <p className={`text-base font-semibold font-mono ${
+        highlight === 'reject' ? 'text-red-600' : highlight === 'keep' ? 'text-green-700' : 'text-[var(--color-text)]'
+      }`}>{value}</p>
     </div>
   )
 }

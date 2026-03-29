@@ -238,9 +238,10 @@ export function ExploreCanvas() {
       newConfig = c
     }
     if (cfg.type === 'means') {
-      // Reject categorical columns
       const droppedCol = grid.columns.find(c => c.id === colId)
-      if (!droppedCol || droppedCol.type !== 'numeric') return
+      if (!droppedCol) return
+      // var1 must be numeric; var2 can be numeric or categorical
+      if (targetZone === 'var1' && droppedCol.type !== 'numeric') return
       let c: MeansCardConfig = { ...cfg }
       if (targetZone === 'var1') c = { ...c, var1ColId: colId }
       if (targetZone === 'var2') c = { ...c, var2ColId: colId }

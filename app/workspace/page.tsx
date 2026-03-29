@@ -11,9 +11,9 @@ import { ShareDatasetModal } from '@/components/library/ShareDatasetModal'
 import { useStore } from '@/lib/store'
 import { CardConfig } from '@/lib/exploreTypes'
 
-type Tab = 'data' | 'explore' | 'probability' | 'inference'
+type Tab = 'data' | 'lab'
 
-// ─── Add Card menu (workspace header) ─────────────────────────────────────────
+// ─── Card option definitions ──────────────────────────────────────────────────
 
 interface CardOption {
   type: CardConfig['type']
@@ -39,40 +39,60 @@ const INFERENCE_CARD_OPTIONS: CardOption[] = [
   { type: 'testinterval', icon: '⚖️',  label: 'Test / Interval' },
 ]
 
-function AddCardMenu({ options, onAdd }: { options: CardOption[]; onAdd: (type: CardConfig['type']) => void }) {
-  const [open, setOpen] = useState(false)
+// ─── Grouped Add Card menu ────────────────────────────────────────────────────
+
+function GroupedAddCardMenu({ onAdd }: { onAdd: (type: CardConfig['type']) => void }) {
+  const [openGroup, setOpenGroup] = useState<string | null>(null)
+
+  const groups = [
+    { id: 'explore',     label: '+ Explore',     options: EXPLORE_CARD_OPTIONS },
+    { id: 'probability', label: '+ Probability', options: PROBABILITY_CARD_OPTIONS },
+    { id: 'inference',   label: '+ Inference',   options: INFERENCE_CARD_OPTIONS },
+  ]
+
+  function toggle(id: string) {
+    setOpenGroup(v => (v === id ? null : id))
+  }
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium hover:opacity-90 transition-opacity"
-      >
-        <span className="text-base leading-none">+</span>
-        Add Card
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden min-w-[200px]">
-            {options.map(o => (
-              <button
-                key={o.type}
-                onClick={() => { onAdd(o.type); setOpen(false) }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 text-left border-b border-[var(--color-border)] last:border-0"
-              >
-                <span className="text-lg">{o.icon}</span>
-                <span className="text-sm font-medium text-[var(--color-text)]">{o.label}</span>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+    <div className="flex items-center gap-1.5">
+      {groups.map(group => (
+        <div key={group.id} className="relative">
+          <button
+            onClick={() => toggle(group.id)}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              openGroup === group.id
+                ? 'bg-[var(--color-accent)] text-white'
+                : 'bg-slate-100 text-[var(--color-text)] hover:bg-slate-200'
+            }`}
+          >
+            {group.label}
+          </button>
+
+          {openGroup === group.id && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setOpenGroup(null)} />
+              <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden min-w-[190px]">
+                {group.options.map(o => (
+                  <button
+                    key={o.type}
+                    onClick={() => { onAdd(o.type); setOpenGroup(null) }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 text-left border-b border-[var(--color-border)] last:border-0"
+                  >
+                    <span className="text-base leading-none">{o.icon}</span>
+                    <span className="text-sm font-medium text-[var(--color-text)]">{o.label}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      ))}
     </div>
   )
 }
 
-// ─── Workspace header (stable shell row) ──────────────────────────────────────
+// ─── Workspace header ─────────────────────────────────────────────────────────
 
 function WorkspaceHeader({
   active,
@@ -88,15 +108,9 @@ function WorkspaceHeader({
   const { addExploreCard } = useStore()
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'data',        label: 'Data'        },
-    { id: 'explore',     label: 'Explore'     },
-    { id: 'probability', label: 'Probability' },
-    { id: 'inference',   label: 'Inference'   },
+    { id: 'data', label: 'Data' },
+    { id: 'lab',  label: 'Lab'  },
   ]
-
-  function handleAddCard(type: CardConfig['type']) {
-    if (active !== 'data') addExploreCard(type)
-  }
 
   return (
     <div className="flex-shrink-0 flex items-stretch border-b border-[var(--color-border)] bg-white min-h-[44px]">
@@ -135,18 +149,12 @@ function WorkspaceHeader({
         ))}
       </div>
 
-      {/* Right: mode-specific action area */}
-      <div className="flex items-center px-3 flex-shrink-0">
-        {active === 'explore' && (
-          <AddCardMenu options={EXPLORE_CARD_OPTIONS} onAdd={handleAddCard} />
-        )}
-        {active === 'probability' && (
-          <AddCardMenu options={PROBABILITY_CARD_OPTIONS} onAdd={handleAddCard} />
-        )}
-        {active === 'inference' && (
-          <AddCardMenu options={INFERENCE_CARD_OPTIONS} onAdd={handleAddCard} />
-        )}
-      </div>
+      {/* Right: Lab add-card actions */}
+      {active === 'lab' && (
+        <div className="flex items-center px-3 flex-shrink-0">
+          <GroupedAddCardMenu onAdd={type => addExploreCard(type)} />
+        </div>
+      )}
     </div>
   )
 }
@@ -310,7 +318,6 @@ function WorkspaceContent() {
       />
 
       <div className="flex flex-1 min-h-0">
-        {/* Data tab */}
         {tab === 'data' && (
           <>
             <ColumnSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -323,10 +330,7 @@ function WorkspaceContent() {
           </>
         )}
 
-        {/* Explore, Probability, and Inference now share the same underlying
-            canvas contents; the active tab only changes which card types can
-            be added. */}
-        {(tab === 'explore' || tab === 'probability' || tab === 'inference') && (
+        {tab === 'lab' && (
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
             <ExploreCanvas />
           </div>

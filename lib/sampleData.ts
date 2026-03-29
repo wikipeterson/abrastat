@@ -1,5 +1,6 @@
 import { parsedRowsToGrid } from './gridHelpers'
 import { DatasetVariableInfo, GridState } from '@/types'
+import { PENGUINS_HEADERS, PENGUINS_META, PENGUINS_ROWS } from './samplePenguins'
 import { TITANIC_STUDENT_HEADERS, TITANIC_STUDENT_META, TITANIC_STUDENT_ROWS } from './sampleTitanic'
 
 export interface SampleDataset {
@@ -153,6 +154,27 @@ export const SAMPLE_DATASETS: SampleDataset[] = [
       { name: 'embarked', description: 'Port where the passenger boarded: Southampton, Cherbourg, or Queenstown.' },
     ],
     grid: parsedRowsToGrid([...TITANIC_STUDENT_HEADERS], TITANIC_STUDENT_ROWS.map(row => [...row] as unknown[])),
+  },
+  {
+    name: 'Palmer Penguins',
+    emoji: '🐧',
+    description: PENGUINS_META.description,
+    tags: [...PENGUINS_META.tags],
+    source: PENGUINS_META.source,
+    sourceUrl: PENGUINS_META.sourceUrl,
+    citation: PENGUINS_META.citation,
+    notes: PENGUINS_META.notes,
+    variableInfo: [
+      { name: 'species', description: 'Penguin species: Adelie, Chinstrap, or Gentoo.' },
+      { name: 'island', description: 'Island in the Palmer Archipelago where the penguin was observed.' },
+      { name: 'bill_length_mm', description: 'Bill length in millimeters.' },
+      { name: 'bill_depth_mm', description: 'Bill depth in millimeters.' },
+      { name: 'flipper_length_mm', description: 'Flipper length in millimeters.' },
+      { name: 'body_mass_g', description: 'Body mass in grams.' },
+      { name: 'sex', description: 'Penguin sex. Some values are missing.' },
+      { name: 'year', description: 'Year of observation.' },
+    ],
+    grid: parsedRowsToGrid([...PENGUINS_HEADERS], PENGUINS_ROWS.map(row => [...row] as unknown[])),
   },
   { name: 'US Weather', emoji: '🌡️', description: 'Average temperature, rainfall, and snowfall patterns for U.S. cities.', grid: parsedRowsToGrid(weatherHeaders, weatherRows) },
   { name: 'NBA Season', emoji: '🏀', description: 'Scoring and performance stats for NBA players.', grid: parsedRowsToGrid(nbaHeaders, nbaRows) },

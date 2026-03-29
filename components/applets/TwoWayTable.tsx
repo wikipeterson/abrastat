@@ -519,6 +519,70 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
     }`
   }
 
+  const outputContent = data ? (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-[var(--color-muted)]">Table:</span>
+        {([['counts', 'Counts'], ['row', 'Row %'], ['col', 'Column %']] as [TableView, string][]).map(
+          ([v, label]) => (
+            <button key={v} onClick={() => setTableView(v)} className={pill(tableView === v)}>
+              {label}
+            </button>
+          )
+        )}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 overflow-x-auto">
+        <OutputTable data={data} view={tableView} />
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+        <div className="flex flex-wrap items-center gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-[var(--color-muted)]">Graph:</span>
+            {([['segmented', 'Segmented Bar'], ['sidebyside', 'Side-by-Side Bar'], ['mosaic', 'Mosaic Plot']] as [GraphType, string][]).map(
+              ([g, label]) => (
+                <button key={g} onClick={() => setGraphType(g)} className={pill(graphType === g)}>
+                  {label}
+                </button>
+              )
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-[var(--color-muted)]">Values:</span>
+            {([['counts', 'Counts'], ['row', 'Row %']] as [ChartMode, string][]).map(([m, label]) => (
+              <button
+                key={m}
+                onClick={() => setChartMode(m)}
+                disabled={graphType === 'mosaic'}
+                className={`${pill(chartMode === m, false)} ${graphType === 'mosaic' ? 'opacity-40 cursor-not-allowed hover:bg-slate-100' : ''}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <PlotlyChart
+          data={traces as Data[]}
+          height={320}
+          mode="fixed"
+          layout={chartLayout}
+        />
+      </div>
+    </div>
+  ) : (
+    <div className="h-full flex flex-col items-center justify-center gap-3 text-center p-8 text-[var(--color-muted)]">
+      <div className="text-4xl opacity-25">📋</div>
+      <p className="text-sm font-medium">
+        {inputMode === 'raw'
+          ? !hasGridData
+            ? 'Load a dataset with categorical columns in the Data tab.'
+            : 'Drag in an Explanatory Variable and a Response Variable to begin.'
+          : 'Enter counts in the table above to get started.'}
+      </p>
+    </div>
+  )
+
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
@@ -600,8 +664,27 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
 
       {/* Drop zones — card mode, raw data */}
       {isCardMode && inputMode === 'raw' && (
-        <div className="flex gap-2">
-          <div className="flex-1">
+        <div
+          className="min-h-[520px]"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '36px 1fr',
+            gridTemplateRows: 'auto 1fr',
+            gap: '6px',
+          }}
+        >
+          <div style={{ gridRow: '2', gridColumn: '1' }}>
+            <DropZone
+              id={`${cardId}:cols`}
+              label="Response Variable"
+              hint="columns of the table"
+              assignedCol={grid.columns.find(c => c.id === respColId) ?? null}
+              onClear={() => onClearZone?.('cols')}
+              variant="vertical"
+            />
+          </div>
+
+          <div style={{ gridRow: '1', gridColumn: '2' }}>
             <DropZone
               id={`${cardId}:rows`}
               label="Explanatory Variable"
@@ -610,14 +693,12 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
               onClear={() => onClearZone?.('rows')}
             />
           </div>
-          <div className="flex-1">
-            <DropZone
-              id={`${cardId}:cols`}
-              label="Response Variable"
-              hint="columns of the table"
-              assignedCol={grid.columns.find(c => c.id === respColId) ?? null}
-              onClear={() => onClearZone?.('cols')}
-            />
+
+          <div
+            style={{ gridRow: '2', gridColumn: '2' }}
+            className="min-h-[420px] rounded-2xl border border-dashed border-[var(--color-border)] bg-slate-50/70 p-4"
+          >
+            {outputContent}
           </div>
         </div>
       )}
@@ -636,7 +717,7 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
       )}
 
       {/* Empty state */}
-      {!data && (
+      {!isCardMode && !data && (
         <div className="text-center py-14 text-[var(--color-muted)]">
           <div className="text-4xl mb-3 opacity-25">📋</div>
           <p className="text-sm">
@@ -650,62 +731,7 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
       )}
 
       {/* ── Output ── */}
-      {data && (
-        <div className="space-y-4">
-
-          {/* Table view controls */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-[var(--color-muted)]">Table:</span>
-            {([['counts', 'Counts'], ['row', 'Row %'], ['col', 'Column %']] as [TableView, string][]).map(
-              ([v, label]) => (
-                <button key={v} onClick={() => setTableView(v)} className={pill(tableView === v)}>
-                  {label}
-                </button>
-              )
-            )}
-          </div>
-
-          {/* Two-way table */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 overflow-x-auto">
-            <OutputTable data={data} view={tableView} />
-          </div>
-
-          {/* Graph card */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <div className="flex flex-wrap items-center gap-4 mb-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-[var(--color-muted)]">Graph:</span>
-                {([['segmented', 'Segmented Bar'], ['sidebyside', 'Side-by-Side Bar'], ['mosaic', 'Mosaic Plot']] as [GraphType, string][]).map(
-                  ([g, label]) => (
-                    <button key={g} onClick={() => setGraphType(g)} className={pill(graphType === g)}>
-                      {label}
-                    </button>
-                  )
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-[var(--color-muted)]">Values:</span>
-                {([['counts', 'Counts'], ['row', 'Row %']] as [ChartMode, string][]).map(([m, label]) => (
-                  <button
-                    key={m}
-                    onClick={() => setChartMode(m)}
-                    disabled={graphType === 'mosaic'}
-                    className={`${pill(chartMode === m, false)} ${graphType === 'mosaic' ? 'opacity-40 cursor-not-allowed hover:bg-slate-100' : ''}`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <PlotlyChart
-              data={traces as Data[]}
-              height={320}
-              mode="fixed"
-              layout={chartLayout}
-            />
-          </div>
-        </div>
-      )}
+      {!isCardMode && data && outputContent}
     </div>
   )
 }

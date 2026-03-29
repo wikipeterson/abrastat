@@ -22,6 +22,7 @@ import { SummaryCard } from './cards/SummaryCard'
 import { RegressionCard } from './cards/RegressionCard'
 import { TwoWayTable } from '@/components/applets/TwoWayTable'
 import { DistributionCard } from '@/components/inference/DistributionCard'
+import { RandomGeneratorCard } from '@/components/probability/RandomGeneratorCard'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 // ─── Draggable variable chip (sidebar) ────────────────────────────────────────
@@ -296,6 +297,7 @@ export function ExploreCanvas() {
       case 'table':        return { minWidth: 780, minHeight: 500 }
       case 'regression':   return { minWidth: 400, minHeight: 340 }
       case 'distribution': return { minWidth: 460, minHeight: 480 }
+      case 'generator':    return { minWidth: 460, minHeight: 440 }
       default:             return { minWidth: 360, minHeight: 280 }
     }
   }
@@ -528,6 +530,9 @@ export function ExploreCanvas() {
                           {card.config.type === 'distribution' && (
                             <DistributionCard preFill={card.config.preFill} />
                           )}
+                          {card.config.type === 'generator' && (
+                            <RandomGeneratorCard />
+                          )}
                           {card.config.type === 'testinterval' && (
                             <PlaceholderCard label="Test / Interval" />
                           )}
@@ -569,7 +574,10 @@ export function ExploreCanvas() {
               })}
             </div>
 
-            <div className="absolute bottom-4 left-4 z-20 flex items-center rounded-xl border border-slate-200 bg-white/95 shadow-sm backdrop-blur-sm overflow-hidden">
+          </div>
+
+          <div className="pointer-events-none absolute bottom-20 left-4 z-20">
+            <div className="pointer-events-auto flex items-center rounded-xl border border-slate-200 bg-white/95 shadow-sm backdrop-blur-sm overflow-hidden">
               <button
                 type="button"
                 onClick={() => nudgeZoom(-1)}

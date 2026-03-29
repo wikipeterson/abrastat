@@ -91,7 +91,7 @@ export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHead
         <div className="bg-[var(--color-accent-light)] rounded-xl px-4 py-3">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-1">Regression Equation</div>
           <div className="font-mono text-lg font-semibold text-[var(--color-text)]">
-            y&#770; = {fmt(stats.slope)}x {stats.interceptSign} {fmt(Math.abs(stats.intercept))}
+            {yCol.name}&#770; = {fmt(stats.slope)}{xCol.name} {stats.interceptSign} {fmt(Math.abs(stats.intercept))}
           </div>
         </div>
 

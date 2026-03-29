@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import type { WheelEvent as ReactWheelEvent } from 'react'
 import {
   DndContext,
@@ -112,6 +112,10 @@ export function ExploreCanvas() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef(1)
+  // Stable ref so the column-change effect can read latest cards without
+  // cards being in its dependency array (which would cause an update loop).
+  const cardsRef = useRef(cards)
+  useLayoutEffect(() => { cardsRef.current = cards })
 
   const BASE_CANVAS_WIDTH = 1400
   const BASE_CANVAS_HEIGHT = 1800
@@ -128,11 +132,26 @@ export function ExploreCanvas() {
 
   const hasData = grid.rows.some(r => Object.values(r).some(v => String(v).trim()))
 
-  // Clear stale column IDs when columns change
+  // When columns change (including type toggles): purge stale IDs and
+  // re-infer chart types for any graph card whose current type is no longer valid.
   useEffect(() => {
     const validIds = new Set(grid.columns.map(c => c.id))
     purgeExploreStaleIds(validIds)
-  }, [grid.columns, purgeExploreStaleIds])
+
+    const colMap = new Map(grid.columns.map(c => [c.id, c]))
+    cardsRef.current.forEach(card => {
+      if (card.config.type !== 'graph') return
+      const cfg = card.config
+      const xType     = cfg.xColId     ? (colMap.get(cfg.xColId)?.type     ?? null) : null
+      const yType     = cfg.yColId     ? (colMap.get(cfg.yColId)?.type     ?? null) : null
+      const groupType = cfg.groupColId ? (colMap.get(cfg.groupColId)?.type ?? null) : null
+      const { primary, alternatives } = inferCharts(xType, yType, groupType)
+      const valid = primary ? [primary, ...alternatives] : []
+      if (cfg.chartType && valid.length > 0 && !valid.includes(cfg.chartType)) {
+        updateCard(card.id, { config: { ...cfg, chartType: primary } })
+      }
+    })
+  }, [grid.columns, purgeExploreStaleIds, updateCard])
 
   useEffect(() => {
     if (!interactionCursor) return
@@ -186,7 +205,7 @@ export function ExploreCanvas() {
     const cfg = card.config
 
     // Only these card types have drop zones
-    if (cfg.type !== 'graph' && cfg.type !== 'summary' && cfg.type !== 'regression' && cfg.type !== 'means') return
+    if (cfg.type !== 'graph' && cfg.type !== 'summary' && cfg.type !== 'regression' && cfg.type !== 'means' && cfg.type !== 'table') return
 
     const sourceZone = (sourceZoneId && sourceZoneId.startsWith(cardId + ':'))
       ? sourceZoneId.slice(cardId.length + 1)
@@ -237,6 +256,16 @@ export function ExploreCanvas() {
       }
       newConfig = c
     }
+    if (cfg.type === 'table') {
+      let c = { ...cfg }
+      if (targetZone === 'rows') c = { ...c, rowsColId: colId }
+      if (targetZone === 'cols') c = { ...c, colsColId: colId }
+      if (sourceZone && sourceZone !== targetZone) {
+        if (sourceZone === 'rows') c = { ...c, rowsColId: null }
+        if (sourceZone === 'cols') c = { ...c, colsColId: null }
+      }
+      newConfig = c
+    }
     if (cfg.type === 'means') {
       const droppedCol = grid.columns.find(c => c.id === colId)
       if (!droppedCol) return
@@ -274,6 +303,10 @@ export function ExploreCanvas() {
     if (cfg.type === 'regression') {
       if (zone === 'x') newConfig = { ...cfg, xColId: null }
       if (zone === 'y') newConfig = { ...cfg, yColId: null }
+    }
+    if (cfg.type === 'table') {
+      if (zone === 'rows') newConfig = { ...cfg, rowsColId: null }
+      if (zone === 'cols') newConfig = { ...cfg, colsColId: null }
     }
     if (cfg.type === 'means') {
       if (zone === 'var1') newConfig = { ...cfg, var1ColId: null }
@@ -529,7 +562,12 @@ export function ExploreCanvas() {
                           )}
                           {card.config.type === 'table' && (
                             <div className="h-full overflow-auto">
-                              <TwoWayTable />
+                              <TwoWayTable
+                                cardId={card.id}
+                                rowsColId={card.config.rowsColId}
+                                colsColId={card.config.colsColId}
+                                onClearZone={z => clearZone(card.id, z)}
+                              />
                             </div>
                           )}
                           {card.config.type === 'regression' && (

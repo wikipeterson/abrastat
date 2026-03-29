@@ -6,6 +6,7 @@ import { useStore } from '@/lib/store'
 import { getStringValues } from '@/lib/gridHelpers'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from '@/components/charts/PlotlyChart'
+import { DropZone } from '@/components/explore/DropZone'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -333,12 +334,28 @@ function OutputTable({ data, view }: { data: TwoWayData; view: TableView }) {
 
 // ─── Applet ───────────────────────────────────────────────────────────────────
 
-export function TwoWayTable() {
+interface TwoWayTableProps {
+  /** When provided, variable slots use drag-and-drop DropZones (canvas card mode).
+   *  When absent, falls back to select dropdowns (standalone / GameHub mode). */
+  cardId?: string
+  rowsColId?: string | null
+  colsColId?: string | null
+  onClearZone?: (zone: string) => void
+}
+
+export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWayTableProps = {}) {
   const { grid } = useStore()
 
+  const isCardMode = !!cardId
+
   const [inputMode, setInputMode] = useState<InputMode>('raw')
-  const [explColId, setExplColId] = useState('')
-  const [respColId, setRespColId] = useState('')
+  // Local state only used in standalone (non-card) mode
+  const [explColIdLocal, setExplColIdLocal] = useState('')
+  const [respColIdLocal, setRespColIdLocal] = useState('')
+
+  // Resolve which IDs to use
+  const explColId = isCardMode ? (rowsColId ?? '') : explColIdLocal
+  const respColId = isCardMode ? (colsColId ?? '') : respColIdLocal
   const [tableView, setTableView] = useState<TableView>('counts')
   const [graphType, setGraphType] = useState<GraphType>('segmented')
   const [chartMode, setChartMode] = useState<ChartMode>('row')
@@ -534,15 +551,15 @@ export function TwoWayTable() {
           </div>
 
           {/* Column selectors — raw mode */}
-          {inputMode === 'raw' && (
+          {inputMode === 'raw' && !isCardMode && (
             <>
               <div>
                 <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
                   Explanatory Variable
                 </div>
                 <select
-                  value={explColId}
-                  onChange={e => setExplColId(e.target.value)}
+                  value={explColIdLocal}
+                  onChange={e => setExplColIdLocal(e.target.value)}
                   className="text-sm border border-[var(--color-border)] rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="">— select —</option>
@@ -556,8 +573,8 @@ export function TwoWayTable() {
                   Response Variable
                 </div>
                 <select
-                  value={respColId}
-                  onChange={e => setRespColId(e.target.value)}
+                  value={respColIdLocal}
+                  onChange={e => setRespColIdLocal(e.target.value)}
                   className="text-sm border border-[var(--color-border)] rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="">— select —</option>
@@ -580,6 +597,30 @@ export function TwoWayTable() {
           )}
         </div>
       </div>
+
+      {/* Drop zones — card mode, raw data */}
+      {isCardMode && inputMode === 'raw' && (
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <DropZone
+              id={`${cardId}:rows`}
+              label="Explanatory Variable"
+              hint="rows of the table"
+              assignedCol={grid.columns.find(c => c.id === explColId) ?? null}
+              onClear={() => onClearZone?.('rows')}
+            />
+          </div>
+          <div className="flex-1">
+            <DropZone
+              id={`${cardId}:cols`}
+              label="Response Variable"
+              hint="columns of the table"
+              assignedCol={grid.columns.find(c => c.id === respColId) ?? null}
+              onClear={() => onClearZone?.('cols')}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Manual entry grid */}
       {inputMode === 'manual' && (

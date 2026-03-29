@@ -1,14 +1,15 @@
-export type ChartType = 'dot' | 'histogram' | 'box' | 'scatter' | 'bar' | 'segmented' | 'normalprob'
+export type ChartType = 'dot' | 'histogram' | 'box' | 'scatter' | 'bar' | 'pie' | 'segmented' | 'normalprob'
 export type Orientation = 'h' | 'v'
 
 export const CHART_META: Record<ChartType, { label: string; icon: string }> = {
-  dot:       { label: 'Dot Plot',    icon: '⚫' },
-  histogram: { label: 'Histogram',   icon: '📊' },
-  box:       { label: 'Box Plot',    icon: '📦' },
-  scatter:   { label: 'Scatter',     icon: '📈' },
-  bar:       { label: 'Bar Chart',   icon: '🔢' },
+  dot:       { label: 'Dot Plot',      icon: '⚫' },
+  histogram: { label: 'Histogram',     icon: '📊' },
+  box:       { label: 'Box Plot',      icon: '📦' },
+  scatter:   { label: 'Scatter',       icon: '📈' },
+  bar:       { label: 'Bar Chart',     icon: '🔢' },
+  pie:       { label: 'Pie Chart',     icon: '🥧' },
   segmented: { label: 'Segmented Bar', icon: '🟦' },
-  normalprob:{ label: 'Normal Prob', icon: '📉' },
+  normalprob:{ label: 'Normal Prob',   icon: '📉' },
 }
 
 export function inferCharts(
@@ -30,8 +31,8 @@ export function inferCharts(
     }
 
     if (type === 'categorical') {
-      if (groupType === 'categorical' && hasH) return { primary: 'segmented', alternatives: [], orientation }
-      return { primary: 'bar', alternatives: [], orientation }
+      if (groupType === 'categorical' && hasH) return { primary: 'segmented', alternatives: ['pie'], orientation }
+      return { primary: 'bar', alternatives: ['pie'], orientation }
     }
   }
 

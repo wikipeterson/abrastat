@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { useStore } from '@/lib/store'
-import { getNumericValues, getStringValues } from '@/lib/gridHelpers'
+import { getNumericValues, getNumericGroup, getValidStringValues } from '@/lib/gridHelpers'
 import { computeSummary, getFrequencyTable } from '@/lib/statistics'
 import { NumericStatsTable, NumericTableRow, CategoricalStatCard, TwoWayTableCard } from '@/components/stats/StatCard'
 import { SummaryCardConfig } from '@/lib/exploreTypes'
@@ -79,15 +79,18 @@ export function SummaryCard({ cardId, config, onClearZone, onRemove, hideHeader 
     const numericCols = varCols.filter(c => c.type === 'numeric')
     const categoricalCols = varCols.filter(c => c.type === 'categorical')
 
-    // Two categorical variables → two-way table
+    // Two categorical variables → two-way table (complete cases only)
     if (numericCols.length === 0 && categoricalCols.length === 2) {
       const [colA, colB] = categoricalCols
+      const pairs = grid.rows
+        .map(r => [String(r[colA.id] ?? '').trim(), String(r[colB.id] ?? '').trim()] as [string, string])
+        .filter(([a, b]) => a !== '' && b !== '')
       return [<TwoWayTableCard
         key="twoway"
         colAName={colA.name}
         colBName={colB.name}
-        colAValues={getStringValues(grid, colA.id).filter(v => v.trim())}
-        colBValues={getStringValues(grid, colB.id).filter(v => v.trim())}
+        colAValues={pairs.map(p => p[0])}
+        colBValues={pairs.map(p => p[1])}
       />]
     }
 
@@ -96,17 +99,17 @@ export function SummaryCard({ cardId, config, onClearZone, onRemove, hideHeader 
     if (numericCols.length > 0) {
       let rows: NumericTableRow[]
       if (groupCol) {
-        const groups = getStringValues(grid, groupCol.id)
-        const uniqueGroups = [...new Set(groups)].filter(Boolean).sort()
-        rows = numericCols.flatMap(col =>
-          uniqueGroups.map(group => ({
+        rows = numericCols.flatMap(col => {
+          const allData = getNumericGroup(grid, col.id, groupCol.id)
+          const uniqueGroups = [...new Set(allData.map(d => d.group))].sort()
+          return uniqueGroups.map(group => ({
             label: numericCols.length > 1 ? `${col.name} | ${group}` : group,
             summary: computeSummary(
-              getNumericValues(grid, col.id).filter((_, i) => groups[i] === group),
+              allData.filter(d => d.group === group).map(d => d.value),
               col.name,
             ),
           }))
-        )
+        })
       } else {
         rows = numericCols.map(col => ({
           label: numericCols.length > 1 ? col.name : null,
@@ -125,7 +128,7 @@ export function SummaryCard({ cardId, config, onClearZone, onRemove, hideHeader 
     }
 
     for (const col of categoricalCols) {
-      const values = getStringValues(grid, col.id).filter(v => v.trim())
+      const values = getValidStringValues(grid, col.id)
       parts.push(<CategoricalStatCard key={col.id} column={col.name} rows={getFrequencyTable(values)} />)
     }
 

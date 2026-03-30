@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import type { Data } from 'plotly.js'
+import type { Data, Annotations, Layout } from 'plotly.js'
 import { useStore } from '@/lib/store'
-import { getNumericValues, getStringValues } from '@/lib/gridHelpers'
+import { getNumericValues, getNumericGroup } from '@/lib/gridHelpers'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -101,36 +101,180 @@ interface HistogramInnerProps {
   hideAxisTitles: boolean
 }
 
+function BinWidthControl({ stats, binWidth, binWidthInput, setBinWidthInput, applyBinWidth }: {
+  stats: HistogramStats
+  binWidth: number
+  binWidthInput: string
+  setBinWidthInput: (v: string) => void
+  applyBinWidth: (v: number) => void
+}) {
+  return (
+    <label className="flex items-center gap-2 text-sm text-[var(--color-muted)]">
+      <span>Bin width</span>
+      <input
+        type="number"
+        min={stats.sliderMin}
+        max={stats.sliderMax}
+        step={stats.sliderStep}
+        value={binWidthInput}
+        onChange={e => setBinWidthInput(e.target.value)}
+        onBlur={() => {
+          const parsed = Number(binWidthInput)
+          if (Number.isFinite(parsed) && parsed > 0) {
+            applyBinWidth(parsed)
+          } else {
+            setBinWidthInput(formatBinWidth(binWidth))
+          }
+        }}
+        className="w-24 rounded-md border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)]"
+      />
+      <input
+        type="range"
+        min={stats.sliderMin}
+        max={stats.sliderMax}
+        step={stats.sliderStep}
+        value={binWidth}
+        onChange={e => applyBinWidth(Number(e.target.value))}
+        className="w-36 accent-[var(--color-accent)]"
+      />
+    </label>
+  )
+}
+
 function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideAxisTitles }: HistogramInnerProps) {
   const [showNormal, setShowNormal] = useState(false)
   const [showMean, setShowMean] = useState(false)
   const [showMedian, setShowMedian] = useState(false)
   const [binWidth, setBinWidth] = useState(stats.defaultWidth)
   const [binWidthInput, setBinWidthInput] = useState(formatBinWidth(stats.defaultWidth))
-  let traces: Data[]
 
   const vert = orientation === 'v'
   const binKey = vert ? 'y' : 'x'
   const binSpecKey = vert ? 'ybins' : 'xbins'
   const rangeEnd = stats.range > 0 ? stats.max + binWidth : stats.min + binWidth
-  const binSpec = {
-    start: stats.min,
-    end: rangeEnd,
-    size: binWidth,
-  }
+  const binSpec = { start: stats.min, end: rangeEnd, size: binWidth }
+
   const mean = values.reduce((a, b) => a + b, 0) / values.length
   const sorted = [...values].sort((a, b) => a - b)
   const median = sorted.length % 2 === 0
     ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
     : sorted[Math.floor(sorted.length / 2)]
 
+  function applyBinWidth(next: number) {
+    const clamped = Math.min(stats.sliderMax, Math.max(stats.sliderMin, next))
+    setBinWidth(clamped)
+    setBinWidthInput(formatBinWidth(clamped))
+  }
+
+  // ── Faceted layout: grouped + horizontal orientation ─────────────────
+  if (groupCol && !vert) {
+    const allData = getNumericGroup(grid, col.id, groupCol.id)
+    const uniqueGroups = [...new Set(allData.map(d => d.group))].sort()
+    const n = uniqueGroups.length
+    const GAP = n > 1 ? 0.06 : 0
+    const panelH = n > 1 ? (1 - GAP * (n - 1)) / n : 1
+
+    const facetAxes: Record<string, unknown> = {}
+    const facetAnnotations: Partial<Annotations>[] = []
+
+    const facetTraces: Data[] = uniqueGroups.map((group, i) => {
+      const yEnd = 1 - i * (panelH + GAP)
+      const yStart = Math.max(0, yEnd - panelH)
+      const isBottom = i === n - 1
+      const xAxisKey = i === 0 ? 'xaxis' : `xaxis${i + 1}`
+      const yAxisKey = i === 0 ? 'yaxis' : `yaxis${i + 1}`
+      const xRef = i === 0 ? 'x' : `x${i + 1}`
+      const yRef = i === 0 ? 'y' : `y${i + 1}`
+
+      facetAxes[xAxisKey] = {
+        domain: [0, 1],
+        ...(i > 0 ? { matches: 'x' } : {}),
+        showticklabels: isBottom,
+        ...(isBottom && !hideAxisTitles ? { title: { text: col.name } } : {}),
+        gridcolor: '#E2E8F0',
+        linecolor: '#CBD5E1',
+        zerolinecolor: '#CBD5E1',
+      }
+      facetAxes[yAxisKey] = {
+        domain: [yStart, yEnd],
+        anchor: xRef,
+        gridcolor: '#E2E8F0',
+        linecolor: '#CBD5E1',
+        ...(!hideAxisTitles ? { title: { text: 'Count', font: { size: 10 } } } : {}),
+      }
+
+      facetAnnotations.push({
+        xref: 'paper',
+        yref: 'paper',
+        x: 0.99,
+        y: yEnd - 0.005,
+        xanchor: 'right',
+        yanchor: 'top',
+        text: `<b>${group}</b>`,
+        showarrow: false,
+        font: { size: 12, color: ABRA_COLORS[i % ABRA_COLORS.length] },
+        bgcolor: 'rgba(255,255,255,0.85)',
+        borderpad: 3,
+      })
+
+      return {
+        type: 'histogram',
+        name: group,
+        x: allData.filter(d => d.group === group).map(d => d.value),
+        xbins: binSpec,
+        xaxis: xRef,
+        yaxis: yRef,
+        marker: { color: ABRA_COLORS[i % ABRA_COLORS.length], opacity: 0.85, line: { color: 'white', width: 0.5 } },
+        hovertemplate: `${group} — Range: %{x}<br>Count: %{y}<extra></extra>`,
+        showlegend: false,
+      } as Data
+    })
+
+    const facetHeight = Math.max(280, n * 155 + 55)
+    const margin = hideAxisTitles
+      ? { t: 8, r: 16, b: 44, l: 52 }
+      : { t: 30, r: 16, b: 60, l: 52 }
+
+    return (
+      <div className="h-full flex flex-col">
+        <div className="flex-shrink-0 flex items-center gap-4 px-4 pt-2">
+          <BinWidthControl
+            stats={stats}
+            binWidth={binWidth}
+            binWidthInput={binWidthInput}
+            setBinWidthInput={setBinWidthInput}
+            applyBinWidth={applyBinWidth}
+          />
+        </div>
+        <div className="flex-1 min-h-0 px-4 overflow-auto">
+          <PlotlyChart
+            data={facetTraces}
+            height={facetHeight}
+            mode="fixed"
+            layout={{
+              ...(facetAxes as Partial<Layout>),
+              annotations: facetAnnotations,
+              showlegend: false,
+              margin,
+            }}
+            title={hideAxisTitles ? undefined : `Distribution of ${col.name} by ${groupCol.name}`}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // ── Standard layout (ungrouped, or grouped vertical overlay) ─────────
+  let traces: Data[]
+
   if (groupCol) {
-    const groups = getStringValues(grid, groupCol.id)
-    const uniqueGroups = [...new Set(groups)].filter(Boolean)
+    // vert=true: keep overlay behavior
+    const allData = getNumericGroup(grid, col.id, groupCol.id)
+    const uniqueGroups = [...new Set(allData.map(d => d.group))].sort()
     traces = uniqueGroups.map((group, i) => ({
       type: 'histogram',
       name: group,
-      [binKey]: values.filter((_, idx) => groups[idx] === group),
+      [binKey]: allData.filter(d => d.group === group).map(d => d.value),
       [binSpecKey]: binSpec,
       marker: { color: ABRA_COLORS[i % ABRA_COLORS.length], opacity: 0.85, line: { color: 'white', width: 0.5 } },
       hovertemplate: vert
@@ -157,44 +301,16 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
     }
   }
 
-  function applyBinWidth(next: number) {
-    const clamped = Math.min(stats.sliderMax, Math.max(stats.sliderMin, next))
-    setBinWidth(clamped)
-    setBinWidthInput(formatBinWidth(clamped))
-  }
-
   return (
     <div className="h-full flex flex-col">
       <div className="flex-shrink-0 flex items-center gap-4 px-4 pt-2">
-        <label className="flex items-center gap-2 text-sm text-[var(--color-muted)]">
-          <span>Bin width</span>
-          <input
-            type="number"
-            min={stats.sliderMin}
-            max={stats.sliderMax}
-            step={stats.sliderStep}
-            value={binWidthInput}
-            onChange={e => setBinWidthInput(e.target.value)}
-            onBlur={() => {
-              const parsed = Number(binWidthInput)
-              if (Number.isFinite(parsed) && parsed > 0) {
-                applyBinWidth(parsed)
-              } else {
-                setBinWidthInput(formatBinWidth(binWidth))
-              }
-            }}
-            className="w-24 rounded-md border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)]"
-          />
-          <input
-            type="range"
-            min={stats.sliderMin}
-            max={stats.sliderMax}
-            step={stats.sliderStep}
-            value={binWidth}
-            onChange={e => applyBinWidth(Number(e.target.value))}
-            className="w-36 accent-[var(--color-accent)]"
-          />
-        </label>
+        <BinWidthControl
+          stats={stats}
+          binWidth={binWidth}
+          binWidthInput={binWidthInput}
+          setBinWidthInput={setBinWidthInput}
+          applyBinWidth={applyBinWidth}
+        />
         {!groupCol && !vert && (
           <>
             <label className="flex items-center gap-2 text-sm text-[var(--color-muted)] cursor-pointer">

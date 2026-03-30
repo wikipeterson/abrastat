@@ -3,7 +3,7 @@ import { v4 as uuid } from 'uuid'
 import { User as FirebaseUser } from 'firebase/auth'
 import { ColumnType, GridState } from '@/types'
 import { ExploreCard, CardConfig, DistributionPreFill } from './exploreTypes'
-import { createEmptyGrid, getStringValues } from './gridHelpers'
+import { createEmptyGrid } from './gridHelpers'
 import { computeColumnValues } from './formulaEval'
 
 // ─── Chi-square context scanner ───────────────────────────────────────────────
@@ -19,8 +19,12 @@ function scanChiSquareContext(
   const { rowsColId, colsColId } = tableCard.config
   if (!rowsColId || !colsColId) return undefined
 
-  const rowVals = getStringValues(grid, rowsColId).filter(v => v.trim())
-  const colVals = getStringValues(grid, colsColId).filter(v => v.trim())
+  // Use complete cases: only rows where BOTH values are non-blank
+  const pairs = grid.rows
+    .map(r => [String(r[rowsColId] ?? '').trim(), String(r[colsColId] ?? '').trim()] as [string, string])
+    .filter(([a, b]) => a !== '' && b !== '')
+  const rowVals = pairs.map(p => p[0])
+  const colVals = pairs.map(p => p[1])
   if (rowVals.length < 2 || colVals.length < 2) return undefined
 
   // Build observed counts

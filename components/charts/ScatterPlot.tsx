@@ -3,7 +3,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import type { Data, Annotations } from 'plotly.js'
 import { useStore } from '@/lib/store'
-import { getNumericValues, getStringValues } from '@/lib/gridHelpers'
 import { linearRegression } from '@/lib/statistics'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
@@ -62,8 +61,25 @@ export function ScatterPlot({ xColId, yColId, colorByColId }: ScatterPlotProps) 
   const xCol = grid.columns.find(c => c.id === xColId)
   const yCol = grid.columns.find(c => c.id === yColId)
 
-  const xValues = useMemo(() => xColId ? getNumericValues(grid, xColId) : [], [grid, xColId])
-  const rawYValues = useMemo(() => yColId ? getNumericValues(grid, yColId) : [], [grid, yColId])
+  // Build complete-case (x, y, group) triples — all three must be non-blank/finite
+  const allPoints = useMemo(() => {
+    if (!xColId || !yColId) return [] as { x: number; y: number; group: string }[]
+    return grid.rows.flatMap(r => {
+      const rx = r[xColId], ry = r[yColId]
+      if (rx === '' || rx == null || ry === '' || ry == null) return []
+      const x = Number(rx), y = Number(ry)
+      if (!isFinite(x) || !isFinite(y)) return []
+      if (colorByColId) {
+        const group = String(r[colorByColId] ?? '').trim()
+        if (!group) return []
+        return [{ x, y, group }]
+      }
+      return [{ x, y, group: '' }]
+    })
+  }, [grid.rows, xColId, yColId, colorByColId])
+
+  const xValues = useMemo(() => allPoints.map(p => p.x), [allPoints])
+  const rawYValues = useMemo(() => allPoints.map(p => p.y), [allPoints])
 
   // Detect transition from null → assigned yColId; defer setState to avoid synchronous call in effect
   useEffect(() => {
@@ -97,14 +113,13 @@ export function ScatterPlot({ xColId, yColId, colorByColId }: ScatterPlotProps) 
   let traces: Data[]
 
   if (colorByColId) {
-    const groups = getStringValues(grid, colorByColId)
-    const uniqueGroups = [...new Set(groups)].filter(Boolean)
+    const uniqueGroups = [...new Set(allPoints.map(p => p.group))].sort()
     traces = uniqueGroups.map((group, i) => ({
       type: 'scatter',
       mode: 'markers',
       name: group,
-      x: xValues.filter((_, idx) => groups[idx] === group),
-      y: yValues.filter((_, idx) => groups[idx] === group),
+      x: allPoints.filter(p => p.group === group).map(p => p.x),
+      y: allPoints.filter(p => p.group === group).map(p => p.y),
       marker: { color: ABRA_COLORS[i % ABRA_COLORS.length], size: 7, opacity: 0.85, line: { width: 0 } },
       hovertemplate: `${xCol.name}: %{x}<br>${yCol.name}: %{y}<extra>${group}</extra>`,
     }))

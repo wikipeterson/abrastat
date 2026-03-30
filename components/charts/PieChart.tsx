@@ -27,7 +27,7 @@ export function PieChart({ colId, groupColId }: PieChartProps) {
     const raw = grid.rows.map(r => ({
       value: String(r[colId] ?? '').trim(),
       group: groupColId ? String(r[groupColId] ?? '').trim() : '',
-    })).filter(r => r.value)
+    })).filter(r => r.value && (!groupColId || r.group))
     const allGroups = groupColId
       ? [...new Set(raw.map(r => r.group))].filter(g => g).sort()
       : []

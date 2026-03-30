@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import type { Data } from 'plotly.js'
 import { useStore } from '@/lib/store'
 import { linearRegression } from '@/lib/statistics'
+import { getNumericPairs } from '@/lib/gridHelpers'
 import { DropZone } from '../DropZone'
 import { PlotlyChart } from '@/components/charts/PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -28,23 +29,9 @@ export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHead
 
   const paired = useMemo(() => {
     if (!config.xColId || !config.yColId) return { xs: [] as number[], ys: [] as number[] }
-
-    const xs: number[] = []
-    const ys: number[] = []
-
-    for (const row of grid.rows) {
-      const rawX = row[config.xColId]
-      const rawY = row[config.yColId]
-      const x = typeof rawX === 'number' ? rawX : Number(rawX)
-      const y = typeof rawY === 'number' ? rawY : Number(rawY)
-      if (Number.isFinite(x) && Number.isFinite(y)) {
-        xs.push(x)
-        ys.push(y)
-      }
-    }
-
-    return { xs, ys }
-  }, [grid.rows, config.xColId, config.yColId])
+    const pairs = getNumericPairs(grid, config.xColId, config.yColId)
+    return { xs: pairs.map(p => p[0]), ys: pairs.map(p => p[1]) }
+  }, [grid, config.xColId, config.yColId])
 
   const stats = useMemo(() => {
     if (!xCol || !yCol || xCol.type !== 'numeric' || yCol.type !== 'numeric' || paired.xs.length < 2) {

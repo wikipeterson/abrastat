@@ -25,9 +25,11 @@ export function computeSummary(values: number[], columnName: string): SummaryRes
 }
 
 export function getFrequencyTable(values: string[]): FrequencyRow[] {
+  const nonBlank = values.filter(v => v !== '')
+  if (nonBlank.length === 0) return []
   const counts: Record<string, number> = {}
-  values.forEach(v => { counts[String(v)] = (counts[String(v)] || 0) + 1 })
-  const total = values.length
+  nonBlank.forEach(v => { counts[v] = (counts[v] || 0) + 1 })
+  const total = nonBlank.length
   return Object.entries(counts)
     .map(([value, count]) => ({ value, count, percent: (count / total) * 100 }))
     .sort((a, b) => b.count - a.count)

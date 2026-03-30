@@ -36,10 +36,72 @@ export function parsedRowsToGrid(headers: string[], dataRows: unknown[][]): Grid
   return { columns, rows }
 }
 
+/**
+ * Numeric values for a single column, blanks excluded.
+ * IMPORTANT: filters out '' and null/undefined BEFORE Number() so that blank
+ * cells are never silently coerced to 0.
+ */
 export function getNumericValues(grid: GridState, colId: string): number[] {
-  return grid.rows.map(r => Number(r[colId])).filter(v => isFinite(v))
+  return grid.rows
+    .filter(r => r[colId] !== '' && r[colId] != null)
+    .map(r => Number(r[colId]))
+    .filter(v => isFinite(v))
 }
 
+/**
+ * Raw string values preserving row alignment (blanks become '').
+ * Use this when you need positional alignment across multiple columns.
+ * For single-column categorical use, prefer getValidStringValues.
+ */
 export function getStringValues(grid: GridState, colId: string): string[] {
   return grid.rows.map(r => String(r[colId] ?? ''))
+}
+
+/**
+ * Categorical values with blanks and whitespace-only strings removed.
+ */
+export function getValidStringValues(grid: GridState, colId: string): string[] {
+  return grid.rows.map(r => String(r[colId] ?? '').trim()).filter(v => v !== '')
+}
+
+/**
+ * Complete-case extraction for one numeric variable with optional categorical
+ * grouping. Excludes rows where the numeric value is blank/non-finite, and
+ * (when grouping) rows where the group value is blank.
+ */
+export function getNumericGroup(
+  grid: GridState,
+  numColId: string,
+  groupColId?: string | null,
+): { value: number; group: string }[] {
+  return grid.rows.flatMap(r => {
+    const raw = r[numColId]
+    if (raw === '' || raw == null) return []
+    const value = Number(raw)
+    if (!isFinite(value)) return []
+    if (groupColId) {
+      const group = String(r[groupColId] ?? '').trim()
+      if (!group) return []
+      return [{ value, group }]
+    }
+    return [{ value, group: '' }]
+  })
+}
+
+/**
+ * Complete-case extraction for two numeric variables (scatter / regression).
+ * Only returns rows where BOTH values are non-blank and finite.
+ */
+export function getNumericPairs(
+  grid: GridState,
+  col1Id: string,
+  col2Id: string,
+): [number, number][] {
+  return grid.rows.flatMap(r => {
+    const r1 = r[col1Id], r2 = r[col2Id]
+    if (r1 === '' || r1 == null || r2 === '' || r2 == null) return []
+    const v1 = Number(r1), v2 = Number(r2)
+    if (!isFinite(v1) || !isFinite(v2)) return []
+    return [[v1, v2] as [number, number]]
+  })
 }

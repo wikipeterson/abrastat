@@ -120,13 +120,21 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
 
   // Extract numeric data
   const data1 = useMemo(() => {
-    if (!config.var1ColId) return []
-    return grid.rows.map(r => Number(r[config.var1ColId!])).filter(v => isFinite(v))
+    const id = config.var1ColId
+    if (!id) return []
+    return grid.rows
+      .filter(r => r[id] !== '' && r[id] != null)
+      .map(r => Number(r[id]))
+      .filter(v => isFinite(v))
   }, [grid.rows, config.var1ColId])
 
   const data2 = useMemo(() => {
-    if (!config.var2ColId || !var2IsNumeric) return []
-    return grid.rows.map(r => Number(r[config.var2ColId!])).filter(v => isFinite(v))
+    const id = config.var2ColId
+    if (!id || !var2IsNumeric) return []
+    return grid.rows
+      .filter(r => r[id] !== '' && r[id] != null)
+      .map(r => Number(r[id]))
+      .filter(v => isFinite(v))
   }, [grid.rows, config.var2ColId, var2IsNumeric])
 
   // Group-split data for categorical var2
@@ -135,7 +143,9 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
     const a: number[] = [], b: number[] = []
     for (const row of grid.rows) {
       const group = String(row[config.var2ColId] ?? '').trim()
-      const val   = Number(row[config.var1ColId])
+      const rawVal = row[config.var1ColId]
+      if (rawVal === '' || rawVal == null) continue
+      const val = Number(rawVal)
       if (!isFinite(val)) continue
       if (group === groupA) a.push(val)
       else if (group === groupB) b.push(val)
@@ -211,9 +221,11 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
       if (!config.var1ColId || !config.var2ColId) return null
       const diffs: number[] = []
       for (const row of grid.rows) {
-        const v1 = Number(row[config.var1ColId])
-        const v2 = Number(row[config.var2ColId])
-        if (isFinite(v1) && isFinite(v2)) diffs.push(v1 - v2)
+        const r1 = row[config.var1ColId], r2 = row[config.var2ColId]
+        if (r1 === '' || r1 == null || r2 === '' || r2 == null) continue
+        const v1 = Number(r1), v2 = Number(r2)
+        if (!isFinite(v1) || !isFinite(v2)) continue
+        diffs.push(v1 - v2)
       }
       const ds = summaryOf(diffs)
       if (!ds) return null

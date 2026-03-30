@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { useStore } from '@/lib/store'
-import { getNumericValues, getStringValues } from '@/lib/gridHelpers'
+import { getNumericValues, getNumericGroup } from '@/lib/gridHelpers'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -26,15 +26,15 @@ export function BoxPlot({ colId, groupColId, orientation = 'v' }: BoxPlotProps) 
     const numericValues = getNumericValues(grid, colId)
 
     if (groupCol && groupColId) {
-      const groups = getStringValues(grid, groupColId)
-      const uniqueGroups = [...new Set(groups)].filter(Boolean)
+      const allData = getNumericGroup(grid, colId, groupColId)
+      const uniqueGroups = [...new Set(allData.map(d => d.group))].sort()
       return uniqueGroups.map((group, i) => ({
         type: 'box',
         name: group,
         orientation,
         ...(isH
-          ? { x: numericValues.filter((_, idx) => groups[idx] === group) }
-          : { y: numericValues.filter((_, idx) => groups[idx] === group) }),
+          ? { x: allData.filter(d => d.group === group).map(d => d.value) }
+          : { y: allData.filter(d => d.group === group).map(d => d.value) }),
         marker: { color: ABRA_COLORS[i % ABRA_COLORS.length], outliercolor: '#EF4444', size: 5, line: { width: 0 } },
         line: { color: ABRA_COLORS[i % ABRA_COLORS.length], width: 1.5 },
         fillcolor: ABRA_COLORS[i % ABRA_COLORS.length] + '28',

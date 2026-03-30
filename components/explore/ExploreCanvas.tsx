@@ -216,13 +216,16 @@ export function ExploreCanvas() {
     let newConfig: CardConfig | null = null
     if (cfg.type === 'graph') {
       let c = { ...cfg }
+      const prevX = c.xColId
+      const prevY = c.yColId
+      const prevGroup = c.groupColId
       if (targetZone === 'x')     c = { ...c, xColId: colId }
       if (targetZone === 'y')     c = { ...c, yColId: colId }
       if (targetZone === 'group') c = { ...c, groupColId: colId }
       if (sourceZone && sourceZone !== targetZone) {
-        if (sourceZone === 'x')     c = { ...c, xColId: null }
-        if (sourceZone === 'y')     c = { ...c, yColId: null }
-        if (sourceZone === 'group') c = { ...c, groupColId: null }
+        if (sourceZone === 'x')     c = { ...c, xColId: targetZone === 'y' ? prevY : targetZone === 'group' ? prevGroup : null }
+        if (sourceZone === 'y')     c = { ...c, yColId: targetZone === 'x' ? prevX : targetZone === 'group' ? prevGroup : null }
+        if (sourceZone === 'group') c = { ...c, groupColId: targetZone === 'x' ? prevX : targetZone === 'y' ? prevY : null }
       }
 
       const nextXCol     = c.xColId     ? (grid.columns.find(col => col.id === c.xColId) ?? null)     : null
@@ -248,21 +251,25 @@ export function ExploreCanvas() {
     }
     if (cfg.type === 'regression') {
       let c = { ...cfg }
+      const prevX = c.xColId
+      const prevY = c.yColId
       if (targetZone === 'x') c = { ...c, xColId: colId }
       if (targetZone === 'y') c = { ...c, yColId: colId }
       if (sourceZone && sourceZone !== targetZone) {
-        if (sourceZone === 'x') c = { ...c, xColId: null }
-        if (sourceZone === 'y') c = { ...c, yColId: null }
+        if (sourceZone === 'x') c = { ...c, xColId: targetZone === 'y' ? prevY : null }
+        if (sourceZone === 'y') c = { ...c, yColId: targetZone === 'x' ? prevX : null }
       }
       newConfig = c
     }
     if (cfg.type === 'table') {
       let c = { ...cfg }
+      const prevRows = c.rowsColId
+      const prevCols = c.colsColId
       if (targetZone === 'rows') c = { ...c, rowsColId: colId }
       if (targetZone === 'cols') c = { ...c, colsColId: colId }
       if (sourceZone && sourceZone !== targetZone) {
-        if (sourceZone === 'rows') c = { ...c, rowsColId: null }
-        if (sourceZone === 'cols') c = { ...c, colsColId: null }
+        if (sourceZone === 'rows') c = { ...c, rowsColId: targetZone === 'cols' ? prevCols : null }
+        if (sourceZone === 'cols') c = { ...c, colsColId: targetZone === 'rows' ? prevRows : null }
       }
       newConfig = c
     }
@@ -272,11 +279,13 @@ export function ExploreCanvas() {
       // var1 must be numeric; var2 can be numeric or categorical
       if (targetZone === 'var1' && droppedCol.type !== 'numeric') return
       let c: MeansCardConfig = { ...cfg }
+      const prevVar1 = c.var1ColId
+      const prevVar2 = c.var2ColId
       if (targetZone === 'var1') c = { ...c, var1ColId: colId }
       if (targetZone === 'var2') c = { ...c, var2ColId: colId }
       if (sourceZone && sourceZone !== targetZone) {
-        if (sourceZone === 'var1') c = { ...c, var1ColId: null }
-        if (sourceZone === 'var2') c = { ...c, var2ColId: null }
+        if (sourceZone === 'var1') c = { ...c, var1ColId: targetZone === 'var2' ? prevVar2 : null }
+        if (sourceZone === 'var2') c = { ...c, var2ColId: targetZone === 'var1' ? prevVar1 : null }
       }
       newConfig = c
     }

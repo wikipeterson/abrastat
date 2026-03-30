@@ -126,6 +126,25 @@ export function ExploreCanvas() {
     zoomRef.current = zoom
   }, [zoom])
 
+  const normalizeGraphConfig = useCallback((cfg: GraphCardConfig): GraphCardConfig => {
+    const xType = cfg.xColId ? (grid.columns.find(c => c.id === cfg.xColId)?.type ?? null) : null
+    const yType = cfg.yColId ? (grid.columns.find(c => c.id === cfg.yColId)?.type ?? null) : null
+    const groupType = cfg.groupColId ? (grid.columns.find(c => c.id === cfg.groupColId)?.type ?? null) : null
+    const { primary, alternatives } = inferCharts(xType, yType, groupType)
+    const valid = primary ? [primary, ...alternatives] : []
+
+    if (!cfg.chartType) {
+      return { ...cfg, chartType: primary }
+    }
+    if (valid.length > 0 && !valid.includes(cfg.chartType)) {
+      return { ...cfg, chartType: primary }
+    }
+    if (valid.length === 0 && cfg.chartType) {
+      return { ...cfg, chartType: null }
+    }
+    return cfg
+  }, [grid.columns])
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
@@ -138,20 +157,26 @@ export function ExploreCanvas() {
     const validIds = new Set(grid.columns.map(c => c.id))
     purgeExploreStaleIds(validIds)
 
-    const colMap = new Map(grid.columns.map(c => [c.id, c]))
+      const colMap = new Map(grid.columns.map(c => [c.id, c]))
     cardsRef.current.forEach(card => {
       if (card.config.type !== 'graph') return
       const cfg = card.config
-      const xType     = cfg.xColId     ? (colMap.get(cfg.xColId)?.type     ?? null) : null
-      const yType     = cfg.yColId     ? (colMap.get(cfg.yColId)?.type     ?? null) : null
-      const groupType = cfg.groupColId ? (colMap.get(cfg.groupColId)?.type ?? null) : null
-      const { primary, alternatives } = inferCharts(xType, yType, groupType)
-      const valid = primary ? [primary, ...alternatives] : []
-      if (cfg.chartType && valid.length > 0 && !valid.includes(cfg.chartType)) {
-        updateCard(card.id, { config: { ...cfg, chartType: primary } })
+      const normalized = normalizeGraphConfig({
+        ...cfg,
+        xColId: cfg.xColId && colMap.has(cfg.xColId) ? cfg.xColId : null,
+        yColId: cfg.yColId && colMap.has(cfg.yColId) ? cfg.yColId : null,
+        groupColId: cfg.groupColId && colMap.has(cfg.groupColId) ? cfg.groupColId : null,
+      })
+      if (
+        normalized.xColId !== cfg.xColId ||
+        normalized.yColId !== cfg.yColId ||
+        normalized.groupColId !== cfg.groupColId ||
+        normalized.chartType !== cfg.chartType
+      ) {
+        updateCard(card.id, { config: normalized })
       }
     })
-  }, [grid.columns, purgeExploreStaleIds, updateCard])
+  }, [grid.columns, normalizeGraphConfig, purgeExploreStaleIds, updateCard])
 
   useEffect(() => {
     if (!interactionCursor) return
@@ -228,19 +253,7 @@ export function ExploreCanvas() {
         if (sourceZone === 'group') c = { ...c, groupColId: targetZone === 'x' ? prevX : targetZone === 'y' ? prevY : null }
       }
 
-      const nextXCol     = c.xColId     ? (grid.columns.find(col => col.id === c.xColId) ?? null)     : null
-      const nextYCol     = c.yColId     ? (grid.columns.find(col => col.id === c.yColId) ?? null)     : null
-      const nextGroupCol = c.groupColId ? (grid.columns.find(col => col.id === c.groupColId) ?? null) : null
-      const { primary, alternatives } = inferCharts(
-        nextXCol?.type ?? null,
-        nextYCol?.type ?? null,
-        nextGroupCol?.type ?? null,
-      )
-      const validChartTypes = primary ? [primary, ...alternatives] : []
-      if (!c.chartType || (validChartTypes.length > 0 && !validChartTypes.includes(c.chartType))) {
-        c = { ...c, chartType: primary }
-      }
-      newConfig = c
+      newConfig = normalizeGraphConfig(c)
     }
     if (cfg.type === 'summary') {
       if (zone === 'variable') {
@@ -290,7 +303,7 @@ export function ExploreCanvas() {
       newConfig = c
     }
     if (newConfig) updateCard(cardId, { config: newConfig })
-  }, [cards, grid.columns, updateCard])
+  }, [cards, grid.columns, normalizeGraphConfig, updateCard])
 
   function clearZone(cardId: string, zone: string) {
     const card = cards.find(c => c.id === cardId)
@@ -298,9 +311,9 @@ export function ExploreCanvas() {
     const cfg = card.config
     let newConfig: CardConfig | null = null
     if (cfg.type === 'graph') {
-      if (zone === 'x')     newConfig = { ...cfg, xColId: null }
-      if (zone === 'y')     newConfig = { ...cfg, yColId: null }
-      if (zone === 'group') newConfig = { ...cfg, groupColId: null }
+      if (zone === 'x')     newConfig = normalizeGraphConfig({ ...cfg, xColId: null })
+      if (zone === 'y')     newConfig = normalizeGraphConfig({ ...cfg, yColId: null })
+      if (zone === 'group') newConfig = normalizeGraphConfig({ ...cfg, groupColId: null })
     }
     if (cfg.type === 'summary') {
       if (zone === 'group') newConfig = { ...cfg, groupColId: null }

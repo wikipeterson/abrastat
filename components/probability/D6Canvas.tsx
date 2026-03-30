@@ -488,7 +488,13 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         const world = worldRef.current
         if (!world || dieEntriesRef.current.length === 0) return
 
-        for (const entry of dieEntriesRef.current) {
+        const innerX = TRAY_W / 2 - DIE_HALF - 0.18
+        const innerZ = TRAY_D / 2 - DIE_HALF - 0.18
+        const zStep = dieEntriesRef.current.length > 1
+          ? (innerZ * 1.5) / Math.max(1, dieEntriesRef.current.length - 1)
+          : 0
+
+        for (const [index, entry] of dieEntriesRef.current.entries()) {
           clearSettleTimer(entry)
           entry.settled = false
           entry.settleCount = 0
@@ -496,25 +502,21 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
             entry.precomputedResult = Math.floor(Math.random() * entry.sides) + 1
           }
 
-          const innerX = TRAY_W / 2 - DIE_HALF - 0.18
-          const innerZ = TRAY_D / 2 - DIE_HALF - 0.18
-          const edge = Math.floor(Math.random() * 4)
-          let sx = 0, sz = 0, vx = 0, vz = 0
-          const speed = 5.5 + Math.random() * 3.8
-
-          if (edge === 0) { sx = (Math.random() - 0.5) * innerX * 1.7; sz = -innerZ; vz = speed }
-          if (edge === 1) { sx = (Math.random() - 0.5) * innerX * 1.7; sz = innerZ; vz = -speed }
-          if (edge === 2) { sz = (Math.random() - 0.5) * innerZ * 1.7; sx = -innerX; vx = speed }
-          if (edge === 3) { sz = (Math.random() - 0.5) * innerZ * 1.7; sx = innerX; vx = -speed }
+          const sx = innerX
+          const sz = dieEntriesRef.current.length > 1
+            ? -innerZ * 0.75 + index * zStep
+            : 0
+          const vx = -(8.8 + Math.random() * 3.2)
+          const vz = (Math.random() - 0.5) * 2.6
 
           entry.body.wakeUp()
-          entry.body.position.set(sx, DIE_HALF + 0.02, sz)
+          entry.body.position.set(sx, DIE_HALF + 0.04, sz)
           entry.body.quaternion.set(0, 0, 0, 1)
           entry.body.velocity.set(vx, 0, vz)
           entry.body.angularVelocity.set(
-            (Math.random() - 0.5) * 22,
-            (Math.random() - 0.5) * 22,
-            (Math.random() - 0.5) * 22,
+            (Math.random() - 0.5) * 28,
+            (Math.random() - 0.5) * 24,
+            (Math.random() - 0.5) * 28,
           )
 
           entry.maxTimer = setTimeout(() => {

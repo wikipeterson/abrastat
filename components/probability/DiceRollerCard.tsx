@@ -82,15 +82,13 @@ function ResultsStrip({
   finalResults: Record<string, number>
 }) {
   const settled = tray.filter(d => finalResults[d.id] != null)
-  if (settled.length === 0) return null
-
   const allDone = settled.length === tray.length
   const total = allDone ? tray.reduce((s, d) => s + (finalResults[d.id] ?? 0), 0) : null
 
   return (
-    <div className="px-3 py-2 border-t border-[var(--color-border)] bg-slate-50 flex-shrink-0">
+    <div className="min-h-[44px] px-1 py-1">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-        {tray.map(die => {
+        {tray.length > 0 ? tray.map(die => {
           const val = finalResults[die.id]
           return (
             <span key={die.id} className="font-mono text-xs">
@@ -100,7 +98,9 @@ function ResultsStrip({
                 : <span className="text-[var(--color-muted)]">…</span>}
             </span>
           )
-        })}
+        }) : (
+          <span className="text-xs text-[var(--color-muted)] italic">Add dice, then roll.</span>
+        )}
         {total != null && tray.length > 1 && (
           <span className="ml-1 font-bold text-sm text-[var(--color-text)]">= {total}</span>
         )}
@@ -152,12 +152,9 @@ export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
     <div className="flex flex-col h-full">
 
       {/* ── Physics tray — fills available space ── */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-[260px]">
         <D6Canvas ref={canvasRef} onDieSettled={handleDieSettled} />
       </div>
-
-      {/* ── Results ── */}
-      <ResultsStrip tray={tray} finalResults={finalResults} />
 
       {/* ── Palette ── */}
       <div className="flex-shrink-0 px-3 pt-3 pb-3 border-t border-[var(--color-border)]">
@@ -189,6 +186,9 @@ export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
           >
             Clear
           </button>
+        </div>
+        <div className="mt-2 border-t border-[var(--color-border)]/80 pt-2">
+          <ResultsStrip tray={tray} finalResults={finalResults} />
         </div>
       </div>
 

@@ -66,17 +66,25 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
 
     const mainColId = orientation === 'h' ? config.xColId : config.yColId
     const hCatAndVNum = xCol?.type === 'categorical' && yCol?.type === 'numeric'
+    const hNumAndVCat = xCol?.type === 'numeric' && yCol?.type === 'categorical'
 
     switch (currentChart) {
-      case 'histogram':  return <Histogram colId={mainColId} groupColId={config.groupColId} orientation={orientation} />
+      case 'histogram':
+        return hNumAndVCat
+          ? <Histogram colId={config.xColId} groupColId={config.yColId} orientation="h" />
+          : <Histogram colId={mainColId} groupColId={config.groupColId} orientation={orientation} />
       case 'dot':
         return hCatAndVNum
           ? <DotPlot colId={config.yColId} groupByColId={config.xColId} orientation="h" />
-          : <DotPlot colId={mainColId} groupByColId={config.groupColId} orientation={orientation} />
+          : hNumAndVCat
+            ? <DotPlot colId={config.xColId} groupByColId={config.yColId} orientation="h" />
+            : <DotPlot colId={mainColId} groupByColId={config.groupColId} orientation={orientation} />
       case 'box':
         return hCatAndVNum
           ? <BoxPlot colId={config.yColId} groupColId={config.xColId} orientation="v" />
-          : <BoxPlot colId={mainColId} groupColId={config.groupColId} orientation={orientation} />
+          : hNumAndVCat
+            ? <BoxPlot colId={config.xColId} groupColId={config.yColId} orientation="h" />
+            : <BoxPlot colId={mainColId} groupColId={config.groupColId} orientation={orientation} />
       case 'scatter':    return <ScatterPlot xColId={config.xColId} yColId={config.yColId} colorByColId={config.groupColId} />
       case 'bar':        return <BarChart colId={mainColId} orientation={orientation} />
       case 'pie':        return <PieChart colId={mainColId} groupColId={config.groupColId} />

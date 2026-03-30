@@ -368,8 +368,6 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
   const [mCells, setMCells] = useState<number[][]>([[0, 0], [0, 0]])
 
   const categoricalCols = grid.columns.filter(c => c.type === 'categorical')
-  const hasGridData = grid.rows.some(r => Object.values(r).some(v => String(v).trim()))
-
   // ── Derive TwoWayData ────────────────────────────────────────────────────
 
   const data = useMemo<TwoWayData | null>(() => {
@@ -571,13 +569,11 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
       </div>
     </div>
   ) : (
-    <div className="h-full flex flex-col items-center justify-center gap-3 text-center p-8 text-[var(--color-muted)]">
+      <div className="h-full flex flex-col items-center justify-center gap-3 text-center p-8 text-[var(--color-muted)]">
       <div className="text-4xl opacity-25">📋</div>
       <p className="text-sm font-medium">
         {inputMode === 'raw'
-          ? !hasGridData
-            ? 'Load a dataset with categorical columns in the Data tab.'
-            : 'Drag in an Explanatory Variable and a Response Variable to begin.'
+          ? 'Drag in an Explanatory Variable and a Response Variable to begin.'
           : 'Enter counts in the table above to get started.'}
       </p>
     </div>
@@ -647,14 +643,9 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
                   ))}
                 </select>
               </div>
-              {!hasGridData && (
+              {categoricalCols.length < 2 && (
                 <p className="text-sm text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg self-center">
-                  Load data in the Data tab first.
-                </p>
-              )}
-              {hasGridData && categoricalCols.length < 2 && (
-                <p className="text-sm text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg self-center">
-                  Need at least two categorical (A) columns.
+                  Add two categorical variables to use raw-data mode, or switch to Enter Table.
                 </p>
               )}
             </>
@@ -722,9 +713,7 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
           <div className="text-4xl mb-3 opacity-25">📋</div>
           <p className="text-sm">
             {inputMode === 'raw'
-              ? !hasGridData
-                ? 'Load a dataset with categorical columns in the Data tab.'
-                : 'Select an Explanatory Variable and a Response Variable above.'
+              ? 'Select an Explanatory Variable and a Response Variable above.'
               : 'Enter counts in the table above to get started.'}
           </p>
         </div>

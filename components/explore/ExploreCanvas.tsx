@@ -129,20 +129,27 @@ export function ExploreCanvas() {
   const normalizeGraphConfig = useCallback((cfg: GraphCardConfig): GraphCardConfig => {
     const xType = cfg.xColId ? (grid.columns.find(c => c.id === cfg.xColId)?.type ?? null) : null
     const yType = cfg.yColId ? (grid.columns.find(c => c.id === cfg.yColId)?.type ?? null) : null
-    const groupType = cfg.groupColId ? (grid.columns.find(c => c.id === cfg.groupColId)?.type ?? null) : null
+    const usesAxisGrouping =
+      (xType === 'numeric' && yType === 'categorical') ||
+      (xType === 'categorical' && yType === 'numeric')
+    const normalizedGroupColId = usesAxisGrouping ? null : cfg.groupColId
+    const groupType = normalizedGroupColId ? (grid.columns.find(c => c.id === normalizedGroupColId)?.type ?? null) : null
     const { primary, alternatives } = inferCharts(xType, yType, groupType)
     const valid = primary ? [primary, ...alternatives] : []
+    const baseCfg = usesAxisGrouping && cfg.groupColId !== null
+      ? { ...cfg, groupColId: null }
+      : cfg
 
-    if (!cfg.chartType) {
-      return { ...cfg, chartType: primary }
+    if (!baseCfg.chartType) {
+      return { ...baseCfg, chartType: primary }
     }
-    if (valid.length > 0 && !valid.includes(cfg.chartType)) {
-      return { ...cfg, chartType: primary }
+    if (valid.length > 0 && !valid.includes(baseCfg.chartType)) {
+      return { ...baseCfg, chartType: primary }
     }
-    if (valid.length === 0 && cfg.chartType) {
-      return { ...cfg, chartType: null }
+    if (valid.length === 0 && baseCfg.chartType) {
+      return { ...baseCfg, chartType: null }
     }
-    return cfg
+    return baseCfg
   }, [grid.columns])
 
   const sensors = useSensors(

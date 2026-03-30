@@ -36,6 +36,9 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
     yCol?.type ?? null,
     groupCol?.type ?? null,
   )
+  const usesAxisGrouping =
+    (xCol?.type === 'numeric' && yCol?.type === 'categorical') ||
+    (xCol?.type === 'categorical' && yCol?.type === 'numeric')
 
   const currentChart = config.chartType ?? primary
 
@@ -124,15 +127,17 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
         </div>
 
         {/* Group — compact square upper right */}
-        <div className="flex-shrink-0 w-24">
-          <DropZone
-            id={`${cardId}:group`}
-            label="Group"
-            hint="optional"
-            assignedCol={groupCol}
-            onClear={() => onClearZone('group')}
-          />
-        </div>
+        {!usesAxisGrouping && (
+          <div className="flex-shrink-0 w-24">
+            <DropZone
+              id={`${cardId}:group`}
+              label="Group"
+              hint="optional"
+              assignedCol={groupCol}
+              onClear={() => onClearZone('group')}
+            />
+          </div>
+        )}
       </div>
 
       {/*

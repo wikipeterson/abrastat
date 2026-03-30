@@ -133,6 +133,11 @@ export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
     canvasRef.current?.addDie(id, sides)
   }
 
+  function rollAll() {
+    setFinalResults({})
+    canvasRef.current?.rollAll()
+  }
+
   function clearAll() {
     canvasRef.current?.clearAll()
     setTray([])
@@ -166,15 +171,25 @@ export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
             />
           ))}
         </div>
-        {tray.length > 0 && (
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            onClick={rollAll}
+            disabled={tray.length === 0}
+            className="flex-1 rounded-xl bg-[var(--color-accent)] text-white font-semibold py-2.5
+                       disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-105 transition"
+          >
+            Roll
+          </button>
           <button
             onClick={clearAll}
-            className="mt-2.5 w-full text-xs text-[var(--color-muted)] hover:text-red-500
-                       transition-colors text-center"
+            disabled={tray.length === 0}
+            className="px-4 py-2.5 rounded-xl border border-[var(--color-border)] text-sm
+                       text-[var(--color-muted)] hover:text-red-500 hover:border-red-200 transition
+                       disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Clear all
+            Clear
           </button>
-        )}
+        </div>
       </div>
 
     </div>

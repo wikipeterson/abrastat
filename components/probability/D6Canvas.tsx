@@ -6,8 +6,8 @@ import * as CANNON from 'cannon-es'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const TRAY_W   = 7.0   // world units wide
-const TRAY_D   = 7.0   // world units deep (square tray)
+const TRAY_W   = 10.5  // world units wide
+const TRAY_D   = 5.9   // world units deep (rectangular tray)
 const WALL_H   = 1.2   // wall height (tall enough to contain bouncing)
 const WALL_T   = 0.22  // wall thickness
 const DIE_HALF = 0.42  // half-side of die cube  (full = 0.84 wu)
@@ -21,15 +21,11 @@ const SETTLE_HOLD = 60   // ~1 s at 60 fps
 const MAX_SETTLE  = 5500 // ms hard timeout
 
 // Die face colours matching the palette
-const DIE_COLORS: Record<number, string> = {
-  4:   '#F59E0B',
-  6:   '#0EA5A0',
-  8:   '#6366F1',
-  10:  '#10B981',
-  12:  '#EC4899',
-  20:  '#EF4444',
-  100: '#8B5CF6',
-}
+const DIE_COLOR = '#FAFAFA'
+const DIE_EDGE_COLOR = '#CBD5E1'
+const DIE_TEXT_COLOR = '#1E293B'
+const DIE_MATERIAL_COLOR = '#FFFFFF'
+const DIE_EMISSIVE_COLOR = '#F8FAFC'
 
 // ── d6 face mapping ───────────────────────────────────────────────────────────
 // THREE.BoxGeometry face material order: +X −X +Y −Y +Z −Z
@@ -58,12 +54,12 @@ function getD6Textures(): THREE.CanvasTexture[] {
     const c = document.createElement('canvas')
     c.width = c.height = S
     const ctx = c.getContext('2d')!
-    ctx.fillStyle = '#FAFAFA'
+    ctx.fillStyle = DIE_COLOR
     ctx.fillRect(0, 0, S, S)
-    ctx.strokeStyle = '#CBD5E1'
+    ctx.strokeStyle = DIE_EDGE_COLOR
     ctx.lineWidth = 3
     ctx.strokeRect(2, 2, S-4, S-4)
-    ctx.fillStyle = '#1E293B'
+    ctx.fillStyle = DIE_TEXT_COLOR
     const mg = 20, cell = (S-mg*2)/3, r = 9
     for (const idx of PIP_SLOTS[v]) {
       ctx.beginPath()
@@ -75,14 +71,17 @@ function getD6Textures(): THREE.CanvasTexture[] {
   return _d6Textures
 }
 
-function makeColorFaceTexture(label: string, color: string): THREE.CanvasTexture {
+function makeColorFaceTexture(label: string): THREE.CanvasTexture {
   const S = 128
   const c = document.createElement('canvas')
   c.width = c.height = S
   const ctx = c.getContext('2d')!
-  ctx.fillStyle = color
+  ctx.fillStyle = DIE_COLOR
   ctx.fillRect(0, 0, S, S)
-  ctx.fillStyle = 'rgba(255,255,255,0.25)'
+  ctx.strokeStyle = DIE_EDGE_COLOR
+  ctx.lineWidth = 3
+  ctx.strokeRect(2, 2, S-4, S-4)
+  ctx.fillStyle = 'rgba(30,41,59,0.55)'
   ctx.font = 'bold 28px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -90,14 +89,17 @@ function makeColorFaceTexture(label: string, color: string): THREE.CanvasTexture
   return new THREE.CanvasTexture(c)
 }
 
-function makeResultTexture(value: number, color: string): THREE.CanvasTexture {
+function makeResultTexture(value: number): THREE.CanvasTexture {
   const S = 128
   const c = document.createElement('canvas')
   c.width = c.height = S
   const ctx = c.getContext('2d')!
-  ctx.fillStyle = color
+  ctx.fillStyle = DIE_COLOR
   ctx.fillRect(0, 0, S, S)
-  ctx.fillStyle = '#ffffff'
+  ctx.strokeStyle = DIE_EDGE_COLOR
+  ctx.lineWidth = 3
+  ctx.strokeRect(2, 2, S-4, S-4)
+  ctx.fillStyle = DIE_TEXT_COLOR
   ctx.font = `bold ${value >= 100 ? 44 : value >= 10 ? 58 : 72}px sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -126,6 +128,7 @@ interface DieEntry {
   precomputedResult: number   // used for non-d6; -1 for d6 (physics determines)
   body: CANNON.Body
   mesh: THREE.Mesh
+  slotIndex: number
   settled: boolean
   settleCount: number
   maxTimer: ReturnType<typeof setTimeout> | null
@@ -136,6 +139,7 @@ interface DieEntry {
 export interface D6CanvasHandle {
   addDie: (id: string, sides: number) => void
   removeDie: (id: string) => void
+  rollAll: () => void
   clearAll: () => void
 }
 
@@ -161,6 +165,36 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
 
     const dieEntriesRef = useRef<DieEntry[]>([])
 
+    function clearSettleTimer(entry: DieEntry) {
+      if (entry.maxTimer) {
+        clearTimeout(entry.maxTimer)
+        entry.maxTimer = null
+      }
+    }
+
+    function assignSlotPositions() {
+      const cols = Math.max(1, Math.floor((TRAY_W - 1.2) / 1.1))
+      const startX = -((cols - 1) * 0.55)
+      const startZ = -(Math.floor(Math.max(0, dieEntriesRef.current.length - 1) / cols) * 0.55) / 2
+      dieEntriesRef.current.forEach((entry, index) => {
+        entry.slotIndex = index
+        const col = index % cols
+        const row = Math.floor(index / cols)
+        const x = startX + col * 1.1
+        const z = startZ + row * 1.1
+        entry.body.position.set(x, DIE_HALF, z)
+        entry.body.velocity.set(0, 0, 0)
+        entry.body.angularVelocity.set(0, 0, 0)
+        entry.body.quaternion.set(0, 0, 0, 1)
+        entry.body.sleep()
+        entry.mesh.position.set(x, DIE_HALF, z)
+        entry.mesh.quaternion.set(0, 0, 0, 1)
+        entry.settled = false
+        entry.settleCount = 0
+        clearSettleTimer(entry)
+      })
+    }
+
     // ── Settle a die ─────────────────────────────────────────────────────────
 
     function settleEntry(entry: DieEntry) {
@@ -176,7 +210,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         // Reveal result on the +Y face (material index 2)
         const mats = entry.mesh.material as THREE.MeshPhongMaterial[]
         const oldTex = mats[2].map
-        mats[2].map = makeResultTexture(result, DIE_COLORS[entry.sides] ?? '#64748B')
+        mats[2].map = makeResultTexture(result)
         mats[2].needsUpdate = true
         oldTex?.dispose()
       }
@@ -223,7 +257,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
       renderer.shadowMap.enabled = true
       renderer.shadowMap.type = THREE.PCFSoftShadowMap
-      renderer.setClearColor(0xF1F5F9)
+      renderer.setClearColor(0xF8FAFC)
       container.appendChild(renderer.domElement)
       rendererRef.current = renderer
 
@@ -240,15 +274,16 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       fitCamera(W, H)
 
       // Lighting  — overhead directional + ambient for flat top-down look
-      scene.add(new THREE.AmbientLight(0xffffff, 0.8))
-      const dir = new THREE.DirectionalLight(0xffffff, 0.9)
-      dir.position.set(1, 10, 2)
+      scene.add(new THREE.AmbientLight(0xffffff, 1.15))
+      const dir = new THREE.DirectionalLight(0xffffff, 1.05)
+      dir.position.set(1.6, 10, 2.5)
       dir.castShadow = true
       dir.shadow.mapSize.set(1024, 1024)
       dir.shadow.camera.near = 0.1
       dir.shadow.camera.far  = 50
       dir.shadow.camera.left = dir.shadow.camera.bottom = -8
       dir.shadow.camera.right = dir.shadow.camera.top   =  8
+      dir.shadow.bias = -0.0001
       scene.add(dir)
 
       // ── Tray visuals ──────────────────────────────────────────────────────
@@ -378,20 +413,31 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         if (!world || !scene) return
 
         const isD6    = sides === 6
-        const color   = DIE_COLORS[sides] ?? '#64748B'
         const precomputed = isD6 ? -1 : Math.floor(Math.random() * sides) + 1
 
         // ── Mesh ────────────────────────────────────────────────────────────
         let materials: THREE.MeshPhongMaterial[]
         if (isD6) {
           const tex = getD6Textures()
-          materials = D6_FACE_VALUES.map(v => new THREE.MeshPhongMaterial({ map: tex[v-1], shininess: 50 }))
+          materials = D6_FACE_VALUES.map(v => new THREE.MeshPhongMaterial({
+            map: tex[v-1],
+            color: DIE_MATERIAL_COLOR,
+            emissive: DIE_EMISSIVE_COLOR,
+            emissiveIntensity: 0.18,
+            shininess: 40,
+          }))
         } else {
           const label = `d${sides}`
           // Side faces: colored label; top face (+Y, index 2) starts the same and updates on settle
-          const sideTex = makeColorFaceTexture(label, color)
+          const sideTex = makeColorFaceTexture(label)
           materials = Array.from({ length: 6 }, () =>
-            new THREE.MeshPhongMaterial({ map: sideTex, shininess: 40 }),
+            new THREE.MeshPhongMaterial({
+              map: sideTex,
+              color: DIE_MATERIAL_COLOR,
+              emissive: DIE_EMISSIVE_COLOR,
+              emissiveIntensity: 0.18,
+              shininess: 32,
+            }),
           )
         }
 
@@ -401,42 +447,23 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         mesh.receiveShadow = true
         scene.add(mesh)
 
-        // ── Spawn from random wall edge, slide inward ────────────────────────
-        const inner = TRAY_W/2 - DIE_HALF - 0.08
-        const edge  = Math.floor(Math.random() * 4)
-        let sx = 0, sz = 0, vx = 0, vz = 0
-        const speed = 5 + Math.random() * 3.5
-
-        if (edge === 0) { sx=(Math.random()-0.5)*inner*1.6; sz=-inner; vz= speed }
-        if (edge === 1) { sx=(Math.random()-0.5)*inner*1.6; sz= inner; vz=-speed }
-        if (edge === 2) { sz=(Math.random()-0.5)*inner*1.6; sx=-inner; vx= speed }
-        if (edge === 3) { sz=(Math.random()-0.5)*inner*1.6; sx= inner; vx=-speed }
-
         const body = new CANNON.Body({
           mass:           1,
           shape:          new CANNON.Box(new CANNON.Vec3(DIE_HALF, DIE_HALF, DIE_HALF)),
-          position:       new CANNON.Vec3(sx, DIE_HALF, sz),
+          position:       new CANNON.Vec3(0, DIE_HALF, 0),
           linearDamping:  LINEAR_DAMPING,
           angularDamping: ANGULAR_DAMPING,
           material:       diceMatRef.current ?? undefined,
         })
-        body.velocity.set(vx, 0, vz)
-        body.angularVelocity.set(
-          (Math.random()-0.5) * 22,
-          (Math.random()-0.5) * 22,
-          (Math.random()-0.5) * 22,
-        )
         world.addBody(body)
 
         const entry: DieEntry = {
           id, sides, precomputedResult: precomputed,
-          body, mesh, settled: false, settleCount: 0,
-          maxTimer: setTimeout(() => {
-            const e = dieEntriesRef.current.find(x => x.id === id)
-            if (e) settleEntry(e)
-          }, MAX_SETTLE),
+          body, mesh, slotIndex: dieEntriesRef.current.length, settled: false, settleCount: 0,
+          maxTimer: null,
         }
         dieEntriesRef.current.push(entry)
+        assignSlotPositions()
       },
 
       removeDie(id: string) {
@@ -446,7 +473,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         const idx = dieEntriesRef.current.findIndex(e => e.id === id)
         if (idx === -1) return
         const entry = dieEntriesRef.current[idx]
-        if (entry.maxTimer) clearTimeout(entry.maxTimer)
+        clearSettleTimer(entry)
         world.removeBody(entry.body)
         entry.mesh.geometry.dispose()
         if (Array.isArray(entry.mesh.material)) {
@@ -454,6 +481,47 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         }
         scene.remove(entry.mesh)
         dieEntriesRef.current.splice(idx, 1)
+        assignSlotPositions()
+      },
+
+      rollAll() {
+        const world = worldRef.current
+        if (!world || dieEntriesRef.current.length === 0) return
+
+        for (const entry of dieEntriesRef.current) {
+          clearSettleTimer(entry)
+          entry.settled = false
+          entry.settleCount = 0
+          if (entry.sides !== 6) {
+            entry.precomputedResult = Math.floor(Math.random() * entry.sides) + 1
+          }
+
+          const innerX = TRAY_W / 2 - DIE_HALF - 0.18
+          const innerZ = TRAY_D / 2 - DIE_HALF - 0.18
+          const edge = Math.floor(Math.random() * 4)
+          let sx = 0, sz = 0, vx = 0, vz = 0
+          const speed = 5.5 + Math.random() * 3.8
+
+          if (edge === 0) { sx = (Math.random() - 0.5) * innerX * 1.7; sz = -innerZ; vz = speed }
+          if (edge === 1) { sx = (Math.random() - 0.5) * innerX * 1.7; sz = innerZ; vz = -speed }
+          if (edge === 2) { sz = (Math.random() - 0.5) * innerZ * 1.7; sx = -innerX; vx = speed }
+          if (edge === 3) { sz = (Math.random() - 0.5) * innerZ * 1.7; sx = innerX; vx = -speed }
+
+          entry.body.wakeUp()
+          entry.body.position.set(sx, DIE_HALF + 0.02, sz)
+          entry.body.quaternion.set(0, 0, 0, 1)
+          entry.body.velocity.set(vx, 0, vz)
+          entry.body.angularVelocity.set(
+            (Math.random() - 0.5) * 22,
+            (Math.random() - 0.5) * 22,
+            (Math.random() - 0.5) * 22,
+          )
+
+          entry.maxTimer = setTimeout(() => {
+            const e = dieEntriesRef.current.find(x => x.id === entry.id)
+            if (e) settleEntry(e)
+          }, MAX_SETTLE)
+        }
       },
 
       clearAll() {
@@ -461,7 +529,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         const scene = sceneRef.current
         if (!world || !scene) return
         for (const entry of dieEntriesRef.current) {
-          if (entry.maxTimer) clearTimeout(entry.maxTimer)
+          clearSettleTimer(entry)
           world.removeBody(entry.body)
           entry.mesh.geometry.dispose()
           if (Array.isArray(entry.mesh.material)) {

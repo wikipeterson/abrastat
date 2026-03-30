@@ -1,8 +1,10 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { v4 as uuid } from 'uuid'
 import { D6Canvas, D6CanvasHandle } from './D6Canvas'
+import { useStore } from '@/lib/store'
+import { DiceRollerCardConfig } from '@/lib/exploreTypes'
 
 // ── Dice configuration ────────────────────────────────────────────────────────
 
@@ -112,14 +114,29 @@ function ResultsStrip({
 // ── Main card ─────────────────────────────────────────────────────────────────
 
 interface DiceRollerCardProps {
+  cardId?: string
   onRemove: () => void
   hideHeader?: boolean
 }
 
-export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
+export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardProps) {
   const [tray, setTray]               = useState<DieInTray[]>([])
   const [finalResults, setFinalResults] = useState<Record<string, number>>({})
   const canvasRef = useRef<D6CanvasHandle>(null)
+
+  // ── Store connections for linked results ──────────────────────────────────
+  const exploreCards      = useStore(s => s.exploreCards)
+  const updateExploreCard = useStore(s => s.updateExploreCard)
+  const addSimResultsCard = useStore(s => s.addSimResultsCard)
+  const pushSimResult     = useStore(s => s.pushSimResult)
+
+  const diceConfig = cardId
+    ? (exploreCards.find(c => c.id === cardId)?.config as DiceRollerCardConfig | undefined)
+    : undefined
+  const trackedMode       = diceConfig?.trackedMode       ?? 'sum'
+  const linkedResultsCardId = diceConfig?.linkedResultsCardId ?? null
+
+  const rollInProgressRef = useRef(false)
 
   // Count of each die type currently in tray
   const dieCounts = DICE_TYPES.reduce((acc, s) => {
@@ -135,8 +152,61 @@ export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
 
   function rollAll() {
     setFinalResults({})
+    rollInProgressRef.current = true
     canvasRef.current?.rollAll()
   }
+
+  // ── Roll-complete detection → push tracked value to linked results ──────────
+  useEffect(() => {
+    if (!rollInProgressRef.current) return
+    if (tray.length === 0) return
+    if (!tray.every(d => finalResults[d.id] != null)) return
+
+    rollInProgressRef.current = false
+
+    if (!linkedResultsCardId) return
+
+    const settled = tray.map(d => finalResults[d.id]).filter((v): v is number => v != null)
+    let trackedValue: number | null = null
+
+    if (trackedMode === 'sum') {
+      trackedValue = settled.reduce((s, v) => s + v, 0)
+    } else if (trackedMode === 'difference' && settled.length === 2) {
+      trackedValue = Math.abs(settled[0] - settled[1])
+    }
+
+    if (trackedValue != null) pushSimResult(linkedResultsCardId, trackedValue)
+  }, [finalResults, tray, trackedMode, linkedResultsCardId, pushSimResult])
+
+  // ── Track Results: create or focus the linked results card ───────────────────
+  function handleTrackResults() {
+    if (!cardId) return
+    const existing = exploreCards.find(
+      c => c.config.type === 'sim-results' && c.config.sourceCardId === cardId,
+    )
+    if (existing) return   // already exists — don't duplicate
+
+    const myCard = exploreCards.find(c => c.id === cardId)
+    const pos = myCard
+      ? { x: myCard.x + myCard.width + 40, y: myCard.y }
+      : { x: 700, y: 20 }
+
+    const newId = addSimResultsCard(cardId, trackedMode, pos, 'Dice Roller')
+    updateExploreCard(cardId, {
+      config: { type: 'dice-roller', linkedResultsCardId: newId, trackedMode },
+    })
+  }
+
+  function setTrackedMode(mode: 'sum' | 'difference') {
+    if (!cardId) return
+    updateExploreCard(cardId, {
+      config: { type: 'dice-roller', linkedResultsCardId, trackedMode: mode },
+    })
+  }
+
+  const hasLinkedCard = linkedResultsCardId != null &&
+    exploreCards.some(c => c.id === linkedResultsCardId)
+  const canDiff = tray.length === 2
 
   function clearAll() {
     canvasRef.current?.clearAll()
@@ -190,6 +260,49 @@ export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
         <div className="mt-2 border-t border-[var(--color-border)]/80 pt-2">
           <ResultsStrip tray={tray} finalResults={finalResults} />
         </div>
+
+        {/* ── Tracking controls ── */}
+        {cardId && (
+          <div className="mt-2 pt-2 border-t border-[var(--color-border)]/60 flex items-center gap-2">
+            {/* Mode selector */}
+            <div className="flex rounded-lg overflow-hidden border border-[var(--color-border)] text-[10px] flex-shrink-0">
+              <button
+                onClick={() => setTrackedMode('sum')}
+                className={`px-2 py-1 transition-colors ${
+                  trackedMode === 'sum'
+                    ? 'bg-[var(--color-accent)] text-white'
+                    : 'text-[var(--color-muted)] hover:bg-slate-50'
+                }`}
+              >
+                Sum
+              </button>
+              <button
+                onClick={() => setTrackedMode('difference')}
+                disabled={!canDiff}
+                className={`px-2 py-1 border-l border-[var(--color-border)] transition-colors
+                            disabled:opacity-30 disabled:cursor-not-allowed ${
+                  trackedMode === 'difference'
+                    ? 'bg-[var(--color-accent)] text-white'
+                    : 'text-[var(--color-muted)] hover:bg-slate-50'
+                }`}
+              >
+                |Δ|
+              </button>
+            </div>
+            {/* Track / linked indicator */}
+            <button
+              onClick={handleTrackResults}
+              className={`flex-1 text-[10px] rounded-lg py-1 px-2 transition-colors
+                          border ${
+                hasLinkedCard
+                  ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+                  : 'border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
+              }`}
+            >
+              {hasLinkedCard ? '📊 Results linked' : '📊 Track results'}
+            </button>
+          </div>
+        )}
       </div>
 
     </div>

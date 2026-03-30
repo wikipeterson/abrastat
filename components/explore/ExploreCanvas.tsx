@@ -26,6 +26,7 @@ import { DistributionCard } from '@/components/inference/DistributionCard'
 import { MeansCard } from '@/components/inference/MeansCard'
 import { RandomGeneratorCard } from '@/components/probability/RandomGeneratorCard'
 import { DiceRollerCard } from '@/components/probability/DiceRollerCard'
+import { SimResultsCard } from '@/components/probability/SimResultsCard'
 
 // ─── Draggable variable chip (sidebar) ────────────────────────────────────────
 
@@ -75,6 +76,7 @@ function cardLabel(type: CardConfig['type']): string {
     case 'distribution': return 'Distribution'
     case 'generator':    return 'Random Generator'
     case 'dice-roller':  return 'Dice Roller'
+    case 'sim-results':   return 'Roll Results'
     case 'testinterval': return 'Test / Interval'
     case 'simulation':   return 'Simulation'
     case 'means':        return 'Means'
@@ -404,6 +406,7 @@ export function ExploreCanvas() {
       case 'distribution': return { minWidth: 460, minHeight: 480 }
       case 'generator':    return { minWidth: 460, minHeight: 440 }
       case 'dice-roller':  return { minWidth: 420, minHeight: 480 }
+      case 'sim-results':  return { minWidth: 360, minHeight: 360 }
       case 'means':        return { minWidth: 520, minHeight: 520 }
       default:             return { minWidth: 360, minHeight: 280 }
     }
@@ -634,7 +637,10 @@ export function ExploreCanvas() {
                             <RandomGeneratorCard />
                           )}
                           {card.config.type === 'dice-roller' && (
-                            <DiceRollerCard onRemove={() => removeCard(card.id)} hideHeader />
+                            <DiceRollerCard cardId={card.id} onRemove={() => removeCard(card.id)} hideHeader />
+                          )}
+                          {card.config.type === 'sim-results' && (
+                            <SimResultsCard cardId={card.id} config={card.config} />
                           )}
                           {card.config.type === 'means' && (
                             <MeansCard

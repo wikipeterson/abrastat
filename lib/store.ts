@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import { User as FirebaseUser } from 'firebase/auth'
 import { ColumnType, GridState } from '@/types'
-import { ExploreCard, CardConfig, DistributionPreFill } from './exploreTypes'
+import { ExploreCard, CardConfig, DistributionPreFill, SimResultsCardConfig } from './exploreTypes'
 import { createEmptyGrid } from './gridHelpers'
 import { computeColumnValues } from './formulaEval'
 
@@ -108,6 +108,9 @@ interface AbraStatStore {
   removeExploreCard: (id: string) => void
   updateExploreCard: (id: string, updates: Partial<Omit<ExploreCard, 'id'>>) => void
   purgeExploreStaleIds: (validIds: Set<string>) => void
+  addSimResultsCard: (sourceCardId: string, trackedMode: 'sum' | 'difference', position: { x: number; y: number }, sourceLabel: string) => string
+  pushSimResult: (cardId: string, value: number) => void
+  clearSimResults: (cardId: string) => void
 
   // Inference canvas (separate state, same canvas model)
   inferenceCards: ExploreCard[]
@@ -232,7 +235,8 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'generator'    ? { type: 'generator' } :
       type === 'testinterval' ? { type: 'testinterval' } :
       type === 'means'        ? { type: 'means', var1ColId: null, var2ColId: null } :
-      type === 'dice-roller'  ? { type: 'dice-roller' } :
+      type === 'dice-roller'  ? { type: 'dice-roller', linkedResultsCardId: null, trackedMode: 'sum' } :
+      type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', values: [] } :
                                  { type: 'simulation' }
     const { width, height } =
       type === 'table'   ? { width: 780, height: 520 } :
@@ -258,6 +262,34 @@ export const useStore = create<AbraStatStore>((set) => ({
       if (cfg.type === 'means')      return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }
       return card
     }),
+  })),
+  addSimResultsCard: (sourceCardId, trackedMode, position, sourceLabel) => {
+    const id = uuid()
+    set(state => ({
+      exploreCards: [...state.exploreCards, {
+        id,
+        config: { type: 'sim-results', sourceCardId, sourceLabel, trackedMode, values: [] } as SimResultsCardConfig,
+        x: position.x,
+        y: position.y,
+        width: 420,
+        height: 460,
+      }],
+    }))
+    return id
+  },
+  pushSimResult: (cardId, value) => set(state => ({
+    exploreCards: state.exploreCards.map(c =>
+      c.id === cardId && c.config.type === 'sim-results'
+        ? { ...c, config: { ...c.config, values: [...(c.config as SimResultsCardConfig).values, value] } }
+        : c,
+    ),
+  })),
+  clearSimResults: (cardId) => set(state => ({
+    exploreCards: state.exploreCards.map(c =>
+      c.id === cardId && c.config.type === 'sim-results'
+        ? { ...c, config: { ...c.config, values: [] } as SimResultsCardConfig }
+        : c,
+    ),
   })),
 
   // ─── Inference canvas (legacy, currently unused) ────────────────────────────

@@ -69,6 +69,16 @@ export interface MeansCardConfig {
 
 export interface DiceRollerCardConfig {
   type: 'dice-roller'
+  linkedResultsCardId: string | null
+  trackedMode: 'sum' | 'difference'
+}
+
+export interface SimResultsCardConfig {
+  type: 'sim-results'
+  sourceCardId: string
+  sourceLabel: string        // e.g. 'Dice Roller'
+  trackedMode: 'sum' | 'difference'
+  values: number[]           // accumulated tracked values
 }
 
 export type CardConfig =
@@ -82,6 +92,7 @@ export type CardConfig =
   | SimulationCardConfig
   | MeansCardConfig
   | DiceRollerCardConfig
+  | SimResultsCardConfig
 
 export interface ExploreCard {
   id: string

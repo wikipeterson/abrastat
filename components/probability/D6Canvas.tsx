@@ -485,42 +485,39 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       },
 
       rollAll() {
-        const world = worldRef.current
-        if (!world || dieEntriesRef.current.length === 0) return
-
-        const innerX = TRAY_W / 2 - DIE_HALF - 0.18
-        const innerZ = TRAY_D / 2 - DIE_HALF - 0.18
-        const zStep = dieEntriesRef.current.length > 1
-          ? (innerZ * 1.5) / Math.max(1, dieEntriesRef.current.length - 1)
-          : 0
-
-        for (const [index, entry] of dieEntriesRef.current.entries()) {
-          clearSettleTimer(entry)
+        for (const entry of dieEntriesRef.current) {
           entry.settled = false
           entry.settleCount = 0
+          clearSettleTimer(entry)
+
+          // Re-randomise result for non-d6 dice
           if (entry.sides !== 6) {
             entry.precomputedResult = Math.floor(Math.random() * entry.sides) + 1
+            // Reset +Y face back to label texture so old result is hidden while rolling
+            const mats = entry.mesh.material as THREE.MeshPhongMaterial[]
+            const oldTex = mats[2].map
+            mats[2].map = makeColorFaceTexture(`d${entry.sides}`)
+            mats[2].needsUpdate = true
+            oldTex?.dispose()
           }
 
-          const sx = innerX
-          const sz = dieEntriesRef.current.length > 1
-            ? -innerZ * 0.75 + index * zStep
-            : 0
-          const vx = -(19.5 + Math.random() * 5.8)
-          const vz = (Math.random() - 0.5) * 6.4
-
+          // Wake up body and apply random impulse
           entry.body.wakeUp()
-          entry.body.position.set(sx, DIE_HALF + 0.04, sz)
-          entry.body.quaternion.set(0, 0, 0, 1)
-          entry.body.velocity.set(vx, 0, vz)
+          entry.body.velocity.set(
+            (Math.random() - 0.5) * 6,
+            0.4,
+            (Math.random() - 0.5) * 6,
+          )
           entry.body.angularVelocity.set(
-            (Math.random() - 0.5) * 56,
-            (Math.random() - 0.5) * 46,
-            (Math.random() - 0.5) * 56,
+            (Math.random() - 0.5) * 28,
+            (Math.random() - 0.5) * 28,
+            (Math.random() - 0.5) * 28,
           )
 
+          // Set new max-settle timer
+          const entryId = entry.id
           entry.maxTimer = setTimeout(() => {
-            const e = dieEntriesRef.current.find(x => x.id === entry.id)
+            const e = dieEntriesRef.current.find(x => x.id === entryId)
             if (e) settleEntry(e)
           }, MAX_SETTLE)
         }

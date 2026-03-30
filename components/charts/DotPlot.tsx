@@ -101,7 +101,7 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
 
       const uniqueGroups = [...new Set(allData.map(d => d.group))].sort()
       const n = uniqueGroups.length
-      const GAP = n > 1 ? 0.05 : 0
+      const GAP = n > 1 ? 0.04 : 0
       const panelH = n > 1 ? (1 - GAP * (n - 1)) / n : 1
 
       const facetAxes: Record<string, unknown> = {}
@@ -168,7 +168,7 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
         } as Data
       })
 
-      const facetHeight = Math.max(280, n * 145 + 55)
+      const facetHeight = Math.max(250, n * 120 + 28)
       return { type: 'faceted', traces, facetAxes, facetAnnotations, facetHeight }
     }
 

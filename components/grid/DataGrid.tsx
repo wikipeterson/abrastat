@@ -8,6 +8,54 @@ import { ColumnHeader } from './ColumnHeader'
 const MIN_EMPTY_ROWS = 5
 const COL_WIDTH = 140
 const ROW_NUM_WIDTH = 48
+const DRAG_PREVIEW_ROWS = 6
+
+function createColumnDragPreview(columnName: string, values: Array<string | number>) {
+  const preview = document.createElement('div')
+  preview.style.position = 'fixed'
+  preview.style.top = '-9999px'
+  preview.style.left = '-9999px'
+  preview.style.width = `${COL_WIDTH}px`
+  preview.style.borderRadius = '14px'
+  preview.style.overflow = 'hidden'
+  preview.style.background = '#ffffff'
+  preview.style.border = '1px solid rgba(148, 163, 184, 0.35)'
+  preview.style.boxShadow = '0 20px 45px rgba(15, 23, 42, 0.18)'
+  preview.style.fontFamily = 'inherit'
+
+  const header = document.createElement('div')
+  header.style.height = '32px'
+  header.style.display = 'flex'
+  header.style.alignItems = 'center'
+  header.style.padding = '0 10px'
+  header.style.background = 'var(--color-grid-header)'
+  header.style.color = '#ffffff'
+  header.style.fontSize = '12px'
+  header.style.fontWeight = '600'
+  header.style.borderBottom = '1px solid rgba(255,255,255,0.08)'
+  header.textContent = columnName
+  preview.appendChild(header)
+
+  values.slice(0, DRAG_PREVIEW_ROWS).forEach((value, index) => {
+    const cell = document.createElement('div')
+    cell.style.height = '36px'
+    cell.style.display = 'flex'
+    cell.style.alignItems = 'center'
+    cell.style.padding = '0 10px'
+    cell.style.fontSize = '13px'
+    cell.style.color = '#0f172a'
+    cell.style.background = index % 2 === 0 ? '#ffffff' : '#f8fafc'
+    cell.style.borderBottom = '1px solid rgba(226, 232, 240, 0.9)'
+    cell.style.whiteSpace = 'nowrap'
+    cell.style.overflow = 'hidden'
+    cell.style.textOverflow = 'ellipsis'
+    cell.textContent = String(value ?? '')
+    preview.appendChild(cell)
+  })
+
+  document.body.appendChild(preview)
+  return preview
+}
 
 export function DataGrid() {
   const { grid, updateCell, addRow, deleteRows, undo, reorderColumns } = useStore()
@@ -17,6 +65,7 @@ export function DataGrid() {
   const [dragColIdx, setDragColIdx] = useState<number | null>(null)
   const [dropTargetIdx, setDropTargetIdx] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const dragPreviewRef = useRef<HTMLDivElement | null>(null)
 
   // Ensure enough empty rows
   const { columns, rows } = grid
@@ -84,6 +133,22 @@ export function DataGrid() {
     return () => window.removeEventListener('click', close)
   }, [contextMenu])
 
+  useEffect(() => {
+    return () => {
+      if (dragPreviewRef.current) {
+        dragPreviewRef.current.remove()
+        dragPreviewRef.current = null
+      }
+    }
+  }, [])
+
+  function getColumnShift(colIndex: number) {
+    if (dragColIdx === null || dropTargetIdx === null || dragColIdx === dropTargetIdx) return 0
+    if (dragColIdx < dropTargetIdx && colIndex > dragColIdx && colIndex <= dropTargetIdx) return -COL_WIDTH
+    if (dragColIdx > dropTargetIdx && colIndex >= dropTargetIdx && colIndex < dragColIdx) return COL_WIDTH
+    return 0
+  }
+
   return (
     <div
       ref={containerRef}
@@ -99,17 +164,30 @@ export function DataGrid() {
           />
           {columns.map((col, colIndex) => {
             const isTarget = dropTargetIdx === colIndex && dragColIdx !== null && dragColIdx !== colIndex
+            const isDraggingCol = dragColIdx === colIndex
+            const shiftX = getColumnShift(colIndex)
             return (
               <div
                 key={col.id}
                 style={{ width: COL_WIDTH, minWidth: COL_WIDTH }}
-                className={`group/col relative transition-colors ${isTarget ? 'ring-2 ring-inset ring-[var(--color-accent)]' : ''}`}
+                className={`group/col relative transition-[transform,opacity,box-shadow] duration-200 ease-out ${
+                  isTarget ? 'z-10' : ''
+                }`}
                 draggable
                 onDragStart={e => {
                   setDragColIdx(colIndex)
+                  setDropTargetIdx(colIndex)
                   e.dataTransfer.effectAllowed = 'move'
                   // Needed for Firefox
                   e.dataTransfer.setData('text/plain', String(colIndex))
+                  if (dragPreviewRef.current) {
+                    dragPreviewRef.current.remove()
+                    dragPreviewRef.current = null
+                  }
+                  const values = Array.from({ length: targetRows }, (_, rowIndex) => rows[rowIndex]?.[col.id] ?? '')
+                  const preview = createColumnDragPreview(col.name, values)
+                  dragPreviewRef.current = preview
+                  e.dataTransfer.setDragImage(preview, 24, 20)
                 }}
                 onDragOver={e => {
                   e.preventDefault()
@@ -124,13 +202,36 @@ export function DataGrid() {
                   }
                   setDragColIdx(null)
                   setDropTargetIdx(null)
+                  if (dragPreviewRef.current) {
+                    dragPreviewRef.current.remove()
+                    dragPreviewRef.current = null
+                  }
                 }}
                 onDragEnd={() => {
                   setDragColIdx(null)
                   setDropTargetIdx(null)
+                  if (dragPreviewRef.current) {
+                    dragPreviewRef.current.remove()
+                    dragPreviewRef.current = null
+                  }
                 }}
               >
-                <ColumnHeader column={col} colIndex={colIndex} />
+                <div
+                  style={{
+                    transform: `translateX(${shiftX}px)`,
+                    opacity: isDraggingCol ? 0.18 : 1,
+                  }}
+                  className={`transition-[transform,opacity,box-shadow] duration-200 ease-out ${
+                    isDraggingCol ? 'shadow-none' : ''
+                  }`}
+                >
+                  <ColumnHeader column={col} colIndex={colIndex} />
+                </div>
+                {isTarget && dragColIdx !== null && dragColIdx !== colIndex && (
+                  <div
+                    className="pointer-events-none absolute inset-y-0 left-0 w-1.5 rounded-full bg-[var(--color-accent)]/70 shadow-[0_0_0_2px_rgba(255,255,255,0.85)]"
+                  />
+                )}
               </div>
             )
           })}
@@ -152,7 +253,16 @@ export function DataGrid() {
               </div>
               {/* Cells */}
               {columns.map((col, colIndex) => (
-                <div key={col.id} style={{ width: COL_WIDTH, minWidth: COL_WIDTH }}>
+                <div
+                  key={col.id}
+                  style={{
+                    width: COL_WIDTH,
+                    minWidth: COL_WIDTH,
+                    transform: `translateX(${getColumnShift(colIndex)}px)`,
+                    opacity: dragColIdx === colIndex ? 0.18 : 1,
+                  }}
+                  className="transition-[transform,opacity] duration-200 ease-out"
+                >
                   <EditableCell
                     value={row[col.id] ?? ''}
                     rowIndex={rowIndex}

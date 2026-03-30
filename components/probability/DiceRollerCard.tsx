@@ -205,9 +205,12 @@ export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
   const [finalResults, setFinalResults] = useState<Record<string, number>>({})
   const [isRolling, setIsRolling] = useState(false)
   const [d6RollKey, setD6RollKey] = useState(0)
-  const [d6TargetFace, setD6TargetFace] = useState<number | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Track d6 die IDs (in tray order) at the moment Roll is pressed,
+  // and the non-d6 finals so handleD6Results can merge everything.
+  const d6DiceIdsRef   = useRef<string[]>([])
+  const nonD6FinalsRef = useRef<Record<string, number>>({})
 
   // Cleanup on unmount
   useEffect(() => () => {
@@ -232,6 +235,9 @@ export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
     setDisplayValues({})
     setFinalResults({})
     setIsRolling(false)
+    setD6RollKey(0)
+    d6DiceIdsRef.current = []
+    nonD6FinalsRef.current = {}
   }
 
   function handleRoll() {
@@ -239,35 +245,59 @@ export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
     if (intervalRef.current) clearInterval(intervalRef.current)
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
-    // Compute fair results immediately — animation is purely visual
-    const finals: Record<string, number> = {}
-    tray.forEach(d => { finals[d.id] = rollDie(d.sides) })
+    const hasD6    = tray.some(d => d.sides === 6)
+    const hasNonD6 = tray.some(d => d.sides !== 6)
 
-    // Set d6 target + increment rollKey before clearing finals so D6Canvas
-    // can capture the target face before its animation effect fires
-    const featuredD6 = tray.find(d => d.sides === 6)
-    if (featuredD6) {
-      setD6TargetFace(finals[featuredD6.id])
-      setD6RollKey(k => k + 1)
-    }
+    // Pre-compute results for non-d6 dice (d6 results come from physics)
+    const nonD6Finals: Record<string, number> = {}
+    tray.filter(d => d.sides !== 6).forEach(d => { nonD6Finals[d.id] = rollDie(d.sides) })
+    nonD6FinalsRef.current = nonD6Finals
+
+    // Capture d6 die IDs in tray order for the physics callback
+    d6DiceIdsRef.current = tray.filter(d => d.sides === 6).map(d => d.id)
 
     setIsRolling(true)
     setFinalResults({})
 
-    // Rapid display cycling: scramble numbers at 55ms intervals
+    // Trigger d6 physics simulation
+    if (hasD6) setD6RollKey(k => k + 1)
+
+    // Cycle display values for all dice while rolling
     intervalRef.current = setInterval(() => {
       const display: Record<string, number> = {}
       tray.forEach(d => { display[d.id] = rollDie(d.sides) })
       setDisplayValues(display)
     }, 55)
 
-    // Settle on final results after 680ms
-    timeoutRef.current = setTimeout(() => {
-      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
-      setDisplayValues(finals)
-      setFinalResults(finals)
-      setIsRolling(false)
-    }, 680)
+    // Non-d6 dice settle at 680 ms
+    if (hasNonD6) {
+      timeoutRef.current = setTimeout(() => {
+        setFinalResults(prev => ({ ...prev, ...nonD6Finals }))
+        setDisplayValues(prev => ({ ...prev, ...nonD6Finals }))
+        // If there are no d6s, we're done
+        if (!hasD6) {
+          if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
+          setIsRolling(false)
+        }
+      }, 680)
+    }
+  }
+
+  // Called by D6Canvas when physics determines the face-up values
+  function handleD6Results(values: number[]) {
+    const ids = d6DiceIdsRef.current
+    if (ids.length === 0) return
+    const d6Finals: Record<string, number> = {}
+    ids.forEach((id, i) => { d6Finals[id] = values[i] ?? rollDie(6) })
+
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
+    if (timeoutRef.current)  { clearTimeout(timeoutRef.current);   timeoutRef.current  = null }
+
+    // Merge with non-d6 finals (may already be in state, but use ref to be safe)
+    const allFinals = { ...nonD6FinalsRef.current, ...d6Finals }
+    setFinalResults(allFinals)
+    setDisplayValues(allFinals)
+    setIsRolling(false)
   }
 
   const inner = (
@@ -331,12 +361,13 @@ export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
         </div>
       </div>
 
-      {/* ── 3D d6 roll stage (shown when tray contains at least one d6) ── */}
+      {/* ── 3D physics roll stage (shown when tray contains at least one d6) ── */}
       {tray.some(d => d.sides === 6) && (
-        <div className="flex justify-center bg-slate-50 rounded-xl border border-slate-100 py-1">
+        <div className="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
           <D6Canvas
-            targetFace={d6TargetFace}
+            diceCount={tray.filter(d => d.sides === 6).length}
             rollKey={d6RollKey}
+            onResults={handleD6Results}
           />
         </div>
       )}

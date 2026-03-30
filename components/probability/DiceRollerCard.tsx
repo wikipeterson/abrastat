@@ -36,6 +36,23 @@ interface DieInTray {
   sides: DiceSides
 }
 
+function getTrackedRange(
+  tray: DieInTray[],
+  trackedMode: 'sum' | 'difference',
+): { minValue: number; maxValue: number } {
+  if (trackedMode === 'difference' && tray.length === 2) {
+    return {
+      minValue: 0,
+      maxValue: Math.max(tray[0].sides, tray[1].sides) - 1,
+    }
+  }
+
+  return {
+    minValue: tray.length === 0 ? 1 : tray.length,
+    maxValue: tray.length === 0 ? 6 : tray.reduce((sum, die) => sum + die.sides, 0),
+  }
+}
+
 // ── Palette die ───────────────────────────────────────────────────────────────
 
 function PaletteDie({ sides, count, onClick }: { sides: DiceSides; count: number; onClick: () => void }) {
@@ -191,7 +208,7 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
       ? { x: myCard.x + myCard.width + 40, y: myCard.y }
       : { x: 700, y: 20 }
 
-    const newId = addSimResultsCard(cardId, trackedMode, pos, 'Dice Roller')
+    const newId = addSimResultsCard(cardId, trackedMode, pos, 'Dice Roller', trackedRange)
     updateExploreCard(cardId, {
       config: { type: 'dice-roller', linkedResultsCardId: newId, trackedMode },
     })
@@ -207,6 +224,39 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   const hasLinkedCard = linkedResultsCardId != null &&
     exploreCards.some(c => c.id === linkedResultsCardId)
   const canDiff = tray.length === 2
+  const trackedRange = getTrackedRange(tray, trackedMode)
+
+  useEffect(() => {
+    if (!linkedResultsCardId) return
+
+    const linkedCard = exploreCards.find(c => c.id === linkedResultsCardId)
+    if (!linkedCard || linkedCard.config.type !== 'sim-results') return
+
+    const cfg = linkedCard.config
+    if (
+      cfg.trackedMode === trackedMode &&
+      cfg.minValue === trackedRange.minValue &&
+      cfg.maxValue === trackedRange.maxValue
+    ) {
+      return
+    }
+
+    updateExploreCard(linkedResultsCardId, {
+      config: {
+        ...cfg,
+        trackedMode,
+        minValue: trackedRange.minValue,
+        maxValue: trackedRange.maxValue,
+      },
+    })
+  }, [
+    exploreCards,
+    linkedResultsCardId,
+    trackedMode,
+    trackedRange.minValue,
+    trackedRange.maxValue,
+    updateExploreCard,
+  ])
 
   function clearAll() {
     canvasRef.current?.clearAll()

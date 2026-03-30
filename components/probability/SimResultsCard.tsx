@@ -9,20 +9,22 @@ import { SimResultsCardConfig } from '@/lib/exploreTypes'
 interface DotPlotProps {
   values: number[]
   trackedMode: 'sum' | 'difference'
+  minValue: number
+  maxValue: number
 }
 
-function DotPlot({ values, trackedMode }: DotPlotProps) {
+function DotPlot({ values, trackedMode, minValue, maxValue }: DotPlotProps) {
   const clipId = useId()
 
   if (values.length === 0) return null
 
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-
   // Count occurrences
   const counts = new Map<number, number>()
   for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1)
-  const uniqueVals = [...counts.keys()].sort((a, b) => a - b)
+  const domainValues = Array.from(
+    { length: Math.max(1, maxValue - minValue + 1) },
+    (_, index) => minValue + index,
+  )
 
   const VIEW_W = 400
   const VIEW_H = 220
@@ -32,13 +34,13 @@ function DotPlot({ values, trackedMode }: DotPlotProps) {
   const DOT_R = 6
 
   const xOf = (v: number) =>
-    uniqueVals.length === 1 ? plotW / 2 : ((v - min) / (max - min)) * plotW
+    minValue === maxValue ? plotW / 2 : ((v - minValue) / (maxValue - minValue)) * plotW
 
-  // Choose which tick labels to show (cap at ~10)
+  // Choose which tick labels to show (cap at ~10) across the full theoretical range.
   const ticks =
-    uniqueVals.length <= 10
-      ? uniqueVals
-      : uniqueVals.filter((_, i, arr) =>
+    domainValues.length <= 10
+      ? domainValues
+      : domainValues.filter((_, i, arr) =>
           i === 0 || i === arr.length - 1 || i % Math.ceil(arr.length / 9) === 0,
         )
 
@@ -129,7 +131,7 @@ interface SimResultsCardProps {
 
 export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
   const clearSimResults = useStore(s => s.clearSimResults)
-  const { values, trackedMode, sourceLabel } = config
+  const { values, trackedMode, sourceLabel, minValue, maxValue } = config
   const rollCount = values.length
 
   return (
@@ -169,7 +171,12 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
             </p>
           </div>
         ) : (
-          <DotPlot values={values} trackedMode={trackedMode} />
+          <DotPlot
+            values={values}
+            trackedMode={trackedMode}
+            minValue={minValue}
+            maxValue={maxValue}
+          />
         )}
       </div>
 

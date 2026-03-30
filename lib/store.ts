@@ -108,7 +108,13 @@ interface AbraStatStore {
   removeExploreCard: (id: string) => void
   updateExploreCard: (id: string, updates: Partial<Omit<ExploreCard, 'id'>>) => void
   purgeExploreStaleIds: (validIds: Set<string>) => void
-  addSimResultsCard: (sourceCardId: string, trackedMode: 'sum' | 'difference', position: { x: number; y: number }, sourceLabel: string) => string
+  addSimResultsCard: (
+    sourceCardId: string,
+    trackedMode: 'sum' | 'difference',
+    position: { x: number; y: number },
+    sourceLabel: string,
+    range: { minValue: number; maxValue: number },
+  ) => string
   pushSimResult: (cardId: string, value: number) => void
   clearSimResults: (cardId: string) => void
 
@@ -236,7 +242,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'testinterval' ? { type: 'testinterval' } :
       type === 'means'        ? { type: 'means', var1ColId: null, var2ColId: null } :
       type === 'dice-roller'  ? { type: 'dice-roller', linkedResultsCardId: null, trackedMode: 'sum' } :
-      type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', values: [] } :
+      type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', minValue: 1, maxValue: 6, values: [] } :
                                  { type: 'simulation' }
     const { width, height } =
       type === 'table'   ? { width: 780, height: 520 } :
@@ -263,12 +269,20 @@ export const useStore = create<AbraStatStore>((set) => ({
       return card
     }),
   })),
-  addSimResultsCard: (sourceCardId, trackedMode, position, sourceLabel) => {
+  addSimResultsCard: (sourceCardId, trackedMode, position, sourceLabel, range) => {
     const id = uuid()
     set(state => ({
       exploreCards: [...state.exploreCards, {
         id,
-        config: { type: 'sim-results', sourceCardId, sourceLabel, trackedMode, values: [] } as SimResultsCardConfig,
+        config: {
+          type: 'sim-results',
+          sourceCardId,
+          sourceLabel,
+          trackedMode,
+          minValue: range.minValue,
+          maxValue: range.maxValue,
+          values: [],
+        } as SimResultsCardConfig,
         x: position.x,
         y: position.y,
         width: 420,

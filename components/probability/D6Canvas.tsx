@@ -506,17 +506,17 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           const sz = dieEntriesRef.current.length > 1
             ? -innerZ * 0.75 + index * zStep
             : 0
-          const vx = -(14.5 + Math.random() * 4.5)
-          const vz = (Math.random() - 0.5) * 4.8
+          const vx = -(19.5 + Math.random() * 5.8)
+          const vz = (Math.random() - 0.5) * 6.4
 
           entry.body.wakeUp()
           entry.body.position.set(sx, DIE_HALF + 0.04, sz)
           entry.body.quaternion.set(0, 0, 0, 1)
           entry.body.velocity.set(vx, 0, vz)
           entry.body.angularVelocity.set(
-            (Math.random() - 0.5) * 42,
-            (Math.random() - 0.5) * 34,
-            (Math.random() - 0.5) * 42,
+            (Math.random() - 0.5) * 56,
+            (Math.random() - 0.5) * 46,
+            (Math.random() - 0.5) * 56,
           )
 
           entry.maxTimer = setTimeout(() => {

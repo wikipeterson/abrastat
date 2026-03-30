@@ -17,6 +17,7 @@ import { useStore } from '@/lib/store'
 import { GridColumn } from '@/types'
 import { CardConfig, GraphCardConfig, MeansCardConfig, ExploreCard } from '@/lib/exploreTypes'
 import { ChartType, inferCharts } from '@/lib/chartHelpers'
+import { SwapAnimContext, SwapAnimState } from '@/lib/swapAnimContext'
 import { GraphCard } from './cards/GraphCard'
 import { SummaryCard } from './cards/SummaryCard'
 import { RegressionCard } from './cards/RegressionCard'
@@ -107,6 +108,7 @@ export function ExploreCanvas() {
   const updateCard = updateExploreCard
 
   const [activeColId, setActiveColId] = useState<string | null>(null)
+  const [swapAnim, setSwapAnim] = useState<SwapAnimState | null>(null)
   const [interactionCursor, setInteractionCursor] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -309,7 +311,30 @@ export function ExploreCanvas() {
       }
       newConfig = c
     }
-    if (newConfig) updateCard(cardId, { config: newConfig })
+    if (newConfig) {
+      // When two occupied zones swap, animate the displaced chip into its new zone
+      if (sourceZone && sourceZone !== targetZone) {
+        // Zone left-to-right order per card type; used to infer the arrival direction
+        const ZONE_ORDER: Record<string, string[]> = {
+          graph:      ['x', 'y', 'group'],
+          regression: ['x', 'y'],
+          means:      ['var1', 'var2'],
+          table:      ['rows', 'cols'],
+        }
+        const order = ZONE_ORDER[cfg.type] ?? []
+        const tIdx = order.indexOf(targetZone)
+        const sIdx = order.indexOf(sourceZone)
+        // Graph's Y-axis uses a vertical chip layout — use a scale-pop instead of a slide
+        const isVertZone = cfg.type === 'graph' && sourceZone === 'y'
+        const direction: SwapAnimState['direction'] =
+          (!isVertZone && tIdx !== -1 && sIdx !== -1)
+            ? (tIdx > sIdx ? 'from-right' : 'from-left')
+            : 'pop'
+        setSwapAnim({ zoneId: `${cardId}:${sourceZone}`, direction })
+        setTimeout(() => setSwapAnim(null), 300)
+      }
+      updateCard(cardId, { config: newConfig })
+    }
   }, [cards, grid.columns, normalizeGraphConfig, updateCard])
 
   function clearZone(cardId: string, zone: string) {
@@ -504,6 +529,7 @@ export function ExploreCanvas() {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <SwapAnimContext.Provider value={swapAnim}>
       <div className="flex h-full min-h-0">
 
         {/* Variable sidebar */}
@@ -667,6 +693,7 @@ export function ExploreCanvas() {
         </div>
       </div>
 
+      </SwapAnimContext.Provider>
       <DragOverlay dropAnimation={null}>
         {activeCol && <GhostChip col={activeCol} />}
       </DragOverlay>

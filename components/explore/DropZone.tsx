@@ -3,6 +3,7 @@
 import { useDroppable, useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { GridColumn } from '@/types'
+import { useSwapAnim } from '@/lib/swapAnimContext'
 
 interface DropZoneProps {
   id: string
@@ -21,6 +22,16 @@ export function DropZone({ id, label, hint, assignedCol, onClear, variant = 'hor
     data: { colId: assignedCol?.id, sourceZoneId: id },
     disabled: !assignedCol,
   })
+
+  // Swap animation: when this zone receives a displaced chip, play a directional
+  // entrance animation so the user sees where the chip came from.
+  const swapAnim = useSwapAnim()
+  const isSwapTarget = swapAnim?.zoneId === id
+  const swapAnimation: string | undefined = isSwapTarget
+    ? (swapAnim!.direction === 'from-right' ? 'swap-chip-from-right 0.22s ease-out'
+     : swapAnim!.direction === 'from-left'  ? 'swap-chip-from-left  0.22s ease-out'
+     :                                         'swap-chip-pop        0.22s ease-out')
+    : undefined
 
   // ── Vertical variant (Response Variable — left edge) ──────────────────────
   if (variant === 'vertical') {
@@ -51,7 +62,7 @@ export function DropZone({ id, label, hint, assignedCol, onClear, variant = 'hor
               style={{
                 writingMode: 'vertical-rl',
                 transform: 'rotate(180deg)',
-                animation: 'chip-to-vertical 0.28s ease-out',
+                animation: swapAnimation ?? 'chip-to-vertical 0.28s ease-out',
               }}
               className="flex items-center gap-1.5 px-2 py-2.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium cursor-grab active:cursor-grabbing"
             >
@@ -101,7 +112,7 @@ export function DropZone({ id, label, hint, assignedCol, onClear, variant = 'hor
           ref={setDragRef}
           style={{
             transform: CSS.Translate.toString(transform),
-            animation: 'chip-to-horizontal 0.28s ease-out',
+            animation: swapAnimation ?? 'chip-to-horizontal 0.28s ease-out',
           }}
           {...listeners}
           {...attributes}

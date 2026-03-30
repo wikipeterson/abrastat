@@ -31,3 +31,18 @@ body {
   from { transform: rotate(-90deg); opacity: 0.5; }
   to   { transform: rotate(0deg); opacity: 1; }
 }
+
+/* Swap displacement animations — played on the chip that gets displaced
+   to its new zone so users can see the swap happen */
+@keyframes swap-chip-from-right {
+  from { opacity: 0.25; transform: translateX(20px) scale(0.87); }
+  to   { opacity: 1;    transform: translateX(0)    scale(1);    }
+}
+@keyframes swap-chip-from-left {
+  from { opacity: 0.25; transform: translateX(-20px) scale(0.87); }
+  to   { opacity: 1;    transform: translateX(0)     scale(1);    }
+}
+@keyframes swap-chip-pop {
+  from { opacity: 0.25; transform: scale(0.82); }
+  to   { opacity: 1;    transform: scale(1);    }
+}

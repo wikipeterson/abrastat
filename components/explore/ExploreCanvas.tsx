@@ -25,6 +25,7 @@ import { TwoWayTable } from '@/components/applets/TwoWayTable'
 import { DistributionCard } from '@/components/inference/DistributionCard'
 import { MeansCard } from '@/components/inference/MeansCard'
 import { RandomGeneratorCard } from '@/components/probability/RandomGeneratorCard'
+import { DiceRollerCard } from '@/components/probability/DiceRollerCard'
 
 // ─── Draggable variable chip (sidebar) ────────────────────────────────────────
 
@@ -73,6 +74,7 @@ function cardLabel(type: CardConfig['type']): string {
     case 'regression':   return 'Regression'
     case 'distribution': return 'Distribution'
     case 'generator':    return 'Random Generator'
+    case 'dice-roller':  return 'Dice Roller'
     case 'testinterval': return 'Test / Interval'
     case 'simulation':   return 'Simulation'
     case 'means':        return 'Means'
@@ -401,6 +403,7 @@ export function ExploreCanvas() {
       case 'regression':   return { minWidth: 400, minHeight: 340 }
       case 'distribution': return { minWidth: 460, minHeight: 480 }
       case 'generator':    return { minWidth: 460, minHeight: 440 }
+      case 'dice-roller':  return { minWidth: 420, minHeight: 480 }
       case 'means':        return { minWidth: 520, minHeight: 520 }
       default:             return { minWidth: 360, minHeight: 280 }
     }
@@ -629,6 +632,9 @@ export function ExploreCanvas() {
                           )}
                           {card.config.type === 'generator' && (
                             <RandomGeneratorCard />
+                          )}
+                          {card.config.type === 'dice-roller' && (
+                            <DiceRollerCard onRemove={() => removeCard(card.id)} hideHeader />
                           )}
                           {card.config.type === 'means' && (
                             <MeansCard

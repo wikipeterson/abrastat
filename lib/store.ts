@@ -232,6 +232,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'generator'    ? { type: 'generator' } :
       type === 'testinterval' ? { type: 'testinterval' } :
       type === 'means'        ? { type: 'means', var1ColId: null, var2ColId: null } :
+      type === 'dice-roller'  ? { type: 'dice-roller' } :
                                  { type: 'simulation' }
     const { width, height } =
       type === 'table'   ? { width: 780, height: 520 } :

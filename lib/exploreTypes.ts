@@ -67,6 +67,10 @@ export interface MeansCardConfig {
   var2ColId: string | null
 }
 
+export interface DiceRollerCardConfig {
+  type: 'dice-roller'
+}
+
 export type CardConfig =
   | GraphCardConfig
   | SummaryCardConfig
@@ -77,6 +81,7 @@ export type CardConfig =
   | TestIntervalCardConfig
   | SimulationCardConfig
   | MeansCardConfig
+  | DiceRollerCardConfig
 
 export interface ExploreCard {
   id: string

@@ -32,6 +32,30 @@ body {
   to   { transform: rotate(0deg); opacity: 1; }
 }
 
+/* Dice rolling animations */
+@keyframes dice-wobble {
+  0%   { transform: rotate(0deg)   scale(1);    }
+  20%  { transform: rotate(-13deg) scale(1.08); }
+  45%  { transform: rotate(11deg)  scale(0.97); }
+  70%  { transform: rotate(-8deg)  scale(1.05); }
+  100% { transform: rotate(0deg)   scale(1);    }
+}
+
+@keyframes dice-land {
+  0%   { transform: rotate(-7deg) scale(1.10); }
+  55%  { transform: rotate(2deg)  scale(0.96); }
+  80%  { transform: rotate(-1deg) scale(1.01); }
+  100% { transform: rotate(0deg)  scale(1);    }
+}
+
+.animate-dice-wobble {
+  animation: dice-wobble 0.28s ease-in-out infinite;
+}
+
+.animate-dice-land {
+  animation: dice-land 0.22s ease-out both;
+}
+
 /* Swap displacement animations — played on the chip that gets displaced
    to its new zone so users can see the swap happen */
 @keyframes swap-chip-from-right {

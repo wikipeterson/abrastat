@@ -1,15 +1,14 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useRef, useState } from 'react'
 import { v4 as uuid } from 'uuid'
-import { D6Canvas } from './D6Canvas'
+import { D6Canvas, D6CanvasHandle } from './D6Canvas'
 
-// ── Dice configuration ───────────────────────────────────────────────────────
+// ── Dice configuration ────────────────────────────────────────────────────────
 
 const DICE_TYPES = [4, 6, 8, 10, 12, 20, 100] as const
 type DiceSides = typeof DICE_TYPES[number]
 
-// Each die type gets a unique color from the AbraStat palette
 const DIE_BG: Record<DiceSides, string> = {
   4:   '#F59E0B',
   6:   '#0EA5A0',
@@ -20,10 +19,9 @@ const DIE_BG: Record<DiceSides, string> = {
   100: '#8B5CF6',
 }
 
-// CSS clip-path shapes for the palette die icons
 const DIE_SHAPE: Record<DiceSides, string | null> = {
   4:   'polygon(50% 3%, 97% 95%, 3% 95%)',
-  6:   null, // square
+  6:   null,
   8:   'polygon(50% 3%, 97% 50%, 50% 97%, 3% 50%)',
   10:  'polygon(50% 0%, 80% 18%, 95% 55%, 75% 95%, 25% 95%, 5% 55%, 20% 18%)',
   12:  'polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)',
@@ -36,33 +34,36 @@ interface DieInTray {
   sides: DiceSides
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Palette die ───────────────────────────────────────────────────────────────
 
-function rollDie(sides: number): number {
-  return Math.floor(Math.random() * sides) + 1
-}
-
-// ── Palette die (click-to-add) ───────────────────────────────────────────────
-
-function PaletteDie({ sides, onClick }: { sides: DiceSides; onClick: () => void }) {
-  const bg = DIE_BG[sides]
+function PaletteDie({ sides, count, onClick }: { sides: DiceSides; count: number; onClick: () => void }) {
+  const bg   = DIE_BG[sides]
   const clip = DIE_SHAPE[sides]
-  const fontSize = sides === 100 ? '9px' : '11px'
   return (
     <button
       onClick={onClick}
       title={`Add d${sides}`}
-      className="flex flex-col items-center gap-1 group"
+      className="relative flex flex-col items-center group"
     >
+      {/* Count badge — top-left of the die shape */}
+      {count > 0 && (
+        <span
+          className="absolute -top-1.5 -left-1.5 z-10 min-w-[18px] h-[18px] px-0.5
+                     rounded-full bg-[var(--color-text)] text-white
+                     text-[9px] font-bold flex items-center justify-center leading-none"
+        >
+          {count}
+        </span>
+      )}
       <div
-        className="w-10 h-10 flex items-center justify-center font-bold text-white
+        className="w-11 h-11 flex items-center justify-center font-bold text-white
                    transition-transform duration-100 group-hover:scale-110 group-active:scale-95
                    cursor-pointer select-none shadow"
         style={{
           backgroundColor: bg,
           clipPath: clip ?? undefined,
-          borderRadius: clip ? undefined : '8px',
-          fontSize,
+          borderRadius: clip ? undefined : '9px',
+          fontSize: sides === 100 ? '9px' : '11px',
         }}
       >
         d{sides}
@@ -71,128 +72,44 @@ function PaletteDie({ sides, onClick }: { sides: DiceSides; onClick: () => void 
   )
 }
 
-// ── Tray die chip ────────────────────────────────────────────────────────────
+// ── Results strip ─────────────────────────────────────────────────────────────
 
-interface TrayDieProps {
-  die: DieInTray
-  displayValue: number | undefined
-  isRolling: boolean
-  onRemove: () => void
-}
-
-function TrayDie({ die, displayValue, isRolling, onRemove }: TrayDieProps) {
-  const bg = DIE_BG[die.sides]
-  const chipRef = useRef<HTMLDivElement>(null)
-  const prevRolling = useRef(false)
-
-  // Play the landing animation exactly once when rolling → settled
-  useEffect(() => {
-    const chip = chipRef.current
-    if (!chip) return
-    if (prevRolling.current && !isRolling) {
-      // Remove then re-add to force CSS animation restart
-      chip.classList.remove('animate-dice-land')
-      void chip.offsetWidth   // trigger reflow
-      chip.classList.add('animate-dice-land')
-    } else if (isRolling) {
-      chip.classList.remove('animate-dice-land')
-    }
-    prevRolling.current = isRolling
-  }, [isRolling])
-
-  const valueFontSize = displayValue != null && String(displayValue).length > 2 ? 'text-lg' : 'text-2xl'
-
-  return (
-    <div className="relative">
-      <div
-        ref={chipRef}
-        className={`w-[60px] h-[60px] rounded-xl flex items-center justify-center shadow-md
-                    select-none relative overflow-hidden
-                    ${isRolling ? 'animate-dice-wobble' : ''}`}
-        style={{ backgroundColor: bg }}
-      >
-        {/* Die-type label */}
-        <span className="absolute top-1.5 left-2 text-white/60 font-mono leading-none"
-              style={{ fontSize: '9px' }}>
-          d{die.sides}
-        </span>
-        {/* Result value */}
-        <span className={`text-white font-bold leading-none select-none transition-none ${valueFontSize}`}>
-          {displayValue != null ? displayValue : '·'}
-        </span>
-      </div>
-      {/* Remove button — always visible, turns red on hover */}
-      <button
-        onClick={onRemove}
-        aria-label={`Remove d${die.sides}`}
-        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full
-                   bg-slate-400 hover:bg-red-500 text-white text-xs
-                   flex items-center justify-center shadow transition-colors
-                   leading-none font-bold"
-      >
-        ×
-      </button>
-    </div>
-  )
-}
-
-// ── Results breakdown ────────────────────────────────────────────────────────
-
-function ResultsPanel({
+function ResultsStrip({
   tray,
-  displayValues,
   finalResults,
-  isRolling,
 }: {
   tray: DieInTray[]
-  displayValues: Record<string, number>
   finalResults: Record<string, number>
-  isRolling: boolean
 }) {
-  const hasDisplay = tray.some(d => displayValues[d.id] != null)
-  if (!hasDisplay) return null
+  const settled = tray.filter(d => finalResults[d.id] != null)
+  if (settled.length === 0) return null
 
-  const isSettled = !isRolling && tray.every(d => finalResults[d.id] != null)
-  const total = isSettled
-    ? tray.reduce((sum, d) => sum + (finalResults[d.id] ?? 0), 0)
-    : null
+  const allDone = settled.length === tray.length
+  const total = allDone ? tray.reduce((s, d) => s + (finalResults[d.id] ?? 0), 0) : null
 
   return (
-    <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5">
-      <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+    <div className="px-3 py-2 border-t border-[var(--color-border)] bg-slate-50 flex-shrink-0">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
         {tray.map(die => {
-          const val = finalResults[die.id] ?? displayValues[die.id]
-          if (val == null) return null
+          const val = finalResults[die.id]
           return (
-            <span key={die.id} className="font-mono text-sm text-[var(--color-text)]">
-              <span className="text-[var(--color-muted)]">d{die.sides}:</span>
-              {' '}
-              <span
-                className="font-semibold"
-                style={{ color: DIE_BG[die.sides] }}
-              >
-                {val}
-              </span>
+            <span key={die.id} className="font-mono text-xs">
+              <span className="text-[var(--color-muted)]">d{die.sides}:</span>{' '}
+              {val != null
+                ? <span className="font-bold" style={{ color: DIE_BG[die.sides] }}>{val}</span>
+                : <span className="text-[var(--color-muted)]">…</span>}
             </span>
           )
         })}
+        {total != null && tray.length > 1 && (
+          <span className="ml-1 font-bold text-sm text-[var(--color-text)]">= {total}</span>
+        )}
       </div>
-      {total != null && (
-        <div className="mt-1.5 pt-1.5 border-t border-slate-200 flex items-baseline gap-2">
-          <span className="text-xs text-[var(--color-muted)] uppercase tracking-wide font-semibold">Total</span>
-          <span className="font-bold text-xl text-[var(--color-text)]">{total}</span>
-          {tray.length > 1 && (
-            <span className="text-xs text-[var(--color-muted)]">
-              ({tray.map(d => `d${d.sides}`).join(' + ')})
-            </span>
-          )}
-        </div>
-      )}
     </div>
   )
 }
 
-// ── Main card component ──────────────────────────────────────────────────────
+// ── Main card ─────────────────────────────────────────────────────────────────
 
 interface DiceRollerCardProps {
   onRemove: () => void
@@ -200,197 +117,65 @@ interface DiceRollerCardProps {
 }
 
 export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
-  const [tray, setTray] = useState<DieInTray[]>([])
-  const [displayValues, setDisplayValues] = useState<Record<string, number>>({})
+  const [tray, setTray]               = useState<DieInTray[]>([])
   const [finalResults, setFinalResults] = useState<Record<string, number>>({})
-  const [isRolling, setIsRolling] = useState(false)
-  const [d6RollKey, setD6RollKey] = useState(0)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Track d6 die IDs (in tray order) at the moment Roll is pressed,
-  // and the non-d6 finals so handleD6Results can merge everything.
-  const d6DiceIdsRef   = useRef<string[]>([])
-  const nonD6FinalsRef = useRef<Record<string, number>>({})
+  const canvasRef = useRef<D6CanvasHandle>(null)
 
-  // Cleanup on unmount
-  useEffect(() => () => {
-    if (intervalRef.current) clearInterval(intervalRef.current)
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
-  }, [])
+  // Count of each die type currently in tray
+  const dieCounts = DICE_TYPES.reduce((acc, s) => {
+    acc[s] = tray.filter(d => d.sides === s).length
+    return acc
+  }, {} as Record<DiceSides, number>)
 
   function addDie(sides: DiceSides) {
-    setTray(prev => [...prev, { id: uuid(), sides }])
-  }
-
-  function removeDie(id: string) {
-    setTray(prev => prev.filter(d => d.id !== id))
-    setDisplayValues(prev => { const n = { ...prev }; delete n[id]; return n })
-    setFinalResults(prev => { const n = { ...prev }; delete n[id]; return n })
+    const id = uuid()
+    setTray(prev => [...prev, { id, sides }])
+    canvasRef.current?.addDie(id, sides)
   }
 
   function clearAll() {
-    if (intervalRef.current) clearInterval(intervalRef.current)
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    canvasRef.current?.clearAll()
     setTray([])
-    setDisplayValues({})
     setFinalResults({})
-    setIsRolling(false)
-    setD6RollKey(0)
-    d6DiceIdsRef.current = []
-    nonD6FinalsRef.current = {}
   }
 
-  function handleRoll() {
-    if (tray.length === 0 || isRolling) return
-    if (intervalRef.current) clearInterval(intervalRef.current)
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
-
-    const hasD6    = tray.some(d => d.sides === 6)
-    const hasNonD6 = tray.some(d => d.sides !== 6)
-
-    // Pre-compute results for non-d6 dice (d6 results come from physics)
-    const nonD6Finals: Record<string, number> = {}
-    tray.filter(d => d.sides !== 6).forEach(d => { nonD6Finals[d.id] = rollDie(d.sides) })
-    nonD6FinalsRef.current = nonD6Finals
-
-    // Capture d6 die IDs in tray order for the physics callback
-    d6DiceIdsRef.current = tray.filter(d => d.sides === 6).map(d => d.id)
-
-    setIsRolling(true)
-    setFinalResults({})
-
-    // Trigger d6 physics simulation
-    if (hasD6) setD6RollKey(k => k + 1)
-
-    // Cycle display values for all dice while rolling
-    intervalRef.current = setInterval(() => {
-      const display: Record<string, number> = {}
-      tray.forEach(d => { display[d.id] = rollDie(d.sides) })
-      setDisplayValues(display)
-    }, 55)
-
-    // Non-d6 dice settle at 680 ms
-    if (hasNonD6) {
-      timeoutRef.current = setTimeout(() => {
-        setFinalResults(prev => ({ ...prev, ...nonD6Finals }))
-        setDisplayValues(prev => ({ ...prev, ...nonD6Finals }))
-        // If there are no d6s, we're done
-        if (!hasD6) {
-          if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
-          setIsRolling(false)
-        }
-      }, 680)
-    }
-  }
-
-  // Called by D6Canvas when physics determines the face-up values
-  function handleD6Results(values: number[]) {
-    const ids = d6DiceIdsRef.current
-    if (ids.length === 0) return
-    const d6Finals: Record<string, number> = {}
-    ids.forEach((id, i) => { d6Finals[id] = values[i] ?? rollDie(6) })
-
-    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
-    if (timeoutRef.current)  { clearTimeout(timeoutRef.current);   timeoutRef.current  = null }
-
-    // Merge with non-d6 finals (may already be in state, but use ref to be safe)
-    const allFinals = { ...nonD6FinalsRef.current, ...d6Finals }
-    setFinalResults(allFinals)
-    setDisplayValues(allFinals)
-    setIsRolling(false)
+  function handleDieSettled(id: string, value: number) {
+    setFinalResults(prev => ({ ...prev, [id]: value }))
   }
 
   const inner = (
-    <div className="flex flex-col gap-3 p-4 h-full">
+    <div className="flex flex-col h-full">
 
-      {/* ── Dice Palette ── */}
-      <div>
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-2">
-          Dice palette — click to add to tray
-        </div>
-        <div className="flex flex-wrap gap-3 bg-slate-50 rounded-xl p-3 border border-slate-100">
-          {DICE_TYPES.map(sides => (
-            <PaletteDie key={sides} sides={sides} onClick={() => addDie(sides)} />
-          ))}
-        </div>
+      {/* ── Physics tray — fills available space ── */}
+      <div className="flex-1 min-h-0">
+        <D6Canvas ref={canvasRef} onDieSettled={handleDieSettled} />
       </div>
-
-      {/* ── Roll Tray ── */}
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-            Roll tray
-            {tray.length > 0 && (
-              <span className="ml-1 text-[var(--color-text)] normal-case">
-                — {tray.length} {tray.length === 1 ? 'die' : 'dice'}
-              </span>
-            )}
-          </div>
-          {tray.length > 0 && (
-            <button
-              onClick={clearAll}
-              disabled={isRolling}
-              className="text-xs text-[var(--color-muted)] hover:text-red-500 transition-colors disabled:opacity-40"
-            >
-              Clear all
-            </button>
-          )}
-        </div>
-        <div
-          className={`rounded-xl border-2 transition-colors p-3 flex flex-wrap gap-3 items-start content-start min-h-[84px] ${
-            tray.length === 0
-              ? 'border-dashed border-[var(--color-border)] bg-slate-50'
-              : 'border-[var(--color-border)] bg-white'
-          }`}
-        >
-          {tray.length === 0 ? (
-            <span className="text-xs text-[var(--color-muted)] self-center w-full text-center py-2">
-              Click a die above to add it here
-            </span>
-          ) : (
-            tray.map(die => (
-              <TrayDie
-                key={die.id}
-                die={die}
-                displayValue={displayValues[die.id]}
-                isRolling={isRolling}
-                onRemove={() => removeDie(die.id)}
-              />
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* ── 3D physics roll stage (shown when tray contains at least one d6) ── */}
-      {tray.some(d => d.sides === 6) && (
-        <div className="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
-          <D6Canvas
-            diceCount={tray.filter(d => d.sides === 6).length}
-            rollKey={d6RollKey}
-            onResults={handleD6Results}
-          />
-        </div>
-      )}
-
-      {/* ── Roll button ── */}
-      <button
-        onClick={handleRoll}
-        disabled={tray.length === 0 || isRolling}
-        className="w-full py-2.5 rounded-xl font-semibold text-sm transition-all
-                   bg-[var(--color-accent)] text-white hover:opacity-90
-                   active:scale-95 shadow-sm
-                   disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
-      >
-        {isRolling ? '🎲 Rolling…' : '🎲 Roll!'}
-      </button>
 
       {/* ── Results ── */}
-      <ResultsPanel
-        tray={tray}
-        displayValues={displayValues}
-        finalResults={finalResults}
-        isRolling={isRolling}
-      />
+      <ResultsStrip tray={tray} finalResults={finalResults} />
+
+      {/* ── Palette ── */}
+      <div className="flex-shrink-0 px-3 pt-3 pb-3 border-t border-[var(--color-border)]">
+        <div className="flex flex-wrap gap-3 justify-center">
+          {DICE_TYPES.map(sides => (
+            <PaletteDie
+              key={sides}
+              sides={sides}
+              count={dieCounts[sides]}
+              onClick={() => addDie(sides)}
+            />
+          ))}
+        </div>
+        {tray.length > 0 && (
+          <button
+            onClick={clearAll}
+            className="mt-2.5 w-full text-xs text-[var(--color-muted)] hover:text-red-500
+                       transition-colors text-center"
+          >
+            Clear all
+          </button>
+        )}
+      </div>
 
     </div>
   )
@@ -410,7 +195,7 @@ export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
           ×
         </button>
       </div>
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div className="flex-1 min-h-0">
         {inner}
       </div>
     </div>

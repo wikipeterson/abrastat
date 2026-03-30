@@ -485,7 +485,16 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       },
 
       rollAll() {
-        for (const entry of dieEntriesRef.current) {
+        const world = worldRef.current
+        if (!world || dieEntriesRef.current.length === 0) return
+
+        const innerX = TRAY_W / 2 - DIE_HALF - 0.18
+        const innerZ = TRAY_D / 2 - DIE_HALF - 0.18
+        const zStep = dieEntriesRef.current.length > 1
+          ? (innerZ * 1.5) / Math.max(1, dieEntriesRef.current.length - 1)
+          : 0
+
+        for (const [index, entry] of dieEntriesRef.current.entries()) {
           entry.settled = false
           entry.settleCount = 0
           clearSettleTimer(entry)
@@ -501,17 +510,22 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
             oldTex?.dispose()
           }
 
-          // Wake up body and apply random impulse
+          const sx = innerX
+          const sz = dieEntriesRef.current.length > 1
+            ? -innerZ * 0.75 + index * zStep
+            : 0
+          const vx = -(19.5 + Math.random() * 5.8)
+          const vz = (Math.random() - 0.5) * 6.4
+
+          // Wake up body and apply strong right-side launch
           entry.body.wakeUp()
-          entry.body.velocity.set(
-            (Math.random() - 0.5) * 6,
-            0.4,
-            (Math.random() - 0.5) * 6,
-          )
+          entry.body.position.set(sx, DIE_HALF + 0.04, sz)
+          entry.body.quaternion.set(0, 0, 0, 1)
+          entry.body.velocity.set(vx, 0, vz)
           entry.body.angularVelocity.set(
-            (Math.random() - 0.5) * 28,
-            (Math.random() - 0.5) * 28,
-            (Math.random() - 0.5) * 28,
+            (Math.random() - 0.5) * 56,
+            (Math.random() - 0.5) * 46,
+            (Math.random() - 0.5) * 56,
           )
 
           // Set new max-settle timer

@@ -15,6 +15,13 @@ interface ScatterPlotProps {
   colorByColId?: string | null
 }
 
+interface ScatterPoint {
+  x: number
+  y: number
+  group: string
+  size: number | null
+}
+
 function useAnimatedY(targetY: number[], animate: boolean): number[] {
   const [displayY, setDisplayY] = useState<number[]>([])
   const rafRef = useRef<number | null>(null)
@@ -60,26 +67,38 @@ export function ScatterPlot({ xColId, yColId, colorByColId }: ScatterPlotProps) 
 
   const xCol = grid.columns.find(c => c.id === xColId)
   const yCol = grid.columns.find(c => c.id === yColId)
+  const groupCol = colorByColId ? (grid.columns.find(c => c.id === colorByColId) ?? null) : null
+  const useBubbleSize = groupCol?.type === 'numeric'
+  const useColorGroups = groupCol?.type === 'categorical'
 
-  // Build complete-case (x, y, group) triples — all three must be non-blank/finite
+  // Build complete-case points. When the third variable is categorical, use it
+  // for color grouping. When it is numeric, use it for bubble size.
   const allPoints = useMemo(() => {
-    if (!xColId || !yColId) return [] as { x: number; y: number; group: string }[]
-    return grid.rows.flatMap(r => {
+    if (!xColId || !yColId) return [] as ScatterPoint[]
+    return grid.rows.flatMap<ScatterPoint>(r => {
       const rx = r[xColId], ry = r[yColId]
-      if (rx === '' || rx == null || ry === '' || ry == null) return []
+      if (rx === '' || rx == null || ry === '' || ry == null) return [] as ScatterPoint[]
       const x = Number(rx), y = Number(ry)
-      if (!isFinite(x) || !isFinite(y)) return []
-      if (colorByColId) {
+      if (!isFinite(x) || !isFinite(y)) return [] as ScatterPoint[]
+      if (useColorGroups && colorByColId) {
         const group = String(r[colorByColId] ?? '').trim()
-        if (!group) return []
-        return [{ x, y, group }]
+        if (!group) return [] as ScatterPoint[]
+        return [{ x, y, group, size: null }]
       }
-      return [{ x, y, group: '' }]
+      if (useBubbleSize && colorByColId) {
+        const rawSize = r[colorByColId]
+        if (rawSize === '' || rawSize == null) return [] as ScatterPoint[]
+        const size = Number(rawSize)
+        if (!isFinite(size)) return [] as ScatterPoint[]
+        return [{ x, y, group: '', size }]
+      }
+      return [{ x, y, group: '', size: null }]
     })
-  }, [grid.rows, xColId, yColId, colorByColId])
+  }, [grid.rows, xColId, yColId, colorByColId, useBubbleSize, useColorGroups])
 
   const xValues = useMemo(() => allPoints.map(p => p.x), [allPoints])
   const rawYValues = useMemo(() => allPoints.map(p => p.y), [allPoints])
+  const sizeValues = useMemo(() => allPoints.map(p => p.size).filter((v): v is number => v != null), [allPoints])
 
   // Detect transition from null → assigned yColId; defer setState to avoid synchronous call in effect
   useEffect(() => {
@@ -112,7 +131,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId }: ScatterPlotProps) 
 
   let traces: Data[]
 
-  if (colorByColId) {
+  if (useColorGroups && colorByColId) {
     const uniqueGroups = [...new Set(allPoints.map(p => p.group))].sort()
     traces = uniqueGroups.map((group, i) => ({
       type: 'scatter',
@@ -123,6 +142,30 @@ export function ScatterPlot({ xColId, yColId, colorByColId }: ScatterPlotProps) 
       marker: { color: ABRA_COLORS[i % ABRA_COLORS.length], size: 7, opacity: 0.85, line: { width: 0 } },
       hovertemplate: `${xCol.name}: %{x}<br>${yCol.name}: %{y}<extra>${group}</extra>`,
     }))
+  } else if (useBubbleSize && groupCol) {
+    const minSize = Math.min(...sizeValues)
+    const maxSize = Math.max(...sizeValues)
+    const scaledSizes = allPoints.map(p => {
+      const value = p.size ?? minSize
+      if (maxSize === minSize) return 24
+      return 12 + ((value - minSize) / (maxSize - minSize)) * 44
+    })
+    traces = [{
+      type: 'scatter',
+      mode: 'markers',
+      name: `${xCol.name} vs ${yCol.name}`,
+      x: xValues,
+      y: yValues,
+      marker: {
+        color: ABRA_COLORS[0],
+        size: scaledSizes,
+        sizemode: 'diameter',
+        opacity: 0.45,
+        line: { width: 0 },
+      },
+      hovertemplate: `${xCol.name}: %{x}<br>${yCol.name}: %{y}<br>${groupCol.name}: %{customdata}<extra></extra>`,
+      customdata: allPoints.map(p => p.size),
+    }]
   } else {
     traces = [{
       type: 'scatter',
@@ -178,7 +221,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId }: ScatterPlotProps) 
           layout={{
             xaxis: { title: hideAxisTitles ? undefined : { text: xCol.name } },
             yaxis: { title: hideAxisTitles ? undefined : { text: yCol.name }, ...(yAxisRange ? { range: yAxisRange } : {}) },
-            showlegend: !!colorByColId,
+            showlegend: !!useColorGroups,
             annotations,
             ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
           }}

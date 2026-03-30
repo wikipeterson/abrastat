@@ -1,6 +1,7 @@
 'use client'
 
 import { useDroppable } from '@dnd-kit/core'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '@/lib/store'
 import { ChartType, CHART_META, inferCharts } from '@/lib/chartHelpers'
 import { GraphCardConfig } from '@/lib/exploreTypes'
@@ -14,6 +15,7 @@ import { PieChart } from '@/components/charts/PieChart'
 import { DotPlot } from '@/components/charts/DotPlot'
 import { SegmentedBar } from '@/components/charts/SegmentedBar'
 import { NormalProbPlot } from '@/components/charts/NormalProbPlot'
+import { AnimatedCaseLayer, deriveGraphMorphSpec } from '@/components/charts/AnimatedCaseLayer'
 
 interface GraphCardProps {
   cardId: string
@@ -41,6 +43,18 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
     (xCol?.type === 'categorical' && yCol?.type === 'numeric')
 
   const currentChart = config.chartType ?? primary
+  const morphSpec = deriveGraphMorphSpec({
+    currentChart,
+    xColId: config.xColId,
+    yColId: config.yColId,
+    groupColId: config.groupColId,
+    xType: xCol?.type ?? null,
+    yType: yCol?.type ?? null,
+    groupType: groupCol?.type ?? null,
+    orientation,
+  })
+  const prevMorphSpecRef = useRef(morphSpec)
+  const [activeTransition, setActiveTransition] = useState<{ from: NonNullable<typeof morphSpec>; to: NonNullable<typeof morphSpec>; nonce: number } | null>(null)
 
   const inferredList = primary ? [primary, ...alternatives] : []
   const chartButtons: ChartType[] = (currentChart && !inferredList.includes(currentChart))
@@ -98,6 +112,19 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
   }
 
   const isBlank = !currentChart
+  const hasRows = grid.rows.some(r => Object.values(r).some(v => String(v ?? '').trim() !== ''))
+
+  useEffect(() => {
+    const prev = prevMorphSpecRef.current
+    if (morphSpec && prev && JSON.stringify(prev) !== JSON.stringify(morphSpec)) {
+      setActiveTransition({ from: prev, to: morphSpec, nonce: Date.now() })
+    }
+    prevMorphSpecRef.current = morphSpec
+  }, [morphSpec])
+
+  const showAnimatedBlank = isBlank && !!morphSpec && hasRows
+  const showAnimatedTransition = !isBlank && !!activeTransition
+  const showDirectChart = !isBlank && !showAnimatedTransition
 
   const inner = (
     <div className="flex flex-col h-full">
@@ -179,7 +206,16 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
               : ''
           }`}
         >
-          {isBlank ? (
+          {showAnimatedBlank ? (
+            <AnimatedCaseLayer spec={morphSpec!} showHint />
+          ) : showAnimatedTransition ? (
+            <AnimatedCaseLayer
+              key={activeTransition?.nonce}
+              spec={activeTransition!.to}
+              fromSpec={activeTransition!.from}
+              onRest={() => setActiveTransition(null)}
+            />
+          ) : isBlank ? (
             <div className="h-full flex flex-col items-center justify-center gap-2 text-center p-6">
               <span className="text-4xl opacity-25 select-none">📈</span>
               <p className="text-sm font-medium text-[var(--color-muted)]">Drop a variable to get started</p>
@@ -187,11 +223,11 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
                 Drag and drop a variable from the sidebar to begin.
               </p>
             </div>
-          ) : (
+          ) : showDirectChart ? (
             <GraphCardContext.Provider value={{ hideAxisTitles: true }}>
               {renderChart()}
             </GraphCardContext.Provider>
-          )}
+          ) : null}
         </div>
 
         {/* Row 2, Col 1 — empty (below response zone) */}

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { v4 as uuid } from 'uuid'
+import { D6Canvas } from './D6Canvas'
 
 // ── Dice configuration ───────────────────────────────────────────────────────
 
@@ -203,6 +204,8 @@ export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
   const [displayValues, setDisplayValues] = useState<Record<string, number>>({})
   const [finalResults, setFinalResults] = useState<Record<string, number>>({})
   const [isRolling, setIsRolling] = useState(false)
+  const [d6RollKey, setD6RollKey] = useState(0)
+  const [d6TargetFace, setD6TargetFace] = useState<number | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -239,6 +242,14 @@ export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
     // Compute fair results immediately — animation is purely visual
     const finals: Record<string, number> = {}
     tray.forEach(d => { finals[d.id] = rollDie(d.sides) })
+
+    // Set d6 target + increment rollKey before clearing finals so D6Canvas
+    // can capture the target face before its animation effect fires
+    const featuredD6 = tray.find(d => d.sides === 6)
+    if (featuredD6) {
+      setD6TargetFace(finals[featuredD6.id])
+      setD6RollKey(k => k + 1)
+    }
 
     setIsRolling(true)
     setFinalResults({})
@@ -319,6 +330,16 @@ export function DiceRollerCard({ onRemove, hideHeader }: DiceRollerCardProps) {
           )}
         </div>
       </div>
+
+      {/* ── 3D d6 roll stage (shown when tray contains at least one d6) ── */}
+      {tray.some(d => d.sides === 6) && (
+        <div className="flex justify-center bg-slate-50 rounded-xl border border-slate-100 py-1">
+          <D6Canvas
+            targetFace={d6TargetFace}
+            rollKey={d6RollKey}
+          />
+        </div>
+      )}
 
       {/* ── Roll button ── */}
       <button

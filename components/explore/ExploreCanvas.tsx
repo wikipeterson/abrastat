@@ -25,7 +25,6 @@ import { TwoWayTable } from '@/components/applets/TwoWayTable'
 import { DistributionCard } from '@/components/inference/DistributionCard'
 import { MeansCard } from '@/components/inference/MeansCard'
 import { RandomGeneratorCard } from '@/components/probability/RandomGeneratorCard'
-import { EmptyState } from '@/components/ui/EmptyState'
 
 // ─── Draggable variable chip (sidebar) ────────────────────────────────────────
 
@@ -157,8 +156,6 @@ export function ExploreCanvas() {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
-
-  const hasData = grid.rows.some(r => Object.values(r).some(v => String(v).trim()))
 
   // When columns change (including type toggles): purge stale IDs and
   // re-infer chart types for any graph card whose current type is no longer valid.
@@ -509,24 +506,6 @@ export function ExploreCanvas() {
 
   const activeCol = activeColId ? (grid.columns.find(c => c.id === activeColId) ?? null) : null
 
-  if (!hasData) {
-    return (
-      <div className="flex h-full min-h-0">
-        <aside className="w-48 flex-shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col">
-          <div className="px-3 py-2 border-b border-[var(--color-border)]">
-            <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Variables</span>
-          </div>
-          <div className="flex-1 overflow-y-auto py-2 px-2">
-            <p className="text-xs text-[var(--color-muted)] px-1 py-2">No data loaded</p>
-          </div>
-        </aside>
-        <div className="flex-1 flex items-center justify-center">
-          <EmptyState icon="📈" title="No data loaded" description="Add data in the Data tab to start exploring." />
-        </div>
-      </div>
-    )
-  }
-
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <SwapAnimContext.Provider value={swapAnim}>
@@ -538,9 +517,15 @@ export function ExploreCanvas() {
             <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Variables</span>
           </div>
           <div className="flex-1 overflow-y-auto py-2 px-2 space-y-1">
-            {grid.columns.map(col => (
-              <DraggableChip key={col.id} col={col} />
-            ))}
+            {grid.columns.length > 0 ? (
+              grid.columns.map(col => (
+                <DraggableChip key={col.id} col={col} />
+              ))
+            ) : (
+              <p className="text-xs text-[var(--color-muted)] px-1 py-2">
+                No dataset variables yet. Probability tools and manual-entry cards still work.
+              </p>
+            )}
           </div>
         </aside>
 
@@ -551,7 +536,12 @@ export function ExploreCanvas() {
               <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
                 <div className="text-center px-6">
                   <div className="text-4xl mb-3 opacity-30">✦</div>
-                  <p className="text-[var(--color-muted)] text-sm">Use <strong>Add Card</strong> to get started</p>
+                  <p className="text-[var(--color-muted)] text-sm">
+                    Use <strong>Add Card</strong> to get started.
+                  </p>
+                  <p className="text-[var(--color-muted)]/80 text-xs mt-1">
+                    Distribution, Random Generator, and manual Two-Way Table cards work even without data.
+                  </p>
                 </div>
               </div>
             )}

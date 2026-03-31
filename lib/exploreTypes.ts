@@ -109,4 +109,5 @@ export interface ExploreCard {
   y: number
   width: number
   height: number
+  minimized?: boolean
 }

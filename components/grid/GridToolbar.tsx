@@ -8,13 +8,10 @@ import { ComputedColumnModal } from './ComputedColumnModal'
 import { useAuth } from '@/components/auth/AuthProvider'
 
 export function GridToolbar({ onShare }: { onShare?: () => void }) {
-  const { grid, addRow, addColumn } = useStore()
+  const { addRow, addColumn } = useStore()
   const { isGuest } = useAuth()
   const [showImport, setShowImport] = useState(false)
   const [showComputed, setShowComputed] = useState(false)
-
-  const rowCount = grid.rows.filter(r => Object.values(r).some(v => String(v).trim())).length
-  const colCount = grid.columns.length
 
   return (
     <>
@@ -57,10 +54,6 @@ export function GridToolbar({ onShare }: { onShare?: () => void }) {
               <Share2 size={14} /> Share
             </button>
           )}
-        </div>
-
-        <div className="ml-auto text-xs text-[var(--color-muted)]">
-          {rowCount} rows × {colCount} cols
         </div>
       </div>
 

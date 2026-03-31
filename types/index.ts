@@ -15,6 +15,10 @@ export interface GridState {
   rows: Record<string, string | number>[]
 }
 
+export interface WorkspaceCardMeta {
+  minimized?: boolean
+}
+
 export interface DatasetVariableInfo {
   name: string
   description: string

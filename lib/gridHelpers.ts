@@ -1,7 +1,7 @@
 import { v4 as uuid } from 'uuid'
 import { ColumnType, GridColumn, GridState } from '@/types'
 
-export function createEmptyGrid(cols = 5, rows = 20): GridState {
+export function createEmptyGrid(cols = 4, rows = 20): GridState {
   const columns: GridColumn[] = Array.from({ length: cols }, (_, i) => ({
     id: uuid(),
     name: `var${i + 1}`,

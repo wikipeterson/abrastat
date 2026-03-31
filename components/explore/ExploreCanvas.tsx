@@ -499,8 +499,10 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
   }
 
   const activeCol = activeColId ? (grid.columns.find(c => c.id === activeColId) ?? null) : null
-
+  const filledRowCount = grid.rows.filter(row => Object.values(row).some(v => String(v).trim())).length
+  const columnCount = grid.columns.length
   const nonGridCards = cards.filter(card => card.config.type !== 'data-grid')
+  const MINIMIZED_HEIGHT = 62
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -529,6 +531,8 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
             >
               {cards.map(card => {
                 const cardH = card.height ?? 520
+                const isMinimized = !!card.minimized
+                const displayHeight = isMinimized ? MINIMIZED_HEIGHT : cardH
                 return (
                   <div
                     key={card.id}
@@ -538,7 +542,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                       left: card.x * zoom,
                       top: card.y * zoom,
                       width: card.width * zoom,
-                      height: cardH * zoom,
+                      height: displayHeight * zoom,
                     }}
                     className="group"
                   >
@@ -551,11 +555,27 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                           onPointerDown={e => startMove(e, card.id)}
                           className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] cursor-grab active:cursor-grabbing select-none"
                         >
-                          <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">
-                            {cardLabel(card.config.type)}
-                          </span>
+                          <div className="min-w-0 flex items-center gap-3">
+                            <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">
+                              {cardLabel(card.config.type)}
+                            </span>
+                            {card.config.type === 'data-grid' && (
+                              <span className="text-xs text-[var(--color-muted)] whitespace-nowrap">
+                                {filledRowCount} rows {columnCount} columns
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2">
                             <span className="text-slate-300 text-xs select-none opacity-0 group-hover:opacity-100 transition-opacity">⠿ drag to move</span>
+                            <button
+                              onPointerDown={e => e.stopPropagation()}
+                              onClick={() => updateCard(card.id, { minimized: !isMinimized })}
+                              className="text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors text-base leading-none"
+                              title={isMinimized ? 'Expand card' : 'Minimize card'}
+                              aria-label={isMinimized ? 'Expand card' : 'Minimize card'}
+                            >
+                              {isMinimized ? '▢' : '−'}
+                            </button>
                             {card.config.type !== 'data-grid' && (
                               <button
                                 onPointerDown={e => e.stopPropagation()}
@@ -569,6 +589,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                         </div>
 
                         {/* Card content */}
+                        {!isMinimized && (
                         <div className={`flex-1 min-h-0 overflow-hidden ${card.config.type === 'data-grid' ? '' : 'p-4'}`}>
                           {card.config.type === 'data-grid' && (
                             <div className="h-full flex flex-col">
@@ -637,9 +658,11 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                             <PlaceholderCard label="Simulation" />
                           )}
                         </div>
+                        )}
                       </div>
 
                       {/* Right-edge resize handle */}
+                      {!isMinimized && (
                       <div
                         onPointerDown={e => startResize(e, card.id, 'e')}
                         className="absolute top-0 w-3 h-full cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity"
@@ -647,8 +670,10 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                       >
                         <div className="absolute top-1/2 -translate-y-1/2 left-0.5 w-1.5 h-8 bg-slate-300 rounded-full" />
                       </div>
+                      )}
 
                       {/* Bottom-edge resize handle */}
+                      {!isMinimized && (
                       <div
                         onPointerDown={e => startResize(e, card.id, 's')}
                         className="absolute left-0 h-3 w-full cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity"
@@ -656,8 +681,10 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                       >
                         <div className="absolute left-1/2 -translate-x-1/2 bottom-0.5 h-1.5 w-8 bg-slate-300 rounded-full" />
                       </div>
+                      )}
 
                       {/* SE corner resize handle */}
+                      {!isMinimized && (
                       <div
                         onPointerDown={e => startResize(e, card.id, 'se')}
                         className="absolute w-5 h-5 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-end"
@@ -665,6 +692,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                       >
                         <div className="w-2.5 h-2.5 rounded-sm bg-slate-400" />
                       </div>
+                      )}
                     </div>
                   </div>
                 )

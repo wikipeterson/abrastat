@@ -157,7 +157,7 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
     >
       <div style={{ minWidth: ROW_NUM_WIDTH + columns.length * COL_WIDTH }}>
         {/* Header row */}
-        <div className="flex sticky top-0 z-20">
+        <div className="flex">
           <div
             className="flex-shrink-0 bg-[var(--color-grid-header)]"
             style={{ width: ROW_NUM_WIDTH }}

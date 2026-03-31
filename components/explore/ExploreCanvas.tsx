@@ -111,11 +111,14 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
   useEffect(() => {
     const dataGridCard = cards.find(card => card.config.type === 'data-grid')
     if (!dataGridCard) return
-    const desiredWidth = Math.max(740, 48 + grid.columns.length * 140 + 104)
+    const desiredWidth = Math.max(
+      620,
+      48 + grid.columns.reduce((sum, col) => sum + (col.width ?? 140), 0) + 32,
+    )
     if (dataGridCard.width < desiredWidth) {
       updateCard(dataGridCard.id, { width: desiredWidth })
     }
-  }, [cards, grid.columns.length, updateCard])
+  }, [cards, grid.columns, updateCard])
 
   const normalizeGraphConfig = useCallback((cfg: GraphCardConfig): GraphCardConfig => {
     const xType = cfg.xColId ? (grid.columns.find(c => c.id === cfg.xColId)?.type ?? null) : null
@@ -395,7 +398,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
   // ─── Card resize ──────────────────────────────────────────────────────────
   function getCardMinSize(card: ExploreCard) {
     switch (card.config.type) {
-      case 'data-grid':    return { minWidth: 880, minHeight: 620 }
+      case 'data-grid':    return { minWidth: 620, minHeight: 620 }
       case 'graph':        return { minWidth: 520, minHeight: 460 }
       case 'summary':      return { minWidth: 700, minHeight: 620 }
       case 'table':        return { minWidth: 780, minHeight: 500 }
@@ -524,7 +527,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                 <div className="max-w-[320px] rounded-2xl border border-[var(--color-border)] bg-white/95 shadow-sm px-5 py-4 text-left">
                   <div className="text-2xl mb-2 opacity-30">✦</div>
                   <p className="text-[var(--color-muted)] text-sm">
-                    Use <span className="font-semibold text-[var(--color-text)]">Add</span> in the header to place analysis cards around your data.
+                    Use the <span className="font-semibold text-[var(--color-text)]">Add</span> button above to place analysis cards around your data.
                   </p>
                   <p className="text-[var(--color-muted)]/80 text-xs mt-1">
                     The data grid now lives on this same workspace canvas.

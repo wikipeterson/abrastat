@@ -7,7 +7,7 @@ import { createEmptyGrid } from './gridHelpers'
 import { computeColumnValues } from './formulaEval'
 
 function getDataGridCardWidth(columnCount: number) {
-  return Math.max(740, 48 + columnCount * 140 + 104)
+  return Math.max(620, 48 + columnCount * 140 + 32)
 }
 
 function createDataGridCard(): ExploreCard {
@@ -117,6 +117,7 @@ interface AbraStatStore {
   reorderColumns: (fromIndex: number, toIndex: number) => void
   renameColumn: (colId: string, newName: string) => void
   setColumnType: (colId: string, type: ColumnType) => void
+  setColumnWidth: (colId: string, width: number) => void
   addComputedColumn: (name: string, formula: string) => void
   undo: () => void
 
@@ -194,7 +195,7 @@ export const useStore = create<AbraStatStore>((set) => ({
     const existingNames = new Set(state.grid.columns.map(c => c.name))
     let n = state.grid.columns.length + 1
     while (existingNames.has(`var${n}`)) n++
-    const newCol = { id, name: `var${n}`, type: 'numeric' as ColumnType }
+    const newCol = { id, name: `var${n}`, type: 'numeric' as ColumnType, width: 140 }
     const idx = afterIndex !== undefined ? afterIndex + 1 : state.grid.columns.length
     const columns = [...state.grid.columns.slice(0, idx), newCol, ...state.grid.columns.slice(idx)]
     const rows = state.grid.rows.map(r => ({ ...r, [id]: '' }))
@@ -233,10 +234,19 @@ export const useStore = create<AbraStatStore>((set) => ({
     return { grid: { ...state.grid, columns }, isDirty: true, undoStack: stack }
   }),
 
+  setColumnWidth: (colId, width) => set(state => {
+    const nextWidth = Math.max(92, Math.min(360, Math.round(width)))
+    const current = state.grid.columns.find(c => c.id === colId)?.width ?? 140
+    if (current === nextWidth) return state
+    const stack = [...state.undoStack, snapshot(state.grid)].slice(-MAX_UNDO)
+    const columns = state.grid.columns.map(c => c.id === colId ? { ...c, width: nextWidth } : c)
+    return { grid: { ...state.grid, columns }, isDirty: true, undoStack: stack }
+  }),
+
   addComputedColumn: (name, formula) => set(state => {
     const stack = [...state.undoStack, snapshot(state.grid)].slice(-MAX_UNDO)
     const id = uuid()
-    const newCol = { id, name, type: 'numeric' as ColumnType, computedFormula: formula }
+    const newCol = { id, name, type: 'numeric' as ColumnType, computedFormula: formula, width: 140 }
     const columns = [...state.grid.columns, newCol]
     const values = computeColumnValues(formula, state.grid.columns, state.grid.rows)
     const rows = state.grid.rows.map((r, i) => ({ ...r, [id]: values[i] ?? '' }))

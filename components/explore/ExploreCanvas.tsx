@@ -108,6 +108,15 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
     ensureDataGridCard()
   }, [ensureDataGridCard])
 
+  useEffect(() => {
+    const dataGridCard = cards.find(card => card.config.type === 'data-grid')
+    if (!dataGridCard) return
+    const desiredWidth = Math.max(740, 48 + grid.columns.length * 140 + 104)
+    if (dataGridCard.width < desiredWidth) {
+      updateCard(dataGridCard.id, { width: desiredWidth })
+    }
+  }, [cards, grid.columns.length, updateCard])
+
   const normalizeGraphConfig = useCallback((cfg: GraphCardConfig): GraphCardConfig => {
     const xType = cfg.xColId ? (grid.columns.find(c => c.id === cfg.xColId)?.type ?? null) : null
     const yType = cfg.yColId ? (grid.columns.find(c => c.id === cfg.yColId)?.type ?? null) : null
@@ -511,14 +520,14 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
           <div ref={scrollRef} onWheel={handleWheel} className="flex-1 overflow-auto bg-[var(--color-bg)] p-2 relative cursor-grab">
             {nonGridCards.length === 0 && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-                <div className="text-center px-6">
-                  <div className="text-4xl mb-3 opacity-30">✦</div>
+              <div className="absolute right-6 top-6 z-10 pointer-events-none">
+                <div className="max-w-[320px] rounded-2xl border border-[var(--color-border)] bg-white/95 shadow-sm px-5 py-4 text-left">
+                  <div className="text-2xl mb-2 opacity-30">✦</div>
                   <p className="text-[var(--color-muted)] text-sm">
-                    Use Add in the header to add analysis cards around your data.
+                    Use <span className="font-semibold text-[var(--color-text)]">Add</span> in the header to place analysis cards around your data.
                   </p>
                   <p className="text-[var(--color-muted)]/80 text-xs mt-1">
-                    Your data grid now lives on this same workspace canvas.
+                    The data grid now lives on this same workspace canvas.
                   </p>
                 </div>
               </div>

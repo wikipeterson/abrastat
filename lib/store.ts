@@ -6,13 +6,17 @@ import { ExploreCard, CardConfig, DistributionPreFill, SimResultsCardConfig } fr
 import { createEmptyGrid } from './gridHelpers'
 import { computeColumnValues } from './formulaEval'
 
+function getDataGridCardWidth(columnCount: number) {
+  return Math.max(740, 48 + columnCount * 140 + 104)
+}
+
 function createDataGridCard(): ExploreCard {
   return {
     id: uuid(),
     config: { type: 'data-grid' },
     x: 20,
     y: 20,
-    width: 980,
+    width: getDataGridCardWidth(4),
     height: 760,
   }
 }

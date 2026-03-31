@@ -22,12 +22,12 @@ const MAX_SETTLE  = 5500 // ms hard timeout
 const LINEUP_DURATION = 420
 
 // Die face colours matching the palette
-const DIE_COLOR = '#2EC4B6'
-const DIE_EDGE_COLOR = '#7FD9D3'
+const DIE_COLOR = '#0D4F49'
+const DIE_EDGE_COLOR = '#1A8C80'
 const DIE_TEXT_COLOR = '#FFFFFF'
-const DIE_MATERIAL_COLOR = '#2EC4B6'
-const DIE_EMISSIVE_COLOR = '#5EE6D9'
-const DIE_SPECULAR_COLOR = '#E9FFFD'
+const DIE_MATERIAL_COLOR = '#0D4F49'
+const DIE_EMISSIVE_COLOR = '#1A8C80'
+const DIE_SPECULAR_COLOR = '#D6F5F2'
 
 // ── d6 face mapping ───────────────────────────────────────────────────────────
 // THREE.BoxGeometry face material order: +X −X +Y −Y +Z −Z
@@ -419,7 +419,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       // Green felt floor
       const floor = new THREE.Mesh(
         new THREE.BoxGeometry(TRAY_W, 0.06, TRAY_D),
-        new THREE.MeshLambertMaterial({ color: 0x0D4F49 }),
+        new THREE.MeshLambertMaterial({ color: 0x2EC4B6 }),
       )
       floor.position.y = -0.03
       floor.receiveShadow = true

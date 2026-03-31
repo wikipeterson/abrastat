@@ -115,63 +115,33 @@ function getD6FaceUp(body: CANNON.Body): number {
 }
 
 function snapD6BodyToNearestFace(body: CANNON.Body) {
-  const q = body.quaternion
+  const current = new THREE.Quaternion(
+    body.quaternion.x,
+    body.quaternion.y,
+    body.quaternion.z,
+    body.quaternion.w,
+  )
   const worldUp = new THREE.Vector3(0, 1, 0)
-  const worldForward = new THREE.Vector3(0, 0, 1)
+  const faceUp = getD6FaceUp(body)
+  const localNormalTuple = D6_LOCAL_NORMALS.find(([, , , value]) => value === faceUp)
+  if (!localNormalTuple) return
 
-  const baseAxes = [
-    { key: 'x', vec: new CANNON.Vec3(1, 0, 0) },
-    { key: 'y', vec: new CANNON.Vec3(0, 1, 0) },
-    { key: 'z', vec: new CANNON.Vec3(0, 0, 1) },
-  ] as const
+  const localUp = new THREE.Vector3(localNormalTuple[0], localNormalTuple[1], localNormalTuple[2])
+  const base = new THREE.Quaternion().setFromUnitVectors(localUp, worldUp)
 
-  const orientedAxes = baseAxes.map(axis => {
-    const world = new CANNON.Vec3()
-    q.vmult(axis.vec, world)
-    return { key: axis.key, vec: new THREE.Vector3(world.x, world.y, world.z) }
-  })
-
-  let topAxis: { key: string; vec: THREE.Vector3 } | null = null
-  let topScore = -Infinity
-  for (const axis of orientedAxes) {
-    for (const sign of [1, -1] as const) {
-      const candidate = axis.vec.clone().multiplyScalar(sign)
-      const score = candidate.dot(worldUp)
-      if (score > topScore) {
-        topScore = score
-        topAxis = { key: axis.key, vec: candidate }
-      }
+  let best = base
+  let bestScore = -Infinity
+  for (const angle of [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]) {
+    const yaw = new THREE.Quaternion().setFromAxisAngle(worldUp, angle)
+    const candidate = yaw.multiply(base.clone())
+    const score = Math.abs(candidate.dot(current))
+    if (score > bestScore) {
+      bestScore = score
+      best = candidate.clone()
     }
   }
-  if (!topAxis) return
 
-  let forwardAxis: { key: string; vec: THREE.Vector3 } | null = null
-  let forwardScore = -Infinity
-  for (const axis of orientedAxes) {
-    if (axis.key === topAxis.key) continue
-    for (const sign of [1, -1] as const) {
-      const candidate = axis.vec.clone().multiplyScalar(sign)
-      const score = Math.abs(candidate.dot(worldForward))
-      if (score > forwardScore) {
-        forwardScore = score
-        forwardAxis = {
-          key: axis.key,
-          vec: candidate.dot(worldForward) >= 0 ? candidate : candidate.multiplyScalar(-1),
-        }
-      }
-    }
-  }
-  if (!forwardAxis) return
-
-  const up = worldUp.clone()
-  const forward = forwardAxis.vec.clone().sub(up.clone().multiplyScalar(forwardAxis.vec.dot(up))).normalize()
-  const right = new THREE.Vector3().crossVectors(forward, up).normalize()
-  const correctedForward = new THREE.Vector3().crossVectors(up, right).normalize()
-
-  const targetMatrix = new THREE.Matrix4().makeBasis(right, up, correctedForward)
-  const targetQuat = new THREE.Quaternion().setFromRotationMatrix(targetMatrix)
-
-  body.quaternion.set(targetQuat.x, targetQuat.y, targetQuat.z, targetQuat.w)
+  body.quaternion.set(best.x, best.y, best.z, best.w)
   body.angularVelocity.set(0, 0, 0)
 }
 

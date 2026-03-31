@@ -19,6 +19,7 @@ const SETTLE_VEL  = 0.04
 const SETTLE_ANG  = 0.05
 const SETTLE_HOLD = 60   // ~1 s at 60 fps
 const MAX_SETTLE  = 5500 // ms hard timeout
+const LINEUP_DURATION = 420
 
 // Die face colours matching the palette
 const DIE_COLOR = '#FAFAFA'
@@ -157,6 +158,11 @@ interface DieEntry {
   settled: boolean
   settleCount: number
   maxTimer: ReturnType<typeof setTimeout> | null
+  resultValue: number | null
+  lineupStartPos: THREE.Vector3
+  lineupStartQuat: THREE.Quaternion
+  lineupTargetPos: THREE.Vector3
+  lineupTargetQuat: THREE.Quaternion
 }
 
 function keepDieInsideTray(body: CANNON.Body) {
@@ -212,6 +218,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
     const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
     const rafRef      = useRef<number | null>(null)
     const diceMatRef  = useRef<CANNON.Material | null>(null)
+    const lineupRef   = useRef<{ active: boolean; completed: boolean; startAt: number }>({ active: false, completed: false, startAt: 0 })
 
     const dieEntriesRef = useRef<DieEntry[]>([])
 
@@ -241,8 +248,39 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         entry.mesh.quaternion.set(0, 0, 0, 1)
         entry.settled = false
         entry.settleCount = 0
+        entry.resultValue = null
         clearSettleTimer(entry)
       })
+    }
+
+    function restoreD6FaceMaps(entry: DieEntry) {
+      const mats = entry.mesh.material as THREE.MeshPhongMaterial[]
+      const tex = getD6Textures()
+      D6_FACE_VALUES.forEach((value, index) => {
+        mats[index].map = tex[value - 1]
+        mats[index].needsUpdate = true
+      })
+    }
+
+    function startLineup(now: number) {
+      if (lineupRef.current.active || dieEntriesRef.current.length === 0) return
+
+      const perRow = Math.max(1, Math.floor((TRAY_W - 1.2) / 1.05))
+      const baseX = -TRAY_W / 2 + DIE_HALF + 0.5
+      const baseZ = TRAY_D / 2 - DIE_HALF - 0.45
+      const gapX = DIE_HALF * 2 + 0.22
+      const gapZ = DIE_HALF * 2 + 0.24
+
+      dieEntriesRef.current.forEach((entry, index) => {
+        const col = index % perRow
+        const row = Math.floor(index / perRow)
+        entry.lineupStartPos.copy(entry.mesh.position)
+        entry.lineupStartQuat.copy(entry.mesh.quaternion)
+        entry.lineupTargetPos.set(baseX + col * gapX, DIE_HALF, baseZ - row * gapZ)
+        entry.lineupTargetQuat.identity()
+      })
+
+      lineupRef.current = { active: true, completed: false, startAt: now }
     }
 
     // ── Settle a die ─────────────────────────────────────────────────────────
@@ -256,6 +294,11 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       if (entry.sides === 6) {
         snapD6BodyToNearestFace(entry.body)
         result = getD6FaceUp(entry.body)
+        const mats = entry.mesh.material as THREE.MeshPhongMaterial[]
+        const oldTex = mats[2].map
+        mats[2].map = makeResultTexture(result)
+        mats[2].needsUpdate = true
+        oldTex?.dispose()
       } else {
         result = entry.precomputedResult
         // Reveal result on the +Y face (material index 2)
@@ -273,6 +316,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       entry.body.torque.set(0, 0, 0)
       entry.body.position.y = DIE_HALF
       entry.body.sleep()
+      entry.resultValue = result
 
       entry.mesh.position.set(entry.body.position.x, entry.body.position.y, entry.body.position.z)
       entry.mesh.quaternion.set(
@@ -432,17 +476,40 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         for (const entry of dieEntriesRef.current) {
           // Sync mesh → body
           const b = entry.body
-          keepDieInsideTray(b)
-          entry.mesh.position.set(b.position.x, b.position.y, b.position.z)
-          entry.mesh.quaternion.set(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w)
+          if (!lineupRef.current.active) {
+            keepDieInsideTray(b)
+            entry.mesh.position.set(b.position.x, b.position.y, b.position.z)
+            entry.mesh.quaternion.set(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w)
 
-          // Per-die settle detection
-          if (!entry.settled) {
-            if (b.velocity.length() < SETTLE_VEL && b.angularVelocity.length() < SETTLE_ANG) {
-              entry.settleCount++
-              if (entry.settleCount >= SETTLE_HOLD) settleEntry(entry)
-            } else {
-              entry.settleCount = 0
+            // Per-die settle detection
+            if (!entry.settled) {
+              if (b.velocity.length() < SETTLE_VEL && b.angularVelocity.length() < SETTLE_ANG) {
+                entry.settleCount++
+                if (entry.settleCount >= SETTLE_HOLD) settleEntry(entry)
+              } else {
+                entry.settleCount = 0
+              }
+            }
+          }
+        }
+
+        if (!lineupRef.current.active && !lineupRef.current.completed && dieEntriesRef.current.length > 0 && dieEntriesRef.current.every(entry => entry.settled)) {
+          startLineup(now)
+        }
+
+        if (lineupRef.current.active) {
+          const t = Math.min(1, (now - lineupRef.current.startAt) / LINEUP_DURATION)
+          const eased = 1 - Math.pow(1 - t, 3)
+          for (const entry of dieEntriesRef.current) {
+            entry.mesh.position.lerpVectors(entry.lineupStartPos, entry.lineupTargetPos, eased)
+            entry.mesh.quaternion.copy(entry.lineupStartQuat).slerp(entry.lineupTargetQuat, eased)
+          }
+          if (t >= 1) {
+            lineupRef.current.active = false
+            lineupRef.current.completed = true
+            for (const entry of dieEntriesRef.current) {
+              entry.mesh.position.copy(entry.lineupTargetPos)
+              entry.mesh.quaternion.copy(entry.lineupTargetQuat)
             }
           }
         }
@@ -529,6 +596,11 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           id, sides, precomputedResult: precomputed,
           body, mesh, slotIndex: dieEntriesRef.current.length, settled: false, settleCount: 0,
           maxTimer: null,
+          resultValue: null,
+          lineupStartPos: new THREE.Vector3(),
+          lineupStartQuat: new THREE.Quaternion(),
+          lineupTargetPos: new THREE.Vector3(),
+          lineupTargetQuat: new THREE.Quaternion(),
         }
         dieEntriesRef.current.push(entry)
         assignSlotPositions()
@@ -555,6 +627,8 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       rollAll() {
         const world = worldRef.current
         if (!world || dieEntriesRef.current.length === 0) return
+        lineupRef.current.active = false
+        lineupRef.current.completed = false
 
         const innerX = TRAY_W / 2 - DIE_HALF - 0.18
         const innerZ = TRAY_D / 2 - DIE_HALF - 0.18
@@ -566,6 +640,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         for (const [index, entry] of dieEntriesRef.current.entries()) {
           entry.settled = false
           entry.settleCount = 0
+          entry.resultValue = null
           clearSettleTimer(entry)
 
           // Re-randomise result for non-d6 dice
@@ -577,6 +652,8 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
             mats[2].map = makeColorFaceTexture(`d${entry.sides}`)
             mats[2].needsUpdate = true
             oldTex?.dispose()
+          } else {
+            restoreD6FaceMaps(entry)
           }
 
           const row = index % rows
@@ -611,6 +688,8 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         const world = worldRef.current
         const scene = sceneRef.current
         if (!world || !scene) return
+        lineupRef.current.active = false
+        lineupRef.current.completed = false
         for (const entry of dieEntriesRef.current) {
           clearSettleTimer(entry)
           world.removeBody(entry.body)

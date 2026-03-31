@@ -86,7 +86,7 @@ function getD6Textures(): THREE.CanvasTexture[] {
 function getFeltTexture(): THREE.CanvasTexture {
   if (_feltTexture) return _feltTexture
 
-  const S = 512
+  const S = 1024
   const c = document.createElement('canvas')
   c.width = c.height = S
   const ctx = c.getContext('2d')!
@@ -96,35 +96,35 @@ function getFeltTexture(): THREE.CanvasTexture {
   ctx.fillRect(0, 0, S, S)
 
   // Soft mottled fabric variation
-  for (let i = 0; i < 2600; i++) {
+  for (let i = 0; i < 5200; i++) {
     const x = Math.random() * S
     const y = Math.random() * S
-    const r = 0.6 + Math.random() * 1.6
-    const alpha = 0.025 + Math.random() * 0.035
+    const r = 0.5 + Math.random() * 1.4
+    const alpha = 0.015 + Math.random() * 0.02
     ctx.fillStyle = `rgba(255,255,255,${alpha})`
     ctx.beginPath()
     ctx.arc(x, y, r, 0, Math.PI * 2)
     ctx.fill()
   }
 
-  for (let i = 0; i < 2400; i++) {
+  for (let i = 0; i < 4800; i++) {
     const x = Math.random() * S
     const y = Math.random() * S
-    const r = 0.6 + Math.random() * 1.8
-    const alpha = 0.018 + Math.random() * 0.03
+    const r = 0.5 + Math.random() * 1.5
+    const alpha = 0.012 + Math.random() * 0.018
     ctx.fillStyle = `rgba(0,0,0,${alpha})`
     ctx.beginPath()
     ctx.arc(x, y, r, 0, Math.PI * 2)
     ctx.fill()
   }
 
-  // Faint directional nap lines
+  // Soft directional nap, but without visible stripe repetition.
   ctx.save()
-  ctx.globalAlpha = 0.055
+  ctx.globalAlpha = 0.018
   ctx.strokeStyle = '#ffffff'
   ctx.lineWidth = 1
-  ctx.rotate((-18 * Math.PI) / 180)
-  for (let y = -S; y < S * 1.5; y += 7) {
+  ctx.rotate((-16 * Math.PI) / 180)
+  for (let y = -S; y < S * 1.5; y += 15) {
     ctx.beginPath()
     ctx.moveTo(-S, y)
     ctx.lineTo(S * 1.5, y)
@@ -132,17 +132,22 @@ function getFeltTexture(): THREE.CanvasTexture {
   }
   ctx.restore()
 
-  // Very soft edge vignette for tray depth
-  const grad = ctx.createRadialGradient(S / 2, S / 2, S * 0.18, S / 2, S / 2, S * 0.7)
-  grad.addColorStop(0, 'rgba(255,255,255,0)')
-  grad.addColorStop(1, 'rgba(0,0,0,0.11)')
-  ctx.fillStyle = grad
-  ctx.fillRect(0, 0, S, S)
+  // Subtle broad mottling to break up any remaining uniformity.
+  for (let i = 0; i < 22; i++) {
+    const x = Math.random() * S
+    const y = Math.random() * S
+    const r = 80 + Math.random() * 150
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r)
+    g.addColorStop(0, `rgba(255,255,255,${0.015 + Math.random() * 0.015})`)
+    g.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = g
+    ctx.fillRect(x - r, y - r, r * 2, r * 2)
+  }
 
   const tex = new THREE.CanvasTexture(c)
-  tex.wrapS = THREE.RepeatWrapping
-  tex.wrapT = THREE.RepeatWrapping
-  tex.repeat.set(2.8, 1.8)
+  tex.wrapS = THREE.ClampToEdgeWrapping
+  tex.wrapT = THREE.ClampToEdgeWrapping
+  tex.repeat.set(1, 1)
   return (_feltTexture = finalizeTexture(tex))
 }
 

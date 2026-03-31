@@ -476,7 +476,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         for (const entry of dieEntriesRef.current) {
           // Sync mesh → body
           const b = entry.body
-          if (!lineupRef.current.active) {
+          if (!lineupRef.current.active && !lineupRef.current.completed) {
             keepDieInsideTray(b)
             entry.mesh.position.set(b.position.x, b.position.y, b.position.z)
             entry.mesh.quaternion.set(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w)

@@ -8,8 +8,8 @@ import * as CANNON from 'cannon-es'
 
 const TRAY_W   = 10.5  // world units wide
 const TRAY_D   = 5.9   // world units deep (rectangular tray)
-const WALL_H   = 1.2   // wall height (tall enough to contain bouncing)
-const WALL_T   = 0.22  // wall thickness
+const WALL_H   = 2.1   // wall height (contain higher-energy launches)
+const WALL_T   = 0.3   // wall thickness
 const DIE_HALF = 0.42  // half-side of die cube  (full = 0.84 wu)
 const GRAVITY  = -32
 
@@ -120,6 +120,67 @@ function getD6FaceUp(body: CANNON.Body): number {
   return bestVal
 }
 
+function snapD6BodyToNearestFace(body: CANNON.Body) {
+  const q = body.quaternion
+  const worldUp = new THREE.Vector3(0, 1, 0)
+  const worldForward = new THREE.Vector3(0, 0, 1)
+
+  const baseAxes = [
+    { key: 'x', vec: new CANNON.Vec3(1, 0, 0) },
+    { key: 'y', vec: new CANNON.Vec3(0, 1, 0) },
+    { key: 'z', vec: new CANNON.Vec3(0, 0, 1) },
+  ] as const
+
+  const orientedAxes = baseAxes.map(axis => {
+    const world = new CANNON.Vec3()
+    q.vmult(axis.vec, world)
+    return { key: axis.key, vec: new THREE.Vector3(world.x, world.y, world.z) }
+  })
+
+  let topAxis: { key: string; vec: THREE.Vector3 } | null = null
+  let topScore = -Infinity
+  for (const axis of orientedAxes) {
+    for (const sign of [1, -1] as const) {
+      const candidate = axis.vec.clone().multiplyScalar(sign)
+      const score = candidate.dot(worldUp)
+      if (score > topScore) {
+        topScore = score
+        topAxis = { key: axis.key, vec: candidate }
+      }
+    }
+  }
+  if (!topAxis) return
+
+  let forwardAxis: { key: string; vec: THREE.Vector3 } | null = null
+  let forwardScore = -Infinity
+  for (const axis of orientedAxes) {
+    if (axis.key === topAxis.key) continue
+    for (const sign of [1, -1] as const) {
+      const candidate = axis.vec.clone().multiplyScalar(sign)
+      const score = Math.abs(candidate.dot(worldForward))
+      if (score > forwardScore) {
+        forwardScore = score
+        forwardAxis = {
+          key: axis.key,
+          vec: candidate.dot(worldForward) >= 0 ? candidate : candidate.multiplyScalar(-1),
+        }
+      }
+    }
+  }
+  if (!forwardAxis) return
+
+  const up = worldUp.clone()
+  const forward = forwardAxis.vec.clone().sub(up.clone().multiplyScalar(forwardAxis.vec.dot(up))).normalize()
+  const right = new THREE.Vector3().crossVectors(forward, up).normalize()
+  const correctedForward = new THREE.Vector3().crossVectors(up, right).normalize()
+
+  const targetMatrix = new THREE.Matrix4().makeBasis(right, up, correctedForward)
+  const targetQuat = new THREE.Quaternion().setFromRotationMatrix(targetMatrix)
+
+  body.quaternion.set(targetQuat.x, targetQuat.y, targetQuat.z, targetQuat.w)
+  body.angularVelocity.set(0, 0, 0)
+}
+
 // ── Per-die state ─────────────────────────────────────────────────────────────
 
 interface DieEntry {
@@ -132,6 +193,31 @@ interface DieEntry {
   settled: boolean
   settleCount: number
   maxTimer: ReturnType<typeof setTimeout> | null
+}
+
+function keepDieInsideTray(body: CANNON.Body) {
+  const limitX = TRAY_W / 2 - DIE_HALF - 0.08
+  const limitZ = TRAY_D / 2 - DIE_HALF - 0.08
+
+  if (body.position.x > limitX) {
+    body.position.x = limitX
+    body.velocity.x = -Math.abs(body.velocity.x) * 0.55
+  } else if (body.position.x < -limitX) {
+    body.position.x = -limitX
+    body.velocity.x = Math.abs(body.velocity.x) * 0.55
+  }
+
+  if (body.position.z > limitZ) {
+    body.position.z = limitZ
+    body.velocity.z = -Math.abs(body.velocity.z) * 0.55
+  } else if (body.position.z < -limitZ) {
+    body.position.z = -limitZ
+    body.velocity.z = Math.abs(body.velocity.z) * 0.55
+  }
+
+  if (body.position.y < DIE_HALF) {
+    body.position.y = DIE_HALF
+  }
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -204,6 +290,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
 
       let result: number
       if (entry.sides === 6) {
+        snapD6BodyToNearestFace(entry.body)
         result = getD6FaceUp(entry.body)
       } else {
         result = entry.precomputedResult
@@ -365,6 +452,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         for (const entry of dieEntriesRef.current) {
           // Sync mesh → body
           const b = entry.body
+          keepDieInsideTray(b)
           entry.mesh.position.set(b.position.x, b.position.y, b.position.z)
           entry.mesh.quaternion.set(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w)
 
@@ -490,9 +578,11 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
 
         const innerX = TRAY_W / 2 - DIE_HALF - 0.18
         const innerZ = TRAY_D / 2 - DIE_HALF - 0.18
-        const zStep = dieEntriesRef.current.length > 1
-          ? (innerZ * 1.5) / Math.max(1, dieEntriesRef.current.length - 1)
-          : 0
+        const launchSpacing = DIE_HALF * 2 + 0.12
+        const maxRows = Math.max(1, Math.floor((innerZ * 2) / launchSpacing))
+        const rows = Math.min(dieEntriesRef.current.length, maxRows)
+        const zStart = -((rows - 1) * launchSpacing) / 2
+        const batchBoost = Math.min(6, Math.max(0, dieEntriesRef.current.length - 1) * 0.28)
 
         for (const [index, entry] of dieEntriesRef.current.entries()) {
           entry.settled = false
@@ -510,22 +600,23 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
             oldTex?.dispose()
           }
 
-          const sx = innerX
-          const sz = dieEntriesRef.current.length > 1
-            ? -innerZ * 0.75 + index * zStep
-            : 0
-          const vx = -(19.5 + Math.random() * 5.8)
-          const vz = (Math.random() - 0.5) * 6.4
+          const row = index % rows
+          const col = Math.floor(index / rows)
+          const sx = innerX - col * launchSpacing
+          const sz = zStart + row * launchSpacing
+          const vx = -(22 + batchBoost + Math.random() * 6.5)
+          const vy = 1.2 + Math.random() * 1.8
+          const vz = (Math.random() - 0.5) * 7.2
 
           // Wake up body and apply strong right-side launch
           entry.body.wakeUp()
           entry.body.position.set(sx, DIE_HALF + 0.04, sz)
           entry.body.quaternion.set(0, 0, 0, 1)
-          entry.body.velocity.set(vx, 0, vz)
+          entry.body.velocity.set(vx, vy, vz)
           entry.body.angularVelocity.set(
-            (Math.random() - 0.5) * 56,
-            (Math.random() - 0.5) * 46,
-            (Math.random() - 0.5) * 56,
+            (Math.random() - 0.5) * 64,
+            (Math.random() - 0.5) * 52,
+            (Math.random() - 0.5) * 64,
           )
 
           // Set new max-settle timer

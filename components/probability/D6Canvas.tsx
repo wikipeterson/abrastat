@@ -25,8 +25,8 @@ const LINEUP_DURATION = 420
 const DIE_COLOR = '#0D4F49'
 const DIE_EDGE_COLOR = '#1A8C80'
 const DIE_TEXT_COLOR = '#FFFFFF'
-const DIE_MATERIAL_COLOR = '#0D4F49'
-const DIE_EMISSIVE_COLOR = '#1A8C80'
+const DIE_MATERIAL_COLOR = '#FFFFFF'
+const DIE_EMISSIVE_COLOR = '#0B2422'
 const DIE_SPECULAR_COLOR = '#D6F5F2'
 
 // ── d6 face mapping ───────────────────────────────────────────────────────────

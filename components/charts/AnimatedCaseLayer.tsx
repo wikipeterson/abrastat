@@ -238,13 +238,35 @@ function buildLayout(
   const points: LayoutPoint[] = []
   const bandCount = groupKeys.length
   const bandSize = cH / bandCount
-  const dotGap = 6.5
   const binCount = Math.max(12, Math.floor(cW / 18))
 
   const toPixVal =
     spec.orientation === 'h'
       ? (v: number) => iL + ((v - vDom.min) / (vDom.max - vDom.min)) * cW
       : (v: number) => iB - ((v - vDom.min) / (vDom.max - vDom.min)) * cH
+
+  // Pre-pass: find the tallest bin across all groups so we can scale dotGap
+  // to ensure no stack overflows its band height.
+  let globalMaxStack = 1
+  for (const groupKey of groupKeys) {
+    const items = grouped.get(groupKey) ?? []
+    const bins = new Map<number, number>()
+    for (const item of items) {
+      const ratio = clamp((item.value - vDom.min) / (vDom.max - vDom.min), 0, 1)
+      const bin = Math.round(ratio * binCount)
+      const s = (bins.get(bin) ?? 0) + 1
+      bins.set(bin, s)
+      if (s > globalMaxStack) globalMaxStack = s
+    }
+  }
+
+  // Available stacking distance per band (h = up from baseline; v = right from axis)
+  const bandStackSpace =
+    spec.orientation === 'h'
+      ? (bandSize - 22)          // leave 10px baseline pad + 12px top pad per band
+      : (cW - iL - MG_R - 28)   // horizontal stacking space for vertical orientation
+  const DOT_GAP_MAX = 9
+  const dotGap = Math.min(DOT_GAP_MAX, Math.max(2, bandStackSpace / (globalMaxStack + 1)))
 
   groupKeys.forEach((groupKey, gi) => {
     const color = COLORS[gi % COLORS.length]
@@ -275,7 +297,7 @@ function buildLayout(
           const x = iL + ratio * cW
           const yBase = spec.groupColId ? bandBottom : iB - 10
           const y = Math.max(
-            spec.groupColId ? bandTop : iT + 10,
+            spec.groupColId ? bandTop : iT + 8,
             yBase - stack * dotGap,
           )
           points.push({ id: item.id, x, y, opacity: 0.92, color })

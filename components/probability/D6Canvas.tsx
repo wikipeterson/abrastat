@@ -44,62 +44,76 @@ const D6_LOCAL_NORMALS: [number, number, number, number][] = [
 
 let _d6Textures: THREE.CanvasTexture[] | null = null
 
+function finalizeTexture(tex: THREE.CanvasTexture) {
+  tex.colorSpace = THREE.SRGBColorSpace
+  tex.anisotropy = 4
+  tex.minFilter = THREE.LinearFilter
+  tex.magFilter = THREE.LinearFilter
+  tex.generateMipmaps = false
+  tex.needsUpdate = true
+  return tex
+}
+
 function getD6Textures(): THREE.CanvasTexture[] {
   if (_d6Textures) return _d6Textures
   _d6Textures = [1,2,3,4,5,6].map(v => {
-    const S = 128
+    const S = 192
     const c = document.createElement('canvas')
     c.width = c.height = S
     const ctx = c.getContext('2d')!
     ctx.fillStyle = DIE_COLOR
     ctx.fillRect(0, 0, S, S)
     ctx.strokeStyle = DIE_EDGE_COLOR
-    ctx.lineWidth = 3
-    ctx.strokeRect(2, 2, S-4, S-4)
+    ctx.lineWidth = 4
+    ctx.strokeRect(2, 2, S - 4, S - 4)
     ctx.fillStyle = DIE_TEXT_COLOR
-    ctx.font = 'bold 72px sans-serif'
+    ctx.font = '900 110px sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
+    ctx.shadowColor = 'rgba(255,255,255,0.4)'
+    ctx.shadowBlur = 8
     ctx.fillText(String(v), S/2, S/2)
-    return new THREE.CanvasTexture(c)
+    return finalizeTexture(new THREE.CanvasTexture(c))
   })
   return _d6Textures
 }
 
 function makeColorFaceTexture(label: string): THREE.CanvasTexture {
-  const S = 128
+  const S = 192
   const c = document.createElement('canvas')
   c.width = c.height = S
   const ctx = c.getContext('2d')!
   ctx.fillStyle = DIE_COLOR
   ctx.fillRect(0, 0, S, S)
   ctx.strokeStyle = DIE_EDGE_COLOR
-  ctx.lineWidth = 3
-  ctx.strokeRect(2, 2, S-4, S-4)
-  ctx.fillStyle = 'rgba(30,41,59,0.55)'
-  ctx.font = 'bold 28px sans-serif'
+  ctx.lineWidth = 4
+  ctx.strokeRect(2, 2, S - 4, S - 4)
+  ctx.fillStyle = 'rgba(255,255,255,0.72)'
+  ctx.font = 'bold 42px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(label, S/2, S/2)
-  return new THREE.CanvasTexture(c)
+  return finalizeTexture(new THREE.CanvasTexture(c))
 }
 
 function makeResultTexture(value: number): THREE.CanvasTexture {
-  const S = 128
+  const S = 192
   const c = document.createElement('canvas')
   c.width = c.height = S
   const ctx = c.getContext('2d')!
   ctx.fillStyle = DIE_COLOR
   ctx.fillRect(0, 0, S, S)
   ctx.strokeStyle = DIE_EDGE_COLOR
-  ctx.lineWidth = 3
-  ctx.strokeRect(2, 2, S-4, S-4)
+  ctx.lineWidth = 4
+  ctx.strokeRect(2, 2, S - 4, S - 4)
   ctx.fillStyle = DIE_TEXT_COLOR
-  ctx.font = `bold ${value >= 100 ? 44 : value >= 10 ? 58 : 72}px sans-serif`
+  ctx.font = `900 ${value >= 100 ? 64 : value >= 10 ? 88 : 110}px sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
+  ctx.shadowColor = 'rgba(255,255,255,0.4)'
+  ctx.shadowBlur = 8
   ctx.fillText(String(value), S/2, S/2)
-  return new THREE.CanvasTexture(c)
+  return finalizeTexture(new THREE.CanvasTexture(c))
 }
 
 // ── Face-up detection (d6 only) ───────────────────────────────────────────────
@@ -385,16 +399,16 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       fitCamera(W, H)
 
       // Lighting  — overhead directional + ambient for flat top-down look
-      scene.add(new THREE.AmbientLight(0xffffff, 1.15))
-      const dir = new THREE.DirectionalLight(0xffffff, 1.05)
-      dir.position.set(1.6, 10, 2.5)
+      scene.add(new THREE.AmbientLight(0xffffff, 1.45))
+      const dir = new THREE.DirectionalLight(0xffffff, 0.82)
+      dir.position.set(0.6, 10, 1.1)
       dir.castShadow = true
       dir.shadow.mapSize.set(1024, 1024)
       dir.shadow.camera.near = 0.1
       dir.shadow.camera.far  = 50
       dir.shadow.camera.left = dir.shadow.camera.bottom = -8
       dir.shadow.camera.right = dir.shadow.camera.top   =  8
-      dir.shadow.bias = -0.0001
+      dir.shadow.bias = -0.00005
       scene.add(dir)
 
       // ── Tray visuals ──────────────────────────────────────────────────────
@@ -558,8 +572,8 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
             map: tex[v-1],
             color: DIE_MATERIAL_COLOR,
             emissive: DIE_EMISSIVE_COLOR,
-            emissiveIntensity: 0.18,
-            shininess: 40,
+            emissiveIntensity: 0.32,
+            shininess: 18,
           }))
         } else {
           const label = `d${sides}`
@@ -570,8 +584,8 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
               map: sideTex,
               color: DIE_MATERIAL_COLOR,
               emissive: DIE_EMISSIVE_COLOR,
-              emissiveIntensity: 0.18,
-              shininess: 32,
+              emissiveIntensity: 0.32,
+              shininess: 16,
             }),
           )
         }

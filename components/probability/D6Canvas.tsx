@@ -44,6 +44,22 @@ const D6_LOCAL_NORMALS: [number, number, number, number][] = [
   [ 1,  0,  0, 3], [-1,  0,  0, 4],
 ]
 
+const CUBE_VERTICES = [
+  new CANNON.Vec3(-DIE_HALF, -DIE_HALF, -DIE_HALF),
+  new CANNON.Vec3( DIE_HALF, -DIE_HALF, -DIE_HALF),
+  new CANNON.Vec3(-DIE_HALF,  DIE_HALF, -DIE_HALF),
+  new CANNON.Vec3( DIE_HALF,  DIE_HALF, -DIE_HALF),
+  new CANNON.Vec3(-DIE_HALF, -DIE_HALF,  DIE_HALF),
+  new CANNON.Vec3( DIE_HALF, -DIE_HALF,  DIE_HALF),
+  new CANNON.Vec3(-DIE_HALF,  DIE_HALF,  DIE_HALF),
+  new CANNON.Vec3( DIE_HALF,  DIE_HALF,  DIE_HALF),
+]
+
+interface PolyFaceDef {
+  value: number
+  normal: CANNON.Vec3
+}
+
 // ── Textures ──────────────────────────────────────────────────────────────────
 
 let _d6Textures: THREE.CanvasTexture[] | null = null
@@ -189,6 +205,23 @@ function makeResultTexture(value: number): THREE.CanvasTexture {
   return finalizeTexture(new THREE.CanvasTexture(c))
 }
 
+function makePolyFaceTexture(label: string): THREE.CanvasTexture {
+  const S = 256
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const ctx = c.getContext('2d')!
+  ctx.fillStyle = DIE_COLOR
+  ctx.fillRect(0, 0, S, S)
+  ctx.fillStyle = DIE_TEXT_COLOR
+  ctx.font = '900 124px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.shadowColor = 'rgba(255,255,255,0.35)'
+  ctx.shadowBlur = 8
+  ctx.fillText(label, S / 2, S / 2)
+  return finalizeTexture(new THREE.CanvasTexture(c))
+}
+
 // ── Face-up detection (d6 only) ───────────────────────────────────────────────
 
 function getD6FaceUp(body: CANNON.Body): number {
@@ -263,59 +296,137 @@ function buildConvexFromGeo(geo: THREE.BufferGeometry): CANNON.ConvexPolyhedron 
   return new CANNON.ConvexPolyhedron({ vertices: uniqueVerts, faces })
 }
 
-// d10/d100 visual: pentagonal bipyramid (two 5-sided pyramids base-to-base)
-function makePentagonalBipyramidGeo(r: number): THREE.BufferGeometry {
-  const n = 5
+function makeExplicitD10Geometry(r: number): {
+  geo: THREE.BufferGeometry
+  faceDefs: PolyFaceDef[]
+} {
+  const top = new THREE.Vector3(0, r, 0)
+  const bottom = new THREE.Vector3(0, -r, 0)
+  const ring: THREE.Vector3[] = []
+  const ringRadius = r * 0.82
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2 - Math.PI / 2
+    ring.push(new THREE.Vector3(
+      Math.cos(a) * ringRadius,
+      0,
+      Math.sin(a) * ringRadius,
+    ))
+  }
+
+  const positions: number[] = []
+  const normals: number[] = []
+  const uvs: number[] = []
+  const groups: { start: number; count: number; materialIndex: number }[] = []
+  const faceDefs: PolyFaceDef[] = []
+  const faceValues = [0, 2, 4, 6, 8, 1, 3, 5, 7, 9]
+
+  function addFace(a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, materialIndex: number) {
+    const ab = new THREE.Vector3().subVectors(b, a)
+    const ac = new THREE.Vector3().subVectors(c, a)
+    const normal = new THREE.Vector3().crossVectors(ab, ac).normalize()
+    positions.push(
+      a.x, a.y, a.z,
+      b.x, b.y, b.z,
+      c.x, c.y, c.z,
+    )
+    for (let i = 0; i < 3; i++) normals.push(normal.x, normal.y, normal.z)
+    uvs.push(0.5, 0.1, 0.14, 0.9, 0.86, 0.9)
+    groups.push({ start: positions.length / 3 - 3, count: 3, materialIndex })
+    faceDefs.push({
+      value: faceValues[materialIndex],
+      normal: new CANNON.Vec3(normal.x, normal.y, normal.z),
+    })
+  }
+
+  for (let i = 0; i < 5; i++) {
+    addFace(top, ring[i], ring[(i + 1) % 5], i)
+  }
+  for (let i = 0; i < 5; i++) {
+    addFace(bottom, ring[(i + 1) % 5], ring[i], 5 + i)
+  }
+
   const geo = new THREE.BufferGeometry()
-  const verts: number[] = [0, r, 0]   // 0 = apex top
-  for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2
-    verts.push(r * 0.82 * Math.cos(a), 0, r * 0.82 * Math.sin(a))  // 1..5 equatorial
-  }
-  verts.push(0, -r, 0)   // 6 = apex bottom
-
-  const idx: number[] = []
-  for (let i = 0; i < n; i++) {
-    idx.push(0,     1 + i, 1 + (i + 1) % n)   // top fan
-    idx.push(n + 1, 1 + (i + 1) % n, 1 + i)   // bottom fan
-  }
-
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3))
-  geo.setIndex(idx)
-  geo.computeVertexNormals()
-  return geo
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
+  groups.forEach(group => geo.addGroup(group.start, group.count, group.materialIndex))
+  return { geo, faceDefs }
 }
 
 // Returns the geometry and matching ConvexPolyhedron physics shape for each die type.
 // d6 is handled separately (BoxGeometry + CANNON.Box) — this is for non-d6 only.
-function getNonD6DieShapes(sides: number): { geo: THREE.BufferGeometry; physicsShape: CANNON.ConvexPolyhedron } {
+function getNonD6DieShapes(sides: number): {
+  geo: THREE.BufferGeometry
+  physicsShape: CANNON.ConvexPolyhedron
+  faceDefs: PolyFaceDef[]
+} {
   const r = DIE_HALF * 1.08
   let geo: THREE.BufferGeometry
+  let faceDefs: PolyFaceDef[] = []
+
   switch (sides) {
-    case 4:  geo = new THREE.TetrahedronGeometry(r * 1.22, 0); break
-    case 8:  geo = new THREE.OctahedronGeometry(r * 1.08, 0); break
-    case 12: geo = new THREE.DodecahedronGeometry(r * 1.02, 0); break
-    case 20: geo = new THREE.IcosahedronGeometry(r * 1.06, 0); break
-    default: geo = makePentagonalBipyramidGeo(r * 1.08); break   // d10, d100
+    case 4:
+      geo = new THREE.TetrahedronGeometry(r * 1.22, 0)
+      break
+    case 8:
+      geo = new THREE.OctahedronGeometry(r * 1.08, 0)
+      break
+    case 10: {
+      const explicit = makeExplicitD10Geometry(r * 1.08)
+      geo = explicit.geo
+      faceDefs = explicit.faceDefs
+      break
+    }
+    case 12:
+      geo = new THREE.DodecahedronGeometry(r * 1.02, 0)
+      break
+    case 20:
+      geo = new THREE.IcosahedronGeometry(r * 1.06, 0)
+      break
+    default: {
+      const explicit = makeExplicitD10Geometry(r * 1.08)
+      geo = explicit.geo
+      faceDefs = explicit.faceDefs
+      break
+    }
   }
+
   const physicsShape = buildConvexFromGeo(geo)
-  return { geo, physicsShape }
+  return { geo, physicsShape, faceDefs }
 }
 
-// Snap a non-d6 physics body so the face most-aligned with world +Y faces up exactly.
-function snapPolyhedronFaceUp(body: CANNON.Body, faceNormals: CANNON.Vec3[]) {
-  if (faceNormals.length === 0) return
+function getPolyFaceUp(body: CANNON.Body, faceDefs: PolyFaceDef[]): number {
+  if (faceDefs.length === 0) return 1
   const worldN = new CANNON.Vec3()
   let bestDot = -Infinity
-  let bestNormal = faceNormals[0]
-  for (const n of faceNormals) {
-    body.quaternion.vmult(n, worldN)
-    if (worldN.y > bestDot) { bestDot = worldN.y; bestNormal = n }
+  let bestValue = faceDefs[0].value
+  for (const face of faceDefs) {
+    body.quaternion.vmult(face.normal, worldN)
+    if (worldN.y > bestDot) {
+      bestDot = worldN.y
+      bestValue = face.value
+    }
+  }
+  return bestValue
+}
+
+// Snap a non-d6 physics body so the logical face most-aligned with world +Y faces up exactly.
+function snapPolyhedronFaceUp(body: CANNON.Body, faceDefs: PolyFaceDef[]) {
+  if (faceDefs.length === 0) return
+  const worldN = new CANNON.Vec3()
+  let bestDot = -Infinity
+  let bestFace = faceDefs[0]
+  for (const face of faceDefs) {
+    body.quaternion.vmult(face.normal, worldN)
+    if (worldN.y > bestDot) {
+      bestDot = worldN.y
+      bestFace = face
+    }
   }
 
   const current   = new THREE.Quaternion(body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w)
   const worldUp   = new THREE.Vector3(0, 1, 0)
-  const localUp   = new THREE.Vector3(bestNormal.x, bestNormal.y, bestNormal.z)
+  const localUp   = new THREE.Vector3(bestFace.normal.x, bestFace.normal.y, bestFace.normal.z)
   const base      = new THREE.Quaternion().setFromUnitVectors(localUp, worldUp)
 
   let best = base, bestScore = -Infinity
@@ -342,14 +453,34 @@ interface DieEntry {
   settleCount: number
   maxTimer: ReturnType<typeof setTimeout> | null
   resultValue: number | null
-  faceNormals: CANNON.Vec3[]  // local-space face normals for non-d6 snap-to-face
+  faceDefs: PolyFaceDef[]     // logical numbered faces for d10 and future d100
+  supportVertices: CANNON.Vec3[]
   lineupStartPos: THREE.Vector3
   lineupStartQuat: THREE.Quaternion
   lineupTargetPos: THREE.Vector3
   lineupTargetQuat: THREE.Quaternion
 }
 
-function keepDieInsideTray(body: CANNON.Body) {
+function getSupportHeight(
+  vertices: CANNON.Vec3[],
+  quaternion: CANNON.Quaternion,
+): number {
+  if (vertices.length === 0) return DIE_HALF
+  const worldV = new CANNON.Vec3()
+  let minY = Infinity
+  for (const vertex of vertices) {
+    quaternion.vmult(vertex, worldV)
+    minY = Math.min(minY, worldV.y)
+  }
+  return -minY
+}
+
+function threeQuatToCannon(quat: THREE.Quaternion) {
+  return new CANNON.Quaternion(quat.x, quat.y, quat.z, quat.w)
+}
+
+function keepDieInsideTray(entry: DieEntry) {
+  const body = entry.body
   const limitX = TRAY_W / 2 - DIE_HALF - 0.08
   const limitZ = TRAY_D / 2 - DIE_HALF - 0.08
 
@@ -369,8 +500,9 @@ function keepDieInsideTray(body: CANNON.Body) {
     body.velocity.z = Math.abs(body.velocity.z) * 0.55
   }
 
-  if (body.position.y < DIE_HALF) {
-    body.position.y = DIE_HALF
+  const supportHeight = getSupportHeight(entry.supportVertices, body.quaternion)
+  if (body.position.y < supportHeight) {
+    body.position.y = supportHeight
   }
 }
 
@@ -428,12 +560,12 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       const x = startX + col * 1.1
       const z = startZ + row * 1.1
       entry.slotIndex = slotIndex
-      entry.body.position.set(x, DIE_HALF, z)
+      entry.body.quaternion.set(0, 0, 0, 1)
+      entry.body.position.set(x, getSupportHeight(entry.supportVertices, entry.body.quaternion), z)
       entry.body.velocity.set(0, 0, 0)
       entry.body.angularVelocity.set(0, 0, 0)
-      entry.body.quaternion.set(0, 0, 0, 1)
       entry.body.sleep()
-      entry.mesh.position.set(x, DIE_HALF, z)
+      entry.mesh.position.set(x, entry.body.position.y, z)
       entry.mesh.quaternion.set(0, 0, 0, 1)
     }
 
@@ -460,7 +592,8 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         const row = Math.floor(index / perRow)
         entry.lineupStartPos.copy(entry.mesh.position)
         entry.lineupStartQuat.copy(entry.mesh.quaternion)
-        entry.lineupTargetPos.set(baseX + col * gapX, DIE_HALF, baseZ - row * gapZ)
+        const targetX = baseX + col * gapX
+        const targetZ = baseZ - row * gapZ
         // d6: always show result face up (identity = face-1 up)
         // non-d6: hold the snapped-face-up orientation from settleEntry
         if (entry.sides === 6) {
@@ -468,6 +601,11 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         } else {
           entry.lineupTargetQuat.copy(entry.mesh.quaternion)
         }
+        const supportHeight = getSupportHeight(
+          entry.supportVertices,
+          threeQuatToCannon(entry.lineupTargetQuat),
+        )
+        entry.lineupTargetPos.set(targetX, supportHeight, targetZ)
       })
 
       lineupRef.current = { active: true, completed: false, startAt: now, readyAt: null }
@@ -489,9 +627,14 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         mats[2].map = makeResultTexture(result)
         mats[2].needsUpdate = true
         oldTex?.dispose()
+      } else if (entry.sides === 10) {
+        snapPolyhedronFaceUp(entry.body, entry.faceDefs)
+        result = getPolyFaceUp(entry.body, entry.faceDefs)
       } else {
         result = entry.precomputedResult
-        snapPolyhedronFaceUp(entry.body, entry.faceNormals)
+        if (entry.faceDefs.length > 0) {
+          snapPolyhedronFaceUp(entry.body, entry.faceDefs)
+        }
         // Single material — swap to result texture (shows on all faces)
         const mat = entry.mesh.material as THREE.MeshPhongMaterial
         const oldTex = mat.map
@@ -505,7 +648,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       entry.body.angularVelocity.set(0, 0, 0)
       entry.body.force.set(0, 0, 0)
       entry.body.torque.set(0, 0, 0)
-      entry.body.position.y = DIE_HALF
+      entry.body.position.y = getSupportHeight(entry.supportVertices, entry.body.quaternion)
       entry.body.sleep()
       entry.resultValue = result
 
@@ -673,7 +816,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           // Sync mesh → body
           const b = entry.body
           if (!lineupRef.current.active && !lineupRef.current.completed) {
-            keepDieInsideTray(b)
+            keepDieInsideTray(entry)
             entry.mesh.position.set(b.position.x, b.position.y, b.position.z)
             entry.mesh.quaternion.set(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w)
 
@@ -770,13 +913,15 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         if (!world || !scene) return
 
         const isD6    = sides === 6
-        const precomputed = isD6 ? -1 : Math.floor(Math.random() * sides) + 1
+        const isD10   = sides === 10
+        const precomputed = (isD6 || isD10) ? -1 : Math.floor(Math.random() * sides) + 1
 
         // ── Mesh + Physics shape ─────────────────────────────────────────────
         let geo: THREE.BufferGeometry
         let meshMaterial: THREE.MeshPhongMaterial | THREE.MeshPhongMaterial[]
         let physicsShape: CANNON.Shape
-        let faceNormals: CANNON.Vec3[] = []
+        let faceDefs: PolyFaceDef[] = []
+        let supportVertices: CANNON.Vec3[] = CUBE_VERTICES
 
         if (isD6) {
           geo = new THREE.BoxGeometry(DIE_HALF*2, DIE_HALF*2, DIE_HALF*2)
@@ -792,19 +937,35 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
             reflectivity: 0.9,
           }))
         } else {
-          const { geo: pGeo, physicsShape: convex } = getNonD6DieShapes(sides)
+          const { geo: pGeo, physicsShape: convex, faceDefs: logicalFaces } = getNonD6DieShapes(sides)
           geo = pGeo
           physicsShape = convex
-          faceNormals = convex.faceNormals
-          meshMaterial = new THREE.MeshPhongMaterial({
-            map: makeColorFaceTexture(`d${sides}`),
-            color: DIE_MATERIAL_COLOR,
-            emissive: DIE_EMISSIVE_COLOR,
-            emissiveIntensity: 0.24,
-            specular: new THREE.Color(DIE_SPECULAR_COLOR),
-            shininess: 60,
-            reflectivity: 0.88,
-          })
+          faceDefs = logicalFaces
+          supportVertices = convex.vertices
+
+          if (isD10 && logicalFaces.length > 0) {
+            meshMaterial = logicalFaces.map(face =>
+              new THREE.MeshPhongMaterial({
+                map: makePolyFaceTexture(String(face.value)),
+                color: DIE_MATERIAL_COLOR,
+                emissive: DIE_EMISSIVE_COLOR,
+                emissiveIntensity: 0.24,
+                specular: new THREE.Color(DIE_SPECULAR_COLOR),
+                shininess: 60,
+                reflectivity: 0.88,
+              }),
+            )
+          } else {
+            meshMaterial = new THREE.MeshPhongMaterial({
+              map: makeColorFaceTexture(`d${sides}`),
+              color: DIE_MATERIAL_COLOR,
+              emissive: DIE_EMISSIVE_COLOR,
+              emissiveIntensity: 0.24,
+              specular: new THREE.Color(DIE_SPECULAR_COLOR),
+              shininess: 60,
+              reflectivity: 0.88,
+            })
+          }
         }
 
         const mesh = new THREE.Mesh(geo, meshMaterial)
@@ -830,7 +991,8 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           body, mesh, slotIndex, settled: false, settleCount: 0,
           maxTimer: null,
           resultValue: null,
-          faceNormals,
+          faceDefs,
+          supportVertices,
           lineupStartPos: new THREE.Vector3(),
           lineupStartQuat: new THREE.Quaternion(),
           lineupTargetPos: new THREE.Vector3(),
@@ -852,6 +1014,10 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         entry.mesh.geometry.dispose()
         if (Array.isArray(entry.mesh.material)) {
           ;(entry.mesh.material as THREE.MeshPhongMaterial[]).forEach(m => { m.map?.dispose(); m.dispose() })
+        } else {
+          const material = entry.mesh.material as THREE.MeshPhongMaterial
+          material.map?.dispose()
+          material.dispose()
         }
         scene.remove(entry.mesh)
         dieEntriesRef.current.splice(idx, 1)
@@ -878,7 +1044,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           clearSettleTimer(entry)
 
           // Re-randomise result for non-d6 dice
-          if (entry.sides !== 6) {
+          if (entry.sides !== 6 && entry.sides !== 10) {
             entry.precomputedResult = Math.floor(Math.random() * entry.sides) + 1
             // Single material — swap back to label so result is hidden while rolling
             const mat = entry.mesh.material as THREE.MeshPhongMaterial
@@ -886,7 +1052,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
             mat.map = makeColorFaceTexture(`d${entry.sides}`)
             mat.needsUpdate = true
             oldTex?.dispose()
-          } else {
+          } else if (entry.sides === 6) {
             restoreD6FaceMaps(entry)
           }
 
@@ -931,6 +1097,10 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           entry.mesh.geometry.dispose()
           if (Array.isArray(entry.mesh.material)) {
             ;(entry.mesh.material as THREE.MeshPhongMaterial[]).forEach(m => { m.map?.dispose(); m.dispose() })
+          } else {
+            const material = entry.mesh.material as THREE.MeshPhongMaterial
+            material.map?.dispose()
+            material.dispose()
           }
           scene.remove(entry.mesh)
         }

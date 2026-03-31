@@ -493,7 +493,7 @@ export function ExploreCanvas() {
                 <div className="text-center px-6">
                   <div className="text-4xl mb-3 opacity-30">✦</div>
                   <p className="text-[var(--color-muted)] text-sm">
-                    Use the add buttons in the sidebar to get started.
+                    Use Add in the header to get started.
                   </p>
                   <p className="text-[var(--color-muted)]/80 text-xs mt-1">
                     Distribution, Random Generator, and manual Two-Way Table cards work even without data.

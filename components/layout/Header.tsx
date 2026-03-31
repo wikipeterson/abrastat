@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
 import { Save, Library, LogOut, ChevronDown, FilePlus } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { signOut } from '@/lib/auth'
@@ -15,9 +15,19 @@ interface HeaderProps {
   activeTab?: 'data' | 'lab'
   onTabChange?: (tab: 'data' | 'lab') => void
   onToggleSidebar?: () => void
+  datasetName?: string
+  labActions?: ReactNode
 }
 
-export function Header({ onNew, onSave, activeTab, onTabChange, onToggleSidebar }: HeaderProps) {
+export function Header({
+  onNew,
+  onSave,
+  activeTab,
+  onTabChange,
+  onToggleSidebar,
+  datasetName,
+  labActions,
+}: HeaderProps) {
   const { user, isGuest } = useAuth()
   const { isDirty, clearGrid } = useStore()
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -48,6 +58,17 @@ export function Header({ onNew, onSave, activeTab, onTabChange, onToggleSidebar 
             <img src="/logo.svg" alt="AbraStat" style={{ width: 248, height: 'auto' }} />
           </Link>
 
+          {datasetName && (
+            <div className="hidden md:flex min-w-0 max-w-[380px] flex-col justify-center px-1">
+              <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-muted)] font-semibold">
+                Dataset
+              </span>
+              <span className="text-base font-semibold text-[var(--color-text)] truncate">
+                {datasetName}
+              </span>
+            </div>
+          )}
+
           {showWorkspaceTabs && (
             <div className="hidden sm:flex items-center self-stretch">
               {([
@@ -71,6 +92,8 @@ export function Header({ onNew, onSave, activeTab, onTabChange, onToggleSidebar 
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">
+          {activeTab === 'lab' && labActions}
+
           {!isGuest && activeTab !== 'lab' && (
             <>
               <button

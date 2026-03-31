@@ -49,53 +49,54 @@ function GroupedAddCardMenu({
   onAdd: (type: CardConfig['type']) => void
   className?: string
 }) {
-  const [openGroup, setOpenGroup] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
 
   const groups = [
-    { id: 'explore',     label: '+ Explore',     options: EXPLORE_CARD_OPTIONS },
-    { id: 'probability', label: '+ Probability', options: PROBABILITY_CARD_OPTIONS },
-    { id: 'inference',   label: '+ Inference',   options: INFERENCE_CARD_OPTIONS },
+    { id: 'explore',     label: 'Explore',     options: EXPLORE_CARD_OPTIONS },
+    { id: 'probability', label: 'Probability', options: PROBABILITY_CARD_OPTIONS },
+    { id: 'inference',   label: 'Inference',   options: INFERENCE_CARD_OPTIONS },
   ]
 
-  function toggle(id: string) {
-    setOpenGroup(v => (v === id ? null : id))
-  }
-
   return (
-    <div className={`flex flex-col gap-2 ${className}`}>
-      {groups.map(group => (
-        <div key={group.id} className="relative z-[60]">
-          <button
-            onClick={() => toggle(group.id)}
-            className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-              openGroup === group.id
-                ? 'bg-[var(--color-accent)] text-white'
-                : 'bg-slate-100 text-[var(--color-text)] hover:bg-slate-200'
-            }`}
-          >
-            <span>{group.label}</span>
-            <span className="text-[10px] opacity-70">▾</span>
-          </button>
+    <div className={`relative z-[60] ${className}`}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-colors min-w-[120px] ${
+          open
+            ? 'bg-[var(--color-accent)] text-white'
+            : 'bg-slate-100 text-[var(--color-text)] hover:bg-slate-200'
+        }`}
+      >
+        <span>Add</span>
+        <span className="text-[10px] opacity-70">▾</span>
+      </button>
 
-          {openGroup === group.id && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setOpenGroup(null)} />
-              <div className="absolute left-0 right-0 bottom-full mb-1 z-[70] bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden min-w-[190px] max-h-[320px] overflow-y-auto">
-                {group.options.map(o => (
-                  <button
-                    key={o.type}
-                    onClick={() => { onAdd(o.type); setOpenGroup(null) }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 text-left border-b border-[var(--color-border)] last:border-0"
-                  >
-                    <span className="text-base leading-none">{o.icon}</span>
-                    <span className="text-sm font-medium text-[var(--color-text)]">{o.label}</span>
-                  </button>
-                ))}
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-2 z-[70] bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden min-w-[260px]">
+            {groups.map(group => (
+              <div key={group.id} className="border-b border-[var(--color-border)] last:border-b-0">
+                <div className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                  {group.label}
+                </div>
+                <div className="pb-2">
+                  {group.options.map(o => (
+                    <button
+                      key={o.type}
+                      onClick={() => { onAdd(o.type); setOpen(false) }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 text-left"
+                    >
+                      <span className="text-base leading-none">{o.icon}</span>
+                      <span className="text-sm font-medium text-[var(--color-text)]">{o.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </>
-          )}
-        </div>
-      ))}
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -105,13 +106,11 @@ function GroupedAddCardMenu({
 function ColumnSidebar({
   open,
   onClose,
-  activeTab,
 }: {
   open: boolean
   onClose: () => void
-  activeTab: Tab
 }) {
-  const { grid, selectedColumnIds, toggleColumnSelection, addExploreCard, activeDatasetName } = useStore()
+  const { grid, selectedColumnIds, toggleColumnSelection } = useStore()
 
   return (
     <>
@@ -128,9 +127,6 @@ function ColumnSidebar({
         <div className="px-3 py-2 border-b border-[var(--color-border)] flex items-center justify-between">
           <div className="min-w-0">
             <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Variables</div>
-            {activeDatasetName && (
-              <div className="text-[11px] text-[var(--color-text)] truncate mt-0.5">{activeDatasetName}</div>
-            )}
           </div>
           <button onClick={onClose} className="md:hidden text-[var(--color-muted)] text-lg leading-none">×</button>
         </div>
@@ -186,15 +182,6 @@ function ColumnSidebar({
             </button>
           </div>
         )}
-
-        {activeTab === 'lab' && (
-          <div className="px-3 py-3 border-t border-[var(--color-border)] bg-slate-50/70 relative z-[60]">
-            <div className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-2">
-              Add To Lab
-            </div>
-            <GroupedAddCardMenu onAdd={type => addExploreCard(type)} />
-          </div>
-        )}
       </aside>
     </>
   )
@@ -228,7 +215,7 @@ function WorkspaceContent() {
   const [showShare, setShowShare] = useState(false)
   const [shareDatasetId, setShareDatasetId] = useState<string | null>(null)
   const [shareIsPublic, setShareIsPublic] = useState(false)
-  const { isDirty, clearGrid, activeDatasetId } = useStore()
+  const { isDirty, clearGrid, activeDatasetId, activeDatasetName, addExploreCard } = useStore()
 
   useEffect(() => {
     function handleBeforeUnload(e: BeforeUnloadEvent) {
@@ -277,10 +264,12 @@ function WorkspaceContent() {
         activeTab={tab}
         onTabChange={setTab}
         onToggleSidebar={() => setSidebarOpen(v => !v)}
+        datasetName={activeDatasetName}
+        labActions={<GroupedAddCardMenu onAdd={type => addExploreCard(type)} />}
       />
 
       <div className="flex flex-1 min-h-0">
-        <ColumnSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} activeTab={tab} />
+        <ColumnSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         {tab === 'data' ? (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <GridToolbar onShare={handleShareClick} />

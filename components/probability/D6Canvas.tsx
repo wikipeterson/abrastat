@@ -404,7 +404,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       const hemi = new THREE.HemisphereLight(0xffffff, 0xc7f3ee, 0.52)
       scene.add(hemi)
       const dir = new THREE.DirectionalLight(0xffffff, 1.28)
-      dir.position.set(1.8, 10, 2.8)
+      dir.position.set(2.8, 6.8, 4.6)
       dir.castShadow = true
       dir.shadow.mapSize.set(1024, 1024)
       dir.shadow.camera.near = 0.1

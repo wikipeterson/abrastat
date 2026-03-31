@@ -3,12 +3,28 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '@/lib/store'
 
-type MorphSpec =
-  | { kind: 'blank' }
-  | { kind: 'dot'; valueColId: string; orientation: 'h' | 'v'; groupColId?: string | null }
-  | { kind: 'scatter'; xColId: string; yColId: string }
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-interface AnimatedCaseLayerProps {
+export type MorphSpec =
+  | { kind: 'blank' }
+  | {
+      kind: 'dot'
+      valueColId: string
+      valueColName?: string
+      orientation: 'h' | 'v'
+      groupColId?: string | null
+      groupColName?: string | null
+    }
+  | {
+      kind: 'scatter'
+      xColId: string
+      yColId: string
+      xColName?: string
+      yColName?: string
+      colorByColId?: string | null
+    }
+
+export interface AnimatedCaseLayerProps {
   spec: MorphSpec
   fromSpec?: MorphSpec | null
   onRest?: () => void
@@ -30,10 +46,42 @@ interface GroupLabel {
   color: string
 }
 
+interface LegendItem {
+  key: string
+  label: string
+  color: string
+}
+
+interface TickMark {
+  px: number
+  label: string
+}
+
+interface AxisInfo {
+  ticks: TickMark[]
+  title: string
+}
+
+interface LayoutResult {
+  points: LayoutPoint[]
+  labels: GroupLabel[]
+  legend?: LegendItem[]
+  xAxis?: AxisInfo
+  yAxis?: AxisInfo
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
 const COLORS = ['#49c7c0', '#f5b13d', '#5e84e2', '#ef7f88', '#9b8ce3', '#5db973']
 const DURATION_MS = 420
+const MG_L = 52
+const MG_R = 24
+const MG_T = 16
+const MG_B = 48
 
-function hashUnit(seed: string) {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function hashUnit(seed: string): number {
   let h = 2166136261
   for (let i = 0; i < seed.length; i++) {
     h ^= seed.charCodeAt(i)
@@ -42,7 +90,7 @@ function hashUnit(seed: string) {
   return ((h >>> 0) % 1000000) / 1000000
 }
 
-function parseNumber(value: string | number | undefined) {
+function parseNumber(value: string | number | undefined): number | null {
   if (value === undefined || value === null) return null
   const text = String(value).trim()
   if (!text) return null
@@ -50,136 +98,218 @@ function parseNumber(value: string | number | undefined) {
   return Number.isFinite(num) ? num : null
 }
 
-function hasAnyData(row: Record<string, string | number>) {
-  return Object.values(row).some(value => String(value ?? '').trim() !== '')
+function hasAnyData(row: Record<string, string | number>): boolean {
+  return Object.values(row).some(v => String(v ?? '').trim() !== '')
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
+function clamp(value: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, value))
 }
 
-function domain(values: number[]) {
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  if (min === max) return { min: min - 1, max: max + 1 }
-  return { min, max }
+function dataDomain(values: number[]): { min: number; max: number } {
+  const mn = Math.min(...values)
+  const mx = Math.max(...values)
+  return mn === mx ? { min: mn - 1, max: mx + 1 } : { min: mn, max: mx }
 }
+
+function niceAxisTicks(
+  min: number,
+  max: number,
+  pxOf: (v: number) => number,
+  targetCount = 5,
+): TickMark[] {
+  if (min >= max) return []
+  const range = max - min
+  const rawStep = range / targetCount
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)))
+  const step =
+    [1, 2, 2.5, 5, 10].map(f => f * mag).find(s => s >= rawStep) ?? rawStep
+  const start = Math.ceil(min / step) * step
+  const ticks: TickMark[] = []
+  for (let v = start; v <= max + step * 1e-9; v += step) {
+    const rv = parseFloat(v.toPrecision(10))
+    if (rv < min || rv > max) continue
+    const label = Number.isInteger(rv)
+      ? String(rv)
+      : String(parseFloat(rv.toPrecision(4)))
+    ticks.push({ px: pxOf(rv), label })
+  }
+  return ticks
+}
+
+// ── Layout ────────────────────────────────────────────────────────────────────
 
 function buildLayout(
   spec: MorphSpec,
   rows: Record<string, string | number>[],
   width: number,
   height: number,
-): { points: LayoutPoint[]; labels: GroupLabel[] } {
-  const innerLeft = 24
-  const innerRight = width - 24
-  const innerTop = 20
-  const innerBottom = height - 20
-  const chartWidth = Math.max(1, innerRight - innerLeft)
-  const chartHeight = Math.max(1, innerBottom - innerTop)
+): LayoutResult {
+  const iL = MG_L
+  const iR = width - MG_R
+  const iT = MG_T
+  const iB = height - MG_B
+  const cW = Math.max(1, iR - iL)
+  const cH = Math.max(1, iB - iT)
 
+  // ── Blank ──────────────────────────────────────────────────────────────────
   if (spec.kind === 'blank') {
-    const points = rows.map((_, index) => ({
-      id: `row-${index}`,
-      x: innerLeft + hashUnit(`x-${index}`) * chartWidth,
-      y: innerTop + hashUnit(`y-${index}`) * chartHeight,
-      opacity: 0.82,
-      color: '#7ccfc9',
-    }))
-    return { points, labels: [] }
-  }
-
-  if (spec.kind === 'scatter') {
-    const plotted = rows.flatMap((row, index) => {
-      const x = parseNumber(row[spec.xColId])
-      const y = parseNumber(row[spec.yColId])
-      if (x === null || y === null) return []
-      return [{ id: `row-${index}`, x, y }]
-    })
-    if (plotted.length === 0) return { points: [], labels: [] }
-    const xDomain = domain(plotted.map(p => p.x))
-    const yDomain = domain(plotted.map(p => p.y))
     return {
-      points: plotted.map(p => ({
-        id: p.id,
-        x: innerLeft + ((p.x - xDomain.min) / (xDomain.max - xDomain.min)) * chartWidth,
-        y: innerBottom - ((p.y - yDomain.min) / (yDomain.max - yDomain.min)) * chartHeight,
-        opacity: 0.92,
-        color: '#49c7c0',
+      points: rows.map((_, i) => ({
+        id: `row-${i}`,
+        x: iL + hashUnit(`x-${i}`) * cW,
+        y: iT + hashUnit(`y-${i}`) * cH,
+        opacity: 0.72,
+        color: '#7ccfc9',
       })),
       labels: [],
     }
   }
 
+  // ── Scatter ────────────────────────────────────────────────────────────────
+  if (spec.kind === 'scatter') {
+    type RawPt = { id: string; x: number; y: number; group: string }
+    const plotted: RawPt[] = []
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]
+      const x = parseNumber(row[spec.xColId])
+      const y = parseNumber(row[spec.yColId])
+      if (x === null || y === null) continue
+      const group = spec.colorByColId
+        ? String(row[spec.colorByColId] ?? '').trim()
+        : '__all__'
+      if (spec.colorByColId && group === '') continue
+      plotted.push({ id: `row-${i}`, x, y, group })
+    }
+    if (plotted.length === 0) return { points: [], labels: [] }
+
+    const uniqueGroups = [...new Set(plotted.map(p => p.group))].sort()
+    const colorMap = new Map(uniqueGroups.map((g, i) => [g, COLORS[i % COLORS.length]]))
+    const xDom = dataDomain(plotted.map(p => p.x))
+    const yDom = dataDomain(plotted.map(p => p.y))
+    const toPixX = (v: number) => iL + ((v - xDom.min) / (xDom.max - xDom.min)) * cW
+    const toPixY = (v: number) => iB - ((v - yDom.min) / (yDom.max - yDom.min)) * cH
+
+    return {
+      points: plotted.map(p => ({
+        id: p.id,
+        x: toPixX(p.x),
+        y: toPixY(p.y),
+        opacity: 0.85,
+        color: colorMap.get(p.group) ?? COLORS[0],
+      })),
+      labels: [],
+      legend: spec.colorByColId
+        ? uniqueGroups.map((g, i) => ({ key: g, label: g, color: COLORS[i % COLORS.length] }))
+        : undefined,
+      xAxis: {
+        ticks: niceAxisTicks(xDom.min, xDom.max, toPixX),
+        title: spec.xColName ?? '',
+      },
+      yAxis: {
+        ticks: niceAxisTicks(yDom.min, yDom.max, toPixY),
+        title: spec.yColName ?? '',
+      },
+    }
+  }
+
+  // ── Dot plot ───────────────────────────────────────────────────────────────
   const grouped = new Map<string, { id: string; value: number }[]>()
-  rows.forEach((row, index) => {
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
     const value = parseNumber(row[spec.valueColId])
-    if (value === null) return
-    const rawGroup = spec.groupColId ? String(row[spec.groupColId] ?? '').trim() : ''
-    if (spec.groupColId && rawGroup === '') return
+    if (value === null) continue
+    const rawGroup = spec.groupColId
+      ? String(row[spec.groupColId] ?? '').trim()
+      : ''
+    if (spec.groupColId && rawGroup === '') continue
     const key = spec.groupColId ? rawGroup : '__all__'
-    const groupRows = grouped.get(key) ?? []
-    groupRows.push({ id: `row-${index}`, value })
-    grouped.set(key, groupRows)
-  })
+    const arr = grouped.get(key) ?? []
+    arr.push({ id: `row-${i}`, value })
+    grouped.set(key, arr)
+  }
 
   const groupKeys = [...grouped.keys()]
   if (groupKeys.length === 0) return { points: [], labels: [] }
 
-  const allValues = groupKeys.flatMap(key => grouped.get(key)!.map(p => p.value))
-  const valueDomain = domain(allValues)
+  const allValues = groupKeys.flatMap(k => grouped.get(k)!.map(p => p.value))
+  const vDom = dataDomain(allValues)
   const labels: GroupLabel[] = []
   const points: LayoutPoint[] = []
   const bandCount = groupKeys.length
-  const bandSize = chartHeight / bandCount
-  const dotSize = 10
-  const dotGap = 6
-  const axisSpan = chartWidth
-  const binCount = Math.max(12, Math.floor(axisSpan / 18))
+  const bandSize = cH / bandCount
+  const dotGap = 6.5
+  const binCount = Math.max(12, Math.floor(cW / 18))
 
-  groupKeys.forEach((groupKey, groupIndex) => {
-    const color = COLORS[groupIndex % COLORS.length]
+  const toPixVal =
+    spec.orientation === 'h'
+      ? (v: number) => iL + ((v - vDom.min) / (vDom.max - vDom.min)) * cW
+      : (v: number) => iB - ((v - vDom.min) / (vDom.max - vDom.min)) * cH
+
+  groupKeys.forEach((groupKey, gi) => {
+    const color = COLORS[gi % COLORS.length]
     const items = grouped.get(groupKey) ?? []
     const bins = new Map<number, number>()
-    const bandBottom = innerTop + bandSize * (groupIndex + 1) - 10
-    const bandTop = innerTop + bandSize * groupIndex + 12
-    const bandMid = innerTop + bandSize * (groupIndex + 0.5)
+    const bandBottom = iT + bandSize * (gi + 1) - 10
+    const bandTop    = iT + bandSize * gi + 12
+    const bandMid    = iT + bandSize * (gi + 0.5)
+
     if (spec.groupColId) {
-      labels.push({
-        key: groupKey,
-        label: groupKey,
-        y: bandMid,
-        color,
-      })
+      labels.push({ key: groupKey, label: groupKey, y: bandMid, color })
     }
 
     items
       .slice()
       .sort((a, b) => a.value - b.value)
       .forEach(item => {
-        const ratio = clamp((item.value - valueDomain.min) / (valueDomain.max - valueDomain.min), 0, 1)
+        const ratio = clamp(
+          (item.value - vDom.min) / (vDom.max - vDom.min),
+          0,
+          1,
+        )
         const bin = Math.round(ratio * binCount)
         const stack = bins.get(bin) ?? 0
         bins.set(bin, stack + 1)
 
         if (spec.orientation === 'h') {
-          const x = innerLeft + ratio * chartWidth
-          const yBase = spec.groupColId ? bandBottom : innerBottom - 10
-          const y = Math.max(spec.groupColId ? bandTop : innerTop + 10, yBase - stack * dotGap)
+          const x = iL + ratio * cW
+          const yBase = spec.groupColId ? bandBottom : iB - 10
+          const y = Math.max(
+            spec.groupColId ? bandTop : iT + 10,
+            yBase - stack * dotGap,
+          )
           points.push({ id: item.id, x, y, opacity: 0.92, color })
         } else {
-          const y = innerBottom - ratio * chartHeight
-          const xBase = spec.groupColId ? innerLeft + 18 + groupIndex * 14 : innerLeft + 16
-          const x = Math.min(innerRight - dotSize, xBase + stack * dotGap)
+          const y = iB - ratio * cH
+          const xBase = spec.groupColId ? iL + 18 + gi * 14 : iL + 16
+          const x = Math.min(iR - 10, xBase + stack * dotGap)
           points.push({ id: item.id, x, y, opacity: 0.92, color })
         }
       })
   })
 
-  return { points, labels }
+  return {
+    points,
+    labels,
+    xAxis:
+      spec.orientation === 'h'
+        ? { ticks: niceAxisTicks(vDom.min, vDom.max, toPixVal), title: spec.valueColName ?? '' }
+        : undefined,
+    yAxis:
+      spec.orientation === 'v'
+        ? { ticks: niceAxisTicks(vDom.min, vDom.max, toPixVal), title: spec.valueColName ?? '' }
+        : undefined,
+  }
 }
 
-export function AnimatedCaseLayer({ spec, fromSpec, onRest, showHint = false }: AnimatedCaseLayerProps) {
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export function AnimatedCaseLayer({
+  spec,
+  fromSpec,
+  onRest,
+  showHint = false,
+}: AnimatedCaseLayerProps) {
   const { grid } = useStore()
   const wrapRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
@@ -191,38 +321,45 @@ export function AnimatedCaseLayer({ spec, fromSpec, onRest, showHint = false }: 
   useEffect(() => {
     const node = wrapRef.current
     if (!node) return
-    const observer = new ResizeObserver(entries => {
+    const ro = new ResizeObserver(entries => {
       const rect = entries[0]?.contentRect
       if (!rect) return
       setSize({ width: rect.width, height: rect.height })
     })
-    observer.observe(node)
-    return () => observer.disconnect()
+    ro.observe(node)
+    return () => ro.disconnect()
   }, [])
 
   const fromLayout = useMemo(
-    () => (size.width > 0 && size.height > 0 ? buildLayout(fromSpec ?? spec, rows, size.width, size.height) : { points: [], labels: [] }),
+    () =>
+      size.width > 0 && size.height > 0
+        ? buildLayout(fromSpec ?? spec, rows, size.width, size.height)
+        : { points: [], labels: [] },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [fromSpec, spec, rows, size.width, size.height],
   )
+
   const toLayout = useMemo(
-    () => (size.width > 0 && size.height > 0 ? buildLayout(spec, rows, size.width, size.height) : { points: [], labels: [] }),
+    () =>
+      size.width > 0 && size.height > 0
+        ? buildLayout(spec, rows, size.width, size.height)
+        : { points: [], labels: [] },
     [spec, rows, size.width, size.height],
   )
 
   const displayPoints = useMemo(() => {
-    const pointMap = new Map<string, { from?: LayoutPoint; to?: LayoutPoint }>()
-    fromLayout.points.forEach(point => pointMap.set(point.id, { from: point }))
-    toLayout.points.forEach(point => {
-      const entry = pointMap.get(point.id) ?? {}
-      entry.to = point
-      pointMap.set(point.id, entry)
+    const map = new Map<string, { from?: LayoutPoint; to?: LayoutPoint }>()
+    fromLayout.points.forEach(p => map.set(p.id, { from: p }))
+    toLayout.points.forEach(p => {
+      const entry = map.get(p.id) ?? {}
+      entry.to = p
+      map.set(p.id, entry)
     })
-
-    const source = phase === 'from' ? 'from' : 'to'
-    const fallback = phase === 'from' ? 'to' : 'from'
-    return [...pointMap.entries()].map(([id, entry]) => {
-      const primary = entry[source]
-      const secondary = entry[fallback]
+    const src = phase === 'from' ? 'from' : 'to'
+    const alt = phase === 'from' ? 'to' : 'from'
+    return [...map.entries()].map(([id, entry]) => {
+      const primary   = entry[src]
+      const secondary = entry[alt]
       if (primary) return primary
       return { ...(secondary as LayoutPoint), id, opacity: 0 }
     })
@@ -239,7 +376,6 @@ export function AnimatedCaseLayer({ spec, fromSpec, onRest, showHint = false }: 
       setAnimating(false)
       onRest?.()
     }, DURATION_MS)
-
     return () => {
       cancelAnimationFrame(raf)
       window.clearTimeout(timer)
@@ -248,26 +384,126 @@ export function AnimatedCaseLayer({ spec, fromSpec, onRest, showHint = false }: 
 
   if (rows.length === 0) {
     return (
-      <div ref={wrapRef} className="h-full flex flex-col items-center justify-center gap-2 text-center p-6">
+      <div
+        ref={wrapRef}
+        className="h-full flex flex-col items-center justify-center gap-2 text-center p-6"
+      >
         <span className="text-4xl opacity-25 select-none">📈</span>
-        <p className="text-sm font-medium text-[var(--color-muted)]">Drop a variable to get started</p>
-        <p className="text-xs text-[var(--color-muted)] opacity-70">Drag and drop a variable from the sidebar to begin.</p>
+        <p className="text-sm font-medium text-[var(--color-muted)]">
+          Drop a variable to get started
+        </p>
+        <p className="text-xs text-[var(--color-muted)] opacity-70">
+          Drag and drop a variable from the sidebar to begin.
+        </p>
       </div>
     )
   }
+
+  const showAxes = spec.kind !== 'blank'
+  const { xAxis, yAxis, legend } = toLayout
 
   return (
     <div ref={wrapRef} className="relative h-full overflow-hidden rounded-xl">
       {showHint && spec.kind === 'blank' && (
         <div className="absolute inset-x-0 bottom-5 text-center pointer-events-none">
-          <p className="text-sm font-medium text-[var(--color-muted)]">Drop a variable to organize the data</p>
+          <p className="text-sm font-medium text-[var(--color-muted)]">
+            Drop a variable to organize the data
+          </p>
         </div>
       )}
 
+      {/* ── Axes SVG ── */}
+      {showAxes && size.width > 0 && (
+        <svg
+          className="absolute inset-0 pointer-events-none"
+          width={size.width}
+          height={size.height}
+        >
+          {xAxis && (
+            <g>
+              <line
+                x1={MG_L}
+                y1={size.height - MG_B}
+                x2={size.width - MG_R}
+                y2={size.height - MG_B}
+                stroke="#E2E8F0"
+                strokeWidth={1.5}
+              />
+              {xAxis.ticks.map(t => (
+                <g key={t.label} transform={`translate(${t.px},${size.height - MG_B})`}>
+                  <line y2={4} stroke="#CBD5E1" strokeWidth={1} />
+                  <text
+                    y={14}
+                    textAnchor="middle"
+                    fontSize={10}
+                    fill="#64748B"
+                    fontFamily="DM Sans, sans-serif"
+                  >
+                    {t.label}
+                  </text>
+                </g>
+              ))}
+              {xAxis.title && (
+                <text
+                  x={(MG_L + size.width - MG_R) / 2}
+                  y={size.height - 6}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fill="#94A3B8"
+                  fontFamily="DM Sans, sans-serif"
+                >
+                  {xAxis.title}
+                </text>
+              )}
+            </g>
+          )}
+
+          {yAxis && (
+            <g>
+              <line
+                x1={MG_L}
+                y1={MG_T}
+                x2={MG_L}
+                y2={size.height - MG_B}
+                stroke="#E2E8F0"
+                strokeWidth={1.5}
+              />
+              {yAxis.ticks.map(t => (
+                <g key={t.label} transform={`translate(${MG_L},${t.px})`}>
+                  <line x2={-4} stroke="#CBD5E1" strokeWidth={1} />
+                  <text
+                    x={-8}
+                    textAnchor="end"
+                    dominantBaseline="middle"
+                    fontSize={10}
+                    fill="#64748B"
+                    fontFamily="DM Sans, sans-serif"
+                  >
+                    {t.label}
+                  </text>
+                </g>
+              ))}
+              {yAxis.title && (
+                <text
+                  transform={`translate(13,${(MG_T + size.height - MG_B) / 2}) rotate(-90)`}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fill="#94A3B8"
+                  fontFamily="DM Sans, sans-serif"
+                >
+                  {yAxis.title}
+                </text>
+              )}
+            </g>
+          )}
+        </svg>
+      )}
+
+      {/* ── Dot-plot group labels ── */}
       {toLayout.labels.map(label => (
         <div
           key={label.key}
-          className="absolute right-6 text-sm font-semibold pointer-events-none"
+          className="absolute right-6 text-xs font-semibold pointer-events-none"
           style={{
             top: `${label.y}px`,
             transform: 'translateY(-50%)',
@@ -280,6 +516,30 @@ export function AnimatedCaseLayer({ spec, fromSpec, onRest, showHint = false }: 
         </div>
       ))}
 
+      {/* ── Scatter color legend ── */}
+      {legend && legend.length > 0 && (
+        <div
+          className="absolute pointer-events-none flex flex-col gap-0.5"
+          style={{ top: MG_T + 4, right: MG_R + 4 }}
+        >
+          {legend.map(item => (
+            <div key={item.key} className="flex items-center gap-1">
+              <div
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: item.color }}
+              />
+              <span
+                className="text-[10px] font-medium leading-none"
+                style={{ color: item.color }}
+              >
+                {item.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Dots ── */}
       {displayPoints.map(point => (
         <div
           key={point.id}
@@ -302,6 +562,8 @@ export function AnimatedCaseLayer({ spec, fromSpec, onRest, showHint = false }: 
   )
 }
 
+// ── Spec derivation ───────────────────────────────────────────────────────────
+
 export function deriveGraphMorphSpec(args: {
   currentChart: string | null
   xColId: string | null
@@ -311,33 +573,81 @@ export function deriveGraphMorphSpec(args: {
   yType: 'numeric' | 'categorical' | null
   groupType: 'numeric' | 'categorical' | null
   orientation: 'h' | 'v'
+  xColName?: string
+  yColName?: string
+  groupColName?: string
 }): MorphSpec | null {
-  const { currentChart, xColId, yColId, groupColId, xType, yType, groupType, orientation } = args
+  const {
+    currentChart, xColId, yColId, groupColId,
+    xType, yType, groupType, orientation,
+    xColName, yColName, groupColName,
+  } = args
 
   if (!currentChart) return { kind: 'blank' }
 
-  if (currentChart === 'scatter' && xColId && yColId && xType === 'numeric' && yType === 'numeric') {
-    return { kind: 'scatter', xColId, yColId }
+  if (
+    currentChart === 'scatter' &&
+    xColId && yColId &&
+    xType === 'numeric' && yType === 'numeric'
+  ) {
+    return {
+      kind: 'scatter',
+      xColId,
+      yColId,
+      xColName,
+      yColName,
+      colorByColId: groupType === 'categorical' ? groupColId : null,
+    }
   }
 
   if (currentChart !== 'dot') return null
 
   if (yColId && !xColId && yType === 'numeric') {
-    return { kind: 'dot', valueColId: yColId, orientation: 'v', groupColId: groupType === 'categorical' ? groupColId : null }
+    return {
+      kind: 'dot',
+      valueColId: yColId,
+      valueColName: yColName,
+      orientation: 'v',
+      groupColId: groupType === 'categorical' ? groupColId : null,
+      groupColName,
+    }
   }
 
   if (xType === 'categorical' && yType === 'numeric' && yColId) {
-    return { kind: 'dot', valueColId: yColId, orientation: 'h', groupColId: xColId }
+    return {
+      kind: 'dot',
+      valueColId: yColId,
+      valueColName: yColName,
+      orientation: 'h',
+      groupColId: xColId,
+      groupColName: xColName,
+    }
   }
 
   if (xType === 'numeric' && yType === 'categorical' && xColId) {
-    return { kind: 'dot', valueColId: xColId, orientation: 'h', groupColId: yColId }
+    return {
+      kind: 'dot',
+      valueColId: xColId,
+      valueColName: xColName,
+      orientation: 'h',
+      groupColId: yColId,
+      groupColName: yColName,
+    }
   }
 
-  const mainColId = orientation === 'h' ? xColId : yColId
-  const mainType = orientation === 'h' ? xType : yType
+  const mainColId   = orientation === 'h' ? xColId   : yColId
+  const mainType    = orientation === 'h' ? xType    : yType
+  const mainColName = orientation === 'h' ? xColName : yColName
+
   if (mainColId && mainType === 'numeric') {
-    return { kind: 'dot', valueColId: mainColId, orientation, groupColId: groupType === 'categorical' ? groupColId : null }
+    return {
+      kind: 'dot',
+      valueColId: mainColId,
+      valueColName: mainColName,
+      orientation,
+      groupColId: groupType === 'categorical' ? groupColId : null,
+      groupColName,
+    }
   }
 
   return null

@@ -15,7 +15,7 @@ import { PieChart } from '@/components/charts/PieChart'
 import { DotPlot } from '@/components/charts/DotPlot'
 import { SegmentedBar } from '@/components/charts/SegmentedBar'
 import { NormalProbPlot } from '@/components/charts/NormalProbPlot'
-import { AnimatedCaseLayer, deriveGraphMorphSpec } from '@/components/charts/AnimatedCaseLayer'
+import { AnimatedCaseLayer, deriveGraphMorphSpec, MorphSpec } from '@/components/charts/AnimatedCaseLayer'
 
 interface GraphCardProps {
   cardId: string
@@ -53,9 +53,16 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
     yType: yCol?.type ?? null,
     groupType: groupCol?.type ?? null,
     orientation,
+    xColName: xCol?.name,
+    yColName: yCol?.name,
+    groupColName: groupCol?.name,
   })
   const prevMorphSpecRef = useRef(morphSpec)
-  const [activeTransition, setActiveTransition] = useState<{ from: NonNullable<typeof morphSpec>; to: NonNullable<typeof morphSpec>; nonce: number } | null>(null)
+  const [activeTransition, setActiveTransition] = useState<{
+    from: MorphSpec
+    to: MorphSpec
+    nonce: number
+  } | null>(null)
 
   const inferredList = primary ? [primary, ...alternatives] : []
   const chartButtons: ChartType[] = (currentChart && !inferredList.includes(currentChart))
@@ -139,9 +146,15 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
     prevMorphSpecRef.current = morphSpec
   }, [morphSpec])
 
-  const showAnimatedBlank = isBlank && !!morphSpec && hasRows
+  // dot and scatter stay in the custom-rendered AnimatedCaseLayer permanently
+  const isCustomRendered =
+    morphSpec !== null &&
+    (morphSpec.kind === 'dot' || morphSpec.kind === 'scatter')
+
+  const showAnimatedBlank     = isBlank && !!morphSpec && hasRows
   const showAnimatedTransition = !isBlank && !!activeTransition
-  const showDirectChart = !isBlank && !showAnimatedTransition
+  const showSettledCustom     = !isBlank && !activeTransition && isCustomRendered
+  const showDirectChart       = !isBlank && !activeTransition && !isCustomRendered
 
   const inner = (
     <div className="flex flex-col h-full">
@@ -230,14 +243,16 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
           }`}
         >
           {showAnimatedBlank ? (
-            <AnimatedCaseLayer spec={morphSpec!} showHint />
+            <AnimatedCaseLayer key="stable" spec={morphSpec!} showHint />
           ) : showAnimatedTransition ? (
             <AnimatedCaseLayer
-              key={activeTransition?.nonce}
+              key={activeTransition!.nonce}
               spec={activeTransition!.to}
               fromSpec={activeTransition!.from}
               onRest={() => setActiveTransition(null)}
             />
+          ) : showSettledCustom ? (
+            <AnimatedCaseLayer key="stable" spec={morphSpec!} />
           ) : isBlank ? (
             <div className="h-full flex flex-col items-center justify-center gap-2 text-center p-6">
               <span className="text-4xl opacity-25 select-none">📈</span>

@@ -513,7 +513,6 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
   const activeCol = activeColId ? (grid.columns.find(c => c.id === activeColId) ?? null) : null
   const filledRowCount = grid.rows.filter(row => Object.values(row).some(v => String(v).trim())).length
   const columnCount = grid.columns.length
-  const nonGridCards = cards.filter(card => card.config.type !== 'data-grid')
   const MINIMIZED_HEIGHT = 62
 
   return (
@@ -522,19 +521,6 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       <div className="flex h-full min-h-0">
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
           <div ref={scrollRef} onWheel={handleWheel} className="flex-1 overflow-auto bg-[var(--color-bg)] p-2 relative cursor-grab">
-            {nonGridCards.length === 0 && (
-              <div className="absolute right-6 top-6 z-10 pointer-events-none">
-                <div className="max-w-[320px] rounded-2xl border border-[var(--color-border)] bg-white/95 shadow-sm px-5 py-4 text-left">
-                  <div className="text-2xl mb-2 opacity-30">✦</div>
-                  <p className="text-[var(--color-muted)] text-sm">
-                    Use the <span className="font-semibold text-[var(--color-text)]">Add</span> button above to place analysis cards around your data.
-                  </p>
-                  <p className="text-[var(--color-muted)]/80 text-xs mt-1">
-                    The data grid now lives on this same workspace canvas.
-                  </p>
-                </div>
-              </div>
-            )}
             <div
               ref={innerRef}
               onPointerDown={startPan}

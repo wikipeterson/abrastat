@@ -63,7 +63,7 @@ function GroupedAddCardMenu({
             : 'bg-slate-100 text-[var(--color-text)] hover:bg-slate-200'
         }`}
       >
-        <span>Add</span>
+        <span>Add Tool</span>
         <span className="text-[10px] opacity-70">▾</span>
       </button>
 

@@ -80,6 +80,7 @@ export interface SimResultsCardConfig {
   trackedMode: 'sum' | 'difference'
   minValue: number
   maxValue: number
+  rolls: number[][]
   values: number[]           // accumulated tracked values
 }
 

@@ -6,6 +6,19 @@ import { ExploreCard, CardConfig, DistributionPreFill, SimResultsCardConfig } fr
 import { createEmptyGrid } from './gridHelpers'
 import { computeColumnValues } from './formulaEval'
 
+function deriveSimValue(
+  roll: number[],
+  trackedMode: 'sum' | 'difference',
+): number | null {
+  if (trackedMode === 'sum') {
+    return roll.reduce((sum, value) => sum + value, 0)
+  }
+  if (trackedMode === 'difference' && roll.length === 2) {
+    return Math.abs(roll[0] - roll[1])
+  }
+  return null
+}
+
 // ─── Chi-square context scanner ───────────────────────────────────────────────
 // Scans the most recent Two-Way Table card for a chi² test statistic so the
 // Distribution card can be pre-populated as a one-time snapshot.
@@ -115,7 +128,7 @@ interface AbraStatStore {
     sourceLabel: string,
     range: { minValue: number; maxValue: number },
   ) => string
-  pushSimResult: (cardId: string, value: number) => void
+  pushSimResult: (cardId: string, roll: number[]) => void
   clearSimResults: (cardId: string) => void
 
   // Inference canvas (separate state, same canvas model)
@@ -242,12 +255,13 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'testinterval' ? { type: 'testinterval' } :
       type === 'means'        ? { type: 'means', var1ColId: null, var2ColId: null } :
       type === 'dice-roller'  ? { type: 'dice-roller', linkedResultsCardId: null, trackedMode: 'sum' } :
-      type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', minValue: 1, maxValue: 6, values: [] } :
+      type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', minValue: 1, maxValue: 6, rolls: [], values: [] } :
                                  { type: 'simulation' }
     const { width, height } =
       type === 'table'   ? { width: 780, height: 520 } :
       type === 'summary' ? { width: 700, height: 620 } :
       type === 'means'   ? { width: 580, height: 580 } :
+      type === 'dice-roller' ? { width: 760, height: 700 } :
                            { width: 620, height: 520 }
     return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width, height }] }
   }),
@@ -281,6 +295,7 @@ export const useStore = create<AbraStatStore>((set) => ({
           trackedMode,
           minValue: range.minValue,
           maxValue: range.maxValue,
+          rolls: [],
           values: [],
         } as SimResultsCardConfig,
         x: position.x,
@@ -291,17 +306,29 @@ export const useStore = create<AbraStatStore>((set) => ({
     }))
     return id
   },
-  pushSimResult: (cardId, value) => set(state => ({
+  pushSimResult: (cardId, roll) => set(state => ({
     exploreCards: state.exploreCards.map(c =>
       c.id === cardId && c.config.type === 'sim-results'
-        ? { ...c, config: { ...c.config, values: [...(c.config as SimResultsCardConfig).values, value] } }
+        ? (() => {
+            const cfg = c.config as SimResultsCardConfig
+            const derived = deriveSimValue(roll, cfg.trackedMode)
+            if (derived == null) return c
+            return {
+              ...c,
+              config: {
+                ...cfg,
+                rolls: [...cfg.rolls, roll],
+                values: [...cfg.values, derived],
+              },
+            }
+          })()
         : c,
     ),
   })),
   clearSimResults: (cardId) => set(state => ({
     exploreCards: state.exploreCards.map(c =>
       c.id === cardId && c.config.type === 'sim-results'
-        ? { ...c, config: { ...c.config, values: [] } as SimResultsCardConfig }
+        ? { ...c, config: { ...c.config, rolls: [], values: [] } as SimResultsCardConfig }
         : c,
     ),
   })),

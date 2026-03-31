@@ -4,6 +4,18 @@ import { useId } from 'react'
 import { useStore } from '@/lib/store'
 import { SimResultsCardConfig } from '@/lib/exploreTypes'
 
+function deriveTrackedValues(
+  rolls: number[][],
+  trackedMode: 'sum' | 'difference',
+): number[] {
+  if (trackedMode === 'sum') {
+    return rolls.map(roll => roll.reduce((sum, value) => sum + value, 0))
+  }
+  return rolls
+    .filter(roll => roll.length === 2)
+    .map(roll => Math.abs(roll[0] - roll[1]))
+}
+
 // ── Mode selector ─────────────────────────────────────────────────────────────
 
 function ModeSelector({
@@ -167,11 +179,18 @@ interface SimResultsCardProps {
 export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
   const clearSimResults  = useStore(s => s.clearSimResults)
   const updateExploreCard = useStore(s => s.updateExploreCard)
-  const { values, trackedMode, sourceLabel, minValue, maxValue } = config
+  const { values, trackedMode, sourceLabel, minValue, maxValue, rolls } = config
   const rollCount = values.length
 
   function handleModeChange(mode: 'sum' | 'difference') {
-    updateExploreCard(cardId, { config: { ...config, trackedMode: mode } })
+    if (mode === trackedMode) return
+    updateExploreCard(cardId, {
+      config: {
+        ...config,
+        trackedMode: mode,
+        values: deriveTrackedValues(rolls, mode),
+      },
+    })
   }
 
   return (

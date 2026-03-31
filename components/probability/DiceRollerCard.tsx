@@ -150,15 +150,7 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
     if (!linkedResultsCardId) return
 
     const settled = tray.map(d => finalResults[d.id]).filter((v): v is number => v != null)
-    let trackedValue: number | null = null
-
-    if (trackedMode === 'sum') {
-      trackedValue = settled.reduce((s, v) => s + v, 0)
-    } else if (trackedMode === 'difference' && settled.length === 2) {
-      trackedValue = Math.abs(settled[0] - settled[1])
-    }
-
-    if (trackedValue != null) pushSimResult(linkedResultsCardId, trackedValue)
+    pushSimResult(linkedResultsCardId, settled)
   }, [finalResults, tray, trackedMode, linkedResultsCardId, pushSimResult])
 
   // ── Track Results: create or focus the linked results card ───────────────────

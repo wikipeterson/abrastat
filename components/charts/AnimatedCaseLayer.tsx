@@ -293,8 +293,12 @@ function buildLayout(
         const stack = bins.get(bin) ?? 0
         bins.set(bin, stack + 1)
 
+        // Use the bin's canonical position (not raw ratio) so all dots in the
+        // same stack share an exact x (horizontal) or y (vertical) coordinate.
+        const binRatio = bin / binCount
+
         if (spec.orientation === 'h') {
-          const x = iL + ratio * cW
+          const x = iL + binRatio * cW
           const yBase = spec.groupColId ? bandBottom : iB - 10
           const y = Math.max(
             spec.groupColId ? bandTop : iT + 8,
@@ -302,7 +306,7 @@ function buildLayout(
           )
           points.push({ id: item.id, x, y, opacity: 0.92, color })
         } else {
-          const y = iB - ratio * cH
+          const y = iB - binRatio * cH
           const xBase = spec.groupColId ? iL + 18 + gi * 14 : iL + 16
           const x = Math.min(iR - 10, xBase + stack * dotGap)
           points.push({ id: item.id, x, y, opacity: 0.92, color })

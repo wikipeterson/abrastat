@@ -15,13 +15,13 @@ const GRAVITY  = -32
 
 const LINEAR_DAMPING  = 0.28
 const ANGULAR_DAMPING = 0.38
-const SETTLE_VEL  = 0.11
-const SETTLE_ANG  = 0.12
-const SETTLE_HOLD = 10   // ~0.17 s at 60 fps
-const MAX_SETTLE  = 5500 // ms hard timeout
+const SETTLE_VEL  = 0.35   // world units/s — die looks still below this
+const SETTLE_ANG  = 0.40   // rad/s
+const SETTLE_HOLD = 4      // consecutive frames needed (~67 ms at 60 fps)
+const MAX_SETTLE  = 5500   // ms hard timeout
 const LINEUP_DURATION = 420
-const LINEUP_READY_VEL = 0.22
-const LINEUP_READY_ANG = 0.25
+const LINEUP_READY_VEL = 2.0   // lineup fires even while dice are barely rolling
+const LINEUP_READY_ANG = 2.0
 
 // Die face colours matching the palette
 const DIE_COLOR = '#0D4F49'
@@ -623,12 +623,14 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         scene.add(mesh)
 
         const body = new CANNON.Body({
-          mass:           1,
-          shape:          new CANNON.Box(new CANNON.Vec3(DIE_HALF, DIE_HALF, DIE_HALF)),
-          position:       new CANNON.Vec3(0, DIE_HALF, 0),
-          linearDamping:  LINEAR_DAMPING,
-          angularDamping: ANGULAR_DAMPING,
-          material:       diceMatRef.current ?? undefined,
+          mass:            1,
+          shape:           new CANNON.Box(new CANNON.Vec3(DIE_HALF, DIE_HALF, DIE_HALF)),
+          position:        new CANNON.Vec3(0, DIE_HALF, 0),
+          linearDamping:   LINEAR_DAMPING,
+          angularDamping:  ANGULAR_DAMPING,
+          material:        diceMatRef.current ?? undefined,
+          sleepSpeedLimit: 0.5,
+          sleepTimeLimit:  0.1,
         })
         world.addBody(body)
 

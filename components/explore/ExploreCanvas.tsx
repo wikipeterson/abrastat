@@ -11,8 +11,6 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
-import { useDraggable } from '@dnd-kit/core'
 import { useStore } from '@/lib/store'
 import { GridColumn } from '@/types'
 import { CardConfig, GraphCardConfig, MeansCardConfig, ExploreCard } from '@/lib/exploreTypes'
@@ -27,34 +25,6 @@ import { MeansCard } from '@/components/inference/MeansCard'
 import { RandomGeneratorCard } from '@/components/probability/RandomGeneratorCard'
 import { DiceRollerCard } from '@/components/probability/DiceRollerCard'
 import { SimResultsCard } from '@/components/probability/SimResultsCard'
-
-// ─── Draggable variable chip (sidebar) ────────────────────────────────────────
-
-function DraggableChip({ col }: { col: GridColumn }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `col:${col.id}`,
-  })
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform) }}
-      {...listeners}
-      {...attributes}
-      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm font-medium
-        cursor-grab active:cursor-grabbing select-none transition-opacity
-        ${col.type === 'numeric'
-          ? 'bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100'
-          : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200'
-        }
-        ${isDragging ? 'opacity-25' : 'opacity-100'}
-      `}
-    >
-      <span className="text-[10px] font-mono font-bold opacity-50">{col.type === 'numeric' ? '#' : 'A'}</span>
-      <span className="truncate">{col.name}</span>
-    </div>
-  )
-}
 
 function GhostChip({ col }: { col: GridColumn }) {
   return (
@@ -516,26 +486,6 @@ export function ExploreCanvas() {
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <SwapAnimContext.Provider value={swapAnim}>
       <div className="flex h-full min-h-0">
-
-        {/* Variable sidebar */}
-        <aside className="w-48 flex-shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col">
-          <div className="px-3 py-2 border-b border-[var(--color-border)] flex items-center justify-between">
-            <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Variables</span>
-          </div>
-          <div className="flex-1 overflow-y-auto py-2 px-2 space-y-1">
-            {grid.columns.length > 0 ? (
-              grid.columns.map(col => (
-                <DraggableChip key={col.id} col={col} />
-              ))
-            ) : (
-              <p className="text-xs text-[var(--color-muted)] px-1 py-2">
-                No dataset variables yet. Probability tools and manual-entry cards still work.
-              </p>
-            )}
-          </div>
-        </aside>
-
-        {/* Canvas column */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
           <div ref={scrollRef} onWheel={handleWheel} className="flex-1 overflow-auto bg-[var(--color-bg)] p-2 relative cursor-grab">
             {cards.length === 0 && (
@@ -543,7 +493,7 @@ export function ExploreCanvas() {
                 <div className="text-center px-6">
                   <div className="text-4xl mb-3 opacity-30">✦</div>
                   <p className="text-[var(--color-muted)] text-sm">
-                    Use <strong>Add Card</strong> to get started.
+                    Use the add buttons in the sidebar to get started.
                   </p>
                   <p className="text-[var(--color-muted)]/80 text-xs mt-1">
                     Distribution, Random Generator, and manual Two-Way Table cards work even without data.

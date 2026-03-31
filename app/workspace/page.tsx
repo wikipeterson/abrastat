@@ -64,7 +64,7 @@ function GroupedAddCardMenu({
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
       {groups.map(group => (
-        <div key={group.id} className="relative">
+        <div key={group.id} className="relative z-[60]">
           <button
             onClick={() => toggle(group.id)}
             className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
@@ -80,7 +80,7 @@ function GroupedAddCardMenu({
           {openGroup === group.id && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setOpenGroup(null)} />
-              <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden min-w-[190px]">
+              <div className="absolute left-0 right-0 bottom-full mb-1 z-[70] bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden min-w-[190px] max-h-[320px] overflow-y-auto">
                 {group.options.map(o => (
                   <button
                     key={o.type}
@@ -188,7 +188,7 @@ function ColumnSidebar({
         )}
 
         {activeTab === 'lab' && (
-          <div className="px-3 py-3 border-t border-[var(--color-border)] bg-slate-50/70">
+          <div className="px-3 py-3 border-t border-[var(--color-border)] bg-slate-50/70 relative z-[60]">
             <div className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-2">
               Add To Lab
             </div>

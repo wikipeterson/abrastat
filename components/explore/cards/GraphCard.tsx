@@ -22,11 +22,12 @@ interface GraphCardProps {
   config: GraphCardConfig
   onClearZone: (zone: string) => void
   onSetChartType: (ct: ChartType) => void
+  onAssignZone: (zone: 'x' | 'y' | 'group', colId: string) => void
   onRemove: () => void
   hideHeader?: boolean
 }
 
-export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemove, hideHeader }: GraphCardProps) {
+export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
   const { grid } = useStore()
 
   const xCol = config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
@@ -66,6 +67,22 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
     id: `${cardId}:canvas`,
     disabled: !!currentChart,
   })
+
+  function handleNativeDrop(zone: 'x' | 'y' | 'group') {
+    return (e: React.DragEvent) => {
+      const colId = e.dataTransfer.getData('text/plain')
+      if (!colId) return
+      e.preventDefault()
+      onAssignZone(zone, colId)
+    }
+  }
+
+  function handleNativeDragOver(e: React.DragEvent) {
+    if (e.dataTransfer.types.includes('text/plain')) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'copy'
+    }
+  }
 
   function renderChart() {
     // Y-only: render vertically (values on y-axis)
@@ -156,13 +173,15 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
         {/* Group — compact square upper right */}
         {!usesAxisGrouping && (
           <div className="flex-shrink-0 w-24">
-            <DropZone
-              id={`${cardId}:group`}
-              label="Group"
-              hint="optional"
-              assignedCol={groupCol}
-              onClear={() => onClearZone('group')}
-            />
+            <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('group')}>
+              <DropZone
+                id={`${cardId}:group`}
+                label="Group"
+                hint="optional"
+                assignedCol={groupCol}
+                onClear={() => onClearZone('group')}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -184,20 +203,24 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
       >
         {/* Row 1, Col 1 — Response Variable (vertical drop zone) */}
         <div style={{ gridRow: '1', gridColumn: '1' }}>
-          <DropZone
-            id={`${cardId}:y`}
-            label="Response Variable"
-            hint="drop here"
-            assignedCol={yCol}
-            onClear={() => onClearZone('y')}
-            variant="vertical"
-          />
+          <div className="h-full" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('y')}>
+            <DropZone
+              id={`${cardId}:y`}
+              label="Response Variable"
+              hint="drop here"
+              assignedCol={yCol}
+              onClear={() => onClearZone('y')}
+              variant="vertical"
+            />
+          </div>
         </div>
 
         {/* Row 1, Col 2 — Main chart rectangle / canvas */}
         <div
           ref={setCanvasRef}
           style={{ gridRow: '1', gridColumn: '2' }}
+          onDragOver={handleNativeDragOver}
+          onDrop={handleNativeDrop('x')}
           className={`min-h-[180px] overflow-hidden rounded-xl transition-colors ${
             isBlank
               ? isOverCanvas
@@ -234,13 +257,15 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onRemov
 
         {/* Row 2, Col 2 — Explanatory Variable (always visible, same width as chart) */}
         <div style={{ gridRow: '2', gridColumn: '2' }}>
-          <DropZone
-            id={`${cardId}:x`}
-            label="Explanatory Variable"
-            hint="any variable"
-            assignedCol={xCol}
-            onClear={() => onClearZone('x')}
-          />
+          <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('x')}>
+            <DropZone
+              id={`${cardId}:x`}
+              label="Explanatory Variable"
+              hint="any variable"
+              assignedCol={xCol}
+              onClear={() => onClearZone('x')}
+            />
+          </div>
         </div>
       </div>
     </div>

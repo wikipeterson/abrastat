@@ -340,6 +340,16 @@ export function ExploreCanvas() {
     if (newConfig) updateCard(cardId, { config: newConfig })
   }
 
+  function assignGraphZone(cardId: string, zone: 'x' | 'y' | 'group', colId: string) {
+    const card = cards.find(c => c.id === cardId)
+    if (!card || card.config.type !== 'graph') return
+    let next: GraphCardConfig = { ...card.config }
+    if (zone === 'x') next = { ...next, xColId: colId }
+    if (zone === 'y') next = { ...next, yColId: colId }
+    if (zone === 'group') next = { ...next, groupColId: colId }
+    updateCard(cardId, { config: normalizeGraphConfig(next) })
+  }
+
   // ─── Card movement ─────────────────────────────────────────────────────────
   function startMove(e: React.PointerEvent, cardId: string) {
     if (e.button !== 0) return
@@ -554,6 +564,7 @@ export function ExploreCanvas() {
                               config={card.config}
                               onClearZone={z => clearZone(card.id, z)}
                               onSetChartType={(ct: ChartType) => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), chartType: ct } })}
+                              onAssignZone={(zone, colId) => assignGraphZone(card.id, zone, colId)}
                               onRemove={() => removeCard(card.id)}
                               hideHeader
                             />

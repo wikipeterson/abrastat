@@ -20,6 +20,8 @@ const SETTLE_ANG  = 0.12
 const SETTLE_HOLD = 10   // ~0.17 s at 60 fps
 const MAX_SETTLE  = 5500 // ms hard timeout
 const LINEUP_DURATION = 420
+const LINEUP_READY_VEL = 0.22
+const LINEUP_READY_ANG = 0.25
 
 // Die face colours matching the palette
 const DIE_COLOR = '#0D4F49'
@@ -512,8 +514,23 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           }
         }
 
-        if (!lineupRef.current.active && !lineupRef.current.completed && dieEntriesRef.current.length > 0 && dieEntriesRef.current.every(entry => entry.settled)) {
-          startLineup(now)
+        if (!lineupRef.current.active && !lineupRef.current.completed && dieEntriesRef.current.length > 0) {
+          const allReadyForLineup = dieEntriesRef.current.every(entry => {
+            if (entry.settled) return true
+            const body = entry.body
+            return (
+              body.sleepState === CANNON.Body.SLEEPING ||
+              (body.velocity.length() < LINEUP_READY_VEL &&
+                body.angularVelocity.length() < LINEUP_READY_ANG)
+            )
+          })
+
+          if (allReadyForLineup) {
+            for (const entry of dieEntriesRef.current) {
+              if (!entry.settled) settleEntry(entry)
+            }
+            startLineup(now)
+          }
         }
 
         if (lineupRef.current.active) {

@@ -58,6 +58,8 @@ const CUBE_VERTICES = [
 interface PolyFaceDef {
   value: number
   normal: CANNON.Vec3
+  textRotation?: number
+  textOffsetY?: number
 }
 
 // ── Textures ──────────────────────────────────────────────────────────────────
@@ -205,20 +207,27 @@ function makeResultTexture(value: number): THREE.CanvasTexture {
   return finalizeTexture(new THREE.CanvasTexture(c))
 }
 
-function makePolyFaceTexture(label: string): THREE.CanvasTexture {
+function makePolyFaceTexture(
+  label: string,
+  options?: { rotationDeg?: number; offsetY?: number },
+): THREE.CanvasTexture {
   const S = 256
   const c = document.createElement('canvas')
   c.width = c.height = S
   const ctx = c.getContext('2d')!
   ctx.fillStyle = DIE_COLOR
   ctx.fillRect(0, 0, S, S)
+  ctx.save()
+  ctx.translate(S / 2, S / 2 + (options?.offsetY ?? 0))
+  ctx.rotate(((options?.rotationDeg ?? 0) * Math.PI) / 180)
   ctx.fillStyle = DIE_TEXT_COLOR
-  ctx.font = '900 124px sans-serif'
+  ctx.font = '900 112px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.shadowColor = 'rgba(255,255,255,0.35)'
   ctx.shadowBlur = 8
-  ctx.fillText(label, S / 2, S / 2)
+  ctx.fillText(label, 0, 0)
+  ctx.restore()
   return finalizeTexture(new THREE.CanvasTexture(c))
 }
 
@@ -319,6 +328,8 @@ function makeExplicitD10Geometry(r: number): {
   const groups: { start: number; count: number; materialIndex: number }[] = []
   const faceDefs: PolyFaceDef[] = []
   const faceValues = [0, 2, 4, 6, 8, 1, 3, 5, 7, 9]
+  const topRotations = [-36, 36, 108, 180, -108]
+  const bottomRotations = [36, -36, -108, 180, 108]
 
   function addFace(a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, materialIndex: number) {
     const ab = new THREE.Vector3().subVectors(b, a)
@@ -332,9 +343,14 @@ function makeExplicitD10Geometry(r: number): {
     for (let i = 0; i < 3; i++) normals.push(normal.x, normal.y, normal.z)
     uvs.push(0.5, 0.1, 0.14, 0.9, 0.86, 0.9)
     groups.push({ start: positions.length / 3 - 3, count: 3, materialIndex })
+    const isTop = materialIndex < 5
     faceDefs.push({
       value: faceValues[materialIndex],
       normal: new CANNON.Vec3(normal.x, normal.y, normal.z),
+      textRotation: isTop
+        ? topRotations[materialIndex]
+        : bottomRotations[materialIndex - 5],
+      textOffsetY: isTop ? 10 : 18,
     })
   }
 
@@ -946,7 +962,10 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           if (isD10 && logicalFaces.length > 0) {
             meshMaterial = logicalFaces.map(face =>
               new THREE.MeshPhongMaterial({
-                map: makePolyFaceTexture(String(face.value)),
+                map: makePolyFaceTexture(String(face.value), {
+                  rotationDeg: face.textRotation,
+                  offsetY: face.textOffsetY,
+                }),
                 color: DIE_MATERIAL_COLOR,
                 emissive: DIE_EMISSIVE_COLOR,
                 emissiveIntensity: 0.24,

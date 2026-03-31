@@ -15,7 +15,10 @@ export function BuildStamp() {
     BUILD_COMMIT
 
   return (
-    <div className="fixed left-3 bottom-3 z-50 pointer-events-none">
+    <div
+      className="fixed left-3 bottom-3 z-50 pointer-events-none"
+      title="Deployment build stamp"
+    >
       <div className="rounded-md border border-slate-200 bg-white/90 px-2 py-1 text-[11px] text-slate-500 shadow-sm backdrop-blur-sm">
         Build {builtAt} · {deployedCommit}
       </div>

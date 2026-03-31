@@ -47,6 +47,7 @@ const D6_LOCAL_NORMALS: [number, number, number, number][] = [
 // ── Textures ──────────────────────────────────────────────────────────────────
 
 let _d6Textures: THREE.CanvasTexture[] | null = null
+let _feltTexture: THREE.CanvasTexture | null = null
 
 function finalizeTexture(tex: THREE.CanvasTexture) {
   tex.colorSpace = THREE.SRGBColorSpace
@@ -80,6 +81,69 @@ function getD6Textures(): THREE.CanvasTexture[] {
     return finalizeTexture(new THREE.CanvasTexture(c))
   })
   return _d6Textures
+}
+
+function getFeltTexture(): THREE.CanvasTexture {
+  if (_feltTexture) return _feltTexture
+
+  const S = 512
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const ctx = c.getContext('2d')!
+
+  // Base teal felt tone
+  ctx.fillStyle = '#2EC4B6'
+  ctx.fillRect(0, 0, S, S)
+
+  // Soft mottled fabric variation
+  for (let i = 0; i < 2600; i++) {
+    const x = Math.random() * S
+    const y = Math.random() * S
+    const r = 0.6 + Math.random() * 1.6
+    const alpha = 0.025 + Math.random() * 0.035
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`
+    ctx.beginPath()
+    ctx.arc(x, y, r, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  for (let i = 0; i < 2400; i++) {
+    const x = Math.random() * S
+    const y = Math.random() * S
+    const r = 0.6 + Math.random() * 1.8
+    const alpha = 0.018 + Math.random() * 0.03
+    ctx.fillStyle = `rgba(0,0,0,${alpha})`
+    ctx.beginPath()
+    ctx.arc(x, y, r, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  // Faint directional nap lines
+  ctx.save()
+  ctx.globalAlpha = 0.055
+  ctx.strokeStyle = '#ffffff'
+  ctx.lineWidth = 1
+  ctx.rotate((-18 * Math.PI) / 180)
+  for (let y = -S; y < S * 1.5; y += 7) {
+    ctx.beginPath()
+    ctx.moveTo(-S, y)
+    ctx.lineTo(S * 1.5, y)
+    ctx.stroke()
+  }
+  ctx.restore()
+
+  // Very soft edge vignette for tray depth
+  const grad = ctx.createRadialGradient(S / 2, S / 2, S * 0.18, S / 2, S / 2, S * 0.7)
+  grad.addColorStop(0, 'rgba(255,255,255,0)')
+  grad.addColorStop(1, 'rgba(0,0,0,0.11)')
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, S, S)
+
+  const tex = new THREE.CanvasTexture(c)
+  tex.wrapS = THREE.RepeatWrapping
+  tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(2.8, 1.8)
+  return (_feltTexture = finalizeTexture(tex))
 }
 
 function makeColorFaceTexture(label: string): THREE.CanvasTexture {
@@ -427,7 +491,10 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       // Green felt floor
       const floor = new THREE.Mesh(
         new THREE.BoxGeometry(TRAY_W, 0.06, TRAY_D),
-        new THREE.MeshLambertMaterial({ color: 0x2EC4B6 }),
+        new THREE.MeshLambertMaterial({
+          color: 0xffffff,
+          map: getFeltTexture(),
+        }),
       )
       floor.position.y = -0.03
       floor.receiveShadow = true

@@ -22,11 +22,11 @@ const MAX_SETTLE  = 5500 // ms hard timeout
 const LINEUP_DURATION = 420
 
 // Die face colours matching the palette
-const DIE_COLOR = '#FAFAFA'
-const DIE_EDGE_COLOR = '#CBD5E1'
-const DIE_TEXT_COLOR = '#000000'
-const DIE_MATERIAL_COLOR = '#FFFFFF'
-const DIE_EMISSIVE_COLOR = '#F8FAFC'
+const DIE_COLOR = '#2EC4B6'
+const DIE_EDGE_COLOR = '#7FD9D3'
+const DIE_TEXT_COLOR = '#FFFFFF'
+const DIE_MATERIAL_COLOR = '#2EC4B6'
+const DIE_EMISSIVE_COLOR = '#5EE6D9'
 
 // ── d6 face mapping ───────────────────────────────────────────────────────────
 // THREE.BoxGeometry face material order: +X −X +Y −Y +Z −Z

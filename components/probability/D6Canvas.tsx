@@ -27,6 +27,7 @@ const DIE_EDGE_COLOR = '#7FD9D3'
 const DIE_TEXT_COLOR = '#FFFFFF'
 const DIE_MATERIAL_COLOR = '#2EC4B6'
 const DIE_EMISSIVE_COLOR = '#5EE6D9'
+const DIE_SPECULAR_COLOR = '#E9FFFD'
 
 // ── d6 face mapping ───────────────────────────────────────────────────────────
 // THREE.BoxGeometry face material order: +X −X +Y −Y +Z −Z
@@ -398,10 +399,12 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       cameraRef.current = cam
       fitCamera(W, H)
 
-      // Lighting  — overhead directional + ambient for flat top-down look
-      scene.add(new THREE.AmbientLight(0xffffff, 1.45))
-      const dir = new THREE.DirectionalLight(0xffffff, 0.82)
-      dir.position.set(0.6, 10, 1.1)
+      // Lighting — bright ambient for legibility plus a glossier key light.
+      scene.add(new THREE.AmbientLight(0xffffff, 1.15))
+      const hemi = new THREE.HemisphereLight(0xffffff, 0xc7f3ee, 0.52)
+      scene.add(hemi)
+      const dir = new THREE.DirectionalLight(0xffffff, 1.28)
+      dir.position.set(1.8, 10, 2.8)
       dir.castShadow = true
       dir.shadow.mapSize.set(1024, 1024)
       dir.shadow.camera.near = 0.1
@@ -497,7 +500,9 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
 
             // Per-die settle detection
             if (!entry.settled) {
-              if (b.velocity.length() < SETTLE_VEL && b.angularVelocity.length() < SETTLE_ANG) {
+              if (b.sleepState === CANNON.Body.SLEEPING) {
+                settleEntry(entry)
+              } else if (b.velocity.length() < SETTLE_VEL && b.angularVelocity.length() < SETTLE_ANG) {
                 entry.settleCount++
                 if (entry.settleCount >= SETTLE_HOLD) settleEntry(entry)
               } else {
@@ -572,8 +577,10 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
             map: tex[v-1],
             color: DIE_MATERIAL_COLOR,
             emissive: DIE_EMISSIVE_COLOR,
-            emissiveIntensity: 0.32,
-            shininess: 18,
+            emissiveIntensity: 0.24,
+            specular: new THREE.Color(DIE_SPECULAR_COLOR),
+            shininess: 68,
+            reflectivity: 0.9,
           }))
         } else {
           const label = `d${sides}`
@@ -584,8 +591,10 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
               map: sideTex,
               color: DIE_MATERIAL_COLOR,
               emissive: DIE_EMISSIVE_COLOR,
-              emissiveIntensity: 0.32,
-              shininess: 16,
+              emissiveIntensity: 0.24,
+              specular: new THREE.Color(DIE_SPECULAR_COLOR),
+              shininess: 60,
+              reflectivity: 0.88,
             }),
           )
         }

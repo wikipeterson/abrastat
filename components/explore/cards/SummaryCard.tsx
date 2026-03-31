@@ -67,6 +67,42 @@ function MultiVarDropZone({ id, varCols, onClearVar }: {
 export function SummaryCard({ cardId, config, onClearZone, onRemove, hideHeader }: SummaryCardProps) {
   const { grid } = useStore()
 
+  function handleNativeDragOver(e: React.DragEvent) {
+    if (e.dataTransfer.types.includes('text/plain')) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'copy'
+    }
+  }
+
+  function handleNativeVarDrop(e: React.DragEvent) {
+    const colId = e.dataTransfer.getData('text/plain')
+    if (!colId) return
+    e.preventDefault()
+    const current = useStore.getState().exploreCards.find(c => c.id === cardId)
+    if (!current || current.config.type !== 'summary') return
+    if (current.config.variableColIds.includes(colId)) return
+    useStore.getState().updateExploreCard(cardId, {
+      config: {
+        ...current.config,
+        variableColIds: [...current.config.variableColIds, colId],
+      },
+    })
+  }
+
+  function handleNativeGroupDrop(e: React.DragEvent) {
+    const colId = e.dataTransfer.getData('text/plain')
+    if (!colId) return
+    e.preventDefault()
+    const current = useStore.getState().exploreCards.find(c => c.id === cardId)
+    if (!current || current.config.type !== 'summary') return
+    useStore.getState().updateExploreCard(cardId, {
+      config: {
+        ...current.config,
+        groupColId: colId,
+      },
+    })
+  }
+
   const varCols = config.variableColIds
     .map(id => grid.columns.find(c => c.id === id))
     .filter((c): c is NonNullable<typeof c> => c != null)
@@ -146,14 +182,18 @@ export function SummaryCard({ cardId, config, onClearZone, onRemove, hideHeader 
 
       <div className={hideHeader ? 'space-y-3' : 'p-4 space-y-3'}>
         <div className="flex gap-2">
-          <MultiVarDropZone
-            id={`${cardId}:variable`}
-            varCols={varCols}
-            onClearVar={colId => onClearZone(`variable:${colId}`)}
-          />
+          <div className="flex-1 min-w-0" onDragOver={handleNativeDragOver} onDrop={handleNativeVarDrop}>
+            <MultiVarDropZone
+              id={`${cardId}:variable`}
+              varCols={varCols}
+              onClearVar={colId => onClearZone(`variable:${colId}`)}
+            />
+          </div>
           <div className="w-40 flex-shrink-0">
-            <DropZone id={`${cardId}:group`} label="Group by" hint="categorical (optional)"
-              assignedCol={groupCol} onClear={() => onClearZone('group')} />
+            <div onDragOver={handleNativeDragOver} onDrop={handleNativeGroupDrop}>
+              <DropZone id={`${cardId}:group`} label="Group by" hint="categorical (optional)"
+                assignedCol={groupCol} onClear={() => onClearZone('group')} />
+            </div>
           </div>
         </div>
 

@@ -398,7 +398,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
   // ─── Card resize ──────────────────────────────────────────────────────────
   function getCardMinSize(card: ExploreCard) {
     switch (card.config.type) {
-      case 'data-grid':    return { minWidth: 620, minHeight: 620 }
+      case 'data-grid':    return { minWidth: 420, minHeight: 620 }
       case 'graph':        return { minWidth: 520, minHeight: 460 }
       case 'summary':      return { minWidth: 700, minHeight: 620 }
       case 'table':        return { minWidth: 780, minHeight: 500 }

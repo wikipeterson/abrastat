@@ -73,6 +73,32 @@ interface Props {
 export function MeansCard({ cardId, config, onClearZone }: Props) {
   const { grid } = useStore()
 
+  function handleNativeDrop(zone: 'var1' | 'var2') {
+    return (e: React.DragEvent) => {
+      const colId = e.dataTransfer.getData('text/plain')
+      if (!colId) return
+      e.preventDefault()
+      const droppedCol = useStore.getState().grid.columns.find(c => c.id === colId)
+      if (!droppedCol) return
+      if (zone === 'var1' && droppedCol.type !== 'numeric') return
+      const current = useStore.getState().exploreCards.find(c => c.id === cardId)
+      if (!current || current.config.type !== 'means') return
+      useStore.getState().updateExploreCard(cardId, {
+        config: {
+          ...current.config,
+          ...(zone === 'var1' ? { var1ColId: colId } : { var2ColId: colId }),
+        },
+      })
+    }
+  }
+
+  function handleNativeDragOver(e: React.DragEvent) {
+    if (e.dataTransfer.types.includes('text/plain')) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'copy'
+    }
+  }
+
   const var1Col = config.var1ColId ? (grid.columns.find(c => c.id === config.var1ColId) ?? null) : null
   const var2Col = config.var2ColId ? (grid.columns.find(c => c.id === config.var2ColId) ?? null) : null
 
@@ -336,7 +362,7 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
 
       {/* Drop zones */}
       <div className="flex gap-2 flex-shrink-0">
-        <div className="flex-1">
+        <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var1')}>
           <DropZone
             id={`${cardId}:var1`}
             label="Variable"
@@ -345,7 +371,7 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
             onClear={() => onClearZone('var1')}
           />
         </div>
-        <div className="flex-1">
+        <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var2')}>
           <DropZone
             id={`${cardId}:var2`}
             label="2nd Variable or Group By"

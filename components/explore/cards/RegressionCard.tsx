@@ -24,6 +24,29 @@ function fmt(n: number): string {
 export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHeader }: RegressionCardProps) {
   const { grid } = useStore()
 
+  function handleNativeDrop(zone: 'x' | 'y') {
+    return (e: React.DragEvent) => {
+      const colId = e.dataTransfer.getData('text/plain')
+      if (!colId) return
+      e.preventDefault()
+      const current = useStore.getState().exploreCards.find(c => c.id === cardId)
+      if (!current || current.config.type !== 'regression') return
+      useStore.getState().updateExploreCard(cardId, {
+        config: {
+          ...current.config,
+          ...(zone === 'x' ? { xColId: colId } : { yColId: colId }),
+        },
+      })
+    }
+  }
+
+  function handleNativeDragOver(e: React.DragEvent) {
+    if (e.dataTransfer.types.includes('text/plain')) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'copy'
+    }
+  }
+
   const xCol = config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
   const yCol = config.yColId ? (grid.columns.find(c => c.id === config.yColId) ?? null) : null
 
@@ -129,20 +152,24 @@ export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHead
   const inner = (
     <div className="h-full flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3">
-        <DropZone
-          id={`${cardId}:x`}
-          label="Explanatory Variable"
-          hint="numeric variable"
-          assignedCol={xCol}
-          onClear={() => onClearZone('x')}
-        />
-        <DropZone
-          id={`${cardId}:y`}
-          label="Response Variable"
-          hint="numeric variable"
-          assignedCol={yCol}
-          onClear={() => onClearZone('y')}
-        />
+        <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('x')}>
+          <DropZone
+            id={`${cardId}:x`}
+            label="Explanatory Variable"
+            hint="numeric variable"
+            assignedCol={xCol}
+            onClear={() => onClearZone('x')}
+          />
+        </div>
+        <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('y')}>
+          <DropZone
+            id={`${cardId}:y`}
+            label="Response Variable"
+            hint="numeric variable"
+            assignedCol={yCol}
+            onClear={() => onClearZone('y')}
+          />
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 overflow-auto">

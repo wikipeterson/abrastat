@@ -345,6 +345,28 @@ interface TwoWayTableProps {
 
 export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWayTableProps = {}) {
   const { grid } = useStore()
+  function handleNativeDrop(zone: 'rows' | 'cols') {
+    return (e: React.DragEvent) => {
+      const colId = e.dataTransfer.getData('text/plain')
+      if (!colId || !cardId) return
+      e.preventDefault()
+      const current = useStore.getState().exploreCards.find(c => c.id === cardId)
+      if (!current || current.config.type !== 'table') return
+      useStore.getState().updateExploreCard(cardId, {
+        config: {
+          ...current.config,
+          ...(zone === 'rows' ? { rowsColId: colId } : { colsColId: colId }),
+        },
+      })
+    }
+  }
+
+  function handleNativeDragOver(e: React.DragEvent) {
+    if (e.dataTransfer.types.includes('text/plain')) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'copy'
+    }
+  }
 
   const isCardMode = !!cardId
 
@@ -665,24 +687,28 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
           }}
         >
           <div style={{ gridRow: '2', gridColumn: '1' }}>
-            <DropZone
-              id={`${cardId}:cols`}
-              label="Response Variable"
-              hint="columns of the table"
-              assignedCol={grid.columns.find(c => c.id === respColId) ?? null}
-              onClear={() => onClearZone?.('cols')}
-              variant="vertical"
-            />
+            <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('cols')}>
+              <DropZone
+                id={`${cardId}:cols`}
+                label="Response Variable"
+                hint="columns of the table"
+                assignedCol={grid.columns.find(c => c.id === respColId) ?? null}
+                onClear={() => onClearZone?.('cols')}
+                variant="vertical"
+              />
+            </div>
           </div>
 
           <div style={{ gridRow: '1', gridColumn: '2' }}>
-            <DropZone
-              id={`${cardId}:rows`}
-              label="Explanatory Variable"
-              hint="rows of the table"
-              assignedCol={grid.columns.find(c => c.id === explColId) ?? null}
-              onClear={() => onClearZone?.('rows')}
-            />
+            <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('rows')}>
+              <DropZone
+                id={`${cardId}:rows`}
+                label="Explanatory Variable"
+                hint="rows of the table"
+                assignedCol={grid.columns.find(c => c.id === explColId) ?? null}
+                onClear={() => onClearZone?.('rows')}
+              />
+            </div>
           </div>
 
           <div

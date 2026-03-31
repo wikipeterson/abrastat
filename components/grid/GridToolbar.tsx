@@ -15,8 +15,8 @@ export function GridToolbar({ onShare }: { onShare?: () => void }) {
 
   return (
     <>
-      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-[var(--color-border)] bg-[var(--color-surface)] flex-wrap">
-        <div className="flex items-center gap-1">
+      <div className="overflow-x-auto border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+        <div className="flex min-w-max items-center gap-1 px-2 py-1.5 whitespace-nowrap">
           <button
             onClick={() => addRow()}
             className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"
@@ -35,11 +35,8 @@ export function GridToolbar({ onShare }: { onShare?: () => void }) {
           >
             <FunctionSquare size={14} /> Compute
           </button>
-        </div>
+          <div className="w-px h-4 bg-[var(--color-border)] mx-1" />
 
-        <div className="w-px h-4 bg-[var(--color-border)] mx-1" />
-
-        <div className="flex items-center gap-1">
           <button
             onClick={() => setShowImport(true)}
             className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"

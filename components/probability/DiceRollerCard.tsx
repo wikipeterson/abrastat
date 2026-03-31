@@ -91,43 +91,6 @@ function PaletteDie({ sides, count, onClick }: { sides: DiceSides; count: number
   )
 }
 
-// ── Results strip ─────────────────────────────────────────────────────────────
-
-function ResultsStrip({
-  tray,
-  finalResults,
-}: {
-  tray: DieInTray[]
-  finalResults: Record<string, number>
-}) {
-  const settled = tray.filter(d => finalResults[d.id] != null)
-  const allDone = settled.length === tray.length
-  const total = allDone ? tray.reduce((s, d) => s + (finalResults[d.id] ?? 0), 0) : null
-
-  return (
-    <div className="min-h-[44px] px-1 py-1">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-        {tray.length > 0 ? tray.map(die => {
-          const val = finalResults[die.id]
-          return (
-            <span key={die.id} className="font-mono text-xs">
-              <span className="text-[var(--color-muted)]">d{die.sides}:</span>{' '}
-              {val != null
-                ? <span className="font-bold" style={{ color: DIE_BG[die.sides] }}>{val}</span>
-                : <span className="text-[var(--color-muted)]">…</span>}
-            </span>
-          )
-        }) : (
-          <span className="text-xs text-[var(--color-muted)] italic">Add dice, then roll.</span>
-        )}
-        {total != null && tray.length > 1 && (
-          <span className="ml-1 font-bold text-sm text-[var(--color-text)]">= {total}</span>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ── Main card ─────────────────────────────────────────────────────────────────
 
 interface DiceRollerCardProps {
@@ -257,7 +220,8 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
 
       {/* ── Palette ── */}
       <div className="flex-shrink-0 px-3 pt-3 pb-3 border-b border-[var(--color-border)]">
-        <div className="flex flex-wrap gap-3 justify-center">
+        <div className="flex items-center gap-2">
+          <div className="flex flex-wrap gap-2 flex-1">
           {DICE_TYPES.map(sides => (
             <PaletteDie
               key={sides}
@@ -266,12 +230,11 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
               onClick={() => addDie(sides)}
             />
           ))}
-        </div>
-        <div className="mt-3 flex items-center gap-2">
+          </div>
           <button
             onClick={rollAll}
             disabled={tray.length === 0}
-            className="flex-1 rounded-xl bg-[var(--color-accent)] text-white font-semibold py-2.5
+            className="rounded-xl bg-[var(--color-accent)] text-white font-semibold px-4 py-2.5
                        disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-105 transition"
           >
             Roll
@@ -285,9 +248,6 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
           >
             Clear
           </button>
-        </div>
-        <div className="mt-2 border-t border-[var(--color-border)]/80 pt-2">
-          <ResultsStrip tray={tray} finalResults={finalResults} />
         </div>
 
         {/* ── Tracking controls ── */}

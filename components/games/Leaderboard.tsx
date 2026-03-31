@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getLeaderboard, LeaderboardEntry, GameId } from '@/lib/leaderboard'
 
 interface LeaderboardProps {
@@ -14,6 +14,7 @@ const MEDALS = ['🥇', '🥈', '🥉']
 export function Leaderboard({ gameId, highlightInitials, compact }: LeaderboardProps) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -23,6 +24,15 @@ export function Leaderboard({ gameId, highlightInitials, compact }: LeaderboardP
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [gameId])
+
+  const highlightedIndex = useMemo(
+    () => (highlightInitials ? entries.findIndex(e => e.initials === highlightInitials) : -1),
+    [entries, highlightInitials]
+  )
+
+  const shouldAutoExpandForHighlight = highlightedIndex >= 3
+  const visibleEntries = (expanded || shouldAutoExpandForHighlight) ? entries : entries.slice(0, 3)
+  const canExpand = entries.length > 3
 
   return (
     <div className={compact ? '' : 'bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden'}>
@@ -44,7 +54,8 @@ export function Leaderboard({ gameId, highlightInitials, compact }: LeaderboardP
             No scores yet — be the first!
           </div>
         )}
-        {entries.map((e, i) => {
+        {visibleEntries.map((e, i) => {
+          const absoluteIndex = expanded || shouldAutoExpandForHighlight ? i : i
           const isHighlighted = highlightInitials && e.initials === highlightInitials
           return (
             <div
@@ -52,7 +63,7 @@ export function Leaderboard({ gameId, highlightInitials, compact }: LeaderboardP
               className={`flex items-center gap-3 px-4 py-2.5 ${isHighlighted ? 'bg-[var(--color-accent-light)]' : ''}`}
             >
               <span className="w-6 text-center text-sm font-bold text-[var(--color-muted)]">
-                {MEDALS[i] ?? `${i + 1}`}
+                {MEDALS[absoluteIndex] ?? `${absoluteIndex + 1}`}
               </span>
               <span className="text-xl w-7 text-center">{e.emoji}</span>
               <span className="flex-1 text-sm font-mono font-bold text-[var(--color-text)] tracking-widest">
@@ -65,6 +76,17 @@ export function Leaderboard({ gameId, highlightInitials, compact }: LeaderboardP
           )
         })}
       </div>
+
+      {!loading && canExpand && (
+        <div className="px-4 py-3 border-t border-[var(--color-border)] bg-slate-50/60">
+          <button
+            onClick={() => setExpanded(v => !v)}
+            className="text-sm font-medium text-[var(--color-accent)] hover:opacity-80 transition-opacity"
+          >
+            {expanded || shouldAutoExpandForHighlight ? 'Show fewer' : `More (${entries.length - 3} more)`}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -63,8 +63,6 @@ interface DotPlotProps {
 function DotPlot({ values, trackedMode, minValue, maxValue }: DotPlotProps) {
   const clipId = useId()
 
-  if (values.length === 0) return null
-
   // Count occurrences
   const counts = new Map<number, number>()
   for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1)
@@ -219,20 +217,19 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
 
       {/* ── Dot plot ── */}
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-4">
-        {rollCount === 0 ? (
-          <div className="text-center">
+        <DotPlot
+          values={values}
+          trackedMode={trackedMode}
+          minValue={minValue}
+          maxValue={maxValue}
+        />
+        {rollCount === 0 && (
+          <div className="-mt-8 text-center">
             <div className="text-3xl opacity-20 mb-2">⚅</div>
             <p className="text-xs text-[var(--color-muted)]">
               Roll the dice to start recording outcomes.
             </p>
           </div>
-        ) : (
-          <DotPlot
-            values={values}
-            trackedMode={trackedMode}
-            minValue={minValue}
-            maxValue={maxValue}
-          />
         )}
       </div>
 

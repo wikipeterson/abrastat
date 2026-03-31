@@ -8,9 +8,10 @@ import { useStore } from '@/lib/store'
 interface ColumnHeaderProps {
   column: GridColumn
   colIndex: number
+  onResizeStart?: (e: React.PointerEvent, colId: string) => void
 }
 
-export function ColumnHeader({ column, colIndex }: ColumnHeaderProps) {
+export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(column.name)
@@ -105,6 +106,17 @@ export function ColumnHeader({ column, colIndex }: ColumnHeaderProps) {
           ))}
         </div>
       )}
+
+      <div
+        onPointerDown={e => {
+          e.stopPropagation()
+          onResizeStart?.(e, column.id)
+        }}
+        className="absolute top-0 right-0 h-full w-2 cursor-col-resize opacity-0 hover:opacity-100 group-hover/col:opacity-100 transition-opacity"
+        title="Resize column"
+      >
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 h-5 w-[2px] rounded-full bg-white/70" />
+      </div>
     </div>
   )
 }

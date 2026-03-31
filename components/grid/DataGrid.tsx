@@ -9,6 +9,7 @@ const MIN_EMPTY_ROWS = 5
 const COL_WIDTH = 140
 const ROW_NUM_WIDTH = 48
 const DRAG_PREVIEW_ROWS = 6
+const MIN_COL_WIDTH = 92
 
 function createColumnDragPreview(columnName: string, values: Array<string | number>) {
   const preview = document.createElement('div')
@@ -58,7 +59,7 @@ function createColumnDragPreview(columnName: string, values: Array<string | numb
 }
 
 export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
-  const { grid, updateCell, addRow, deleteRows, undo, reorderColumns } = useStore()
+  const { grid, updateCell, addRow, deleteRows, undo, reorderColumns, setColumnWidth } = useStore()
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null)
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; rowIndex: number } | null>(null)
@@ -144,18 +145,40 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
 
   function getColumnShift(colIndex: number) {
     if (dragColIdx === null || dropTargetIdx === null || dragColIdx === dropTargetIdx) return 0
-    if (dragColIdx < dropTargetIdx && colIndex > dragColIdx && colIndex <= dropTargetIdx) return -COL_WIDTH
-    if (dragColIdx > dropTargetIdx && colIndex >= dropTargetIdx && colIndex < dragColIdx) return COL_WIDTH
+    const draggedWidth = columns[dragColIdx]?.width ?? COL_WIDTH
+    if (dragColIdx < dropTargetIdx && colIndex > dragColIdx && colIndex <= dropTargetIdx) return -draggedWidth
+    if (dragColIdx > dropTargetIdx && colIndex >= dropTargetIdx && colIndex < dragColIdx) return draggedWidth
     return 0
   }
+
+  function startColumnResize(e: React.PointerEvent, colId: string) {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = columns.find(c => c.id === colId)?.width ?? COL_WIDTH
+
+    function onMove(ev: PointerEvent) {
+      setColumnWidth(colId, Math.max(MIN_COL_WIDTH, startWidth + (ev.clientX - startX)))
+    }
+
+    function onUp() {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+
+  const totalColumnWidth = columns.reduce((sum, col) => sum + (col.width ?? COL_WIDTH), 0)
 
   return (
     <div
       ref={containerRef}
-      className="overflow-auto border border-[var(--color-border)] rounded-lg"
-      style={fillHeight ? { height: '100%' } : { maxHeight: 'calc(100vh - 220px)' }}
+      className="overflow-auto border border-[var(--color-border)] rounded-lg inline-block max-w-full"
+      style={fillHeight ? { height: '100%', width: 'fit-content' } : { maxHeight: 'calc(100vh - 220px)', width: 'fit-content' }}
     >
-      <div style={{ minWidth: ROW_NUM_WIDTH + columns.length * COL_WIDTH }}>
+      <div style={{ minWidth: ROW_NUM_WIDTH + totalColumnWidth }}>
         {/* Header row */}
         <div className="flex">
           <div
@@ -166,10 +189,11 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
             const isTarget = dropTargetIdx === colIndex && dragColIdx !== null && dragColIdx !== colIndex
             const isDraggingCol = dragColIdx === colIndex
             const shiftX = getColumnShift(colIndex)
+            const columnWidth = col.width ?? COL_WIDTH
             return (
               <div
                 key={col.id}
-                style={{ width: COL_WIDTH, minWidth: COL_WIDTH }}
+                style={{ width: columnWidth, minWidth: columnWidth }}
                 className={`group/col relative transition-[transform,opacity,box-shadow] duration-200 ease-out ${
                   isTarget ? 'z-10' : ''
                 }`}
@@ -225,7 +249,7 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
                     isDraggingCol ? 'shadow-none' : ''
                   }`}
                 >
-                  <ColumnHeader column={col} colIndex={colIndex} />
+                  <ColumnHeader column={col} colIndex={colIndex} onResizeStart={startColumnResize} />
                 </div>
                 {isTarget && dragColIdx !== null && dragColIdx !== colIndex && (
                   <div
@@ -256,8 +280,8 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
                 <div
                   key={col.id}
                   style={{
-                    width: COL_WIDTH,
-                    minWidth: COL_WIDTH,
+                    width: col.width ?? COL_WIDTH,
+                    minWidth: col.width ?? COL_WIDTH,
                     transform: `translateX(${getColumnShift(colIndex)}px)`,
                     opacity: dragColIdx === colIndex ? 0.18 : 1,
                   }}

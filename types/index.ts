@@ -8,6 +8,7 @@ export interface ColumnMeta {
 export interface GridColumn extends ColumnMeta {
   id: string
   computedFormula?: string
+  width?: number
 }
 
 export interface GridState {

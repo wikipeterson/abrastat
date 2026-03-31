@@ -6,6 +6,7 @@ export function createEmptyGrid(cols = 4, rows = 20): GridState {
     id: uuid(),
     name: `var${i + 1}`,
     type: 'numeric' as ColumnType,
+    width: 140,
   }))
   const emptyRow = () => Object.fromEntries(columns.map(c => [c.id, '']))
   return { columns, rows: Array.from({ length: rows }, emptyRow) }
@@ -23,6 +24,7 @@ export function parsedRowsToGrid(headers: string[], dataRows: unknown[][]): Grid
     id: uuid(),
     name,
     type: 'numeric' as ColumnType,
+    width: 140,
   }))
   const rows = dataRows.map(row =>
     Object.fromEntries(columns.map((col, i) => {

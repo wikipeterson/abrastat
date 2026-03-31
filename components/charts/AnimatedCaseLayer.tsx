@@ -78,6 +78,7 @@ const MG_L = 52
 const MG_R = 24
 const MG_T = 16
 const MG_B = 48
+const POINT_R = 5
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -151,14 +152,20 @@ function buildLayout(
   const iB = height - MG_B
   const cW = Math.max(1, iR - iL)
   const cH = Math.max(1, iB - iT)
+  const pL = iL + POINT_R
+  const pR = iR - POINT_R
+  const pT = iT + POINT_R
+  const pB = iB - POINT_R
+  const pW = Math.max(1, pR - pL)
+  const pH = Math.max(1, pB - pT)
 
   // ── Blank ──────────────────────────────────────────────────────────────────
   if (spec.kind === 'blank') {
     return {
       points: rows.map((_, i) => ({
         id: `row-${i}`,
-        x: iL + hashUnit(`x-${i}`) * cW,
-        y: iT + hashUnit(`y-${i}`) * cH,
+        x: pL + hashUnit(`x-${i}`) * pW,
+        y: pT + hashUnit(`y-${i}`) * pH,
         opacity: 0.72,
         color: '#7ccfc9',
       })),
@@ -187,8 +194,8 @@ function buildLayout(
     const colorMap = new Map(uniqueGroups.map((g, i) => [g, COLORS[i % COLORS.length]]))
     const xDom = dataDomain(plotted.map(p => p.x))
     const yDom = dataDomain(plotted.map(p => p.y))
-    const toPixX = (v: number) => iL + ((v - xDom.min) / (xDom.max - xDom.min)) * cW
-    const toPixY = (v: number) => iB - ((v - yDom.min) / (yDom.max - yDom.min)) * cH
+    const toPixX = (v: number) => pL + ((v - xDom.min) / (xDom.max - xDom.min)) * pW
+    const toPixY = (v: number) => pB - ((v - yDom.min) / (yDom.max - yDom.min)) * pH
 
     return {
       points: plotted.map(p => ({
@@ -242,8 +249,8 @@ function buildLayout(
 
   const toPixVal =
     spec.orientation === 'h'
-      ? (v: number) => iL + ((v - vDom.min) / (vDom.max - vDom.min)) * cW
-      : (v: number) => iB - ((v - vDom.min) / (vDom.max - vDom.min)) * cH
+      ? (v: number) => pL + ((v - vDom.min) / (vDom.max - vDom.min)) * pW
+      : (v: number) => pB - ((v - vDom.min) / (vDom.max - vDom.min)) * pH
 
   // Pre-pass: find the tallest bin across all groups so we can scale dotGap
   // to ensure no stack overflows its band height.
@@ -263,8 +270,8 @@ function buildLayout(
   // Available stacking distance per band (h = up from baseline; v = right from axis)
   const bandStackSpace =
     spec.orientation === 'h'
-      ? (bandSize - 22)          // leave 10px baseline pad + 12px top pad per band
-      : (cW - iL - MG_R - 28)   // horizontal stacking space for vertical orientation
+      ? (bandSize - 22 - POINT_R)      // keep dots off the baseline/top edge
+      : (pW - 18)                      // horizontal stacking space for vertical orientation
   const DOT_GAP_MAX = 9
   const dotGap = Math.min(DOT_GAP_MAX, Math.max(2, bandStackSpace / (globalMaxStack + 1)))
 
@@ -272,8 +279,8 @@ function buildLayout(
     const color = COLORS[gi % COLORS.length]
     const items = grouped.get(groupKey) ?? []
     const bins = new Map<number, number>()
-    const bandBottom = iT + bandSize * (gi + 1) - 10
-    const bandTop    = iT + bandSize * gi + 12
+    const bandBottom = iT + bandSize * (gi + 1) - (10 + POINT_R)
+    const bandTop    = iT + bandSize * gi + (12 + POINT_R)
     const bandMid    = iT + bandSize * (gi + 0.5)
 
     if (spec.groupColId) {
@@ -298,17 +305,17 @@ function buildLayout(
         const binRatio = bin / binCount
 
         if (spec.orientation === 'h') {
-          const x = iL + binRatio * cW
-          const yBase = spec.groupColId ? bandBottom : iB - 10
+          const x = pL + binRatio * pW
+          const yBase = spec.groupColId ? bandBottom : pB
           const y = Math.max(
-            spec.groupColId ? bandTop : iT + 8,
+            spec.groupColId ? bandTop : pT,
             yBase - stack * dotGap,
           )
           points.push({ id: item.id, x, y, opacity: 0.92, color })
         } else {
-          const y = iB - binRatio * cH
-          const xBase = spec.groupColId ? iL + 18 + gi * 14 : iL + 16
-          const x = Math.min(iR - 10, xBase + stack * dotGap)
+          const y = pB - binRatio * pH
+          const xBase = spec.groupColId ? pL + 13 + gi * 14 : pL + 11
+          const x = Math.min(pR, xBase + stack * dotGap)
           points.push({ id: item.id, x, y, opacity: 0.92, color })
         }
       })

@@ -29,6 +29,7 @@ interface GraphCardProps {
 
 export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
   const { grid } = useStore()
+  const [showBestFitLine, setShowBestFitLine] = useState(false)
 
   const xCol = config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
   const yCol = config.yColId ? (grid.columns.find(c => c.id === config.yColId) ?? null) : null
@@ -161,25 +162,38 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
 
       {/* Top row: chart type pills | Group zone compact upper-right */}
       <div className="flex-shrink-0 flex items-start justify-between gap-2 mb-2">
-        <div className="flex items-center gap-1.5 flex-wrap min-h-[40px]">
-          {chartButtons.length > 0 && (
-            <>
-              <span className="text-xs font-medium text-[var(--color-muted)]">Chart type:</span>
-              {chartButtons.map(ct => (
-                <button
-                  key={ct}
-                  onClick={() => onSetChartType(ct)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
-                    currentChart === ct
-                      ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
-                      : 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-slate-300'
-                  }`}
-                >
-                  <span>{CHART_META[ct].icon}</span>
-                  {CHART_META[ct].label}
-                </button>
-              ))}
-            </>
+        <div className="flex flex-col items-start gap-1.5 min-h-[40px]">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {chartButtons.length > 0 && (
+              <>
+                <span className="text-xs font-medium text-[var(--color-muted)]">Chart type:</span>
+                {chartButtons.map(ct => (
+                  <button
+                    key={ct}
+                    onClick={() => onSetChartType(ct)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                      currentChart === ct
+                        ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+                        : 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-slate-300'
+                    }`}
+                  >
+                    <span>{CHART_META[ct].icon}</span>
+                    {CHART_META[ct].label}
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+          {currentChart === 'scatter' && xCol?.type === 'numeric' && yCol?.type === 'numeric' && (
+            <label className="flex items-center gap-2 text-xs text-[var(--color-muted)] cursor-pointer pl-0.5">
+              <input
+                type="checkbox"
+                checked={showBestFitLine}
+                onChange={e => setShowBestFitLine(e.target.checked)}
+                className="accent-[var(--color-accent)]"
+              />
+              Show best-fit line
+            </label>
           )}
         </div>
 
@@ -249,10 +263,11 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
               key={activeTransition!.nonce}
               spec={activeTransition!.to}
               fromSpec={activeTransition!.from}
+              showBestFitLine={activeTransition!.to.kind === 'scatter' ? showBestFitLine : false}
               onRest={() => setActiveTransition(null)}
             />
           ) : showSettledCustom ? (
-            <AnimatedCaseLayer key="stable" spec={morphSpec!} />
+            <AnimatedCaseLayer key="stable" spec={morphSpec!} showBestFitLine={morphSpec!.kind === 'scatter' ? showBestFitLine : false} />
           ) : isBlank ? (
             <div className="h-full flex flex-col items-center justify-center gap-2 text-center p-6">
               <span className="text-4xl opacity-25 select-none">📈</span>

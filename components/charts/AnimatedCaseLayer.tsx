@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '@/lib/store'
+import { linearRegression } from '@/lib/statistics'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,7 @@ export interface AnimatedCaseLayerProps {
   fromSpec?: MorphSpec | null
   onRest?: () => void
   showHint?: boolean
+  showBestFitLine?: boolean
 }
 
 interface LayoutPoint {
@@ -343,6 +345,7 @@ export function AnimatedCaseLayer({
   fromSpec,
   onRest,
   showHint = false,
+  showBestFitLine = false,
 }: AnimatedCaseLayerProps) {
   const { grid } = useStore()
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -416,6 +419,49 @@ export function AnimatedCaseLayer({
     }
   }, [fromSpec, onRest, size.height, size.width, spec])
 
+  const showAxes = spec.kind !== 'blank'
+  const { xAxis, yAxis, legend } = toLayout
+  const bestFitLine = useMemo(() => {
+    if (!showBestFitLine || spec.kind !== 'scatter' || size.width <= 0 || size.height <= 0) return null
+
+    const plotted = rows.flatMap(row => {
+      const x = parseNumber(row[spec.xColId])
+      const y = parseNumber(row[spec.yColId])
+      if (x === null || y === null) return [] as { x: number; y: number }[]
+      return [{ x, y }]
+    })
+    if (plotted.length < 2) return null
+
+    const xs = plotted.map(p => p.x)
+    const ys = plotted.map(p => p.y)
+    const { slope, intercept } = linearRegression(xs, ys)
+    if (!Number.isFinite(slope) || !Number.isFinite(intercept)) return null
+
+    const xDom = dataDomain(xs)
+    const yDom = dataDomain(ys)
+    const iL = MG_L
+    const iR = size.width - MG_R
+    const iT = MG_T
+    const iB = size.height - MG_B
+    const pL = iL + AXIS_CLEARANCE
+    const pR = iR - POINT_R
+    const pT = iT + POINT_R
+    const pB = iB - AXIS_CLEARANCE
+    const pW = Math.max(1, pR - pL)
+    const pH = Math.max(1, pB - pT)
+    const toPixX = (v: number) => pL + ((v - xDom.min) / (xDom.max - xDom.min)) * pW
+    const toPixY = (v: number) => pB - ((v - yDom.min) / (yDom.max - yDom.min)) * pH
+
+    const x1 = xDom.min
+    const x2 = xDom.max
+    return {
+      x1: toPixX(x1),
+      y1: toPixY(slope * x1 + intercept),
+      x2: toPixX(x2),
+      y2: toPixY(slope * x2 + intercept),
+    }
+  }, [rows, showBestFitLine, size.height, size.width, spec])
+
   if (rows.length === 0) {
     return (
       <div
@@ -432,9 +478,6 @@ export function AnimatedCaseLayer({
       </div>
     )
   }
-
-  const showAxes = spec.kind !== 'blank'
-  const { xAxis, yAxis, legend } = toLayout
 
   return (
     <div ref={wrapRef} className="relative h-full overflow-hidden rounded-xl">
@@ -453,6 +496,18 @@ export function AnimatedCaseLayer({
           width={size.width}
           height={size.height}
         >
+          {bestFitLine && (
+            <line
+              x1={bestFitLine.x1}
+              y1={bestFitLine.y1}
+              x2={bestFitLine.x2}
+              y2={bestFitLine.y2}
+              stroke="#EF4444"
+              strokeWidth={2}
+              strokeDasharray="6 5"
+              strokeLinecap="round"
+            />
+          )}
           {xAxis && (
             <g>
               <line

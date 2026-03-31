@@ -14,7 +14,7 @@ import { useStore } from '@/lib/store'
 import { DatasetMeta } from '@/types'
 import { SAMPLE_DATASETS } from '@/lib/sampleData'
 
-type HomeTab = 'datasets' | 'games' | 'polls'
+type HomeTab = 'datasets' | 'lab' | 'games' | 'polls'
 type LibraryTab = 'all' | 'mine'
 type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 
@@ -193,12 +193,25 @@ function DatasetsSection() {
 
 const HOME_TABS: { id: HomeTab; label: string; soon?: boolean }[] = [
   { id: 'datasets', label: 'Datasets' },
+  { id: 'lab',      label: 'Lab' },
   { id: 'games',    label: 'Games' },
   { id: 'polls',    label: 'Polls', soon: true },
 ]
 
 function HomeContent() {
   const [tab, setTab] = useState<HomeTab>('datasets')
+  const router = useRouter()
+  const clearGrid = useStore(s => s.clearGrid)
+
+  function handleTopTabClick(tabId: HomeTab, soon?: boolean) {
+    if (soon) return
+    if (tabId === 'lab') {
+      clearGrid()
+      router.push('/workspace')
+      return
+    }
+    setTab(tabId)
+  }
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: 'var(--color-bg)' }}>
@@ -210,7 +223,7 @@ function HomeContent() {
           {HOME_TABS.map(t => (
             <button
               key={t.id}
-              onClick={() => !t.soon && setTab(t.id)}
+              onClick={() => handleTopTabClick(t.id, t.soon)}
               disabled={t.soon}
               className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 tab === t.id

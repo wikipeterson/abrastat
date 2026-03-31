@@ -266,6 +266,22 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         oldTex?.dispose()
       }
 
+      // Fully freeze the body so it does not visibly shimmy after settling.
+      entry.body.velocity.set(0, 0, 0)
+      entry.body.angularVelocity.set(0, 0, 0)
+      entry.body.force.set(0, 0, 0)
+      entry.body.torque.set(0, 0, 0)
+      entry.body.position.y = DIE_HALF
+      entry.body.sleep()
+
+      entry.mesh.position.set(entry.body.position.x, entry.body.position.y, entry.body.position.z)
+      entry.mesh.quaternion.set(
+        entry.body.quaternion.x,
+        entry.body.quaternion.y,
+        entry.body.quaternion.z,
+        entry.body.quaternion.w,
+      )
+
       onSettledRef.current(entry.id, result)
     }
 

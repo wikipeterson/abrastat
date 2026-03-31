@@ -500,9 +500,15 @@ function keepDieInsideTray(entry: DieEntry) {
     body.velocity.z = Math.abs(body.velocity.z) * 0.55
   }
 
-  const supportHeight = getSupportHeight(entry.supportVertices, body.quaternion)
-  if (body.position.y < supportHeight) {
-    body.position.y = supportHeight
+  if (entry.sides === 6) {
+    if (body.position.y < DIE_HALF) {
+      body.position.y = DIE_HALF
+    }
+  } else {
+    const supportHeight = getSupportHeight(entry.supportVertices, body.quaternion)
+    if (body.position.y < supportHeight) {
+      body.position.y = supportHeight
+    }
   }
 }
 
@@ -560,12 +566,17 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       const x = startX + col * 1.1
       const z = startZ + row * 1.1
       entry.slotIndex = slotIndex
-      entry.body.quaternion.set(0, 0, 0, 1)
-      entry.body.position.set(x, getSupportHeight(entry.supportVertices, entry.body.quaternion), z)
+      if (entry.sides === 6) {
+        entry.body.position.set(x, DIE_HALF, z)
+        entry.body.quaternion.set(0, 0, 0, 1)
+      } else {
+        entry.body.quaternion.set(0, 0, 0, 1)
+        entry.body.position.set(x, getSupportHeight(entry.supportVertices, entry.body.quaternion), z)
+      }
       entry.body.velocity.set(0, 0, 0)
       entry.body.angularVelocity.set(0, 0, 0)
       entry.body.sleep()
-      entry.mesh.position.set(x, entry.body.position.y, z)
+      entry.mesh.position.set(x, entry.sides === 6 ? DIE_HALF : entry.body.position.y, z)
       entry.mesh.quaternion.set(0, 0, 0, 1)
     }
 
@@ -601,11 +612,15 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         } else {
           entry.lineupTargetQuat.copy(entry.mesh.quaternion)
         }
-        const supportHeight = getSupportHeight(
-          entry.supportVertices,
-          threeQuatToCannon(entry.lineupTargetQuat),
-        )
-        entry.lineupTargetPos.set(targetX, supportHeight, targetZ)
+        if (entry.sides === 6) {
+          entry.lineupTargetPos.set(targetX, DIE_HALF, targetZ)
+        } else {
+          const supportHeight = getSupportHeight(
+            entry.supportVertices,
+            threeQuatToCannon(entry.lineupTargetQuat),
+          )
+          entry.lineupTargetPos.set(targetX, supportHeight, targetZ)
+        }
       })
 
       lineupRef.current = { active: true, completed: false, startAt: now, readyAt: null }
@@ -648,7 +663,9 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       entry.body.angularVelocity.set(0, 0, 0)
       entry.body.force.set(0, 0, 0)
       entry.body.torque.set(0, 0, 0)
-      entry.body.position.y = getSupportHeight(entry.supportVertices, entry.body.quaternion)
+      entry.body.position.y = entry.sides === 6
+        ? DIE_HALF
+        : getSupportHeight(entry.supportVertices, entry.body.quaternion)
       entry.body.sleep()
       entry.resultValue = result
 

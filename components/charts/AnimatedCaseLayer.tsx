@@ -79,6 +79,7 @@ const MG_R = 24
 const MG_T = 16
 const MG_B = 48
 const POINT_R = 5
+const AXIS_CLEARANCE = 10
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -152,10 +153,10 @@ function buildLayout(
   const iB = height - MG_B
   const cW = Math.max(1, iR - iL)
   const cH = Math.max(1, iB - iT)
-  const pL = iL + POINT_R
+  const pL = iL + AXIS_CLEARANCE
   const pR = iR - POINT_R
   const pT = iT + POINT_R
-  const pB = iB - POINT_R
+  const pB = iB - AXIS_CLEARANCE
   const pW = Math.max(1, pR - pL)
   const pH = Math.max(1, pB - pT)
 

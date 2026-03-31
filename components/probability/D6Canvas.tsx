@@ -20,6 +20,7 @@ const SETTLE_ANG  = 0.40   // rad/s
 const SETTLE_HOLD = 4      // consecutive frames needed (~67 ms at 60 fps)
 const MAX_SETTLE  = 5500   // ms hard timeout
 const LINEUP_DURATION = 420
+const LINEUP_DELAY = 180
 const LINEUP_READY_VEL = 2.0   // lineup fires even while dice are barely rolling
 const LINEUP_READY_ANG = 2.0
 
@@ -235,7 +236,12 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
     const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
     const rafRef      = useRef<number | null>(null)
     const diceMatRef  = useRef<CANNON.Material | null>(null)
-    const lineupRef   = useRef<{ active: boolean; completed: boolean; startAt: number }>({ active: false, completed: false, startAt: 0 })
+    const lineupRef   = useRef<{
+      active: boolean
+      completed: boolean
+      startAt: number
+      readyAt: number | null
+    }>({ active: false, completed: false, startAt: 0, readyAt: null })
 
     const dieEntriesRef = useRef<DieEntry[]>([])
 
@@ -297,7 +303,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         entry.lineupTargetQuat.identity()
       })
 
-      lineupRef.current = { active: true, completed: false, startAt: now }
+      lineupRef.current = { active: true, completed: false, startAt: now, readyAt: null }
     }
 
     // ── Settle a die ─────────────────────────────────────────────────────────
@@ -526,10 +532,18 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           })
 
           if (allReadyForLineup) {
-            for (const entry of dieEntriesRef.current) {
-              if (!entry.settled) settleEntry(entry)
+            if (lineupRef.current.readyAt === null) {
+              lineupRef.current.readyAt = now
             }
-            startLineup(now)
+
+            if (now - lineupRef.current.readyAt >= LINEUP_DELAY) {
+              for (const entry of dieEntriesRef.current) {
+                if (!entry.settled) settleEntry(entry)
+              }
+              startLineup(now)
+            }
+          } else {
+            lineupRef.current.readyAt = null
           }
         }
 
@@ -543,6 +557,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           if (t >= 1) {
             lineupRef.current.active = false
             lineupRef.current.completed = true
+            lineupRef.current.readyAt = null
             for (const entry of dieEntriesRef.current) {
               entry.mesh.position.copy(entry.lineupTargetPos)
               entry.mesh.quaternion.copy(entry.lineupTargetQuat)
@@ -671,6 +686,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         if (!world || dieEntriesRef.current.length === 0) return
         lineupRef.current.active = false
         lineupRef.current.completed = false
+        lineupRef.current.readyAt = null
 
         const innerX = TRAY_W / 2 - DIE_HALF - 0.18
         const innerZ = TRAY_D / 2 - DIE_HALF - 0.18
@@ -732,6 +748,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         if (!world || !scene) return
         lineupRef.current.active = false
         lineupRef.current.completed = false
+        lineupRef.current.readyAt = null
         for (const entry of dieEntriesRef.current) {
           clearSettleTimer(entry)
           world.removeBody(entry.body)

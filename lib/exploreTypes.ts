@@ -1,5 +1,9 @@
 import type { ChartType } from './chartHelpers'
 
+export interface DataGridCardConfig {
+  type: 'data-grid'
+}
+
 export interface GraphCardConfig {
   type: 'graph'
   xColId: string | null
@@ -85,6 +89,7 @@ export interface SimResultsCardConfig {
 }
 
 export type CardConfig =
+  | DataGridCardConfig
   | GraphCardConfig
   | SummaryCardConfig
   | TableCardConfig

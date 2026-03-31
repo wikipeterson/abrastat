@@ -3,15 +3,11 @@
 import { useState, useEffect } from 'react'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { Header } from '@/components/layout/Header'
-import { DataGrid } from '@/components/grid/DataGrid'
-import { GridToolbar } from '@/components/grid/GridToolbar'
 import { ExploreCanvas } from '@/components/explore/ExploreCanvas'
 import { SaveDatasetModal } from '@/components/library/SaveDatasetModal'
 import { ShareDatasetModal } from '@/components/library/ShareDatasetModal'
 import { useStore } from '@/lib/store'
 import { CardConfig } from '@/lib/exploreTypes'
-
-type Tab = 'data' | 'lab'
 
 // ─── Card option definitions ──────────────────────────────────────────────────
 
@@ -101,7 +97,7 @@ function GroupedAddCardMenu({
   )
 }
 
-// ─── Column sidebar (Data tab) ────────────────────────────────────────────────
+// ─── Column sidebar ────────────────────────────────────────────────────────────
 
 function ColumnSidebar({
   open,
@@ -208,7 +204,6 @@ function UnsavedGuard({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
 // ─── Main workspace ───────────────────────────────────────────────────────────
 
 function WorkspaceContent() {
-  const [tab, setTab] = useState<Tab>('data')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [confirmNew, setConfirmNew] = useState(false)
   const [showSave, setShowSave] = useState(false)
@@ -261,8 +256,6 @@ function WorkspaceContent() {
       <Header
         onNew={handleNewDataset}
         onSave={handleSaveClick}
-        activeTab={tab}
-        onTabChange={setTab}
         onToggleSidebar={() => setSidebarOpen(v => !v)}
         datasetName={activeDatasetName}
         labActions={<GroupedAddCardMenu onAdd={type => addExploreCard(type)} />}
@@ -270,18 +263,9 @@ function WorkspaceContent() {
 
       <div className="flex flex-1 min-h-0">
         <ColumnSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        {tab === 'data' ? (
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <GridToolbar onShare={handleShareClick} />
-              <div className="flex-1 overflow-auto p-2">
-                <DataGrid />
-              </div>
-          </div>
-        ) : (
-          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-            <ExploreCanvas />
-          </div>
-        )}
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          <ExploreCanvas onShareDataset={handleShareClick} />
+        </div>
       </div>
 
       {confirmNew && (

@@ -6,6 +6,17 @@ import { ExploreCard, CardConfig, DistributionPreFill, SimResultsCardConfig } fr
 import { createEmptyGrid } from './gridHelpers'
 import { computeColumnValues } from './formulaEval'
 
+function createDataGridCard(): ExploreCard {
+  return {
+    id: uuid(),
+    config: { type: 'data-grid' },
+    x: 20,
+    y: 20,
+    width: 980,
+    height: 760,
+  }
+}
+
 function deriveSimValue(
   roll: number[],
   trackedMode: 'sum' | 'difference',
@@ -118,6 +129,7 @@ interface AbraStatStore {
   // Explore canvas
   exploreCards: ExploreCard[]
   addExploreCard: (type: CardConfig['type'], position?: { x: number; y: number }) => void
+  ensureDataGridCard: () => void
   removeExploreCard: (id: string) => void
   updateExploreCard: (id: string, updates: Partial<Omit<ExploreCard, 'id'>>) => void
   purgeExploreStaleIds: (validIds: Set<string>) => void
@@ -237,15 +249,25 @@ export const useStore = create<AbraStatStore>((set) => ({
   setActiveDatasetId: (id) => set({ activeDatasetId: id }),
   setActiveDatasetName: (name) => set({ activeDatasetName: name }),
   markClean: () => set({ isDirty: false }),
-  clearGrid: () => set({ grid: createEmptyGrid(), activeDatasetId: null, activeDatasetName: '', isDirty: false, undoStack: [], selectedColumnIds: [] }),
+  clearGrid: () => set({
+    grid: createEmptyGrid(),
+    activeDatasetId: null,
+    activeDatasetName: '',
+    isDirty: false,
+    undoStack: [],
+    selectedColumnIds: [],
+    exploreCards: [createDataGridCard()],
+  }),
 
   // ─── Explore canvas ──────────────────────────────────────────────────────────
-  exploreCards: [],
+  exploreCards: [createDataGridCard()],
   addExploreCard: (type, position) => set(state => {
-    const idx = state.exploreCards.length
-    const x = position?.x ?? 20 + (idx % 2) * 660
-    const y = position?.y ?? 20 + Math.floor(idx / 2) * 520
+    const analysisCards = state.exploreCards.filter(card => card.config.type !== 'data-grid')
+    const idx = analysisCards.length
+    const x = position?.x ?? 1040 + (idx % 2) * 500
+    const y = position?.y ?? 24 + Math.floor(idx / 2) * 520
     const config: CardConfig =
+      type === 'data-grid'    ? { type: 'data-grid' } :
       type === 'graph'        ? { type: 'graph',       xColId: null, yColId: null, groupColId: null } :
       type === 'summary'      ? { type: 'summary',     variableColIds: [], groupColId: null } :
       type === 'table'        ? { type: 'table',       rowsColId: null, colsColId: null } :
@@ -265,8 +287,12 @@ export const useStore = create<AbraStatStore>((set) => ({
                            { width: 620, height: 520 }
     return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width, height }] }
   }),
+  ensureDataGridCard: () => set(state => {
+    if (state.exploreCards.some(card => card.config.type === 'data-grid')) return state
+    return { exploreCards: [createDataGridCard(), ...state.exploreCards] }
+  }),
   removeExploreCard: (id) => set(state => ({
-    exploreCards: state.exploreCards.filter(c => c.id !== id),
+    exploreCards: state.exploreCards.filter(c => c.id !== id || c.config.type === 'data-grid'),
   })),
   updateExploreCard: (id, updates) => set(state => ({
     exploreCards: state.exploreCards.map(c => c.id === id ? { ...c, ...updates } : c),

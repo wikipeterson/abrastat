@@ -25,6 +25,8 @@ import { MeansCard } from '@/components/inference/MeansCard'
 import { RandomGeneratorCard } from '@/components/probability/RandomGeneratorCard'
 import { DiceRollerCard } from '@/components/probability/DiceRollerCard'
 import { SimResultsCard } from '@/components/probability/SimResultsCard'
+import { GridToolbar } from '@/components/grid/GridToolbar'
+import { DataGrid } from '@/components/grid/DataGrid'
 
 function GhostChip({ col }: { col: GridColumn }) {
   return (
@@ -39,6 +41,7 @@ function GhostChip({ col }: { col: GridColumn }) {
 
 function cardLabel(type: CardConfig['type']): string {
   switch (type) {
+    case 'data-grid':    return 'Data Grid'
     case 'graph':        return 'Graph'
     case 'summary':      return 'Summary Statistics'
     case 'table':        return 'Two-Way Table'
@@ -70,10 +73,10 @@ function PlaceholderCard({ label }: { label: string }) {
 
 // ─── Main canvas ──────────────────────────────────────────────────────────────
 
-export function ExploreCanvas() {
+export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void }) {
   const {
     grid,
-    exploreCards, removeExploreCard, updateExploreCard, purgeExploreStaleIds,
+    exploreCards, removeExploreCard, updateExploreCard, purgeExploreStaleIds, ensureDataGridCard,
   } = useStore()
 
   const cards = exploreCards
@@ -92,7 +95,7 @@ export function ExploreCanvas() {
   const cardsRef = useRef(cards)
   useLayoutEffect(() => { cardsRef.current = cards })
 
-  const BASE_CANVAS_WIDTH = 1400
+  const BASE_CANVAS_WIDTH = 2200
   const BASE_CANVAS_HEIGHT = 1800
   const MIN_ZOOM = 0.6
   const MAX_ZOOM = 1.8
@@ -100,6 +103,10 @@ export function ExploreCanvas() {
   useEffect(() => {
     zoomRef.current = zoom
   }, [zoom])
+
+  useEffect(() => {
+    ensureDataGridCard()
+  }, [ensureDataGridCard])
 
   const normalizeGraphConfig = useCallback((cfg: GraphCardConfig): GraphCardConfig => {
     const xType = cfg.xColId ? (grid.columns.find(c => c.id === cfg.xColId)?.type ?? null) : null
@@ -379,6 +386,7 @@ export function ExploreCanvas() {
   // ─── Card resize ──────────────────────────────────────────────────────────
   function getCardMinSize(card: ExploreCard) {
     switch (card.config.type) {
+      case 'data-grid':    return { minWidth: 880, minHeight: 620 }
       case 'graph':        return { minWidth: 520, minHeight: 460 }
       case 'summary':      return { minWidth: 700, minHeight: 620 }
       case 'table':        return { minWidth: 780, minHeight: 500 }
@@ -492,21 +500,23 @@ export function ExploreCanvas() {
 
   const activeCol = activeColId ? (grid.columns.find(c => c.id === activeColId) ?? null) : null
 
+  const nonGridCards = cards.filter(card => card.config.type !== 'data-grid')
+
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <SwapAnimContext.Provider value={swapAnim}>
       <div className="flex h-full min-h-0">
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
           <div ref={scrollRef} onWheel={handleWheel} className="flex-1 overflow-auto bg-[var(--color-bg)] p-2 relative cursor-grab">
-            {cards.length === 0 && (
+            {nonGridCards.length === 0 && (
               <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
                 <div className="text-center px-6">
                   <div className="text-4xl mb-3 opacity-30">✦</div>
                   <p className="text-[var(--color-muted)] text-sm">
-                    Use Add in the header to get started.
+                    Use Add in the header to add analysis cards around your data.
                   </p>
                   <p className="text-[var(--color-muted)]/80 text-xs mt-1">
-                    Distribution, Random Generator, and manual Two-Way Table cards work even without data.
+                    Your data grid now lives on this same workspace canvas.
                   </p>
                 </div>
               </div>
@@ -546,18 +556,28 @@ export function ExploreCanvas() {
                           </span>
                           <div className="flex items-center gap-2">
                             <span className="text-slate-300 text-xs select-none opacity-0 group-hover:opacity-100 transition-opacity">⠿ drag to move</span>
-                            <button
-                              onPointerDown={e => e.stopPropagation()}
-                              onClick={() => removeCard(card.id)}
-                              className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none"
-                            >
-                              ×
-                            </button>
+                            {card.config.type !== 'data-grid' && (
+                              <button
+                                onPointerDown={e => e.stopPropagation()}
+                                onClick={() => removeCard(card.id)}
+                                className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none"
+                              >
+                                ×
+                              </button>
+                            )}
                           </div>
                         </div>
 
                         {/* Card content */}
-                        <div className="flex-1 min-h-0 overflow-hidden p-4">
+                        <div className={`flex-1 min-h-0 overflow-hidden ${card.config.type === 'data-grid' ? '' : 'p-4'}`}>
+                          {card.config.type === 'data-grid' && (
+                            <div className="h-full flex flex-col">
+                              <GridToolbar onShare={onShareDataset} />
+                              <div className="flex-1 min-h-0 overflow-hidden p-2">
+                                <DataGrid fillHeight />
+                              </div>
+                            </div>
+                          )}
                           {card.config.type === 'graph' && (
                             <GraphCard
                               cardId={card.id}

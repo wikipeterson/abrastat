@@ -57,7 +57,7 @@ function createColumnDragPreview(columnName: string, values: Array<string | numb
   return preview
 }
 
-export function DataGrid() {
+export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
   const { grid, updateCell, addRow, deleteRows, undo, reorderColumns } = useStore()
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null)
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
@@ -153,7 +153,7 @@ export function DataGrid() {
     <div
       ref={containerRef}
       className="overflow-auto border border-[var(--color-border)] rounded-lg"
-      style={{ maxHeight: 'calc(100vh - 220px)' }}
+      style={fillHeight ? { height: '100%' } : { maxHeight: 'calc(100vh - 220px)' }}
     >
       <div style={{ minWidth: ROW_NUM_WIDTH + columns.length * COL_WIDTH }}>
         {/* Header row */}

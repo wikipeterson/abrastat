@@ -12,8 +12,6 @@ import { useAuth } from '@/components/auth/AuthProvider'
 interface HeaderProps {
   onNew?: () => void
   onSave?: () => void
-  activeTab?: 'data' | 'lab'
-  onTabChange?: (tab: 'data' | 'lab') => void
   onToggleSidebar?: () => void
   datasetName?: string
   labActions?: ReactNode
@@ -22,8 +20,6 @@ interface HeaderProps {
 export function Header({
   onNew,
   onSave,
-  activeTab,
-  onTabChange,
   onToggleSidebar,
   datasetName,
   labActions,
@@ -32,7 +28,6 @@ export function Header({
   const { isDirty, clearGrid } = useStore()
   const [showUserMenu, setShowUserMenu] = useState(false)
   const router = useRouter()
-  const showWorkspaceTabs = !!activeTab && !!onTabChange
 
   async function handleSignOut() {
     await signOut()
@@ -68,33 +63,12 @@ export function Header({
               </span>
             </div>
           )}
-
-          {showWorkspaceTabs && (
-            <div className="hidden sm:flex items-center self-stretch">
-              {([
-                { id: 'data', label: 'Data' },
-                { id: 'lab', label: 'Lab' },
-              ] as const).map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => onTabChange(tab.id)}
-                  className={`px-5 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-[var(--color-accent)] text-[var(--color-accent)]'
-                      : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-text)]'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">
-          {activeTab === 'lab' && labActions}
+          {labActions}
 
-          {!isGuest && activeTab !== 'lab' && (
+          {!isGuest && (
             <>
               <button
                 onClick={onSave}
@@ -108,7 +82,7 @@ export function Header({
             </>
           )}
 
-          {onNew && activeTab !== 'lab' && (
+          {onNew && (
             <button
               onClick={onNew}
               className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-slate-100 transition-colors"
@@ -117,27 +91,6 @@ export function Header({
               <FilePlus size={14} />
               <span className="hidden sm:inline">New</span>
             </button>
-          )}
-
-          {showWorkspaceTabs && (
-            <div className="flex sm:hidden items-center rounded-xl bg-slate-100 p-1 mr-1">
-              {([
-                { id: 'data', label: 'Data' },
-                { id: 'lab', label: 'Lab' },
-              ] as const).map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => onTabChange(tab.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-white text-[var(--color-accent)] shadow-sm'
-                      : 'text-[var(--color-muted)]'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
           )}
 
           {!isGuest && (

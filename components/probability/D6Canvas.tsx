@@ -15,9 +15,9 @@ const GRAVITY  = -32
 
 const LINEAR_DAMPING  = 0.28
 const ANGULAR_DAMPING = 0.38
-const SETTLE_VEL  = 0.04
-const SETTLE_ANG  = 0.05
-const SETTLE_HOLD = 24   // ~0.4 s at 60 fps
+const SETTLE_VEL  = 0.11
+const SETTLE_ANG  = 0.12
+const SETTLE_HOLD = 10   // ~0.17 s at 60 fps
 const MAX_SETTLE  = 5500 // ms hard timeout
 const LINEUP_DURATION = 420
 

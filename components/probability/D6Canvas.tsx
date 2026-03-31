@@ -581,8 +581,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         const launchSpacing = DIE_HALF * 2 + 0.12
         const maxRows = Math.max(1, Math.floor((innerZ * 2) / launchSpacing))
         const rows = Math.min(dieEntriesRef.current.length, maxRows)
-        const zStart = -((rows - 1) * launchSpacing) / 2
-        const batchBoost = Math.min(6, Math.max(0, dieEntriesRef.current.length - 1) * 0.28)
+        const batchBoost = Math.min(8, Math.max(0, dieEntriesRef.current.length - 1) * 0.34)
 
         for (const [index, entry] of dieEntriesRef.current.entries()) {
           entry.settled = false
@@ -602,21 +601,21 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
 
           const row = index % rows
           const col = Math.floor(index / rows)
-          const sx = innerX - col * launchSpacing
-          const sz = zStart + row * launchSpacing
-          const vx = -(22 + batchBoost + Math.random() * 6.5)
-          const vy = 1.2 + Math.random() * 1.8
-          const vz = (Math.random() - 0.5) * 7.2
+          const sx = innerX - col * launchSpacing * 0.95
+          const sz = -innerZ + row * launchSpacing
+          const vx = -(25 + batchBoost + Math.random() * 7.8)
+          const vy = 1.8 + Math.random() * 2.4
+          const vz = 9.5 + Math.random() * 4.8
 
-          // Wake up body and apply strong right-side launch
+          // Wake up body and apply strong upper-right diagonal launch
           entry.body.wakeUp()
           entry.body.position.set(sx, DIE_HALF + 0.04, sz)
           entry.body.quaternion.set(0, 0, 0, 1)
           entry.body.velocity.set(vx, vy, vz)
           entry.body.angularVelocity.set(
-            (Math.random() - 0.5) * 64,
-            (Math.random() - 0.5) * 52,
-            (Math.random() - 0.5) * 64,
+            (Math.random() - 0.5) * 74,
+            (Math.random() - 0.5) * 58,
+            (Math.random() - 0.5) * 74,
           )
 
           // Set new max-settle timer

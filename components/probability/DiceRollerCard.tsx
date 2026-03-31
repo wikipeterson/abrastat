@@ -150,8 +150,11 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   const diceConfig = cardId
     ? (exploreCards.find(c => c.id === cardId)?.config as DiceRollerCardConfig | undefined)
     : undefined
-  const trackedMode       = diceConfig?.trackedMode       ?? 'sum'
   const linkedResultsCardId = diceConfig?.linkedResultsCardId ?? null
+
+  // Read trackedMode from the linked results card (source of truth)
+  const linkedCard = exploreCards.find(c => c.id === linkedResultsCardId)
+  const trackedMode = (linkedCard?.config.type === 'sim-results' ? linkedCard.config.trackedMode : null) ?? 'sum'
 
   const rollInProgressRef = useRef(false)
 
@@ -210,49 +213,30 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
 
     const newId = addSimResultsCard(cardId, trackedMode, pos, 'Dice Roller', trackedRange)
     updateExploreCard(cardId, {
-      config: { type: 'dice-roller', linkedResultsCardId: newId, trackedMode },
-    })
-  }
-
-  function setTrackedMode(mode: 'sum' | 'difference') {
-    if (!cardId) return
-    updateExploreCard(cardId, {
-      config: { type: 'dice-roller', linkedResultsCardId, trackedMode: mode },
+      config: { type: 'dice-roller', linkedResultsCardId: newId, trackedMode: 'sum' },
     })
   }
 
   const hasLinkedCard = linkedResultsCardId != null &&
     exploreCards.some(c => c.id === linkedResultsCardId)
-  const canDiff = tray.length === 2
   const trackedRange = getTrackedRange(tray, trackedMode)
 
+  // Keep linked results card's minValue/maxValue in sync with current tray
   useEffect(() => {
     if (!linkedResultsCardId) return
 
-    const linkedCard = exploreCards.find(c => c.id === linkedResultsCardId)
-    if (!linkedCard || linkedCard.config.type !== 'sim-results') return
+    const lc = exploreCards.find(c => c.id === linkedResultsCardId)
+    if (!lc || lc.config.type !== 'sim-results') return
 
-    const cfg = linkedCard.config
-    if (
-      cfg.trackedMode === trackedMode &&
-      cfg.minValue === trackedRange.minValue &&
-      cfg.maxValue === trackedRange.maxValue
-    ) {
-      return
-    }
+    const cfg = lc.config
+    if (cfg.minValue === trackedRange.minValue && cfg.maxValue === trackedRange.maxValue) return
 
     updateExploreCard(linkedResultsCardId, {
-      config: {
-        ...cfg,
-        trackedMode,
-        minValue: trackedRange.minValue,
-        maxValue: trackedRange.maxValue,
-      },
+      config: { ...cfg, minValue: trackedRange.minValue, maxValue: trackedRange.maxValue },
     })
   }, [
     exploreCards,
     linkedResultsCardId,
-    trackedMode,
     trackedRange.minValue,
     trackedRange.maxValue,
     updateExploreCard,
@@ -271,13 +255,8 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   const inner = (
     <div className="flex flex-col h-full">
 
-      {/* ── Physics tray — fills available space ── */}
-      <div className="flex-1 min-h-[260px]">
-        <D6Canvas ref={canvasRef} onDieSettled={handleDieSettled} />
-      </div>
-
       {/* ── Palette ── */}
-      <div className="flex-shrink-0 px-3 pt-3 pb-3 border-t border-[var(--color-border)]">
+      <div className="flex-shrink-0 px-3 pt-3 pb-3 border-b border-[var(--color-border)]">
         <div className="flex flex-wrap gap-3 justify-center">
           {DICE_TYPES.map(sides => (
             <PaletteDie
@@ -314,32 +293,6 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
         {/* ── Tracking controls ── */}
         {cardId && (
           <div className="mt-2 pt-2 border-t border-[var(--color-border)]/60 flex items-center gap-2">
-            {/* Mode selector */}
-            <div className="flex rounded-lg overflow-hidden border border-[var(--color-border)] text-[10px] flex-shrink-0">
-              <button
-                onClick={() => setTrackedMode('sum')}
-                className={`px-2 py-1 transition-colors ${
-                  trackedMode === 'sum'
-                    ? 'bg-[var(--color-accent)] text-white'
-                    : 'text-[var(--color-muted)] hover:bg-slate-50'
-                }`}
-              >
-                Sum
-              </button>
-              <button
-                onClick={() => setTrackedMode('difference')}
-                disabled={!canDiff}
-                className={`px-2 py-1 border-l border-[var(--color-border)] transition-colors
-                            disabled:opacity-30 disabled:cursor-not-allowed ${
-                  trackedMode === 'difference'
-                    ? 'bg-[var(--color-accent)] text-white'
-                    : 'text-[var(--color-muted)] hover:bg-slate-50'
-                }`}
-              >
-                |Δ|
-              </button>
-            </div>
-            {/* Track / linked indicator */}
             <button
               onClick={handleTrackResults}
               className={`flex-1 text-[10px] rounded-lg py-1 px-2 transition-colors
@@ -353,6 +306,11 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
             </button>
           </div>
         )}
+      </div>
+
+      {/* ── Physics tray — fills remaining space ── */}
+      <div className="flex-1 min-h-[200px]">
+        <D6Canvas ref={canvasRef} onDieSettled={handleDieSettled} />
       </div>
 
     </div>

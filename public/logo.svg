@@ -36,9 +36,10 @@
   <polygon points="0,-13 4,-4 13,-4 6.5,3 9,13 0,8 -9,13 -6.5,3 -13,-4 -4,-4" fill="#F5A623" style="fill:rgb(245, 166, 35);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
 </g>
 
-<!-- AbraStat — no space, starting right after wand -->
-<text font-family="var(--font-sans)" font-size="44" font-weight="500" font-style="italic" fill="#1A8C80" x="200" y="82" style="fill:rgb(26, 140, 128);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, sans-serif;font-size:44px;font-weight:500;font-style:italic;text-anchor:start;dominant-baseline:auto">Abra</text>
-<text font-family="var(--font-sans)" font-size="44" font-weight="500" font-style="italic" fill="#2EC4B6" x="312" y="82" style="fill:rgb(46, 196, 182);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, sans-serif;font-size:44px;font-weight:500;font-style:italic;text-anchor:start;dominant-baseline:auto">Stat</text>
+<!-- AbraStat — tight wordmark with no gap -->
+<text font-family="var(--font-sans)" font-size="44" font-weight="500" font-style="italic" x="200" y="82" style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, sans-serif;font-size:44px;font-weight:500;font-style:italic;text-anchor:start;dominant-baseline:auto">
+  <tspan fill="#1A8C80">Abra</tspan><tspan fill="#2EC4B6">Stat</tspan>
+</text>
 
 <!-- tagline pill -->
 <rect x="200" y="92" width="252" height="22" rx="11" fill="#1A8C80" style="fill:rgb(26, 140, 128);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>

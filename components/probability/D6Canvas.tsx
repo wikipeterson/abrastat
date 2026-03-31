@@ -41,10 +41,6 @@ const D6_LOCAL_NORMALS: [number, number, number, number][] = [
 
 // ── Textures ──────────────────────────────────────────────────────────────────
 
-const PIP_SLOTS: Record<number, number[]> = {
-  1:[4], 2:[0,8], 3:[0,4,8], 4:[0,2,6,8], 5:[0,2,4,6,8], 6:[0,2,3,5,6,8],
-}
-
 let _d6Textures: THREE.CanvasTexture[] | null = null
 
 function getD6Textures(): THREE.CanvasTexture[] {
@@ -60,12 +56,10 @@ function getD6Textures(): THREE.CanvasTexture[] {
     ctx.lineWidth = 3
     ctx.strokeRect(2, 2, S-4, S-4)
     ctx.fillStyle = DIE_TEXT_COLOR
-    const mg = 20, cell = (S-mg*2)/3, r = 9
-    for (const idx of PIP_SLOTS[v]) {
-      ctx.beginPath()
-      ctx.arc(mg+(idx%3)*cell+cell/2, mg+Math.floor(idx/3)*cell+cell/2, r, 0, Math.PI*2)
-      ctx.fill()
-    }
+    ctx.font = 'bold 72px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(String(v), S/2, S/2)
     return new THREE.CanvasTexture(c)
   })
   return _d6Textures

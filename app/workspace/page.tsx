@@ -42,7 +42,13 @@ const INFERENCE_CARD_OPTIONS: CardOption[] = [
 
 // ─── Grouped Add Card menu ────────────────────────────────────────────────────
 
-function GroupedAddCardMenu({ onAdd }: { onAdd: (type: CardConfig['type']) => void }) {
+function GroupedAddCardMenu({
+  onAdd,
+  className = '',
+}: {
+  onAdd: (type: CardConfig['type']) => void
+  className?: string
+}) {
   const [openGroup, setOpenGroup] = useState<string | null>(null)
 
   const groups = [
@@ -56,24 +62,25 @@ function GroupedAddCardMenu({ onAdd }: { onAdd: (type: CardConfig['type']) => vo
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className={`flex flex-col gap-2 ${className}`}>
       {groups.map(group => (
         <div key={group.id} className="relative">
           <button
             onClick={() => toggle(group.id)}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+            className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
               openGroup === group.id
                 ? 'bg-[var(--color-accent)] text-white'
                 : 'bg-slate-100 text-[var(--color-text)] hover:bg-slate-200'
             }`}
           >
-            {group.label}
+            <span>{group.label}</span>
+            <span className="text-[10px] opacity-70">▾</span>
           </button>
 
           {openGroup === group.id && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setOpenGroup(null)} />
-              <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden min-w-[190px]">
+              <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden min-w-[190px]">
                 {group.options.map(o => (
                   <button
                     key={o.type}
@@ -93,77 +100,18 @@ function GroupedAddCardMenu({ onAdd }: { onAdd: (type: CardConfig['type']) => vo
   )
 }
 
-// ─── Workspace header ─────────────────────────────────────────────────────────
-
-function WorkspaceHeader({
-  active,
-  onChange,
-  onToggleSidebar,
-  datasetName,
-}: {
-  active: Tab
-  onChange: (t: Tab) => void
-  onToggleSidebar: () => void
-  datasetName: string
-}) {
-  const { addExploreCard } = useStore()
-
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'data', label: 'Data' },
-    { id: 'lab',  label: 'Lab'  },
-  ]
-
-  return (
-    <div className="flex-shrink-0 flex items-stretch border-b border-[var(--color-border)] bg-white min-h-[44px]">
-      {/* Left: sidebar toggle + dataset name */}
-      <div className="w-48 flex-shrink-0 border-r border-[var(--color-border)] flex items-center min-w-0 px-3">
-        {active === 'data' && (
-          <button
-            onClick={onToggleSidebar}
-            className="md:hidden mr-2 text-[var(--color-muted)] hover:text-[var(--color-text)]"
-            aria-label="Toggle column sidebar"
-          >
-            ☰
-          </button>
-        )}
-        {datasetName && (
-          <span className="font-display italic font-semibold text-[var(--color-text)] text-sm truncate block">
-            {datasetName}
-          </span>
-        )}
-      </div>
-
-      {/* Middle: tabs */}
-      <div className="flex items-center px-2 sm:px-3 flex-1 min-w-0">
-        {tabs.map(t => (
-          <button
-            key={t.id}
-            onClick={() => onChange(t.id)}
-            className={`px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              active === t.id
-                ? 'border-[var(--color-accent)] text-[var(--color-accent)]'
-                : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-text)]'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Right: Lab add-card actions */}
-      {active === 'lab' && (
-        <div className="flex items-center px-3 flex-shrink-0">
-          <GroupedAddCardMenu onAdd={type => addExploreCard(type)} />
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ─── Column sidebar (Data tab) ────────────────────────────────────────────────
 
-function ColumnSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { grid, selectedColumnIds, toggleColumnSelection } = useStore()
+function ColumnSidebar({
+  open,
+  onClose,
+  activeTab,
+}: {
+  open: boolean
+  onClose: () => void
+  activeTab: Tab
+}) {
+  const { grid, selectedColumnIds, toggleColumnSelection, addExploreCard, activeDatasetName } = useStore()
 
   return (
     <>
@@ -178,7 +126,12 @@ function ColumnSidebar({ open, onClose }: { open: boolean; onClose: () => void }
         ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <div className="px-3 py-2 border-b border-[var(--color-border)] flex items-center justify-between">
-          <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Variables</span>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Variables</div>
+            {activeDatasetName && (
+              <div className="text-[11px] text-[var(--color-text)] truncate mt-0.5">{activeDatasetName}</div>
+            )}
+          </div>
           <button onClick={onClose} className="md:hidden text-[var(--color-muted)] text-lg leading-none">×</button>
         </div>
 
@@ -233,6 +186,15 @@ function ColumnSidebar({ open, onClose }: { open: boolean; onClose: () => void }
             </button>
           </div>
         )}
+
+        {activeTab === 'lab' && (
+          <div className="px-3 py-3 border-t border-[var(--color-border)] bg-slate-50/70">
+            <div className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-2">
+              Add To Lab
+            </div>
+            <GroupedAddCardMenu onAdd={type => addExploreCard(type)} />
+          </div>
+        )}
       </aside>
     </>
   )
@@ -266,7 +228,7 @@ function WorkspaceContent() {
   const [showShare, setShowShare] = useState(false)
   const [shareDatasetId, setShareDatasetId] = useState<string | null>(null)
   const [shareIsPublic, setShareIsPublic] = useState(false)
-  const { isDirty, clearGrid, activeDatasetName, activeDatasetId } = useStore()
+  const { isDirty, clearGrid, activeDatasetId } = useStore()
 
   useEffect(() => {
     function handleBeforeUnload(e: BeforeUnloadEvent) {
@@ -309,29 +271,24 @@ function WorkspaceContent() {
 
   return (
     <div className="flex flex-col h-screen">
-      <Header onNew={handleNewDataset} onSave={handleSaveClick} />
-
-      <WorkspaceHeader
-        active={tab}
-        onChange={setTab}
+      <Header
+        onNew={handleNewDataset}
+        onSave={handleSaveClick}
+        activeTab={tab}
+        onTabChange={setTab}
         onToggleSidebar={() => setSidebarOpen(v => !v)}
-        datasetName={activeDatasetName}
       />
 
       <div className="flex flex-1 min-h-0">
-        {tab === 'data' && (
-          <>
-            <ColumnSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <ColumnSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} activeTab={tab} />
+        {tab === 'data' ? (
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <GridToolbar onShare={handleShareClick} />
               <div className="flex-1 overflow-auto p-2">
                 <DataGrid />
               </div>
-            </div>
-          </>
-        )}
-
-        {tab === 'lab' && (
+          </div>
+        ) : (
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
             <ExploreCanvas />
           </div>

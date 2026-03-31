@@ -4,6 +4,41 @@ import { useId } from 'react'
 import { useStore } from '@/lib/store'
 import { SimResultsCardConfig } from '@/lib/exploreTypes'
 
+// ── Mode selector ─────────────────────────────────────────────────────────────
+
+function ModeSelector({
+  mode,
+  onSelect,
+}: {
+  mode: 'sum' | 'difference'
+  onSelect: (m: 'sum' | 'difference') => void
+}) {
+  return (
+    <div className="flex rounded-lg overflow-hidden border border-[var(--color-border)] text-[10px]">
+      <button
+        onClick={() => onSelect('sum')}
+        className={`px-2.5 py-1 transition-colors ${
+          mode === 'sum'
+            ? 'bg-[var(--color-accent)] text-white'
+            : 'text-[var(--color-muted)] hover:bg-slate-50'
+        }`}
+      >
+        Sum
+      </button>
+      <button
+        onClick={() => onSelect('difference')}
+        className={`px-2.5 py-1 border-l border-[var(--color-border)] transition-colors ${
+          mode === 'difference'
+            ? 'bg-[var(--color-accent)] text-white'
+            : 'text-[var(--color-muted)] hover:bg-slate-50'
+        }`}
+      >
+        |Δ|
+      </button>
+    </div>
+  )
+}
+
 // ── Dot plot ──────────────────────────────────────────────────────────────────
 
 interface DotPlotProps {
@@ -130,9 +165,14 @@ interface SimResultsCardProps {
 }
 
 export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
-  const clearSimResults = useStore(s => s.clearSimResults)
+  const clearSimResults  = useStore(s => s.clearSimResults)
+  const updateExploreCard = useStore(s => s.updateExploreCard)
   const { values, trackedMode, sourceLabel, minValue, maxValue } = config
   const rollCount = values.length
+
+  function handleModeChange(mode: 'sum' | 'difference') {
+    updateExploreCard(cardId, { config: { ...config, trackedMode: mode } })
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -143,10 +183,7 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
           <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
             {sourceLabel}
           </span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-accent-light)]
-                           text-[var(--color-accent)] font-medium">
-            {trackedMode === 'sum' ? 'Sum' : '|Δ|'}
-          </span>
+          <ModeSelector mode={trackedMode} onSelect={handleModeChange} />
           <span className="text-[10px] text-[var(--color-muted)]">
             {rollCount} roll{rollCount !== 1 ? 's' : ''}
           </span>

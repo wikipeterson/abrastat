@@ -200,23 +200,6 @@ function makeResultTexture(value: number): THREE.CanvasTexture {
   return finalizeTexture(new THREE.CanvasTexture(c))
 }
 
-function makePolyFaceTexture(label: string): THREE.CanvasTexture {
-  const S = 256
-  const c = document.createElement('canvas')
-  c.width = c.height = S
-  const ctx = c.getContext('2d')!
-  ctx.fillStyle = DIE_COLOR
-  ctx.fillRect(0, 0, S, S)
-  ctx.fillStyle = DIE_TEXT_COLOR
-  ctx.font = `900 ${label.length >= 2 ? 88 : 124}px sans-serif`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.shadowColor = 'rgba(255,255,255,0.35)'
-  ctx.shadowBlur = 8
-  ctx.fillText(label, S / 2, S / 2)
-  return finalizeTexture(new THREE.CanvasTexture(c))
-}
-
 // ── Face-up detection (d6 only) ───────────────────────────────────────────────
 
 function getD6FaceUp(body: CANNON.Body): number {
@@ -432,7 +415,6 @@ function makeD10TrapezohedronGeometry(r: number): {
   geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
   geo.setAttribute('normal',   new THREE.Float32BufferAttribute(normals,   3))
   geo.setAttribute('uv',       new THREE.Float32BufferAttribute(uvs,       2))
-  for (let i = 0; i < 10; i++) geo.addGroup(i * 6, 6, i)
 
   return { geo, faceDefs }
 }
@@ -755,6 +737,11 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       } else if (entry.sides === 10) {
         snapPolyhedronFaceUp(entry.body, entry.faceDefs)
         result = getPolyFaceUp(entry.body, entry.faceDefs)
+        const mat = entry.mesh.material as THREE.MeshPhongMaterial
+        const oldTex = mat.map
+        mat.map = makeResultTexture(result)
+        mat.needsUpdate = true
+        oldTex?.dispose()
       } else {
         result = entry.precomputedResult
         if (entry.faceDefs.length > 0) {
@@ -1073,29 +1060,15 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           faceDefs = logicalFaces
           supportVertices = convex.vertices
 
-          if (isD10 && logicalFaces.length > 0) {
-            meshMaterial = logicalFaces.map(face =>
-              new THREE.MeshPhongMaterial({
-                map: makePolyFaceTexture(String(face.value)),
-                color: DIE_MATERIAL_COLOR,
-                emissive: DIE_EMISSIVE_COLOR,
-                emissiveIntensity: 0.24,
-                specular: new THREE.Color(DIE_SPECULAR_COLOR),
-                shininess: 60,
-                reflectivity: 0.88,
-              }),
-            )
-          } else {
-            meshMaterial = new THREE.MeshPhongMaterial({
-              map: makeColorFaceTexture(`d${sides}`),
-              color: DIE_MATERIAL_COLOR,
-              emissive: DIE_EMISSIVE_COLOR,
-              emissiveIntensity: 0.24,
-              specular: new THREE.Color(DIE_SPECULAR_COLOR),
-              shininess: 60,
-              reflectivity: 0.88,
-            })
-          }
+          meshMaterial = new THREE.MeshPhongMaterial({
+            map: makeColorFaceTexture(`d${sides}`),
+            color: DIE_MATERIAL_COLOR,
+            emissive: DIE_EMISSIVE_COLOR,
+            emissiveIntensity: 0.24,
+            specular: new THREE.Color(DIE_SPECULAR_COLOR),
+            shininess: 60,
+            reflectivity: 0.88,
+          })
         }
 
         const mesh = new THREE.Mesh(geo, meshMaterial)
@@ -1190,6 +1163,13 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
             const mat = entry.mesh.material as THREE.MeshPhongMaterial
             const oldTex = mat.map
             mat.map = makeColorFaceTexture(`d${entry.sides}`)
+            mat.needsUpdate = true
+            oldTex?.dispose()
+          } else if (entry.sides === 10) {
+            // Single material — swap back to label so result is hidden while rolling
+            const mat = entry.mesh.material as THREE.MeshPhongMaterial
+            const oldTex = mat.map
+            mat.map = makeColorFaceTexture('d10')
             mat.needsUpdate = true
             oldTex?.dispose()
           } else if (entry.sides === 6) {

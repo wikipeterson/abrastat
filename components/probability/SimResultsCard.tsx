@@ -20,9 +20,11 @@ function deriveTrackedValues(
 
 function ModeSelector({
   mode,
+  supportsDifference,
   onSelect,
 }: {
   mode: 'sum' | 'difference'
+  supportsDifference: boolean
   onSelect: (m: 'sum' | 'difference') => void
 }) {
   return (
@@ -37,16 +39,18 @@ function ModeSelector({
       >
         Sum
       </button>
-      <button
-        onClick={() => onSelect('difference')}
-        className={`px-2.5 py-1 border-l border-[var(--color-border)] transition-colors ${
-          mode === 'difference'
-            ? 'bg-[var(--color-accent)] text-white'
-            : 'text-[var(--color-muted)] hover:bg-slate-50'
-        }`}
-      >
-        |Δ|
-      </button>
+      {supportsDifference && (
+        <button
+          onClick={() => onSelect('difference')}
+          className={`px-2.5 py-1 border-l border-[var(--color-border)] transition-colors ${
+            mode === 'difference'
+              ? 'bg-[var(--color-accent)] text-white'
+              : 'text-[var(--color-muted)] hover:bg-slate-50'
+          }`}
+        >
+          |Δ|
+        </button>
+      )}
     </div>
   )
 }
@@ -177,10 +181,11 @@ interface SimResultsCardProps {
 export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
   const clearSimResults  = useStore(s => s.clearSimResults)
   const updateExploreCard = useStore(s => s.updateExploreCard)
-  const { values, trackedMode, sourceLabel, minValue, maxValue, rolls } = config
+  const { values, trackedMode, sourceLabel, minValue, maxValue, rolls, supportsDifference } = config
   const rollCount = values.length
 
   function handleModeChange(mode: 'sum' | 'difference') {
+    if (mode === 'difference' && !supportsDifference) return
     if (mode === trackedMode) return
     updateExploreCard(cardId, {
       config: {
@@ -200,7 +205,7 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
           <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
             {sourceLabel}
           </span>
-          <ModeSelector mode={trackedMode} onSelect={handleModeChange} />
+          <ModeSelector mode={trackedMode} supportsDifference={supportsDifference} onSelect={handleModeChange} />
           <span className="text-[10px] text-[var(--color-muted)]">
             {rollCount} roll{rollCount !== 1 ? 's' : ''}
           </span>

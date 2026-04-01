@@ -82,6 +82,7 @@ export interface SimResultsCardConfig {
   sourceCardId: string
   sourceLabel: string        // e.g. 'Dice Roller'
   trackedMode: 'sum' | 'difference'
+  supportsDifference: boolean
   minValue: number
   maxValue: number
   rolls: number[][]

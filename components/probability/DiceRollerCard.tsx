@@ -53,6 +53,18 @@ function getTrackedRange(
   }
 }
 
+function deriveTrackedValues(
+  rolls: number[][],
+  trackedMode: 'sum' | 'difference',
+): number[] {
+  if (trackedMode === 'sum') {
+    return rolls.map(roll => roll.reduce((sum, value) => sum + value, 0))
+  }
+  return rolls
+    .filter(roll => roll.length === 2)
+    .map(roll => Math.abs(roll[0] - roll[1]))
+}
+
 // ── Palette die ───────────────────────────────────────────────────────────────
 
 function PaletteDie({ sides, count, onClick }: { sides: DiceSides; count: number; onClick: () => void }) {
@@ -175,6 +187,7 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   const hasLinkedCard = linkedResultsCardId != null &&
     exploreCards.some(c => c.id === linkedResultsCardId)
   const trackedRange = getTrackedRange(tray, trackedMode)
+  const supportsDifference = tray.length === 2
 
   // Keep linked results card's minValue/maxValue in sync with current tray
   useEffect(() => {
@@ -184,16 +197,36 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
     if (!lc || lc.config.type !== 'sim-results') return
 
     const cfg = lc.config
-    if (cfg.minValue === trackedRange.minValue && cfg.maxValue === trackedRange.maxValue) return
+    const nextTrackedMode =
+      cfg.trackedMode === 'difference' && !supportsDifference ? 'sum' : cfg.trackedMode
+    const nextValues =
+      nextTrackedMode !== cfg.trackedMode
+        ? deriveTrackedValues(cfg.rolls, nextTrackedMode)
+        : cfg.values
+
+    if (
+      cfg.minValue === trackedRange.minValue &&
+      cfg.maxValue === trackedRange.maxValue &&
+      cfg.supportsDifference === supportsDifference &&
+      nextTrackedMode === cfg.trackedMode
+    ) return
 
     updateExploreCard(linkedResultsCardId, {
-      config: { ...cfg, minValue: trackedRange.minValue, maxValue: trackedRange.maxValue },
+      config: {
+        ...cfg,
+        trackedMode: nextTrackedMode,
+        supportsDifference,
+        minValue: trackedRange.minValue,
+        maxValue: trackedRange.maxValue,
+        values: nextValues,
+      },
     })
   }, [
     exploreCards,
     linkedResultsCardId,
     trackedRange.minValue,
     trackedRange.maxValue,
+    supportsDifference,
     updateExploreCard,
   ])
 

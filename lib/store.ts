@@ -291,7 +291,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'testinterval' ? { type: 'testinterval' } :
       type === 'means'        ? { type: 'means', var1ColId: null, var2ColId: null } :
       type === 'dice-roller'  ? { type: 'dice-roller', linkedResultsCardId: null, trackedMode: 'sum' } :
-      type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', minValue: 1, maxValue: 6, rolls: [], values: [] } :
+      type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', supportsDifference: false, minValue: 1, maxValue: 6, rolls: [], values: [] } :
                                  { type: 'simulation' }
     const { width, height } =
       type === 'table'   ? { width: 780, height: 520 } :
@@ -333,6 +333,7 @@ export const useStore = create<AbraStatStore>((set) => ({
           sourceCardId,
           sourceLabel,
           trackedMode,
+          supportsDifference: trackedMode === 'difference',
           minValue: range.minValue,
           maxValue: range.maxValue,
           rolls: [],

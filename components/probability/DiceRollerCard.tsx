@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react'
 import { v4 as uuid } from 'uuid'
-import { D6Canvas, D6CanvasHandle } from './D6Canvas'
+import { D6Canvas, D6CanvasHandle, DEFAULT_DICE_TUNING, DiceTuning } from './D6Canvas'
 import { useStore } from '@/lib/store'
 import { DiceRollerCardConfig } from '@/lib/exploreTypes'
 
@@ -114,6 +114,8 @@ interface DiceRollerCardProps {
 export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardProps) {
   const [tray, setTray]               = useState<DieInTray[]>([])
   const [finalResults, setFinalResults] = useState<Record<string, number>>({})
+  const [showTuning, setShowTuning] = useState(false)
+  const [tuning, setTuning] = useState<DiceTuning>(DEFAULT_DICE_TUNING)
   const canvasRef = useRef<D6CanvasHandle>(null)
 
   // ── Store connections for linked results ──────────────────────────────────
@@ -240,6 +242,10 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
     setFinalResults(prev => ({ ...prev, [id]: value }))
   }
 
+  function setTune<K extends keyof DiceTuning>(key: K, value: DiceTuning[K]) {
+    setTuning(prev => ({ ...prev, [key]: value }))
+  }
+
   const inner = (
     <div className="flex flex-col h-full">
 
@@ -289,13 +295,73 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
             >
               {hasLinkedCard ? '📊 Results linked' : '📊 Track results'}
             </button>
+            <button
+              onClick={() => setShowTuning(v => !v)}
+              className={`text-[10px] rounded-lg py-1 px-2 border transition-colors ${
+                showTuning
+                  ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+                  : 'border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
+              }`}
+            >
+              Tune
+            </button>
+          </div>
+        )}
+
+        {showTuning && (
+          <div className="mt-2 rounded-xl border border-[var(--color-border)] bg-slate-50/80 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                Dice Tuning
+              </span>
+              <button
+                onClick={() => setTuning(DEFAULT_DICE_TUNING)}
+                className="text-[10px] text-[var(--color-muted)] hover:text-[var(--color-text)]"
+              >
+                Reset
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">
+              <label className="flex flex-col gap-1">
+                <span className="text-[var(--color-muted)]">Launch speed {tuning.launchSpeed.toFixed(1)}</span>
+                <input type="range" min="10" max="45" step="0.5" value={tuning.launchSpeed} onChange={e => setTune('launchSpeed', Number(e.target.value))} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[var(--color-muted)]">Launch spread {tuning.launchSpread.toFixed(1)}</span>
+                <input type="range" min="0" max="16" step="0.2" value={tuning.launchSpread} onChange={e => setTune('launchSpread', Number(e.target.value))} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[var(--color-muted)]">Spin {tuning.launchSpin.toFixed(0)}</span>
+                <input type="range" min="20" max="120" step="1" value={tuning.launchSpin} onChange={e => setTune('launchSpin', Number(e.target.value))} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[var(--color-muted)]">Settle velocity {tuning.settleVelocity.toFixed(2)}</span>
+                <input type="range" min="0.05" max="1" step="0.01" value={tuning.settleVelocity} onChange={e => setTune('settleVelocity', Number(e.target.value))} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[var(--color-muted)]">Settle angular {tuning.settleAngular.toFixed(2)}</span>
+                <input type="range" min="0.05" max="1" step="0.01" value={tuning.settleAngular} onChange={e => setTune('settleAngular', Number(e.target.value))} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[var(--color-muted)]">Hold frames {tuning.settleHoldFrames}</span>
+                <input type="range" min="1" max="20" step="1" value={tuning.settleHoldFrames} onChange={e => setTune('settleHoldFrames', Number(e.target.value))} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[var(--color-muted)]">Lineup delay {tuning.lineupDelayMs}ms</span>
+                <input type="range" min="0" max="800" step="10" value={tuning.lineupDelayMs} onChange={e => setTune('lineupDelayMs', Number(e.target.value))} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[var(--color-muted)]">Lineup duration {tuning.lineupDurationMs}ms</span>
+                <input type="range" min="120" max="1000" step="10" value={tuning.lineupDurationMs} onChange={e => setTune('lineupDurationMs', Number(e.target.value))} />
+              </label>
+            </div>
           </div>
         )}
       </div>
 
       {/* ── Physics tray — fills remaining space ── */}
       <div className="flex-1 min-h-[200px]">
-        <D6Canvas ref={canvasRef} onDieSettled={handleDieSettled} />
+        <D6Canvas ref={canvasRef} onDieSettled={handleDieSettled} tuning={tuning} />
       </div>
 
     </div>

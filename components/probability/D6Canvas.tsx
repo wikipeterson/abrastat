@@ -15,12 +15,7 @@ const GRAVITY  = -32
 
 const LINEAR_DAMPING  = 0.28
 const ANGULAR_DAMPING = 0.38
-const SETTLE_VEL  = 0.35   // world units/s — die looks still below this
-const SETTLE_ANG  = 0.40   // rad/s
-const SETTLE_HOLD = 4      // consecutive frames needed (~67 ms at 60 fps)
 const MAX_SETTLE  = 5500   // ms hard timeout
-const LINEUP_DURATION = 420
-const LINEUP_DELAY = 180
 const LINEUP_READY_VEL = 2.0   // lineup fires even while dice are barely rolling
 const LINEUP_READY_ANG = 2.0
 
@@ -613,15 +608,40 @@ export interface D6CanvasHandle {
 
 export interface D6CanvasProps {
   onDieSettled: (id: string, value: number) => void
+  tuning?: DiceTuning
+}
+
+export interface DiceTuning {
+  launchSpeed: number
+  launchSpread: number
+  launchSpin: number
+  settleVelocity: number
+  settleAngular: number
+  settleHoldFrames: number
+  lineupDelayMs: number
+  lineupDurationMs: number
+}
+
+export const DEFAULT_DICE_TUNING: DiceTuning = {
+  launchSpeed: 25,
+  launchSpread: 7.8,
+  launchSpin: 74,
+  settleVelocity: 0.35,
+  settleAngular: 0.4,
+  settleHoldFrames: 4,
+  lineupDelayMs: 180,
+  lineupDurationMs: 420,
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
-  function D6Canvas({ onDieSettled }, ref) {
+  function D6Canvas({ onDieSettled, tuning }, ref) {
     const mountRef     = useRef<HTMLDivElement>(null)
     const onSettledRef = useRef(onDieSettled)
+    const tuningRef    = useRef<DiceTuning>({ ...DEFAULT_DICE_TUNING, ...tuning })
     useEffect(() => { onSettledRef.current = onDieSettled })
+    useEffect(() => { tuningRef.current = { ...DEFAULT_DICE_TUNING, ...tuning } }, [tuning])
 
     // Three / Cannon singletons
     const worldRef    = useRef<CANNON.World | null>(null)
@@ -668,15 +688,6 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       entry.body.sleep()
       entry.mesh.position.set(x, entry.sides === 6 ? DIE_HALF : entry.body.position.y, z)
       entry.mesh.quaternion.set(0, 0, 0, 1)
-    }
-
-    function restageIdleDice() {
-      if (lineupRef.current.active) return
-      lineupRef.current.completed = false
-      lineupRef.current.readyAt = null
-      dieEntriesRef.current.forEach((entry, index) => {
-        stageDieAtSlot(entry, index)
-      })
     }
 
     function restoreD6FaceMaps(entry: DieEntry) {
@@ -940,9 +951,12 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
             if (!entry.settled) {
               if (b.sleepState === CANNON.Body.SLEEPING) {
                 settleEntry(entry)
-              } else if (b.velocity.length() < SETTLE_VEL && b.angularVelocity.length() < SETTLE_ANG) {
+              } else if (
+                b.velocity.length() < tuningRef.current.settleVelocity &&
+                b.angularVelocity.length() < tuningRef.current.settleAngular
+              ) {
                 entry.settleCount++
-                if (entry.settleCount >= SETTLE_HOLD) settleEntry(entry)
+                if (entry.settleCount >= tuningRef.current.settleHoldFrames) settleEntry(entry)
               } else {
                 entry.settleCount = 0
               }
@@ -966,7 +980,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
               lineupRef.current.readyAt = now
             }
 
-            if (now - lineupRef.current.readyAt >= LINEUP_DELAY) {
+            if (now - lineupRef.current.readyAt >= tuningRef.current.lineupDelayMs) {
               for (const entry of dieEntriesRef.current) {
                 if (!entry.settled) settleEntry(entry)
               }
@@ -978,7 +992,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         }
 
         if (lineupRef.current.active) {
-          const t = Math.min(1, (now - lineupRef.current.startAt) / LINEUP_DURATION)
+          const t = Math.min(1, (now - lineupRef.current.startAt) / tuningRef.current.lineupDurationMs)
           const eased = 1 - Math.pow(1 - t, 3)
           for (const entry of dieEntriesRef.current) {
             entry.mesh.position.lerpVectors(entry.lineupStartPos, entry.lineupTargetPos, eased)
@@ -1115,7 +1129,10 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           lineupTargetQuat: new THREE.Quaternion(),
         }
         dieEntriesRef.current.push(entry)
-        restageIdleDice()
+        lineupRef.current.active = false
+        lineupRef.current.completed = false
+        lineupRef.current.readyAt = null
+        stageDieAtSlot(entry, slotIndex)
       },
 
       removeDie(id: string) {
@@ -1137,7 +1154,12 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         }
         scene.remove(entry.mesh)
         dieEntriesRef.current.splice(idx, 1)
-        restageIdleDice()
+        lineupRef.current.active = false
+        lineupRef.current.completed = false
+        lineupRef.current.readyAt = null
+        dieEntriesRef.current.forEach((remaining, index) => {
+          stageDieAtSlot(remaining, index)
+        })
       },
 
       rollAll() {
@@ -1153,6 +1175,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         const maxRows = Math.max(1, Math.floor((innerZ * 2) / launchSpacing))
         const rows = Math.min(dieEntriesRef.current.length, maxRows)
         const batchBoost = Math.min(8, Math.max(0, dieEntriesRef.current.length - 1) * 0.34)
+        const liveTuning = tuningRef.current
 
         for (const [index, entry] of dieEntriesRef.current.entries()) {
           entry.settled = false
@@ -1177,7 +1200,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           const col = Math.floor(index / rows)
           const sx = innerX - col * launchSpacing * 0.95
           const sz = -innerZ + row * launchSpacing
-          const vx = -(25 + batchBoost + Math.random() * 7.8)
+          const vx = -(liveTuning.launchSpeed + batchBoost + Math.random() * liveTuning.launchSpread)
           const vy = 1.8 + Math.random() * 2.4
           const vz = 9.5 + Math.random() * 4.8
 
@@ -1187,9 +1210,9 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           entry.body.quaternion.set(0, 0, 0, 1)
           entry.body.velocity.set(vx, vy, vz)
           entry.body.angularVelocity.set(
-            (Math.random() - 0.5) * 74,
-            (Math.random() - 0.5) * 58,
-            (Math.random() - 0.5) * 74,
+            (Math.random() - 0.5) * liveTuning.launchSpin,
+            (Math.random() - 0.5) * (liveTuning.launchSpin * 0.78),
+            (Math.random() - 0.5) * liveTuning.launchSpin,
           )
 
           // Set new max-settle timer

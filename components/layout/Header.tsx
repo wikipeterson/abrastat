@@ -80,7 +80,7 @@ export function Header({
                 aria-label="Save dataset"
               >
                 <Save size={14} />
-                <span className="hidden sm:inline">Save{isDirty ? ' ●' : ''}</span>
+                <span className="hidden sm:inline">Save Data{isDirty ? ' ●' : ''}</span>
                 {isDirty && <span className="sm:hidden">●</span>}
               </button>
             </>

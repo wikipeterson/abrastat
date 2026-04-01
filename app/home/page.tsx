@@ -214,9 +214,9 @@ function HomeContent() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: 'var(--color-bg)' }}>
+    <div className="flex flex-col min-h-full" style={{ background: 'var(--color-bg)' }}>
       {/* Top-level section tabs */}
-      <div className="border-b border-[var(--color-border)] bg-white flex-shrink-0">
+      <div className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-white flex-shrink-0">
         <div className="max-w-5xl mx-auto px-4 flex items-center gap-1">
           {HOME_TABS.map(t => (
             <button

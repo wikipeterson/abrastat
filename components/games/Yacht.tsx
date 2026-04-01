@@ -228,23 +228,6 @@ export function Yacht({ onDone }: Props) {
   return (
     <div className="grid items-stretch gap-4 xl:grid-cols-[1.45fr_1fr]">
       <div className="space-y-3">
-        <div className="grid grid-cols-3 rounded-2xl border border-[var(--color-border)] bg-white p-3 text-center">
-          <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Turn</div>
-            <div className="text-lg font-bold text-[var(--color-text)]">{Math.min(turn + 1, NUM_TURNS)} / {NUM_TURNS}</div>
-          </div>
-          <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Roll State</div>
-            <div className="text-lg font-bold text-[var(--color-text)]">
-              {rollsLeft === 3 ? 'Ready' : rollsLeft === 0 ? 'Score now' : `${rollsLeft} left`}
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Score</div>
-            <div className="text-lg font-bold text-[var(--color-text)] tabular-nums">{grandTotal}</div>
-          </div>
-        </div>
-
         <div className="rounded-2xl border border-[var(--color-border)] bg-white p-3 space-y-3">
           <div className="overflow-hidden rounded-xl" style={{ height: 250 }}>
             <D6Canvas
@@ -254,31 +237,23 @@ export function Yacht({ onDone }: Props) {
           </div>
 
           <div className="space-y-3">
-            <div>
-              <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
-                Active Dice
-              </div>
-              <div className="flex min-h-[56px] flex-wrap items-center gap-2 rounded-xl border border-[var(--color-border)] bg-slate-50/70 px-3 py-2">
-                {activeDice.map(d => (
-                  <button
-                    key={d.id}
-                    onClick={() => toggleHold(d.id)}
-                    disabled={!holdable}
-                    title="Click to hold out of tray"
-                    className={[
-                      'rounded-lg border px-3 py-1.5 text-lg font-black tabular-nums transition-all',
-                      holdable
-                        ? 'border-[#0D4F49] bg-[#0D4F49] text-white hover:scale-105'
-                        : 'cursor-not-allowed border-slate-200 bg-slate-100 text-[var(--color-muted)]',
-                    ].join(' ')}
-                  >
-                    {d.value ?? '?'}
-                  </button>
-                ))}
-                <span className="text-xs text-[var(--color-muted)]">
-                  Click a value to hold that die out of the next roll.
-                </span>
-              </div>
+            <div className="flex flex-wrap gap-2">
+              {activeDice.map(d => (
+                <button
+                  key={d.id}
+                  onClick={() => toggleHold(d.id)}
+                  disabled={!holdable}
+                  title="Click to hold out of tray"
+                  className={[
+                    'rounded-lg border px-3 py-1.5 text-lg font-black tabular-nums transition-all',
+                    holdable
+                      ? 'border-[#0D4F49] bg-[#0D4F49] text-white hover:scale-105'
+                      : 'cursor-not-allowed border-slate-200 bg-slate-100 text-[var(--color-muted)]',
+                  ].join(' ')}
+                >
+                  {d.value ?? '?'}
+                </button>
+              ))}
             </div>
             <div className="grid gap-3 lg:grid-cols-[1fr_220px]">
             <div>

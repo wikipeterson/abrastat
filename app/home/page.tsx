@@ -215,8 +215,6 @@ function HomeContent() {
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: 'var(--color-bg)' }}>
-      <Header />
-
       {/* Top-level section tabs */}
       <div className="border-b border-[var(--color-border)] bg-white flex-shrink-0">
         <div className="max-w-5xl mx-auto px-4 flex items-center gap-1">

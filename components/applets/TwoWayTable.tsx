@@ -18,8 +18,8 @@ type ChartMode = 'counts' | 'row'
 interface TwoWayData {
   explName: string
   respName: string
-  rowLabels: string[] // explanatory variable categories
-  colLabels: string[] // response variable categories
+  rowLabels: string[] // response variable categories
+  colLabels: string[] // explanatory variable categories
   cells: number[][]  // cells[rowIdx][colIdx]
 }
 
@@ -42,44 +42,44 @@ function getGrandTotal(cells: number[][]): number {
 // ─── Chart traces ─────────────────────────────────────────────────────────────
 
 function buildBarTraces(data: TwoWayData, chartMode: ChartMode) {
-  const rTotals = getRowTotals(data.cells)
+  const cTotals = getColTotals(data.cells, data.colLabels.length)
   const values =
     chartMode === 'row'
-      ? data.cells.map((row, ri) =>
-          row.map(c => (rTotals[ri] ? (c / rTotals[ri]) * 100 : 0))
+      ? data.cells.map(row =>
+          row.map((c, ci) => (cTotals[ci] ? (c / cTotals[ci]) * 100 : 0))
         )
       : data.cells
 
-  return data.colLabels.map((col, ci) => ({
+  return data.rowLabels.map((rowLabel, ri) => ({
     type: 'bar' as const,
-    name: col,
-    x: data.rowLabels,
-    y: values.map(row => row[ci]),
-    marker: { color: ABRA_COLORS[ci % ABRA_COLORS.length], opacity: 0.9 },
+    name: rowLabel,
+    x: data.colLabels,
+    y: values[ri],
+    marker: { color: ABRA_COLORS[ri % ABRA_COLORS.length], opacity: 0.9 },
     hovertemplate:
       chartMode === 'row'
-        ? `${col}: %{y:.1f}%<extra></extra>`
-        : `${col}: %{y}<extra></extra>`,
+        ? `${rowLabel}: %{y:.1f}%<extra></extra>`
+        : `${rowLabel}: %{y}<extra></extra>`,
   }))
 }
 
 function buildMosaicTraces(data: TwoWayData): Data[] {
-  const rowTotals = getRowTotals(data.cells)
+  const colTotals = getColTotals(data.cells, data.colLabels.length)
   const grandTotal = getGrandTotal(data.cells)
   if (!grandTotal) return []
 
   let xStart = 0
   const traces: Data[] = []
 
-  data.rowLabels.forEach((rowLabel, ri) => {
-    const rowTotal = rowTotals[ri]
-    const rowWidth = rowTotal / grandTotal
-    const xEnd = xStart + rowWidth
+  data.colLabels.forEach((colLabel, ci) => {
+    const colTotal = colTotals[ci]
+    const colWidth = colTotal / grandTotal
+    const xEnd = xStart + colWidth
     let yStart = 0
 
-    data.colLabels.forEach((colLabel, ci) => {
+    data.rowLabels.forEach((rowLabel, ri) => {
       const cell = data.cells[ri][ci]
-      const segmentHeight = rowTotal ? cell / rowTotal : 0
+      const segmentHeight = colTotal ? cell / colTotal : 0
       const yEnd = yStart + segmentHeight
 
       traces.push({
@@ -88,16 +88,16 @@ function buildMosaicTraces(data: TwoWayData): Data[] {
         x: [xStart, xEnd, xEnd, xStart, xStart],
         y: [yStart, yStart, yEnd, yEnd, yStart],
         fill: 'toself',
-        name: colLabel,
-        legendgroup: colLabel,
-        showlegend: ri === 0,
+        name: rowLabel,
+        legendgroup: rowLabel,
+        showlegend: ci === 0,
         line: { color: 'white', width: 1 },
-        fillcolor: ABRA_COLORS[ci % ABRA_COLORS.length],
+        fillcolor: ABRA_COLORS[ri % ABRA_COLORS.length],
         hovertemplate:
-          `${data.explName}: ${rowLabel}<br>` +
-          `${data.respName}: ${colLabel}<br>` +
+          `${data.explName}: ${colLabel}<br>` +
+          `${data.respName}: ${rowLabel}<br>` +
           `Count: ${cell}<br>` +
-          `Row %: ${rowTotal ? ((cell / rowTotal) * 100).toFixed(1) : '0.0'}%<br>` +
+          `Column %: ${colTotal ? ((cell / colTotal) * 100).toFixed(1) : '0.0'}%<br>` +
           `Total %: ${((cell / grandTotal) * 100).toFixed(1)}%<extra></extra>`,
       })
 
@@ -175,8 +175,8 @@ function ManualInput({
               {/* Top-left corner */}
               <th className="pr-3 pb-1.5 text-left w-36">
                 <span className="text-[10px] text-[var(--color-muted)] font-normal leading-tight">
-                  {explName || 'Explanatory'}<br />
-                  <span className="opacity-60">\ {respName || 'Response'}</span>
+            {respName || 'Response'}<br />
+            <span className="opacity-60">\ {explName || 'Explanatory'}</span>
                 </span>
               </th>
               {colLabels.map((cl, ci) => (
@@ -376,8 +376,8 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
   const [respColIdLocal, setRespColIdLocal] = useState('')
 
   // Resolve which IDs to use
-  const explColId = isCardMode ? (rowsColId ?? '') : explColIdLocal
-  const respColId = isCardMode ? (colsColId ?? '') : respColIdLocal
+  const explColId = isCardMode ? (colsColId ?? '') : explColIdLocal
+  const respColId = isCardMode ? (rowsColId ?? '') : respColIdLocal
   const [tableView, setTableView] = useState<TableView>('counts')
   const [graphType, setGraphType] = useState<GraphType>('segmented')
   const [chartMode, setChartMode] = useState<ChartMode>('row')
@@ -404,10 +404,10 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
         .map((e, i) => [e.trim(), respVals[i].trim()] as [string, string])
         .filter(([e, r]) => e && r)
       if (pairs.length === 0) return null
-      const rowLabels = [...new Set(pairs.map(p => p[0]))].sort()
-      const colLabels = [...new Set(pairs.map(p => p[1]))].sort()
+      const rowLabels = [...new Set(pairs.map(p => p[1]))].sort()
+      const colLabels = [...new Set(pairs.map(p => p[0]))].sort()
       const cells = rowLabels.map(rl =>
-        colLabels.map(cl => pairs.filter(([e, r]) => e === rl && r === cl).length)
+        colLabels.map(cl => pairs.filter(([e, r]) => e === cl && r === rl).length)
       )
       return { explName: explCol.name, respName: respCol.name, rowLabels, colLabels, cells }
     }
@@ -436,10 +436,10 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
     if (!data) return {}
 
     if (graphType === 'mosaic') {
-      const rowTotals = getRowTotals(data.cells)
+      const colTotals = getColTotals(data.cells, data.colLabels.length)
       const grandTotal = getGrandTotal(data.cells)
       let running = 0
-      const centers = rowTotals.map(total => {
+      const centers = colTotals.map(total => {
         const width = grandTotal ? total / grandTotal : 0
         const center = running + width / 2
         running += width
@@ -452,7 +452,7 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
           range: [0, 1],
           tickmode: 'array',
           tickvals: centers,
-          ticktext: data.rowLabels,
+          ticktext: data.colLabels,
           fixedrange: true,
         },
         yaxis: {
@@ -471,11 +471,11 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
       barmode: graphType === 'segmented' ? 'stack' : 'group',
       xaxis: { title: { text: data.explName } },
       yaxis: {
-        title: { text: chartMode === 'counts' ? 'Count' : 'Row %' },
+        title: { text: chartMode === 'counts' ? 'Count' : 'Column %' },
         ticksuffix: chartMode === 'row' ? '%' : '',
       },
       showlegend: true,
-      legend: { title: { text: data.respName } },
+        legend: { title: { text: data.respName } },
       margin: { t: 12, r: 20, b: 56, l: 56 },
     }
   }, [data, graphType, chartMode])
@@ -687,26 +687,26 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
           }}
         >
           <div style={{ gridRow: '2', gridColumn: '1' }}>
-            <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('cols')}>
+            <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('rows')}>
               <DropZone
-                id={`${cardId}:cols`}
+                id={`${cardId}:rows`}
                 label="Response Variable"
-                hint="columns of the table"
+                hint="rows of the table"
                 assignedCol={grid.columns.find(c => c.id === respColId) ?? null}
-                onClear={() => onClearZone?.('cols')}
+                onClear={() => onClearZone?.('rows')}
                 variant="vertical"
               />
             </div>
           </div>
 
           <div style={{ gridRow: '1', gridColumn: '2' }}>
-            <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('rows')}>
+            <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('cols')}>
               <DropZone
-                id={`${cardId}:rows`}
+                id={`${cardId}:cols`}
                 label="Explanatory Variable"
-                hint="rows of the table"
+                hint="columns of the table"
                 assignedCol={grid.columns.find(c => c.id === explColId) ?? null}
-                onClear={() => onClearZone?.('rows')}
+                onClear={() => onClearZone?.('cols')}
               />
             </div>
           </div>

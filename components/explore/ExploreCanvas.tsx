@@ -401,7 +401,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       case 'data-grid':    return { minWidth: 420, minHeight: 620 }
       case 'graph':        return { minWidth: 520, minHeight: 460 }
       case 'summary':      return { minWidth: 700, minHeight: 620 }
-      case 'table':        return { minWidth: 780, minHeight: 500 }
+      case 'table':        return { minWidth: 920, minHeight: 700 }
       case 'regression':   return { minWidth: 400, minHeight: 340 }
       case 'distribution': return { minWidth: 460, minHeight: 480 }
       case 'generator':    return { minWidth: 460, minHeight: 440 }

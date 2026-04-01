@@ -15,6 +15,8 @@ interface HeaderProps {
   onToggleSidebar?: () => void
   datasetName?: string
   labActions?: ReactNode
+  showSave?: boolean
+  showHomeLink?: boolean
 }
 
 export function Header({
@@ -23,6 +25,8 @@ export function Header({
   onToggleSidebar,
   datasetName,
   labActions,
+  showSave = true,
+  showHomeLink = true,
 }: HeaderProps) {
   const { user, isGuest } = useAuth()
   const { isDirty, clearGrid } = useStore()
@@ -68,7 +72,7 @@ export function Header({
         <div className="flex items-center gap-1 sm:gap-2">
           {labActions}
 
-          {!isGuest && (
+          {!isGuest && showSave && (
             <>
               <button
                 onClick={onSave}
@@ -93,7 +97,7 @@ export function Header({
             </button>
           )}
 
-          {!isGuest && (
+          {!isGuest && showHomeLink && (
             <Link href="/home" className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-slate-100 transition-colors">
               <Library size={14} />
               <span className="hidden sm:inline">Home</span>

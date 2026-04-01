@@ -259,7 +259,12 @@ function HomeContent() {
 export default function HomePage() {
   return (
     <ProtectedRoute>
-      <HomeContent />
+      <div className="flex h-screen flex-col">
+        <Header showSave={false} showHomeLink={false} />
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <HomeContent />
+        </div>
+      </div>
     </ProtectedRoute>
   )
 }

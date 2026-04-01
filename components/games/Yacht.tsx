@@ -226,7 +226,7 @@ export function Yacht({ onDone }: Props) {
   const bonusLabel = bonusAchieved ? '+35 ✓' : upperFilled > 0 ? `need ${upperNeeded} more` : '—'
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1.15fr_0.95fr]">
+    <div className="grid gap-4 xl:grid-cols-[1.45fr_1fr]">
       <div className="space-y-3">
         <div className="grid grid-cols-3 rounded-2xl border border-[var(--color-border)] bg-white p-3 text-center">
           <div>
@@ -246,19 +246,19 @@ export function Yacht({ onDone }: Props) {
         </div>
 
         <div className="rounded-2xl border border-[var(--color-border)] bg-white p-3 space-y-3">
-          <div className="overflow-hidden rounded-xl" style={{ height: 300 }}>
+          <div className="overflow-hidden rounded-xl" style={{ height: 250 }}>
             <D6Canvas
               ref={canvasRef}
               onDieSettled={handleDieSettled}
             />
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3 lg:grid-cols-[1fr_1fr_220px]">
             <div>
               <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
                 In Tray
               </div>
-              <div className="flex min-h-[78px] flex-wrap gap-3 rounded-xl border border-[var(--color-border)] bg-slate-50/70 p-3">
+              <div className="flex min-h-[102px] flex-wrap content-start gap-3 rounded-xl border border-[var(--color-border)] bg-slate-50/70 p-3">
                 {activeDice.map(d => (
                   <DieFace
                     key={d.id}
@@ -275,7 +275,7 @@ export function Yacht({ onDone }: Props) {
               <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
                 Held
               </div>
-              <div className="flex min-h-[78px] flex-wrap gap-3 rounded-xl border border-dashed border-[var(--color-accent)] bg-[var(--color-accent-light)]/50 p-3">
+              <div className="flex min-h-[102px] flex-wrap content-start gap-3 rounded-xl border border-dashed border-[var(--color-accent)] bg-[var(--color-accent-light)]/50 p-3">
                 {heldDice.length === 0 ? (
                   <div className="flex items-center text-xs text-[var(--color-muted)]">Click a die below the tray to hold it out.</div>
                 ) : (
@@ -292,34 +292,42 @@ export function Yacht({ onDone }: Props) {
                 )}
               </div>
             </div>
-          </div>
-
-          <div className="flex flex-col items-center gap-1.5">
-            {mustScore && (
-              <p className="text-xs font-medium text-amber-600">
-                No rolls remaining — choose a category on the right.
-              </p>
-            )}
-            <button
-              onClick={roll}
-              disabled={rollsLeft === 0 || isRolling || activeDice.length === 0}
-              className={[
-                'w-full rounded-xl py-3 text-sm font-bold transition-all',
-                rollsLeft > 0 && !isRolling && activeDice.length > 0
-                  ? 'bg-[var(--color-accent)] text-white shadow-sm hover:opacity-90'
-                  : 'cursor-not-allowed bg-slate-100 text-[var(--color-muted)]',
-              ].join(' ')}
-            >
-              {isRolling
-                ? 'Rolling…'
-                : rollsLeft === 3
-                  ? 'Roll Dice'
-                  : rollsLeft === 0
-                    ? 'No rolls left'
-                    : activeDice.length === 0
-                      ? 'Return a die to roll again'
-                      : `Roll Again (${rollsLeft} left)`}
-            </button>
+            <div className="flex flex-col justify-between rounded-xl border border-[var(--color-border)] bg-slate-50/70 p-3">
+              <div className="space-y-2">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
+                  Action
+                </div>
+                {mustScore ? (
+                  <p className="text-xs font-medium text-amber-600">
+                    No rolls left. Pick a category.
+                  </p>
+                ) : (
+                  <p className="text-xs text-[var(--color-muted)]">
+                    Use the width: keep dice in tray to reroll, or move them out to hold.
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={roll}
+                disabled={rollsLeft === 0 || isRolling || activeDice.length === 0}
+                className={[
+                  'w-full rounded-xl py-3 text-sm font-bold transition-all',
+                  rollsLeft > 0 && !isRolling && activeDice.length > 0
+                    ? 'bg-[var(--color-accent)] text-white shadow-sm hover:opacity-90'
+                    : 'cursor-not-allowed bg-slate-200 text-[var(--color-muted)]',
+                ].join(' ')}
+              >
+                {isRolling
+                  ? 'Rolling…'
+                  : rollsLeft === 3
+                    ? 'Roll Dice'
+                    : rollsLeft === 0
+                      ? 'No rolls left'
+                      : activeDice.length === 0
+                        ? 'Return a die'
+                        : `Roll Again (${rollsLeft} left)`}
+              </button>
+            </div>
           </div>
         </div>
       </div>

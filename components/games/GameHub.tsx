@@ -145,7 +145,7 @@ export function GameHub() {
 
   if (state.view === 'playing') {
     const containerClass = gameMeta.wide
-      ? 'max-w-2xl mx-auto py-6 px-4 space-y-4'
+      ? 'max-w-6xl mx-auto py-6 px-4 space-y-4'
       : 'max-w-lg mx-auto py-6 px-4 space-y-4'
     return (
       <div className={containerClass}>
@@ -187,7 +187,7 @@ export function GameHub() {
 
   // Done screen
   const doneContainerClass = gameMeta.wide
-    ? 'max-w-2xl mx-auto py-6 px-4 space-y-4'
+    ? 'max-w-6xl mx-auto py-6 px-4 space-y-4'
     : 'max-w-lg mx-auto py-6 px-4 space-y-4'
   return (
     <div className={doneContainerClass}>

@@ -76,7 +76,11 @@ export function Header({
             <>
               <button
                 onClick={onSave}
-                className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isDirty ? 'bg-[var(--color-accent)] text-white' : 'bg-slate-100 text-[var(--color-muted)]'}`}
+                className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  isDirty
+                    ? 'text-[var(--color-accent)] hover:bg-[var(--color-accent-light)]'
+                    : 'text-[var(--color-muted)] hover:bg-slate-100'
+                }`}
                 aria-label="Save dataset"
               >
                 <Save size={14} />

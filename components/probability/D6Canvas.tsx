@@ -213,7 +213,7 @@ function makePolyFaceTexture(label: string): THREE.CanvasTexture {
   ctx.fillStyle = DIE_COLOR
   ctx.fillRect(0, 0, S, S)
   ctx.fillStyle = DIE_TEXT_COLOR
-  ctx.font = '900 124px sans-serif'
+  ctx.font = `900 ${label.length >= 2 ? 88 : 124}px sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.shadowColor = 'rgba(255,255,255,0.35)'
@@ -353,6 +353,95 @@ function makeExplicitD10Geometry(r: number): {
   return { geo, faceDefs }
 }
 
+// Pentagonal trapezohedron — the correct d10 shape (10 kite-shaped faces, 12 vertices).
+// Upper kites neighbour the top pole (odd values 1,3,5,7,9).
+// Lower kites neighbour the bottom pole (even values 2,4,6,8,10).
+function makeD10TrapezohedronGeometry(r: number): {
+  geo: THREE.BufferGeometry
+  faceDefs: PolyFaceDef[]
+} {
+  const n = 5
+  const hPole  = r * 0.94  // pole height
+  const yUpper =  r * 0.18 // upper equatorial ring Y
+  const yLower = -r * 0.18 // lower equatorial ring Y
+  const rEq    =  r * 0.84 // equatorial radius
+
+  const top    = new THREE.Vector3(0,  hPole, 0)
+  const bottom = new THREE.Vector3(0, -hPole, 0)
+  const upper: THREE.Vector3[] = []
+  const lower: THREE.Vector3[] = []
+
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2
+    upper.push(new THREE.Vector3(rEq * Math.cos(a), yUpper, rEq * Math.sin(a)))
+  }
+  for (let i = 0; i < n; i++) {
+    const a = ((i + 0.5) / n) * Math.PI * 2
+    lower.push(new THREE.Vector3(rEq * Math.cos(a), yLower, rEq * Math.sin(a)))
+  }
+
+  // Standard d10 arrangement: odd on upper kites, even on lower (10 instead of 0)
+  const upperValues = [9, 7, 5, 3, 1]
+  const lowerValues = [8, 6, 4, 2, 10]
+
+  const positions: number[] = []
+  const normals:   number[] = []
+  const uvs:       number[] = []
+  const faceDefs: PolyFaceDef[] = []
+
+  // Upper kite i = (top, lower[i], upper[i], upper[(i+1)%n])
+  // Correct CCW winding from outside: tri1=(top, lower[i], upper[i])  tri2=(top, upper[(i+1)%n], lower[i])
+  for (let i = 0; i < n; i++) {
+    const a = top, b = lower[i], c = upper[i], d = upper[(i + 1) % n]
+    const norm = new THREE.Vector3()
+      .crossVectors(
+        new THREE.Vector3().subVectors(b, a),
+        new THREE.Vector3().subVectors(c, a),
+      )
+      .normalize()
+
+    positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z)   // tri 1
+    for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
+    uvs.push(0.5, 0.07, 0.07, 0.9, 0.9, 0.9)
+
+    positions.push(a.x, a.y, a.z, d.x, d.y, d.z, b.x, b.y, b.z)   // tri 2
+    for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
+    uvs.push(0.5, 0.07, 0.9, 0.9, 0.07, 0.9)
+
+    faceDefs.push({ value: upperValues[i], normal: new CANNON.Vec3(norm.x, norm.y, norm.z) })
+  }
+
+  // Lower kite i = (bottom, lower[i], upper[(i+1)%n], lower[(i+1)%n])
+  // Correct CCW winding from outside: tri1=(bottom, lower[i], upper[(i+1)%n])  tri2=(bottom, upper[(i+1)%n], lower[(i+1)%n])
+  for (let i = 0; i < n; i++) {
+    const a = bottom, b = lower[i], c = upper[(i + 1) % n], d = lower[(i + 1) % n]
+    const norm = new THREE.Vector3()
+      .crossVectors(
+        new THREE.Vector3().subVectors(b, a),
+        new THREE.Vector3().subVectors(c, a),
+      )
+      .normalize()
+
+    positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z)   // tri 1
+    for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
+    uvs.push(0.5, 0.93, 0.07, 0.1, 0.9, 0.1)
+
+    positions.push(a.x, a.y, a.z, c.x, c.y, c.z, d.x, d.y, d.z)   // tri 2
+    for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
+    uvs.push(0.5, 0.93, 0.9, 0.1, 0.07, 0.1)
+
+    faceDefs.push({ value: lowerValues[i], normal: new CANNON.Vec3(norm.x, norm.y, norm.z) })
+  }
+
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geo.setAttribute('normal',   new THREE.Float32BufferAttribute(normals,   3))
+  geo.setAttribute('uv',       new THREE.Float32BufferAttribute(uvs,       2))
+  for (let i = 0; i < 10; i++) geo.addGroup(i * 6, 6, i)
+
+  return { geo, faceDefs }
+}
+
 // Returns the geometry and matching ConvexPolyhedron physics shape for each die type.
 // d6 is handled separately (BoxGeometry + CANNON.Box) — this is for non-d6 only.
 function getNonD6DieShapes(sides: number): {
@@ -372,9 +461,10 @@ function getNonD6DieShapes(sides: number): {
       geo = new THREE.OctahedronGeometry(r * 1.08, 0)
       break
     case 10: {
-      const explicit = makeExplicitD10Geometry(r * 1.08)
-      geo = explicit.geo
-      faceDefs = explicit.faceDefs
+      // Use the correct pentagonal trapezohedron shape
+      const t = makeD10TrapezohedronGeometry(r * 1.08)
+      geo = t.geo
+      faceDefs = t.faceDefs
       break
     }
     case 12:
@@ -578,6 +668,15 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       entry.body.sleep()
       entry.mesh.position.set(x, entry.sides === 6 ? DIE_HALF : entry.body.position.y, z)
       entry.mesh.quaternion.set(0, 0, 0, 1)
+    }
+
+    function restageIdleDice() {
+      if (lineupRef.current.active) return
+      lineupRef.current.completed = false
+      lineupRef.current.readyAt = null
+      dieEntriesRef.current.forEach((entry, index) => {
+        stageDieAtSlot(entry, index)
+      })
     }
 
     function restoreD6FaceMaps(entry: DieEntry) {
@@ -1016,7 +1115,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           lineupTargetQuat: new THREE.Quaternion(),
         }
         dieEntriesRef.current.push(entry)
-        stageDieAtSlot(entry, slotIndex)
+        restageIdleDice()
       },
 
       removeDie(id: string) {
@@ -1038,6 +1137,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         }
         scene.remove(entry.mesh)
         dieEntriesRef.current.splice(idx, 1)
+        restageIdleDice()
       },
 
       rollAll() {

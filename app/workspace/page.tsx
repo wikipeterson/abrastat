@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Plus } from 'lucide-react'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { Header } from '@/components/layout/Header'
 import { ExploreCanvas } from '@/components/explore/ExploreCanvas'
@@ -40,9 +41,11 @@ const INFERENCE_CARD_OPTIONS: CardOption[] = [
 
 function GroupedAddCardMenu({
   onAdd,
+  highlight = false,
   className = '',
 }: {
   onAdd: (type: CardConfig['type']) => void
+  highlight?: boolean
   className?: string
 }) {
   const [open, setOpen] = useState(false)
@@ -57,13 +60,16 @@ function GroupedAddCardMenu({
     <div className={`relative z-[60] ${className}`}>
       <button
         onClick={() => setOpen(v => !v)}
-        className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-colors min-w-[120px] ${
+        className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all min-w-[132px] ${
           open
-            ? 'bg-[var(--color-accent)] text-white'
-            : 'bg-slate-100 text-[var(--color-text)] hover:bg-slate-200'
-        }`}
+            ? 'bg-[var(--color-text)] text-white'
+            : 'bg-[var(--color-accent)] text-white hover:brightness-105'
+        } ${highlight ? 'shadow-[0_0_0_4px_rgba(214,245,242,0.95)] animate-pulse' : ''}`}
       >
-        <span>Add Tool</span>
+        <span className="flex items-center gap-1.5">
+          <Plus size={14} />
+          <span>Add Card</span>
+        </span>
         <span className="text-[10px] opacity-70">▾</span>
       </button>
 
@@ -210,7 +216,8 @@ function WorkspaceContent() {
   const [showShare, setShowShare] = useState(false)
   const [shareDatasetId, setShareDatasetId] = useState<string | null>(null)
   const [shareIsPublic, setShareIsPublic] = useState(false)
-  const { isDirty, clearGrid, activeDatasetId, activeDatasetName, addExploreCard } = useStore()
+  const { isDirty, clearGrid, activeDatasetId, activeDatasetName, addExploreCard, exploreCards } = useStore()
+  const hasOnlyDataGrid = exploreCards.every(card => card.config.type === 'data-grid')
 
   useEffect(() => {
     function handleBeforeUnload(e: BeforeUnloadEvent) {
@@ -258,7 +265,7 @@ function WorkspaceContent() {
         onSave={handleSaveClick}
         onToggleSidebar={() => setSidebarOpen(v => !v)}
         datasetName={activeDatasetName}
-        labActions={<GroupedAddCardMenu onAdd={type => addExploreCard(type)} />}
+        labActions={<GroupedAddCardMenu onAdd={type => addExploreCard(type)} highlight={hasOnlyDataGrid} />}
       />
 
       <div className="flex flex-1 min-h-0">

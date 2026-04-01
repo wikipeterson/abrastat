@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import type { WheelEvent as ReactWheelEvent } from 'react'
+import { Plus } from 'lucide-react'
 import {
   DndContext,
   DragEndEvent,
@@ -27,6 +28,37 @@ import { DiceRollerCard } from '@/components/probability/DiceRollerCard'
 import { SimResultsCard } from '@/components/probability/SimResultsCard'
 import { GridToolbar } from '@/components/grid/GridToolbar'
 import { DataGrid } from '@/components/grid/DataGrid'
+
+interface CardOption {
+  type: CardConfig['type']
+  icon: string
+  label: string
+}
+
+const EXPLORE_CARD_OPTIONS: CardOption[] = [
+  { type: 'graph', icon: '📈', label: 'Graph' },
+  { type: 'summary', icon: '📊', label: 'Summary Statistics' },
+  { type: 'table', icon: '⊞', label: 'Two-Way Table' },
+  { type: 'regression', icon: '📉', label: 'Regression' },
+]
+
+const PROBABILITY_CARD_OPTIONS: CardOption[] = [
+  { type: 'distribution', icon: '🔔', label: 'Distribution' },
+  { type: 'generator', icon: '🎛️', label: 'Random Generator' },
+  { type: 'dice-roller', icon: '🎲', label: 'Dice Roller' },
+  { type: 'simulation', icon: '🔀', label: 'Simulation' },
+]
+
+const INFERENCE_CARD_OPTIONS: CardOption[] = [
+  { type: 'means', icon: '📐', label: 'Means' },
+  { type: 'testinterval', icon: '⚖️', label: 'Test / Interval' },
+]
+
+const CARD_OPTION_GROUPS = [
+  { id: 'explore', label: 'Explore', options: EXPLORE_CARD_OPTIONS },
+  { id: 'probability', label: 'Probability', options: PROBABILITY_CARD_OPTIONS },
+  { id: 'inference', label: 'Inference', options: INFERENCE_CARD_OPTIONS },
+] as const
 
 function GhostChip({ col }: { col: GridColumn }) {
   return (
@@ -71,11 +103,57 @@ function PlaceholderCard({ label }: { label: string }) {
   )
 }
 
+function WorkspaceContextMenu({
+  x,
+  y,
+  onAdd,
+  onClose,
+}: {
+  x: number
+  y: number
+  onAdd: (type: CardConfig['type']) => void
+  onClose: () => void
+}) {
+  return (
+    <>
+      <div className="fixed inset-0 z-[90]" onClick={onClose} onContextMenu={e => { e.preventDefault(); onClose() }} />
+      <div
+        className="fixed z-[100] w-[280px] rounded-2xl border border-slate-100 bg-white shadow-xl overflow-hidden"
+        style={{ left: x, top: y }}
+      >
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--color-border)]">
+          <Plus size={14} className="text-[var(--color-accent)]" />
+          <span className="text-sm font-semibold text-[var(--color-text)]">Add Card</span>
+        </div>
+        {CARD_OPTION_GROUPS.map(group => (
+          <div key={group.id} className="border-b border-[var(--color-border)] last:border-b-0">
+            <div className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+              {group.label}
+            </div>
+            <div className="pb-2">
+              {group.options.map(option => (
+                <button
+                  key={option.type}
+                  onClick={() => onAdd(option.type)}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50"
+                >
+                  <span className="text-base leading-none">{option.icon}</span>
+                  <span className="text-sm font-medium text-[var(--color-text)]">{option.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  )
+}
+
 // ─── Main canvas ──────────────────────────────────────────────────────────────
 
 export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void }) {
   const {
-    grid,
+    grid, addExploreCard,
     exploreCards, removeExploreCard, updateExploreCard, purgeExploreStaleIds, ensureDataGridCard,
   } = useStore()
 
@@ -87,6 +165,12 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
   const [swapAnim, setSwapAnim] = useState<SwapAnimState | null>(null)
   const [interactionCursor, setInteractionCursor] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
+  const [contextMenu, setContextMenu] = useState<{
+    screenX: number
+    screenY: number
+    worldX: number
+    worldY: number
+  } | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef(1)
@@ -188,6 +272,14 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       document.body.style.cursor = ''
     }
   }, [interactionCursor])
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setContextMenu(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const id = String(event.active.id)
@@ -372,6 +464,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
   // ─── Card movement ─────────────────────────────────────────────────────────
   function startMove(e: React.PointerEvent, cardId: string) {
     if (e.button !== 0) return
+    setContextMenu(null)
     e.preventDefault()
     e.stopPropagation()
     const card = cards.find(c => c.id === cardId)
@@ -415,6 +508,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
   function startResize(e: React.PointerEvent, cardId: string, dir: 'e' | 's' | 'se') {
     e.preventDefault()
     e.stopPropagation()
+    setContextMenu(null)
     const card = cards.find(c => c.id === cardId)
     if (!card) return
     const { minWidth, minHeight } = getCardMinSize(card)
@@ -440,6 +534,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
 
   function startPan(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return
+    setContextMenu(null)
     const target = e.target as HTMLElement
     if (
       target.closest('[data-card-id]') ||
@@ -510,6 +605,38 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
     if (nextZoom !== current) applyZoom(nextZoom, { clientX: e.clientX, clientY: e.clientY })
   }
 
+  function handleWorkspaceContextMenu(e: React.MouseEvent<HTMLDivElement>) {
+    const target = e.target as HTMLElement
+    if (
+      target.closest('[data-card-id]') ||
+      target.closest('button') ||
+      target.closest('input') ||
+      target.closest('label') ||
+      target.closest('a')
+    ) {
+      return
+    }
+
+    e.preventDefault()
+    const inner = innerRef.current
+    if (!inner) return
+    const rect = inner.getBoundingClientRect()
+    const worldX = Math.max(0, (e.clientX - rect.left) / zoomRef.current)
+    const worldY = Math.max(0, (e.clientY - rect.top) / zoomRef.current)
+    setContextMenu({
+      screenX: Math.min(window.innerWidth - 300, e.clientX),
+      screenY: Math.min(window.innerHeight - 420, e.clientY),
+      worldX,
+      worldY,
+    })
+  }
+
+  function handleContextAdd(type: CardConfig['type']) {
+    if (!contextMenu) return
+    addExploreCard(type, { x: contextMenu.worldX, y: contextMenu.worldY })
+    setContextMenu(null)
+  }
+
   const activeCol = activeColId ? (grid.columns.find(c => c.id === activeColId) ?? null) : null
   const filledRowCount = grid.rows.filter(row => Object.values(row).some(v => String(v).trim())).length
   const columnCount = grid.columns.length
@@ -520,7 +647,12 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       <SwapAnimContext.Provider value={swapAnim}>
       <div className="flex h-full min-h-0">
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-          <div ref={scrollRef} onWheel={handleWheel} className="flex-1 overflow-auto bg-[var(--color-bg)] p-2 relative cursor-grab">
+          <div
+            ref={scrollRef}
+            onWheel={handleWheel}
+            onContextMenu={handleWorkspaceContextMenu}
+            className="flex-1 overflow-auto bg-[var(--color-bg)] p-2 relative cursor-grab"
+          >
             <div
               ref={innerRef}
               onPointerDown={startPan}
@@ -701,6 +833,15 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
 
         </div>
       </div>
+
+      {contextMenu && (
+        <WorkspaceContextMenu
+          x={contextMenu.screenX}
+          y={contextMenu.screenY}
+          onAdd={handleContextAdd}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
 
       </SwapAnimContext.Provider>
       <DragOverlay dropAnimation={null}>

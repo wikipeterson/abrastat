@@ -15,6 +15,7 @@ export const GAME_IDS = {
   realOrRandom: 'real-or-random',
   guessResidual: 'guess-residual',
   meanVsMedian: 'mean-vs-median',
+  yacht: 'yacht',
 } as const
 
 export type GameId = (typeof GAME_IDS)[keyof typeof GAME_IDS]

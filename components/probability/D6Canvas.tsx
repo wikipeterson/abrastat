@@ -585,12 +585,14 @@ export interface D6CanvasHandle {
   addDie: (id: string, sides: number) => void
   removeDie: (id: string) => void
   rollAll: () => void
+  rollSome: (idsToRoll: string[]) => void
   clearAll: () => void
 }
 
 export interface D6CanvasProps {
   onDieSettled: (id: string, value: number) => void
   tuning?: DiceTuning
+  disableLineup?: boolean
 }
 
 export interface DiceTuning {
@@ -618,12 +620,14 @@ export const DEFAULT_DICE_TUNING: DiceTuning = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
-  function D6Canvas({ onDieSettled, tuning }, ref) {
-    const mountRef     = useRef<HTMLDivElement>(null)
-    const onSettledRef = useRef(onDieSettled)
-    const tuningRef    = useRef<DiceTuning>({ ...DEFAULT_DICE_TUNING, ...tuning })
+  function D6Canvas({ onDieSettled, tuning, disableLineup }, ref) {
+    const mountRef        = useRef<HTMLDivElement>(null)
+    const onSettledRef    = useRef(onDieSettled)
+    const tuningRef       = useRef<DiceTuning>({ ...DEFAULT_DICE_TUNING, ...tuning })
+    const disableLineupRef = useRef(disableLineup ?? false)
     useEffect(() => { onSettledRef.current = onDieSettled })
     useEffect(() => { tuningRef.current = { ...DEFAULT_DICE_TUNING, ...tuning } }, [tuning])
+    useEffect(() => { disableLineupRef.current = disableLineup ?? false }, [disableLineup])
 
     // Three / Cannon singletons
     const worldRef    = useRef<CANNON.World | null>(null)
@@ -951,7 +955,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           }
         }
 
-        if (!lineupRef.current.active && !lineupRef.current.completed && dieEntriesRef.current.length > 0) {
+        if (!lineupRef.current.active && !lineupRef.current.completed && dieEntriesRef.current.length > 0 && !disableLineupRef.current) {
           const allReadyForLineup = dieEntriesRef.current.every(entry => {
             if (entry.settled) return true
             const body = entry.body
@@ -978,7 +982,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
           }
         }
 
-        if (lineupRef.current.active) {
+        if (lineupRef.current.active && !disableLineupRef.current) {
           const t = Math.min(1, (now - lineupRef.current.startAt) / tuningRef.current.lineupDurationMs)
           const eased = 1 - Math.pow(1 - t, 3)
           for (const entry of dieEntriesRef.current) {
@@ -1133,6 +1137,71 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         dieEntriesRef.current.forEach((remaining, index) => {
           stageDieAtSlot(remaining, index)
         })
+      },
+
+      rollSome(idsToRoll: string[]) {
+        const world = worldRef.current
+        if (!world || dieEntriesRef.current.length === 0 || idsToRoll.length === 0) return
+        lineupRef.current.active = false
+        lineupRef.current.completed = false
+        lineupRef.current.readyAt = null
+
+        const innerX = TRAY_W / 2 - DIE_HALF - 0.18
+        const innerZ = TRAY_D / 2 - DIE_HALF - 0.18
+        const launchSpacing = DIE_HALF * 2 + 0.12
+        const maxRows = Math.max(1, Math.floor((innerZ * 2) / launchSpacing))
+        const toRoll = dieEntriesRef.current.filter(e => idsToRoll.includes(e.id))
+        const rows = Math.min(toRoll.length, maxRows)
+        const batchBoost = Math.min(8, Math.max(0, toRoll.length - 1) * 0.34)
+        const liveTuning = tuningRef.current
+
+        for (const [index, entry] of toRoll.entries()) {
+          entry.settled = false
+          entry.settleCount = 0
+          entry.resultValue = null
+          clearSettleTimer(entry)
+
+          if (entry.sides !== 6 && entry.sides !== 10) {
+            entry.precomputedResult = Math.floor(Math.random() * entry.sides) + 1
+            const mat = entry.mesh.material as THREE.MeshPhongMaterial
+            const oldTex = mat.map
+            mat.map = makeColorFaceTexture(`d${entry.sides}`)
+            mat.needsUpdate = true
+            oldTex?.dispose()
+          } else if (entry.sides === 10) {
+            const mat = entry.mesh.material as THREE.MeshPhongMaterial
+            const oldTex = mat.map
+            mat.map = makeColorFaceTexture('d10')
+            mat.needsUpdate = true
+            oldTex?.dispose()
+          } else if (entry.sides === 6) {
+            restoreD6FaceMaps(entry)
+          }
+
+          const row = index % rows
+          const col = Math.floor(index / rows)
+          const sx = innerX - col * launchSpacing * 0.95
+          const sz = -innerZ + row * launchSpacing
+          const vx = -(liveTuning.launchSpeed + batchBoost + Math.random() * liveTuning.launchSpread)
+          const vy = 1.8 + Math.random() * 2.4
+          const vz = 9.5 + Math.random() * 4.8
+
+          entry.body.wakeUp()
+          entry.body.position.set(sx, DIE_HALF + 0.04, sz)
+          entry.body.quaternion.set(0, 0, 0, 1)
+          entry.body.velocity.set(vx, vy, vz)
+          entry.body.angularVelocity.set(
+            (Math.random() - 0.5) * liveTuning.launchSpin,
+            (Math.random() - 0.5) * (liveTuning.launchSpin * 0.78),
+            (Math.random() - 0.5) * liveTuning.launchSpin,
+          )
+
+          const entryId = entry.id
+          entry.maxTimer = setTimeout(() => {
+            const e = dieEntriesRef.current.find(x => x.id === entryId)
+            if (e) settleEntry(e)
+          }, MAX_SETTLE)
+        }
       },
 
       rollAll() {

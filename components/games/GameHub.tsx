@@ -11,6 +11,7 @@ import { MoreVariability } from './MoreVariability'
 import { RealOrRandom } from './RealOrRandom'
 import { GuessResidual } from './GuessResidual'
 import { MeanVsMedian } from './MeanVsMedian'
+import { Yacht, YACHT_MAX_SCORE } from './Yacht'
 
 const GAMES: {
   id: GameId
@@ -18,6 +19,7 @@ const GAMES: {
   title: string
   description: string
   maxScore: number
+  wide?: boolean
 }[] = [
   {
     id: GAME_IDS.guessCorrelation,
@@ -53,6 +55,14 @@ const GAMES: {
     title: 'Compare Mean and Median',
     description: `Look at a histogram. Is the mean greater than or less than the median?`,
     maxScore: ROUNDS_PER_GAME * 100,
+  },
+  {
+    id: GAME_IDS.yacht,
+    icon: '⚄',
+    title: 'Yacht',
+    description: '13 turns, 5 dice, up to 3 rolls per turn. Score in classic Yacht categories for the highest total.',
+    maxScore: YACHT_MAX_SCORE,
+    wide: true,
   },
 ]
 
@@ -134,8 +144,11 @@ export function GameHub() {
   const gameMeta = GAMES.find(g => g.id === state.gameId)!
 
   if (state.view === 'playing') {
+    const containerClass = gameMeta.wide
+      ? 'max-w-2xl mx-auto py-6 px-4 space-y-4'
+      : 'max-w-lg mx-auto py-6 px-4 space-y-4'
     return (
-      <div className="max-w-lg mx-auto py-6 px-4 space-y-4">
+      <div className={containerClass}>
         <div className="flex items-center gap-3">
           <button
             onClick={() => setState({ view: 'hub' })}
@@ -164,14 +177,20 @@ export function GameHub() {
           {state.gameId === GAME_IDS.meanVsMedian && (
             <MeanVsMedian onDone={s => handleDone(state.gameId, s)} />
           )}
+          {state.gameId === GAME_IDS.yacht && (
+            <Yacht onDone={s => handleDone(state.gameId, s)} />
+          )}
         </div>
       </div>
     )
   }
 
   // Done screen
+  const doneContainerClass = gameMeta.wide
+    ? 'max-w-2xl mx-auto py-6 px-4 space-y-4'
+    : 'max-w-lg mx-auto py-6 px-4 space-y-4'
   return (
-    <div className="max-w-lg mx-auto py-6 px-4 space-y-4">
+    <div className={doneContainerClass}>
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
         {state.submittedInitials === null ? (
           <ScoreEntry

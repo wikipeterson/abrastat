@@ -591,6 +591,7 @@ export interface D6CanvasHandle {
 
 export interface D6CanvasProps {
   onDieSettled: (id: string, value: number) => void
+  onDieClick?: (id: string) => void
   tuning?: DiceTuning
   disableLineup?: boolean
 }
@@ -620,12 +621,14 @@ export const DEFAULT_DICE_TUNING: DiceTuning = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
-  function D6Canvas({ onDieSettled, tuning, disableLineup }, ref) {
+  function D6Canvas({ onDieSettled, onDieClick, tuning, disableLineup }, ref) {
     const mountRef        = useRef<HTMLDivElement>(null)
     const onSettledRef    = useRef(onDieSettled)
+    const onDieClickRef   = useRef(onDieClick)
     const tuningRef       = useRef<DiceTuning>({ ...DEFAULT_DICE_TUNING, ...tuning })
     const disableLineupRef = useRef(disableLineup ?? false)
     useEffect(() => { onSettledRef.current = onDieSettled })
+    useEffect(() => { onDieClickRef.current = onDieClick }, [onDieClick])
     useEffect(() => { tuningRef.current = { ...DEFAULT_DICE_TUNING, ...tuning } }, [tuning])
     useEffect(() => { disableLineupRef.current = disableLineup ?? false }, [disableLineup])
 
@@ -827,6 +830,8 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       // Scene
       const scene = new THREE.Scene()
       sceneRef.current = scene
+      const raycaster = new THREE.Raycaster()
+      const pointer = new THREE.Vector2()
 
       // Orthographic camera — straight above, +Z = bottom of screen
       const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200)
@@ -1015,9 +1020,31 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       })
       ro.observe(container)
 
+      function handlePointerDown(event: PointerEvent) {
+        if (!onDieClickRef.current) return
+        const rect = renderer.domElement.getBoundingClientRect()
+        if (!rect.width || !rect.height) return
+
+        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+        pointer.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1)
+        raycaster.setFromCamera(pointer, cam)
+
+        const meshes = dieEntriesRef.current.map(entry => entry.mesh)
+        const hits = raycaster.intersectObjects(meshes, false)
+        if (hits.length === 0) return
+
+        const mesh = hits[0].object
+        const entry = dieEntriesRef.current.find(die => die.mesh === mesh)
+        if (!entry) return
+        onDieClickRef.current(entry.id)
+      }
+
+      renderer.domElement.addEventListener('pointerdown', handlePointerDown)
+
       return () => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current)
         ro.disconnect()
+        renderer.domElement.removeEventListener('pointerdown', handlePointerDown)
         renderer.dispose()
         if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement)
         // Clear all die timers

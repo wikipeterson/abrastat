@@ -233,28 +233,11 @@ export function Yacht({ onDone }: Props) {
             <D6Canvas
               ref={canvasRef}
               onDieSettled={handleDieSettled}
+              onDieClick={toggleHold}
             />
           </div>
 
           <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              {activeDice.map(d => (
-                <button
-                  key={d.id}
-                  onClick={() => toggleHold(d.id)}
-                  disabled={!holdable}
-                  title="Click to hold out of tray"
-                  className={[
-                    'rounded-lg border px-3 py-1.5 text-lg font-black tabular-nums transition-all',
-                    holdable
-                      ? 'border-[#0D4F49] bg-[#0D4F49] text-white hover:scale-105'
-                      : 'cursor-not-allowed border-slate-200 bg-slate-100 text-[var(--color-muted)]',
-                  ].join(' ')}
-                >
-                  {d.value ?? '?'}
-                </button>
-              ))}
-            </div>
             <div className="grid gap-3 lg:grid-cols-[1fr_220px]">
             <div>
               <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
@@ -262,7 +245,7 @@ export function Yacht({ onDone }: Props) {
               </div>
               <div className="flex min-h-[102px] flex-wrap content-start gap-3 rounded-xl border border-dashed border-[var(--color-accent)] bg-[var(--color-accent-light)]/50 p-3">
                 {heldDice.length === 0 ? (
-                  <div className="flex items-center text-xs text-[var(--color-muted)]">Held dice stay out of the next roll. Click a held die to return it.</div>
+                  <div className="flex items-center text-xs text-[var(--color-muted)]">Click a die in the tray to hold it out. Click a held die to return it.</div>
                 ) : (
                   heldDice.map(d => (
                     <DieFace

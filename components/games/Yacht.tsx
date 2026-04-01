@@ -226,7 +226,7 @@ export function Yacht({ onDone }: Props) {
   const bonusLabel = bonusAchieved ? '+35 ✓' : upperFilled > 0 ? `need ${upperNeeded} more` : '—'
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[1.45fr_1fr]">
+    <div className="grid items-stretch gap-4 xl:grid-cols-[1.45fr_1fr]">
       <div className="space-y-3">
         <div className="grid grid-cols-3 rounded-2xl border border-[var(--color-border)] bg-white p-3 text-center">
           <div>
@@ -253,31 +253,41 @@ export function Yacht({ onDone }: Props) {
             />
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-[1fr_1fr_220px]">
+          <div className="space-y-3">
             <div>
               <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
-                In Tray
+                Active Dice
               </div>
-              <div className="flex min-h-[102px] flex-wrap content-start gap-3 rounded-xl border border-[var(--color-border)] bg-slate-50/70 p-3">
+              <div className="flex min-h-[56px] flex-wrap items-center gap-2 rounded-xl border border-[var(--color-border)] bg-slate-50/70 px-3 py-2">
                 {activeDice.map(d => (
-                  <DieFace
+                  <button
                     key={d.id}
-                    value={d.value}
-                    held={false}
                     onClick={() => toggleHold(d.id)}
                     disabled={!holdable}
-                    label="Click to hold"
-                  />
+                    title="Click to hold out of tray"
+                    className={[
+                      'rounded-lg border px-3 py-1.5 text-lg font-black tabular-nums transition-all',
+                      holdable
+                        ? 'border-[#0D4F49] bg-[#0D4F49] text-white hover:scale-105'
+                        : 'cursor-not-allowed border-slate-200 bg-slate-100 text-[var(--color-muted)]',
+                    ].join(' ')}
+                  >
+                    {d.value ?? '?'}
+                  </button>
                 ))}
+                <span className="text-xs text-[var(--color-muted)]">
+                  Click a value to hold that die out of the next roll.
+                </span>
               </div>
             </div>
+            <div className="grid gap-3 lg:grid-cols-[1fr_220px]">
             <div>
               <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
                 Held
               </div>
               <div className="flex min-h-[102px] flex-wrap content-start gap-3 rounded-xl border border-dashed border-[var(--color-accent)] bg-[var(--color-accent-light)]/50 p-3">
                 {heldDice.length === 0 ? (
-                  <div className="flex items-center text-xs text-[var(--color-muted)]">Click a die below the tray to hold it out.</div>
+                  <div className="flex items-center text-xs text-[var(--color-muted)]">Held dice stay out of the next roll. Click a held die to return it.</div>
                 ) : (
                   heldDice.map(d => (
                     <DieFace
@@ -303,7 +313,7 @@ export function Yacht({ onDone }: Props) {
                   </p>
                 ) : (
                   <p className="text-xs text-[var(--color-muted)]">
-                    Use the width: keep dice in tray to reroll, or move them out to hold.
+                    Roll the dice still in the tray. Held dice stay out until you return them.
                   </p>
                 )}
               </div>
@@ -328,11 +338,12 @@ export function Yacht({ onDone }: Props) {
                         : `Roll Again (${rollsLeft} left)`}
               </button>
             </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="space-y-3 rounded-2xl border border-[var(--color-border)] bg-white p-3">
+      <div className="flex h-full flex-col space-y-3 rounded-2xl border border-[var(--color-border)] bg-white p-3">
         <div className="flex items-end justify-between">
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">Scorecard</div>
@@ -348,6 +359,7 @@ export function Yacht({ onDone }: Props) {
           </div>
         </div>
 
+        <div className="flex-1">
         <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
           <div>
             <div className="mb-1 px-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
@@ -406,8 +418,9 @@ export function Yacht({ onDone }: Props) {
             </div>
           </div>
         </div>
+        </div>
 
-        <div className="rounded-xl border border-[var(--color-border)] px-3 py-3">
+        <div className="mt-auto rounded-xl border border-[var(--color-border)] px-3 py-3">
           <div className="grid grid-cols-3 gap-3 text-center">
             <div>
               <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">Upper</div>

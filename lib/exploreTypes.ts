@@ -1,5 +1,13 @@
 import type { ChartType } from './chartHelpers'
 
+export interface ManualTwoWayTableSnapshot {
+  explName: string
+  respName: string
+  rowLabels: string[]
+  colLabels: string[]
+  cells: number[][]
+}
+
 export interface DataGridCardConfig {
   type: 'data-grid'
 }
@@ -10,6 +18,7 @@ export interface GraphCardConfig {
   yColId: string | null
   groupColId: string | null
   chartType?: ChartType | null
+  manualTable?: ManualTwoWayTableSnapshot
 }
 
 export interface SummaryCardConfig {

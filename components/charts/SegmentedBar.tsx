@@ -7,13 +7,15 @@ import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
+import { ManualTwoWayTableSnapshot } from '@/lib/exploreTypes'
 
 interface SegmentedBarProps {
   xColId: string | null
   fillColId: string | null
+  manualTable?: ManualTwoWayTableSnapshot
 }
 
-export function SegmentedBar({ xColId, fillColId }: SegmentedBarProps) {
+export function SegmentedBar({ xColId, fillColId, manualTable }: SegmentedBarProps) {
   const { grid } = useStore()
   const { hideAxisTitles } = useGraphCardContext()
   const [mode, setMode] = useState<'count' | 'percent'>('count')
@@ -22,6 +24,29 @@ export function SegmentedBar({ xColId, fillColId }: SegmentedBarProps) {
   const fillCol = grid.columns.find(c => c.id === fillColId)
 
   const traces = useMemo(() => {
+    if (manualTable) {
+      return manualTable.rowLabels.map((rowLabel, gi) => {
+        const counts = manualTable.colLabels.map((_, ci) => manualTable.cells[gi]?.[ci] ?? 0)
+        const values = mode === 'count'
+          ? counts
+          : manualTable.colLabels.map((_, ci) => {
+              const total = manualTable.cells.reduce((sum, row) => sum + (row[ci] ?? 0), 0)
+              return total ? (counts[ci] / total) * 100 : 0
+            })
+
+        return {
+          type: 'bar',
+          name: rowLabel,
+          x: manualTable.colLabels,
+          y: values,
+          marker: { color: ABRA_COLORS[gi % ABRA_COLORS.length], opacity: 0.9 },
+          hovertemplate: mode === 'count'
+            ? `${rowLabel}: %{y}<extra></extra>`
+            : `${rowLabel}: %{y:.1f}%<extra></extra>`,
+        }
+      })
+    }
+
     if (!xCol || !fillCol) return []
 
     const xVals = getStringValues(grid, xCol.id)
@@ -52,11 +77,17 @@ export function SegmentedBar({ xColId, fillColId }: SegmentedBarProps) {
           : `${fillGroup}: %{y:.1f}%<extra></extra>`,
       }
     })
-  }, [grid, xCol, fillCol, mode])
+  }, [grid, xCol, fillCol, manualTable, mode])
 
-  if (!xCol || !fillCol) {
+  if (!manualTable && (!xCol || !fillCol)) {
     return <EmptyState icon="📊" title="Select two variables" description="Choose an X variable and a Fill variable above." />
   }
+
+  const xAxisTitle = manualTable ? manualTable.explName : xCol?.name
+  const legendTitle = manualTable ? manualTable.respName : fillCol?.name
+  const chartTitle = manualTable
+    ? `${manualTable.explName} by ${manualTable.respName}`
+    : `${xCol?.name} by ${fillCol?.name}`
 
   return (
     <div className="h-full flex flex-col">
@@ -76,13 +107,13 @@ export function SegmentedBar({ xColId, fillColId }: SegmentedBarProps) {
           data={traces as import("plotly.js").Data[]}
           layout={{
             barmode: 'stack',
-            xaxis: { title: hideAxisTitles ? undefined : { text: xCol.name } },
+            xaxis: { title: hideAxisTitles ? undefined : { text: xAxisTitle } },
             yaxis: { title: hideAxisTitles ? undefined : { text: mode === 'count' ? 'Count' : 'Percent' }, ticksuffix: mode === 'percent' ? '%' : '' },
             showlegend: true,
-            legend: { title: { text: fillCol.name } },
+            legend: { title: { text: legendTitle } },
             ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
           }}
-          title={hideAxisTitles ? undefined : `${xCol.name} by ${fillCol.name}`}
+          title={hideAxisTitles ? undefined : chartTitle}
         />
       </div>
     </div>

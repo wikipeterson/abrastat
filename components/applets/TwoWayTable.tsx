@@ -277,7 +277,7 @@ export function TwoWayTable({
   inputMode: controlledInputMode,
   onInputModeChange,
 }: TwoWayTableProps = {}) {
-  const { grid } = useStore()
+  const { grid, exploreCards, addLinkedGraphCard } = useStore()
   function handleNativeDrop(zone: 'rows' | 'cols') {
     return (e: React.DragEvent) => {
       const colId = e.dataTransfer.getData('text/plain')
@@ -302,6 +302,7 @@ export function TwoWayTable({
   }
 
   const isCardMode = !!cardId
+  const thisCard = isCardMode ? exploreCards.find(c => c.id === cardId) ?? null : null
 
   const [localInputMode, setLocalInputMode] = useState<InputMode>('raw')
   const inputMode = controlledInputMode ?? localInputMode
@@ -456,7 +457,11 @@ export function TwoWayTable({
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-5xl mx-auto py-6 px-4 space-y-5">
+    <div
+      className={`max-w-5xl mx-auto px-4 ${
+        isCardMode ? 'pt-2 pb-6 space-y-3' : 'py-6 space-y-5'
+      }`}
+    >
 
       {/* Top controls */}
       <div className="flex flex-wrap items-end gap-4">
@@ -518,6 +523,35 @@ export function TwoWayTable({
             )}
           </>
         )}
+
+        {isCardMode && inputMode === 'manual' && data && (
+          <button
+            onClick={() => {
+              if (!thisCard) return
+              addLinkedGraphCard(
+                {
+                  type: 'graph',
+                  xColId: null,
+                  yColId: null,
+                  groupColId: null,
+                  chartType: 'segmented',
+                  manualTable: {
+                    explName: data.explName,
+                    respName: data.respName,
+                    rowLabels: [...data.rowLabels],
+                    colLabels: [...data.colLabels],
+                    cells: data.cells.map(row => [...row]),
+                  },
+                },
+                { x: thisCard.x + thisCard.width + 40, y: thisCard.y },
+              )
+            }}
+            className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
+            title="Open a linked plot card for this table"
+          >
+            Plot Card
+          </button>
+        )}
       </div>
 
       {/* Drop zones — card mode, raw data */}
@@ -531,8 +565,15 @@ export function TwoWayTable({
             gap: '6px',
           }}
         >
-          <div style={{ gridRow: '2', gridColumn: '1' }}>
-            <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('rows')}>
+          <div
+            style={{ gridRow: '2', gridColumn: '1' }}
+            className="h-full self-stretch"
+          >
+            <div
+              onDragOver={handleNativeDragOver}
+              onDrop={handleNativeDrop('rows')}
+              className="h-full"
+            >
               <DropZone
                 id={`${cardId}:rows`}
                 label="Response Variable (rows)"
@@ -556,7 +597,7 @@ export function TwoWayTable({
 
           <div
             style={{ gridRow: '2', gridColumn: '2' }}
-            className="min-h-[420px] rounded-2xl border border-dashed border-[var(--color-border)] bg-slate-50/70 p-4"
+            className="min-h-[420px] h-full rounded-2xl border border-dashed border-[var(--color-border)] bg-slate-50/70 p-4"
           >
             {outputContent}
           </div>

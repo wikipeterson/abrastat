@@ -30,10 +30,11 @@ interface GraphCardProps {
 export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
   const { grid } = useStore()
   const [showBestFitLine, setShowBestFitLine] = useState(false)
+  const manualTable = config.manualTable ?? null
 
-  const xCol = config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
-  const yCol = config.yColId ? (grid.columns.find(c => c.id === config.yColId) ?? null) : null
-  const groupCol = config.groupColId ? (grid.columns.find(c => c.id === config.groupColId) ?? null) : null
+  const xCol = !manualTable && config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
+  const yCol = !manualTable && config.yColId ? (grid.columns.find(c => c.id === config.yColId) ?? null) : null
+  const groupCol = !manualTable && config.groupColId ? (grid.columns.find(c => c.id === config.groupColId) ?? null) : null
 
   const { primary, alternatives, orientation } = inferCharts(
     xCol?.type ?? null,
@@ -130,7 +131,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
       case 'scatter':    return <ScatterPlot xColId={config.xColId} yColId={config.yColId} colorByColId={config.groupColId} />
       case 'bar':        return <BarChart colId={mainColId} orientation={orientation} />
       case 'pie':        return <PieChart colId={mainColId} groupColId={config.groupColId} />
-      case 'segmented':  return <SegmentedBar xColId={config.xColId} fillColId={config.groupColId} />
+      case 'segmented':  return <SegmentedBar xColId={config.xColId} fillColId={config.groupColId} manualTable={manualTable ?? undefined} />
       case 'normalprob': return <NormalProbPlot colId={mainColId} />
       default:           return null
     }
@@ -138,6 +139,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
 
   const isBlank = !currentChart
   const hasRows = grid.rows.some(r => Object.values(r).some(v => String(v ?? '').trim() !== ''))
+  const isManualSegmented = !!manualTable
 
   useEffect(() => {
     const prev = prevMorphSpecRef.current
@@ -196,7 +198,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
         </div>
 
         {/* Group — compact square upper right */}
-        {!usesAxisGrouping && (
+        {!usesAxisGrouping && !isManualSegmented && (
           <div className="flex-shrink-0 w-24">
             <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('group')}>
               <DropZone
@@ -217,6 +219,13 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
           col 2 (1fr):  chart rectangle          — fills remaining space
           row 2 col 2:  Explanatory Variable     — same width as chart rectangle
       */}
+      {isManualSegmented ? (
+        <div className="flex-1 min-h-0 rounded-xl overflow-hidden">
+          <GraphCardContext.Provider value={{ hideAxisTitles: true }}>
+            {renderChart()}
+          </GraphCardContext.Provider>
+        </div>
+      ) : (
       <div
         className="flex-1 min-h-0"
         style={{
@@ -296,6 +305,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
           </div>
         </div>
       </div>
+      )}
     </div>
   )
 

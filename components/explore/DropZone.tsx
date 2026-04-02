@@ -15,6 +15,7 @@ interface DropZoneProps {
 }
 
 export function DropZone({ id, label, hint, assignedCol, onClear, variant = 'horizontal' }: DropZoneProps) {
+  void hint
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id })
 
   const { setNodeRef: setDragRef, attributes, listeners, transform, isDragging } = useDraggable({
@@ -103,7 +104,7 @@ export function DropZone({ id, label, hint, assignedCol, onClear, variant = 'hor
       className={`rounded-xl border-2 transition-colors ${
         assignedCol
           ? `${filledColors} flex items-center justify-center p-1.5 min-h-[44px]`
-          : `${emptyColors} flex flex-col gap-1 p-2 min-h-[52px]`
+          : `${emptyColors} flex items-center px-4 py-2 min-h-[44px]`
       }`}
     >
       {assignedCol ? (
@@ -131,16 +132,9 @@ export function DropZone({ id, label, hint, assignedCol, onClear, variant = 'hor
           </button>
         </div>
       ) : (
-        <>
-          <span className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide leading-none">
-            {label}
-          </span>
-          {hint && (
-            <span className="text-xs text-[var(--color-muted)] italic leading-none">
-              {hint}
-            </span>
-          )}
-        </>
+        <span className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide leading-none">
+          {label}
+        </span>
       )}
     </div>
   )

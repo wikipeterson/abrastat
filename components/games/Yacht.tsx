@@ -245,7 +245,7 @@ export function Yacht({ onDone }: Props) {
           </div>
 
           <div className="mt-3 flex flex-1 flex-col">
-            <div className="grid gap-3 lg:grid-cols-[1.2fr_220px]">
+            <div className="grid gap-4 lg:grid-cols-2">
             <div>
               <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
                 Held
@@ -272,7 +272,7 @@ export function Yacht({ onDone }: Props) {
                 onClick={roll}
                 disabled={rollsLeft === 0 || isRolling || activeDice.length === 0}
                 className={[
-                  'w-full rounded-xl py-3 text-sm font-bold transition-all',
+                  'w-full rounded-xl py-3 text-sm font-bold transition-all lg:self-stretch',
                   rollsLeft > 0 && !isRolling && activeDice.length > 0
                     ? 'bg-[var(--color-accent)] text-white shadow-sm hover:opacity-90'
                     : 'cursor-not-allowed bg-slate-200 text-[var(--color-muted)]',

@@ -215,7 +215,7 @@ export function Yacht({ onDone }: Props) {
       <div className="flex h-full flex-col">
         <div className="flex h-full flex-col rounded-2xl border border-[var(--color-border)] bg-white p-1.5">
           <div
-            className="relative flex-1 overflow-hidden rounded-[1.15rem]"
+            className="relative flex-1 overflow-hidden bg-white"
             style={{ minHeight: 480 }}
           >
             <D6Canvas

@@ -520,6 +520,7 @@ interface DieEntry {
   settleCount: number
   maxTimer: ReturnType<typeof setTimeout> | null
   resultValue: number | null
+  resultTexture?: THREE.CanvasTexture  // tracks dynamically-created result texture for safe disposal
   faceDefs: PolyFaceDef[]     // logical numbered faces for d10 and future d100
   supportVertices: CANNON.Vec3[]
   lineupStartPos: THREE.Vector3
@@ -587,6 +588,7 @@ export interface D6CanvasHandle {
   rollAll: () => void
   rollSome: (idsToRoll: string[]) => void
   clearAll: () => void
+  stageAll: () => void
 }
 
 export interface D6CanvasProps {
@@ -747,10 +749,11 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
         snapD6BodyToNearestFace(entry.body)
         result = getD6FaceUp(entry.body)
         const mats = entry.mesh.material as THREE.MeshPhongMaterial[]
-        const oldTex = mats[2].map
-        mats[2].map = makeResultTexture(result)
+        entry.resultTexture?.dispose()
+        const resultTex = makeResultTexture(result)
+        mats[2].map = resultTex
         mats[2].needsUpdate = true
-        oldTex?.dispose()
+        entry.resultTexture = resultTex
       } else if (entry.sides === 10) {
         snapPolyhedronFaceUp(entry.body, entry.faceDefs)
         result = getPolyFaceUp(entry.body, entry.faceDefs)
@@ -1337,6 +1340,23 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           scene.remove(entry.mesh)
         }
         dieEntriesRef.current = []
+      },
+
+      stageAll() {
+        for (let i = 0; i < dieEntriesRef.current.length; i++) {
+          const entry = dieEntriesRef.current[i]
+          clearSettleTimer(entry)
+          entry.resultTexture?.dispose()
+          entry.resultTexture = undefined
+          entry.resultValue = null
+          entry.settled = true
+          entry.settleCount = 0
+          if (entry.sides === 6) restoreD6FaceMaps(entry)
+          stageDieAtSlot(entry, i)
+        }
+        lineupRef.current.active = false
+        lineupRef.current.completed = false
+        lineupRef.current.readyAt = null
       },
     }))
 

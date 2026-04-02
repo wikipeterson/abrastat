@@ -126,7 +126,6 @@ export function Yacht({ onDone }: Props) {
   const [turn, setTurn] = useState(0)
   const [rollsLeft, setRollsLeft] = useState(3)
   const [isRolling, setIsRolling] = useState(false)
-  const [showRollOverlay, setShowRollOverlay] = useState(true)
   const [dice, setDice] = useState<DieState[]>(
     DIE_IDS.map(id => ({ id, value: null, held: false })),
   )
@@ -138,26 +137,18 @@ export function Yacht({ onDone }: Props) {
     const handle = canvasRef.current
     if (!handle) return
     DIE_IDS.forEach(id => handle.addDie(id, 6))
+    handle.stageAll()
     return () => {
-      DIE_IDS.forEach(id => handle.removeDie(id))
+      handle.clearAll()
     }
   }, [])
 
   function handleDieSettled(id: string, value: number) {
+    if (!rollingIdsRef.current.has(id)) return
     settledValRef.current.set(id, value)
     setDice(prev => prev.map(d => d.id === id ? { ...d, value } : d))
-    if (
-      rollingIdsRef.current.size > 0 &&
-      [...rollingIdsRef.current].every(rid => settledValRef.current.has(rid))
-    ) {
+    if ([...rollingIdsRef.current].every(rid => settledValRef.current.has(rid))) {
       setIsRolling(false)
-      if (rollsLeft === 0) {
-        const heldToRestore = dice.filter(d => d.held && d.value !== null)
-        heldToRestore.forEach(d => {
-          canvasRef.current?.addDie(d.id, 6, d.value ?? undefined)
-        })
-        setDice(prev => prev.map(d => ({ ...d, held: false })))
-      }
     }
   }
 
@@ -166,26 +157,17 @@ export function Yacht({ onDone }: Props) {
     const activeIds = dice.filter(d => !d.held).map(d => d.id)
     if (activeIds.length === 0) return
 
-    setShowRollOverlay(false)
     rollingIdsRef.current = new Set(activeIds)
     for (const id of activeIds) settledValRef.current.delete(id)
 
     setDice(prev => prev.map(d => activeIds.includes(d.id) ? { ...d, value: null } : d))
     setIsRolling(true)
     setRollsLeft(r => r - 1)
-    canvasRef.current?.rollAll()
+    canvasRef.current?.rollSome(activeIds)
   }
 
   function toggleHold(id: string) {
     if (rollsLeft === 3 || isRolling || rollsLeft === 0) return
-    const die = dice.find(d => d.id === id)
-    if (!die) return
-
-    if (die.held) {
-      canvasRef.current?.addDie(id, 6)
-    } else {
-      canvasRef.current?.removeDie(id)
-    }
     setDice(prev => prev.map(d => d.id === id ? { ...d, held: !d.held } : d))
   }
 
@@ -205,11 +187,9 @@ export function Yacht({ onDone }: Props) {
     setTurn(nextTurn)
     setRollsLeft(3)
     setIsRolling(false)
-    setShowRollOverlay(true)
     rollingIdsRef.current = new Set()
     settledValRef.current = new Map()
-    canvasRef.current?.clearAll()
-    DIE_IDS.forEach(id => canvasRef.current?.addDie(id, 6))
+    canvasRef.current?.stageAll()
     setDice(DIE_IDS.map(id => ({ id, value: null, held: false })))
   }
 
@@ -220,7 +200,7 @@ export function Yacht({ onDone }: Props) {
   const holdable = hasRolled && !isRolling && rollsLeft > 0
   const activeDice = dice.filter(d => !d.held)
   const heldDice = dice.filter(d => d.held)
-  const canShowRollOverlay = showRollOverlay && !isRolling && rollsLeft > 0 && activeDice.length > 0
+  const canShowRollOverlay = !isRolling && rollsLeft > 0 && activeDice.length > 0
 
   const { upperSubtotal, lowerSubtotal, grandTotal } = computeTotals(scores)
   const upperCats = CATEGORIES.filter(c => c.section === 'upper')
@@ -246,7 +226,7 @@ export function Yacht({ onDone }: Props) {
               ref={canvasRef}
               onDieSettled={handleDieSettled}
               onDieClick={toggleHold}
-              onLineupComplete={() => setShowRollOverlay(true)}
+              disableLineup
             />
             {canShowRollOverlay && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">

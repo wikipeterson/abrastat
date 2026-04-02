@@ -245,12 +245,9 @@ export function Yacht({ onDone }: Props) {
           </div>
 
           <div className="mt-3 flex flex-1 flex-col">
-            <div className="grid gap-4 lg:grid-cols-2">
-            <div>
-              <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
-                Held
-              </div>
-              <div className="flex min-h-[102px] flex-wrap content-start gap-3 rounded-xl border border-dashed border-[var(--color-accent)] bg-[var(--color-accent-light)]/50 p-3">
+            <div className="grid min-h-[136px] gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)]">
+            <div className="flex h-full flex-col">
+              <div className="flex h-full flex-wrap content-start gap-3 rounded-xl border border-dashed border-[var(--color-accent)] bg-[var(--color-accent-light)]/50 p-3">
                 {heldDice.length === 0 ? (
                   <div className="flex items-center text-xs text-[var(--color-muted)]">Click a die in the tray to hold it out. Click a held die to return it.</div>
                 ) : (
@@ -267,12 +264,12 @@ export function Yacht({ onDone }: Props) {
                 )}
               </div>
             </div>
-            <div className="flex flex-col justify-end">
+            <div className="flex h-full flex-col justify-end">
               <button
                 onClick={roll}
                 disabled={rollsLeft === 0 || isRolling || activeDice.length === 0}
                 className={[
-                  'w-full rounded-xl py-3 text-sm font-bold transition-all lg:self-stretch',
+                  'my-auto w-full rounded-xl py-3 text-sm font-bold transition-all lg:self-stretch',
                   rollsLeft > 0 && !isRolling && activeDice.length > 0
                     ? 'bg-[var(--color-accent)] text-white shadow-sm hover:opacity-90'
                     : 'cursor-not-allowed bg-slate-200 text-[var(--color-muted)]',

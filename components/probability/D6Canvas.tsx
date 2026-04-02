@@ -582,7 +582,7 @@ function keepDieInsideTray(entry: DieEntry) {
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export interface D6CanvasHandle {
-  addDie: (id: string, sides: number) => void
+  addDie: (id: string, sides: number, initialValue?: number) => void
   removeDie: (id: string) => void
   rollAll: () => void
   rollSome: (idsToRoll: string[]) => void
@@ -679,14 +679,21 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       entry.mesh.quaternion.set(0, 0, 0, 1)
     }
 
-    function restoreD6FaceMaps(entry: DieEntry) {
+function restoreD6FaceMaps(entry: DieEntry) {
       const mats = entry.mesh.material as THREE.MeshPhongMaterial[]
       const tex = getD6Textures()
       D6_FACE_VALUES.forEach((value, index) => {
         mats[index].map = tex[value - 1]
         mats[index].needsUpdate = true
       })
-    }
+}
+
+function showD6ResultOnTop(entry: DieEntry, result: number) {
+  const mats = entry.mesh.material as THREE.MeshPhongMaterial[]
+  restoreD6FaceMaps(entry)
+  mats[2].map = makeResultTexture(result)
+  mats[2].needsUpdate = true
+}
 
     function startLineup(now: number) {
       if (lineupRef.current.active || dieEntriesRef.current.length === 0) return
@@ -1055,7 +1062,7 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
     // ── Imperative API ────────────────────────────────────────────────────────
 
     useImperativeHandle(ref, () => ({
-      addDie(id: string, sides: number) {
+      addDie(id: string, sides: number, initialValue?: number) {
         const world = worldRef.current
         const scene = sceneRef.current
         if (!world || !scene) return
@@ -1137,6 +1144,11 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
         lineupRef.current.completed = false
         lineupRef.current.readyAt = null
         stageDieAtSlot(entry, slotIndex)
+        if (initialValue !== undefined && sides === 6) {
+          entry.settled = true
+          entry.resultValue = initialValue
+          showD6ResultOnTop(entry, initialValue)
+        }
       },
 
       removeDie(id: string) {

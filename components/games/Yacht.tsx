@@ -149,6 +149,13 @@ export function Yacht({ onDone }: Props) {
       [...rollingIdsRef.current].every(rid => settledValRef.current.has(rid))
     ) {
       setIsRolling(false)
+      if (rollsLeft === 0) {
+        const heldToRestore = dice.filter(d => d.held && d.value !== null)
+        heldToRestore.forEach(d => {
+          canvasRef.current?.addDie(d.id, 6, d.value ?? undefined)
+        })
+        setDice(prev => prev.map(d => ({ ...d, held: false })))
+      }
     }
   }
 
@@ -238,7 +245,7 @@ export function Yacht({ onDone }: Props) {
           </div>
 
           <div className="mt-3 flex flex-1 flex-col">
-            <div className="grid gap-3 lg:grid-cols-[1fr_220px]">
+            <div className="grid gap-3 lg:grid-cols-[1.2fr_220px]">
             <div>
               <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
                 Held

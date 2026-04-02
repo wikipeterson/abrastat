@@ -592,6 +592,7 @@ export interface D6CanvasHandle {
 export interface D6CanvasProps {
   onDieSettled: (id: string, value: number) => void
   onDieClick?: (id: string) => void
+  onLineupComplete?: () => void
   tuning?: DiceTuning
   disableLineup?: boolean
 }
@@ -621,14 +622,16 @@ export const DEFAULT_DICE_TUNING: DiceTuning = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
-  function D6Canvas({ onDieSettled, onDieClick, tuning, disableLineup }, ref) {
+  function D6Canvas({ onDieSettled, onDieClick, onLineupComplete, tuning, disableLineup }, ref) {
     const mountRef        = useRef<HTMLDivElement>(null)
     const onSettledRef    = useRef(onDieSettled)
     const onDieClickRef   = useRef(onDieClick)
+    const onLineupCompleteRef = useRef(onLineupComplete)
     const tuningRef       = useRef<DiceTuning>({ ...DEFAULT_DICE_TUNING, ...tuning })
     const disableLineupRef = useRef(disableLineup ?? false)
     useEffect(() => { onSettledRef.current = onDieSettled })
     useEffect(() => { onDieClickRef.current = onDieClick }, [onDieClick])
+    useEffect(() => { onLineupCompleteRef.current = onLineupComplete }, [onLineupComplete])
     useEffect(() => { tuningRef.current = { ...DEFAULT_DICE_TUNING, ...tuning } }, [tuning])
     useEffect(() => { disableLineupRef.current = disableLineup ?? false }, [disableLineup])
 
@@ -1009,6 +1012,7 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
               entry.mesh.position.copy(entry.lineupTargetPos)
               entry.mesh.quaternion.copy(entry.lineupTargetQuat)
             }
+            onLineupCompleteRef.current?.()
           }
         }
 

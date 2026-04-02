@@ -126,6 +126,7 @@ export function Yacht({ onDone }: Props) {
   const [turn, setTurn] = useState(0)
   const [rollsLeft, setRollsLeft] = useState(3)
   const [isRolling, setIsRolling] = useState(false)
+  const [showRollOverlay, setShowRollOverlay] = useState(true)
   const [dice, setDice] = useState<DieState[]>(
     DIE_IDS.map(id => ({ id, value: null, held: false })),
   )
@@ -165,6 +166,7 @@ export function Yacht({ onDone }: Props) {
     const activeIds = dice.filter(d => !d.held).map(d => d.id)
     if (activeIds.length === 0) return
 
+    setShowRollOverlay(false)
     rollingIdsRef.current = new Set(activeIds)
     for (const id of activeIds) settledValRef.current.delete(id)
 
@@ -203,6 +205,7 @@ export function Yacht({ onDone }: Props) {
     setTurn(nextTurn)
     setRollsLeft(3)
     setIsRolling(false)
+    setShowRollOverlay(true)
     rollingIdsRef.current = new Set()
     settledValRef.current = new Map()
     canvasRef.current?.clearAll()
@@ -217,6 +220,7 @@ export function Yacht({ onDone }: Props) {
   const holdable = hasRolled && !isRolling && rollsLeft > 0
   const activeDice = dice.filter(d => !d.held)
   const heldDice = dice.filter(d => d.held)
+  const canShowRollOverlay = showRollOverlay && !isRolling && rollsLeft > 0 && activeDice.length > 0
 
   const { upperSubtotal, lowerSubtotal, grandTotal } = computeTotals(scores)
   const upperCats = CATEGORIES.filter(c => c.section === 'upper')
@@ -237,16 +241,27 @@ export function Yacht({ onDone }: Props) {
     <div className="grid items-stretch gap-4 xl:grid-cols-[1.45fr_1fr]">
       <div className="flex h-full flex-col">
         <div className="flex h-full flex-col rounded-2xl border border-[var(--color-border)] bg-white p-3">
-          <div className="flex-1 overflow-hidden rounded-xl" style={{ minHeight: 310 }}>
+          <div className="relative flex-1 overflow-hidden rounded-xl" style={{ minHeight: 310 }}>
             <D6Canvas
               ref={canvasRef}
               onDieSettled={handleDieSettled}
               onDieClick={toggleHold}
+              onLineupComplete={() => setShowRollOverlay(true)}
             />
+            {canShowRollOverlay && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <button
+                  onClick={roll}
+                  className="pointer-events-auto rounded-2xl border-2 border-[var(--color-accent)] bg-white px-10 py-4 text-2xl font-bold text-[var(--color-accent)] shadow-lg transition-all hover:bg-[var(--color-accent)] hover:text-white"
+                >
+                  {rollsLeft === 3 ? 'Roll Dice' : `Roll Again (${rollsLeft} left)`}
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="mt-auto pt-3">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)]">
+            <div>
             <div className="flex h-full flex-col">
               <div
                 className="flex flex-wrap content-start gap-3 rounded-xl border border-dashed border-[var(--color-accent)] bg-[var(--color-accent-light)]/50 p-3"
@@ -267,29 +282,6 @@ export function Yacht({ onDone }: Props) {
                   ))
                 )}
               </div>
-            </div>
-            <div className="flex h-full flex-col justify-end">
-              <button
-                onClick={roll}
-                disabled={rollsLeft === 0 || isRolling || activeDice.length === 0}
-                className={[
-                  'w-full rounded-xl py-3 text-sm font-bold transition-all lg:self-stretch',
-                  rollsLeft > 0 && !isRolling && activeDice.length > 0
-                    ? 'bg-[var(--color-accent)] text-white shadow-sm hover:opacity-90'
-                    : 'cursor-not-allowed bg-slate-200 text-[var(--color-muted)]',
-                ].join(' ')}
-                style={{ height: YACHT_FOOTER_BAND_HEIGHT }}
-              >
-                {isRolling
-                  ? 'Rolling…'
-                  : rollsLeft === 3
-                    ? 'Roll Dice'
-                    : rollsLeft === 0
-                      ? 'No rolls left'
-                      : activeDice.length === 0
-                        ? 'Return a die'
-                        : `Roll Again (${rollsLeft} left)`}
-              </button>
             </div>
             </div>
           </div>

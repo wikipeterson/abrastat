@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 
 function getCommit() {
@@ -16,11 +16,17 @@ function getCommit() {
 const stamp = new Date().toISOString()
 const commit = getCommit()
 const outputPath = resolve(process.cwd(), 'lib/buildStamp.generated.ts')
+const nextContents =
+  `export const BUILD_STAMP_ISO = ${JSON.stringify(stamp)}\n` +
+  `export const BUILD_COMMIT = ${JSON.stringify(commit)}\n`
+
+// Avoid dirtying the local repo on every verification build.
+// Vercel deploys still write a fresh stamp in their ephemeral build env.
+if (!process.env.VERCEL && existsSync(outputPath)) {
+  process.exit(0)
+}
 
 mkdirSync(dirname(outputPath), { recursive: true })
-writeFileSync(
-  outputPath,
-  `export const BUILD_STAMP_ISO = ${JSON.stringify(stamp)}\nexport const BUILD_COMMIT = ${JSON.stringify(commit)}\n`,
-  'utf8'
-)
-
+if (!existsSync(outputPath) || readFileSync(outputPath, 'utf8') !== nextContents) {
+  writeFileSync(outputPath, nextContents, 'utf8')
+}

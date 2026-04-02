@@ -85,6 +85,7 @@ function ScoreRow({
 
 export function Yacht({ onDone }: Props) {
   const canvasRef = useRef<D6CanvasHandle>(null)
+  const diceInitializedRef = useRef(false)
 
   const [scores, setScores] = useState<Partial<Record<CategoryId, number>>>({})
   const [turn, setTurn] = useState(0)
@@ -101,11 +102,8 @@ export function Yacht({ onDone }: Props) {
 
   useEffect(() => {
     const handle = canvasRef.current
-    if (!handle) return
-    DIE_IDS.forEach(id => handle.addDie(id, 6))
-    handle.stageAll()
     return () => {
-      handle.clearAll()
+      handle?.clearAll()
     }
   }, [])
 
@@ -132,6 +130,14 @@ export function Yacht({ onDone }: Props) {
 
   function roll() {
     if (rollsLeft <= 0 || isRolling) return
+
+    if (!diceInitializedRef.current) {
+      const handle = canvasRef.current
+      if (!handle) return
+      DIE_IDS.forEach(id => handle.addDie(id, 6))
+      diceInitializedRef.current = true
+    }
+
     const activeIds = dice.filter(d => !d.held).map(d => d.id)
     if (activeIds.length === 0) return
 
@@ -175,7 +181,7 @@ export function Yacht({ onDone }: Props) {
     setShowRollOverlay(true)
     rollingIdsRef.current = new Set()
     settledValRef.current = new Map()
-    canvasRef.current?.stageAll()
+    if (diceInitializedRef.current) canvasRef.current?.stageAll()
     setDice(DIE_IDS.map(id => ({ id, value: null, held: false })))
   }
 

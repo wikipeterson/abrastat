@@ -198,7 +198,7 @@ const HOME_TABS: { id: HomeTab; label: string; soon?: boolean }[] = [
   { id: 'polls',    label: 'Polls', soon: true },
 ]
 
-function HomeContent() {
+function HomeContent({ onGameChromeChange }: { onGameChromeChange: (chrome: { title: string; onBack: () => void } | null) => void }) {
   const [tab, setTab] = useState<HomeTab>('datasets')
   const [gameChrome, setGameChrome] = useState<{ title: string; onBack: () => void } | null>(null)
   const router = useRouter()
@@ -211,8 +211,16 @@ function HomeContent() {
       router.push('/workspace')
       return
     }
-    if (tabId !== 'games') setGameChrome(null)
+    if (tabId !== 'games') {
+      setGameChrome(null)
+      onGameChromeChange(null)
+    }
     setTab(tabId)
+  }
+
+  function handleGameChromeChange(chrome: { title: string; onBack: () => void } | null) {
+    setGameChrome(chrome)
+    onGameChromeChange(chrome)
   }
 
   return (
@@ -254,13 +262,6 @@ function HomeContent() {
             ))}
           </div>
 
-          {tab === 'games' && gameChrome && (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">
-                {gameChrome.title}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -270,19 +271,21 @@ function HomeContent() {
             <DatasetsSection />
           </div>
         )}
-        {tab === 'games' && <GameHub onChromeChange={setGameChrome} />}
+        {tab === 'games' && <GameHub onChromeChange={handleGameChromeChange} />}
       </div>
     </div>
   )
 }
 
 export default function HomePage() {
+  const [gameChrome, setGameChrome] = useState<{ title: string; onBack: () => void } | null>(null)
+
   return (
     <ProtectedRoute>
       <div className="flex h-screen flex-col">
-        <Header showSave={false} showHomeLink={false} />
+        <Header showSave={false} showHomeLink={false} centerTitle={gameChrome?.title ?? null} />
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <HomeContent />
+          <HomeContent onGameChromeChange={setGameChrome} />
         </div>
       </div>
     </ProtectedRoute>

@@ -135,9 +135,11 @@ export function DropZone({ id, label, hint, assignedCol, onClear, variant = 'hor
           <span className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide leading-none">
             {label}
           </span>
-          <span className="text-xs text-[var(--color-muted)] italic leading-none">
-            {hint ?? 'Drop variable here'}
-          </span>
+          {hint && (
+            <span className="text-xs text-[var(--color-muted)] italic leading-none">
+              {hint}
+            </span>
+          )}
         </>
       )}
     </div>

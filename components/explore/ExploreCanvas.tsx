@@ -154,7 +154,7 @@ function WorkspaceContextMenu({
 export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void }) {
   const {
     grid, addExploreCard,
-    exploreCards, removeExploreCard, updateExploreCard, purgeExploreStaleIds, ensureDataGridCard,
+    exploreCards, removeExploreCard, updateExploreCard, purgeExploreStaleIds, ensureDataGridCard, addLinkedGraphCard,
   } = useStore()
 
   const cards = exploreCards
@@ -695,26 +695,54 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                                 {filledRowCount} rows {columnCount} columns
                               </span>
                             )}
-                            {card.config.type === 'table' && (
-                              <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden bg-white">
-                                {(['raw', 'manual'] as const).map(mode => (
-                                  <button
-                                    key={mode}
-                                    onPointerDown={e => e.stopPropagation()}
-                                    onClick={() =>
-                                      setTableInputModes(prev => ({ ...prev, [card.id]: mode }))
-                                    }
-                                    className={`px-3 py-1 text-xs font-medium normal-case tracking-normal transition-colors ${
-                                      (tableInputModes[card.id] ?? 'raw') === mode
-                                        ? 'bg-[var(--color-accent)] text-white'
-                                        : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
-                                    }`}
-                                  >
-                                    {mode === 'raw' ? 'Raw Data' : 'Enter Table'}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
+                            {card.config.type === 'table' && (() => {
+                              const tableConfig = card.config
+                              return (
+                              <>
+                                <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden bg-white">
+                                  {(['raw', 'manual'] as const).map(mode => (
+                                    <button
+                                      key={mode}
+                                      onPointerDown={e => e.stopPropagation()}
+                                      onClick={() =>
+                                        setTableInputModes(prev => ({ ...prev, [card.id]: mode }))
+                                      }
+                                      className={`px-3 py-1 text-xs font-medium normal-case tracking-normal transition-colors ${
+                                        (tableInputModes[card.id] ?? 'raw') === mode
+                                          ? 'bg-[var(--color-accent)] text-white'
+                                          : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                                      }`}
+                                    >
+                                      {mode === 'raw' ? 'Raw Data' : 'Enter Table'}
+                                    </button>
+                                  ))}
+                                </div>
+                                {(tableInputModes[card.id] ?? 'raw') === 'raw' &&
+                                  tableConfig.rowsColId &&
+                                  tableConfig.colsColId && (
+                                    <button
+                                      onPointerDown={e => e.stopPropagation()}
+                                      onClick={() =>
+                                        addLinkedGraphCard(
+                                          {
+                                            type: 'graph',
+                                            xColId: tableConfig.colsColId,
+                                            yColId: null,
+                                            groupColId: tableConfig.rowsColId,
+                                            chartType: 'segmented',
+                                          },
+                                          { x: card.x + card.width + 40, y: card.y },
+                                        )
+                                      }
+                                      className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
+                                      title="Open a linked plot card for this table"
+                                    >
+                                      Plot Card
+                                    </button>
+                                  )}
+                              </>
+                              )
+                            })()}
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-slate-300 text-xs select-none opacity-0 group-hover:opacity-100 transition-opacity">⠿ drag to move</span>

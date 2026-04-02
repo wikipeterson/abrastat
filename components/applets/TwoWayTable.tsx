@@ -1,19 +1,14 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import type { Data, Layout } from 'plotly.js'
 import { useStore } from '@/lib/store'
 import { getStringValues } from '@/lib/gridHelpers'
-import { ABRA_COLORS } from '@/lib/plotlyTheme'
-import { PlotlyChart } from '@/components/charts/PlotlyChart'
 import { DropZone } from '@/components/explore/DropZone'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type InputMode = 'raw' | 'manual'
 type TableView = 'counts' | 'row' | 'col'
-type GraphType = 'segmented' | 'sidebyside' | 'mosaic'
-type ChartMode = 'counts' | 'row'
 
 interface TwoWayData {
   explName: string
@@ -37,77 +32,6 @@ function getColTotals(cells: number[][], numCols: number): number[] {
 
 function getGrandTotal(cells: number[][]): number {
   return cells.flat().reduce((a, b) => a + b, 0)
-}
-
-// ─── Chart traces ─────────────────────────────────────────────────────────────
-
-function buildBarTraces(data: TwoWayData, chartMode: ChartMode) {
-  const cTotals = getColTotals(data.cells, data.colLabels.length)
-  const values =
-    chartMode === 'row'
-      ? data.cells.map(row =>
-          row.map((c, ci) => (cTotals[ci] ? (c / cTotals[ci]) * 100 : 0))
-        )
-      : data.cells
-
-  return data.rowLabels.map((rowLabel, ri) => ({
-    type: 'bar' as const,
-    name: rowLabel,
-    x: data.colLabels,
-    y: values[ri],
-    marker: { color: ABRA_COLORS[ri % ABRA_COLORS.length], opacity: 0.9 },
-    hovertemplate:
-      chartMode === 'row'
-        ? `${rowLabel}: %{y:.1f}%<extra></extra>`
-        : `${rowLabel}: %{y}<extra></extra>`,
-  }))
-}
-
-function buildMosaicTraces(data: TwoWayData): Data[] {
-  const colTotals = getColTotals(data.cells, data.colLabels.length)
-  const grandTotal = getGrandTotal(data.cells)
-  if (!grandTotal) return []
-
-  let xStart = 0
-  const traces: Data[] = []
-
-  data.colLabels.forEach((colLabel, ci) => {
-    const colTotal = colTotals[ci]
-    const colWidth = colTotal / grandTotal
-    const xEnd = xStart + colWidth
-    let yStart = 0
-
-    data.rowLabels.forEach((rowLabel, ri) => {
-      const cell = data.cells[ri][ci]
-      const segmentHeight = colTotal ? cell / colTotal : 0
-      const yEnd = yStart + segmentHeight
-
-      traces.push({
-        type: 'scatter',
-        mode: 'lines',
-        x: [xStart, xEnd, xEnd, xStart, xStart],
-        y: [yStart, yStart, yEnd, yEnd, yStart],
-        fill: 'toself',
-        name: rowLabel,
-        legendgroup: rowLabel,
-        showlegend: ci === 0,
-        line: { color: 'white', width: 1 },
-        fillcolor: ABRA_COLORS[ri % ABRA_COLORS.length],
-        hovertemplate:
-          `${data.explName}: ${colLabel}<br>` +
-          `${data.respName}: ${rowLabel}<br>` +
-          `Count: ${cell}<br>` +
-          `Column %: ${colTotal ? ((cell / colTotal) * 100).toFixed(1) : '0.0'}%<br>` +
-          `Total %: ${((cell / grandTotal) * 100).toFixed(1)}%<extra></extra>`,
-      })
-
-      yStart = yEnd
-    })
-
-    xStart = xEnd
-  })
-
-  return traces
 }
 
 // ─── Manual table input ───────────────────────────────────────────────────────
@@ -390,8 +314,6 @@ export function TwoWayTable({
   const explColId = isCardMode ? (colsColId ?? '') : explColIdLocal
   const respColId = isCardMode ? (rowsColId ?? '') : respColIdLocal
   const [tableView, setTableView] = useState<TableView>('counts')
-  const [graphType, setGraphType] = useState<GraphType>('segmented')
-  const [chartMode, setChartMode] = useState<ChartMode>('row')
 
   // Manual table state
   const [mExplName, setMExplName] = useState('Group')
@@ -437,59 +359,6 @@ export function TwoWayTable({
     inputMode, grid, explColId, respColId,
     mExplName, mRespName, mRowLabels, mColLabels, mCells,
   ])
-
-  const traces = useMemo(() => {
-    if (!data) return []
-    return graphType === 'mosaic' ? buildMosaicTraces(data) : buildBarTraces(data, chartMode)
-  }, [data, chartMode, graphType])
-
-  const chartLayout = useMemo<Partial<Layout>>(() => {
-    if (!data) return {}
-
-    if (graphType === 'mosaic') {
-      const colTotals = getColTotals(data.cells, data.colLabels.length)
-      const grandTotal = getGrandTotal(data.cells)
-      let running = 0
-      const centers = colTotals.map(total => {
-        const width = grandTotal ? total / grandTotal : 0
-        const center = running + width / 2
-        running += width
-        return center
-      })
-
-      return {
-        xaxis: {
-          title: { text: data.explName },
-          range: [0, 1],
-          tickmode: 'array',
-          tickvals: centers,
-          ticktext: data.colLabels,
-          fixedrange: true,
-        },
-        yaxis: {
-          title: { text: `Proportion within ${data.explName}` },
-          range: [0, 1],
-          tickformat: '.0%',
-          fixedrange: true,
-        },
-        showlegend: true,
-        legend: { title: { text: data.respName } },
-        margin: { t: 12, r: 20, b: 56, l: 72 },
-      }
-    }
-
-    return {
-      barmode: graphType === 'segmented' ? 'stack' : 'group',
-      xaxis: { title: { text: data.explName } },
-      yaxis: {
-        title: { text: chartMode === 'counts' ? 'Count' : 'Column %' },
-        ticksuffix: chartMode === 'row' ? '%' : '',
-      },
-      showlegend: true,
-        legend: { title: { text: data.respName } },
-      margin: { t: 12, r: 20, b: 56, l: 56 },
-    }
-  }, [data, graphType, chartMode])
 
   // ── Manual table mutations ───────────────────────────────────────────────
 
@@ -567,39 +436,6 @@ export function TwoWayTable({
         <OutputTable data={data} view={tableView} />
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-        <div className="flex flex-wrap items-center gap-4 mb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-[var(--color-muted)]">Graph:</span>
-            {([['segmented', 'Segmented Bar'], ['sidebyside', 'Side-by-Side Bar'], ['mosaic', 'Mosaic Plot']] as [GraphType, string][]).map(
-              ([g, label]) => (
-                <button key={g} onClick={() => setGraphType(g)} className={pill(graphType === g)}>
-                  {label}
-                </button>
-              )
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-[var(--color-muted)]">Values:</span>
-            {([['counts', 'Counts'], ['row', 'Row %']] as [ChartMode, string][]).map(([m, label]) => (
-              <button
-                key={m}
-                onClick={() => setChartMode(m)}
-                disabled={graphType === 'mosaic'}
-                className={`${pill(chartMode === m, false)} ${graphType === 'mosaic' ? 'opacity-40 cursor-not-allowed hover:bg-slate-100' : ''}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <PlotlyChart
-          data={traces as Data[]}
-          height={320}
-          mode="fixed"
-          layout={chartLayout}
-        />
-      </div>
     </div>
   ) : (
       <div className="h-full flex flex-col items-center justify-center gap-3 text-center p-8 text-[var(--color-muted)]">
@@ -609,6 +445,11 @@ export function TwoWayTable({
           ? 'Drag in an Explanatory Variable and a Response Variable to begin.'
           : 'Enter counts in the table above to get started.'}
       </p>
+      {isCardMode && inputMode === 'raw' && (
+        <p className="text-xs text-[var(--color-muted)]">
+          Use the header Plot Card button after assigning both variables.
+        </p>
+      )}
     </div>
   )
 

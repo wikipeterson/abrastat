@@ -90,6 +90,7 @@ export function Yacht({ onDone }: Props) {
   const [turn, setTurn] = useState(0)
   const [rollsLeft, setRollsLeft] = useState(3)
   const [isRolling, setIsRolling] = useState(false)
+  const [showRollOverlay, setShowRollOverlay] = useState(true)
   const [dice, setDice] = useState<DieState[]>(
     DIE_IDS.map(id => ({ id, value: null, held: false })),
   )
@@ -134,6 +135,7 @@ export function Yacht({ onDone }: Props) {
     const activeIds = dice.filter(d => !d.held).map(d => d.id)
     if (activeIds.length === 0) return
 
+    setShowRollOverlay(false)
     rollingIdsRef.current = new Set(activeIds)
     for (const id of activeIds) settledValRef.current.delete(id)
 
@@ -170,6 +172,7 @@ export function Yacht({ onDone }: Props) {
     setTurn(nextTurn)
     setRollsLeft(3)
     setIsRolling(false)
+    setShowRollOverlay(true)
     rollingIdsRef.current = new Set()
     settledValRef.current = new Map()
     canvasRef.current?.stageAll()
@@ -181,7 +184,7 @@ export function Yacht({ onDone }: Props) {
   const canScore = hasRolled && !isRolling && !returningHeld
   const diceValues = dice.map(d => d.value ?? 0)
   const activeDice = dice.filter(d => !d.held)
-  const canShowRollOverlay = !isRolling && rollsLeft > 0 && activeDice.length > 0
+  const canShowRollOverlay = showRollOverlay && !isRolling && rollsLeft > 0 && activeDice.length > 0
 
   const { upperSubtotal, lowerSubtotal, grandTotal } = computeTotals(scores)
   const upperCats = CATEGORIES.filter(c => c.section === 'upper')
@@ -207,7 +210,7 @@ export function Yacht({ onDone }: Props) {
               ref={canvasRef}
               onDieSettled={handleDieSettled}
               onDieClick={toggleHold}
-              disableLineup
+              onLineupComplete={() => setShowRollOverlay(true)}
               enableHeldZone
             />
             {canShowRollOverlay && (

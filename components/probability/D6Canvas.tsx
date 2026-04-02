@@ -735,6 +735,13 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
       const gapZ = DIE_HALF * 2 + 0.24
 
       dieEntriesRef.current.forEach((entry, index) => {
+        if (enableHeldZoneRef.current && entry.zone === 'held') {
+          entry.lineupStartPos.copy(entry.mesh.position)
+          entry.lineupStartQuat.copy(entry.mesh.quaternion)
+          entry.lineupTargetPos.copy(entry.mesh.position)
+          entry.lineupTargetQuat.copy(entry.mesh.quaternion)
+          return
+        }
         const col = index % perRow
         const row = Math.floor(index / perRow)
         entry.lineupStartPos.copy(entry.mesh.position)

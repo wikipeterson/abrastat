@@ -1,10 +1,10 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '@/lib/store'
 import { getStringValues } from '@/lib/gridHelpers'
 import { DropZone } from '@/components/explore/DropZone'
-
+import { ManualTwoWayTableSnapshot } from '@/lib/exploreTypes'
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type InputMode = 'raw' | 'manual'
@@ -267,6 +267,7 @@ interface TwoWayTableProps {
   onClearZone?: (zone: string) => void
   inputMode?: InputMode
   onInputModeChange?: (mode: InputMode) => void
+  onManualTableDataChange?: (snapshot: ManualTwoWayTableSnapshot | null) => void
 }
 
 export function TwoWayTable({
@@ -276,8 +277,9 @@ export function TwoWayTable({
   onClearZone,
   inputMode: controlledInputMode,
   onInputModeChange,
+  onManualTableDataChange,
 }: TwoWayTableProps = {}) {
-  const { grid, exploreCards, addLinkedGraphCard } = useStore()
+  const { grid } = useStore()
   function handleNativeDrop(zone: 'rows' | 'cols') {
     return (e: React.DragEvent) => {
       const colId = e.dataTransfer.getData('text/plain')
@@ -302,7 +304,6 @@ export function TwoWayTable({
   }
 
   const isCardMode = !!cardId
-  const thisCard = isCardMode ? exploreCards.find(c => c.id === cardId) ?? null : null
 
   const [localInputMode, setLocalInputMode] = useState<InputMode>('raw')
   const inputMode = controlledInputMode ?? localInputMode
@@ -360,6 +361,19 @@ export function TwoWayTable({
     inputMode, grid, explColId, respColId,
     mExplName, mRespName, mRowLabels, mColLabels, mCells,
   ])
+
+  const showTopControls = !isCardMode && inputMode === 'raw'
+
+  useEffect(() => {
+    if (!onManualTableDataChange) return
+    onManualTableDataChange(isCardMode && inputMode === 'manual' ? (data ? {
+      explName: data.explName,
+      respName: data.respName,
+      rowLabels: [...data.rowLabels],
+      colLabels: [...data.colLabels],
+      cells: data.cells.map(row => [...row]),
+    } : null) : null)
+  }, [data, inputMode, isCardMode, onManualTableDataChange])
 
   // ── Manual table mutations ───────────────────────────────────────────────
 
@@ -459,11 +473,11 @@ export function TwoWayTable({
   return (
     <div
       className={`max-w-5xl mx-auto px-4 ${
-        isCardMode ? 'pt-2 pb-6 space-y-3' : 'py-6 space-y-5'
+        isCardMode ? 'pt-0 pb-6 space-y-2' : 'py-6 space-y-5'
       }`}
     >
-
       {/* Top controls */}
+      {showTopControls && (
       <div className="flex flex-wrap items-end gap-4">
         {!isCardMode && (
           <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden bg-white">
@@ -523,36 +537,8 @@ export function TwoWayTable({
             )}
           </>
         )}
-
-        {isCardMode && inputMode === 'manual' && data && (
-          <button
-            onClick={() => {
-              if (!thisCard) return
-              addLinkedGraphCard(
-                {
-                  type: 'graph',
-                  xColId: null,
-                  yColId: null,
-                  groupColId: null,
-                  chartType: 'segmented',
-                  manualTable: {
-                    explName: data.explName,
-                    respName: data.respName,
-                    rowLabels: [...data.rowLabels],
-                    colLabels: [...data.colLabels],
-                    cells: data.cells.map(row => [...row]),
-                  },
-                },
-                { x: thisCard.x + thisCard.width + 40, y: thisCard.y },
-              )
-            }}
-            className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
-            title="Open a linked plot card for this table"
-          >
-            Plot Card
-          </button>
-        )}
       </div>
+      )}
 
       {/* Drop zones — card mode, raw data */}
       {isCardMode && inputMode === 'raw' && (

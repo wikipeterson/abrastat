@@ -14,12 +14,13 @@ import {
 } from '@dnd-kit/core'
 import { useStore } from '@/lib/store'
 import { GridColumn } from '@/types'
-import { CardConfig, GraphCardConfig, MeansCardConfig, ExploreCard } from '@/lib/exploreTypes'
+import { CardConfig, GraphCardConfig, MeansCardConfig, ExploreCard, ManualTwoWayTableSnapshot } from '@/lib/exploreTypes'
 import { ChartType, inferCharts } from '@/lib/chartHelpers'
 import { SwapAnimContext, SwapAnimState } from '@/lib/swapAnimContext'
 import { GraphCard } from './cards/GraphCard'
 import { SummaryCard } from './cards/SummaryCard'
 import { RegressionCard } from './cards/RegressionCard'
+import { TableCard } from './cards/TableCard'
 import { TwoWayTable } from '@/components/applets/TwoWayTable'
 import { DistributionCard } from '@/components/inference/DistributionCard'
 import { MeansCard } from '@/components/inference/MeansCard'
@@ -77,6 +78,7 @@ function cardLabel(type: CardConfig['type']): string {
     case 'graph':        return 'Graph'
     case 'summary':      return 'Summary Statistics'
     case 'table':        return 'Two-Way Table'
+    case 'table-output': return 'Two-Way Table'
     case 'regression':   return 'Regression'
     case 'distribution': return 'Distribution'
     case 'generator':    return 'Random Generator'
@@ -154,7 +156,7 @@ function WorkspaceContextMenu({
 export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void }) {
   const {
     grid, addExploreCard,
-    exploreCards, removeExploreCard, updateExploreCard, purgeExploreStaleIds, ensureDataGridCard, addLinkedGraphCard,
+    exploreCards, removeExploreCard, updateExploreCard, purgeExploreStaleIds, ensureDataGridCard, addLinkedGraphCard, addLinkedTableCard,
   } = useStore()
 
   const cards = exploreCards
@@ -172,6 +174,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
     worldY: number
   } | null>(null)
   const [tableInputModes, setTableInputModes] = useState<Record<string, 'raw' | 'manual'>>({})
+  const [tableManualSnapshots, setTableManualSnapshots] = useState<Record<string, ManualTwoWayTableSnapshot | null>>({})
   const scrollRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef(1)
@@ -740,6 +743,49 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                                       Plot Card
                                     </button>
                                   )}
+                                {(tableInputModes[card.id] ?? 'raw') === 'manual' &&
+                                  tableManualSnapshots[card.id] && (
+                                    <>
+                                      <button
+                                        onPointerDown={e => e.stopPropagation()}
+                                        onClick={() =>
+                                          addLinkedTableCard(
+                                            {
+                                              type: 'table-output',
+                                              rowsColId: null,
+                                              colsColId: null,
+                                              manualTable: tableManualSnapshots[card.id] ?? undefined,
+                                            },
+                                            { x: card.x + card.width + 40, y: card.y },
+                                          )
+                                        }
+                                        className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
+                                        title="Open a linked table card for this manual table"
+                                      >
+                                        Table Card
+                                      </button>
+                                      <button
+                                        onPointerDown={e => e.stopPropagation()}
+                                        onClick={() =>
+                                          addLinkedGraphCard(
+                                            {
+                                              type: 'graph',
+                                              xColId: null,
+                                              yColId: null,
+                                              groupColId: null,
+                                              chartType: 'segmented',
+                                              manualTable: tableManualSnapshots[card.id] ?? undefined,
+                                            },
+                                            { x: card.x + card.width + 40, y: card.y },
+                                          )
+                                        }
+                                        className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
+                                        title="Open a linked plot card for this manual table"
+                                      >
+                                        Plot Card
+                                      </button>
+                                    </>
+                                  )}
                               </>
                               )
                             })()}
@@ -803,8 +849,20 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                                 onInputModeChange={mode =>
                                   setTableInputModes(prev => ({ ...prev, [card.id]: mode }))
                                 }
+                                onManualTableDataChange={snapshot =>
+                                  setTableManualSnapshots(prev => ({ ...prev, [card.id]: snapshot }))
+                                }
                               />
                             </div>
+                          )}
+                          {card.config.type === 'table-output' && (
+                            <TableCard
+                              cardId={card.id}
+                              config={card.config}
+                              onClearZone={z => clearZone(card.id, z)}
+                              onRemove={() => removeCard(card.id)}
+                              hideHeader
+                            />
                           )}
                           {card.config.type === 'regression' && (
                             <RegressionCard

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { SummaryResult, FrequencyRow } from '@/types'
 import { linearRegression, twoWayTable } from '@/lib/statistics'
+import { ManualTwoWayTableSnapshot } from '@/lib/exploreTypes'
 
 const STAT_TOOLTIPS: Record<string, string> = {
   n: 'The number of non-missing values in this column.',
@@ -187,11 +188,33 @@ export function LinearRegressionCard({ xName, yName, xs, ys }: { xName: string; 
 
 type TableMode = 'count' | 'row' | 'col' | 'total'
 
-export function TwoWayTableCard({ colAName, colBName, colAValues, colBValues }: {
-  colAName: string; colBName: string; colAValues: string[]; colBValues: string[]
+export function TwoWayTableCard({
+  colAName,
+  colBName,
+  colAValues,
+  colBValues,
+  manualTable,
+}: {
+  colAName?: string
+  colBName?: string
+  colAValues?: string[]
+  colBValues?: string[]
+  manualTable?: ManualTwoWayTableSnapshot
 }) {
   const [mode, setMode] = useState<TableMode>('count')
-  const { rowLabels, colLabels, counts } = twoWayTable(colAValues, colBValues)
+  const { rowLabels, colLabels, counts, displayAName, displayBName } = manualTable
+    ? {
+        rowLabels: manualTable.rowLabels,
+        colLabels: manualTable.colLabels,
+        counts: manualTable.cells,
+        displayAName: manualTable.respName,
+        displayBName: manualTable.explName,
+      }
+    : {
+        ...twoWayTable(colAValues ?? [], colBValues ?? []),
+        displayAName: colAName ?? 'Rows',
+        displayBName: colBName ?? 'Columns',
+      }
 
   const rowTotals = counts.map(row => row.reduce((s, v) => s + v, 0))
   const colTotals = colLabels.map((_, ci) => counts.reduce((s, row) => s + row[ci], 0))
@@ -213,7 +236,7 @@ export function TwoWayTableCard({ colAName, colBName, colAValues, colBValues }: 
     <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:col-span-2 xl:col-span-3">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h3 className="font-semibold text-[var(--color-text)]">
-          Two-Way Table — <span className="text-[var(--color-accent)]">{colAName}</span> × <span className="text-[var(--color-accent)]">{colBName}</span>
+          Two-Way Table — <span className="text-[var(--color-accent)]">{displayAName}</span> × <span className="text-[var(--color-accent)]">{displayBName}</span>
         </h3>
         <div className="flex gap-1">
           {(['count', 'row', 'col', 'total'] as TableMode[]).map(m => (
@@ -231,9 +254,9 @@ export function TwoWayTableCard({ colAName, colBName, colAValues, colBValues }: 
         <table className="text-sm w-full border-collapse">
           <thead>
             <tr>
-              <th className="text-left px-3 py-2 text-[var(--color-muted)] font-medium border-b border-[var(--color-border)]">
-                {colAName} ↓ / {colBName} →
-              </th>
+                <th className="text-left px-3 py-2 text-[var(--color-muted)] font-medium border-b border-[var(--color-border)]">
+                {displayAName} ↓ / {displayBName} →
+                </th>
               {colLabels.map(label => (
                 <th key={label} className="px-3 py-2 text-center font-medium bg-[var(--color-grid-header)] text-white border-b border-slate-600">
                   {label}

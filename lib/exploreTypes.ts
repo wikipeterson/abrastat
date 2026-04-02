@@ -33,6 +33,13 @@ export interface TableCardConfig {
   colsColId: string | null
 }
 
+export interface TableOutputCardConfig {
+  type: 'table-output'
+  rowsColId: string | null
+  colsColId: string | null
+  manualTable?: ManualTwoWayTableSnapshot
+}
+
 export interface RegressionCardConfig {
   type: 'regression'
   xColId: string | null
@@ -103,6 +110,7 @@ export type CardConfig =
   | GraphCardConfig
   | SummaryCardConfig
   | TableCardConfig
+  | TableOutputCardConfig
   | RegressionCardConfig
   | DistributionCardConfig
   | RandomGeneratorCardConfig

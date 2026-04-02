@@ -30,6 +30,8 @@ interface GraphCardProps {
 export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
   const { grid } = useStore()
   const [showBestFitLine, setShowBestFitLine] = useState(false)
+  const [manualTableGraphType, setManualTableGraphType] = useState<'segmented' | 'sidebyside'>('segmented')
+  const [manualTableValueMode, setManualTableValueMode] = useState<'count' | 'row'>('count')
   const manualTable = config.manualTable ?? null
 
   const xCol = !manualTable && config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
@@ -131,7 +133,16 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
       case 'scatter':    return <ScatterPlot xColId={config.xColId} yColId={config.yColId} colorByColId={config.groupColId} />
       case 'bar':        return <BarChart colId={mainColId} orientation={orientation} />
       case 'pie':        return <PieChart colId={mainColId} groupColId={config.groupColId} />
-      case 'segmented':  return <SegmentedBar xColId={config.xColId} fillColId={config.groupColId} manualTable={manualTable ?? undefined} />
+      case 'segmented':  return (
+        <SegmentedBar
+          xColId={config.xColId}
+          fillColId={config.groupColId}
+          manualTable={manualTable ?? undefined}
+          modeOverride={manualTable ? manualTableValueMode : undefined}
+          barmodeOverride={manualTable ? (manualTableGraphType === 'segmented' ? 'stack' : 'group') : undefined}
+          showControls={!manualTable}
+        />
+      )
       case 'normalprob': return <NormalProbPlot colId={mainColId} />
       default:           return null
     }
@@ -165,7 +176,45 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
       {/* Top row: chart type pills | Group zone compact upper-right */}
       <div className="flex-shrink-0 flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 flex-wrap min-h-[40px]">
-          {chartButtons.length > 0 && (
+          {manualTable && (
+            <>
+              <span className="text-xs font-medium text-[var(--color-muted)]">Graph:</span>
+              {([
+                ['segmented', 'Segmented Bar'],
+                ['sidebyside', 'Side-by-Side Bar'],
+              ] as const).map(([type, label]) => (
+                <button
+                  key={type}
+                  onClick={() => setManualTableGraphType(type)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    manualTableGraphType === type
+                      ? 'bg-[var(--color-accent)] text-white'
+                      : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+              <span className="text-xs font-medium text-[var(--color-muted)] ml-2">Values:</span>
+              {([
+                ['count', 'Counts'],
+                ['row', 'Row %'],
+              ] as const).map(([mode, label]) => (
+                <button
+                  key={mode}
+                  onClick={() => setManualTableValueMode(mode)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    manualTableValueMode === mode
+                      ? 'bg-slate-600 text-white'
+                      : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </>
+          )}
+          {!manualTable && chartButtons.length > 0 && (
             <>
               <span className="text-xs font-medium text-[var(--color-muted)]">Chart type:</span>
               {chartButtons.map(ct => (

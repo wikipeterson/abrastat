@@ -3,13 +3,13 @@
 import { useStore } from '@/lib/store'
 import { getStringValues } from '@/lib/gridHelpers'
 import { TwoWayTableCard } from '@/components/stats/StatCard'
-import { TableCardConfig } from '@/lib/exploreTypes'
+import { TableOutputCardConfig } from '@/lib/exploreTypes'
 import { DropZone } from '../DropZone'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 interface TableCardProps {
   cardId: string
-  config: TableCardConfig
+  config: TableOutputCardConfig
   onClearZone: (zone: string) => void
   onRemove: () => void
   hideHeader?: boolean
@@ -17,9 +17,10 @@ interface TableCardProps {
 
 export function TableCard({ cardId, config, onClearZone, onRemove, hideHeader }: TableCardProps) {
   const { grid } = useStore()
+  const manualTable = config.manualTable ?? null
 
-  const rowsCol = config.rowsColId ? (grid.columns.find(c => c.id === config.rowsColId) ?? null) : null
-  const colsCol = config.colsColId ? (grid.columns.find(c => c.id === config.colsColId) ?? null) : null
+  const rowsCol = !manualTable && config.rowsColId ? (grid.columns.find(c => c.id === config.rowsColId) ?? null) : null
+  const colsCol = !manualTable && config.colsColId ? (grid.columns.find(c => c.id === config.colsColId) ?? null) : null
 
   return (
     <div className={hideHeader ? '' : 'bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden'}>
@@ -31,14 +32,18 @@ export function TableCard({ cardId, config, onClearZone, onRemove, hideHeader }:
       )}
 
       <div className={hideHeader ? 'space-y-3' : 'p-4 space-y-3'}>
+        {!manualTable && (
         <div className="grid grid-cols-2 gap-2">
           <DropZone id={`${cardId}:rows`} label="Rows" hint="categorical variable"
             assignedCol={rowsCol} onClear={() => onClearZone('rows')} />
           <DropZone id={`${cardId}:cols`} label="Columns" hint="categorical variable"
             assignedCol={colsCol} onClear={() => onClearZone('cols')} />
         </div>
+        )}
 
-        {rowsCol && colsCol ? (
+        {manualTable ? (
+          <TwoWayTableCard manualTable={manualTable} />
+        ) : rowsCol && colsCol ? (
           <TwoWayTableCard
             colAName={rowsCol.name}
             colBName={colsCol.name}
@@ -52,4 +57,3 @@ export function TableCard({ cardId, config, onClearZone, onRemove, hideHeader }:
     </div>
   )
 }
-

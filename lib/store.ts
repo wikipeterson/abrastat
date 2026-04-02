@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import { User as FirebaseUser } from 'firebase/auth'
 import { ColumnType, GridState } from '@/types'
-import { ExploreCard, CardConfig, DistributionPreFill, GraphCardConfig, SimResultsCardConfig } from './exploreTypes'
+import { ExploreCard, CardConfig, DistributionPreFill, GraphCardConfig, SimResultsCardConfig, TableOutputCardConfig } from './exploreTypes'
 import { createEmptyGrid } from './gridHelpers'
 import { computeColumnValues } from './formulaEval'
 
@@ -147,6 +147,10 @@ interface AbraStatStore {
   ) => string
   addLinkedGraphCard: (
     config: GraphCardConfig,
+    position: { x: number; y: number },
+  ) => string
+  addLinkedTableCard: (
+    config: TableOutputCardConfig,
     position: { x: number; y: number },
   ) => string
   pushSimResult: (cardId: string, roll: number[]) => void
@@ -352,6 +356,20 @@ export const useStore = create<AbraStatStore>((set) => ({
     return id
   },
   addLinkedGraphCard: (config, position) => {
+    const id = uuid()
+    set(state => ({
+      exploreCards: [...state.exploreCards, {
+        id,
+        config,
+        x: position.x,
+        y: position.y,
+        width: 620,
+        height: 520,
+      }],
+    }))
+    return id
+  },
+  addLinkedTableCard: (config, position) => {
     const id = uuid()
     set(state => ({
       exploreCards: [...state.exploreCards, {

@@ -245,7 +245,7 @@ export function Yacht({ onDone }: Props) {
             />
           </div>
 
-          <div className="mt-3 flex flex-1 flex-col">
+          <div className="mt-auto pt-3">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)]">
             <div className="flex h-full flex-col">
               <div

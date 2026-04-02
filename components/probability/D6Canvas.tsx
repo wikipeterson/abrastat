@@ -833,10 +833,10 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
     function fitCamera(w: number, h: number) {
       const cam = cameraRef.current
       if (!cam) return
-      const trW = TRAY_W + WALL_T * 2 + 0.6
-      const topExtent    = TRAY_D / 2 + WALL_T + 0.3   // world Z shown above center
+      const trW = TRAY_W + WALL_T * 2 + 0.16
+      const topExtent    = TRAY_D / 2 + WALL_T + 0.08   // world Z shown above center
       const bottomExtent = enableHeldZoneRef.current
-        ? HELD_ZONE_END_Z + 0.25               // world Z shown below center (held zone)
+        ? HELD_ZONE_END_Z + 0.08               // world Z shown below center (held zone)
         : topExtent
       const trH = topExtent + bottomExtent
       const aspect = w / h

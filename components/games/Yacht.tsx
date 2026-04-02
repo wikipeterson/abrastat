@@ -14,7 +14,7 @@ import {
 const NUM_DICE = 5
 const NUM_TURNS = 12
 const DIE_IDS = Array.from({ length: NUM_DICE }, (_, i) => `y${i}`)
-const YACHT_FOOTER_BAND_HEIGHT = 112
+const ZONE_RETURN_MS = 350
 
 export const YACHT_MAX_SCORE = 304
 
@@ -26,42 +26,6 @@ interface DieState {
 
 interface Props {
   onDone: (score: number) => void
-}
-
-function DieFace({
-  value,
-  held,
-  onClick,
-  disabled,
-  label,
-}: {
-  value: number | null
-  held: boolean
-  onClick: () => void
-  disabled: boolean
-  label?: string
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      title={held ? 'Click to return to tray' : 'Click to hold out of tray'}
-      className={[
-        'relative flex h-14 w-14 items-center justify-center rounded-xl border font-black text-2xl transition-all select-none',
-        held
-          ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)] shadow-sm'
-          : 'border-[#0D4F49] bg-[#0D4F49] text-white hover:scale-105',
-        disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
-      ].join(' ')}
-    >
-      {value ?? '?'}
-      {label && (
-        <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-          {label}
-        </span>
-      )}
-    </button>
-  )
 }
 
 function ScoreRow({
@@ -132,6 +96,7 @@ export function Yacht({ onDone }: Props) {
 
   const rollingIdsRef = useRef<Set<string>>(new Set())
   const settledValRef = useRef<Map<string, number>>(new Map())
+  const [returningHeld, setReturningHeld] = useState(false)
 
   useEffect(() => {
     const handle = canvasRef.current
@@ -149,6 +114,18 @@ export function Yacht({ onDone }: Props) {
     setDice(prev => prev.map(d => d.id === id ? { ...d, value } : d))
     if ([...rollingIdsRef.current].every(rid => settledValRef.current.has(rid))) {
       setIsRolling(false)
+      // After the last roll, animate held dice back to the tray before scoring
+      if (rollsLeft === 0) {
+        setDice(prev => {
+          const held = prev.filter(d => d.held)
+          if (held.length > 0) {
+            setReturningHeld(true)
+            held.forEach(d => canvasRef.current?.setDieZone(d.id, 'tray'))
+            setTimeout(() => setReturningHeld(false), ZONE_RETURN_MS)
+          }
+          return prev.map(d => ({ ...d, held: false }))
+        })
+      }
     }
   }
 
@@ -168,7 +145,13 @@ export function Yacht({ onDone }: Props) {
 
   function toggleHold(id: string) {
     if (rollsLeft === 3 || isRolling || rollsLeft === 0) return
-    setDice(prev => prev.map(d => d.id === id ? { ...d, held: !d.held } : d))
+    setDice(prev => {
+      const die = prev.find(d => d.id === id)
+      if (!die) return prev
+      const newHeld = !die.held
+      canvasRef.current?.setDieZone(id, newHeld ? 'held' : 'tray')
+      return prev.map(d => d.id === id ? { ...d, held: newHeld } : d)
+    })
   }
 
   function scoreAndAdvance(catId: CategoryId) {
@@ -195,11 +178,9 @@ export function Yacht({ onDone }: Props) {
 
   const hasRolled = rollsLeft < 3
   const mustScore = rollsLeft === 0 && !isRolling
-  const canScore = hasRolled && !isRolling
+  const canScore = hasRolled && !isRolling && !returningHeld
   const diceValues = dice.map(d => d.value ?? 0)
-  const holdable = hasRolled && !isRolling && rollsLeft > 0
   const activeDice = dice.filter(d => !d.held)
-  const heldDice = dice.filter(d => d.held)
   const canShowRollOverlay = !isRolling && rollsLeft > 0 && activeDice.length > 0
 
   const { upperSubtotal, lowerSubtotal, grandTotal } = computeTotals(scores)
@@ -221,12 +202,13 @@ export function Yacht({ onDone }: Props) {
     <div className="grid items-stretch gap-4 xl:grid-cols-[1.45fr_1fr]">
       <div className="flex h-full flex-col">
         <div className="flex h-full flex-col rounded-2xl border border-[var(--color-border)] bg-white p-3">
-          <div className="relative flex-1 overflow-hidden rounded-xl" style={{ minHeight: 310 }}>
+          <div className="relative flex-1 overflow-hidden rounded-xl" style={{ minHeight: 480 }}>
             <D6Canvas
               ref={canvasRef}
               onDieSettled={handleDieSettled}
               onDieClick={toggleHold}
               disableLineup
+              enableHeldZone
             />
             {canShowRollOverlay && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -240,31 +222,6 @@ export function Yacht({ onDone }: Props) {
             )}
           </div>
 
-          <div className="mt-auto pt-3">
-            <div>
-            <div className="flex h-full flex-col">
-              <div
-                className="flex flex-wrap content-start gap-3 rounded-xl border border-dashed border-[var(--color-accent)] bg-[var(--color-accent-light)]/50 p-3"
-                style={{ height: YACHT_FOOTER_BAND_HEIGHT }}
-              >
-                {heldDice.length === 0 ? (
-                  <div className="flex items-center text-xs text-[var(--color-muted)]">Click a die in the tray to hold it out. Click a held die to return it.</div>
-                ) : (
-                  heldDice.map(d => (
-                    <DieFace
-                      key={d.id}
-                      value={d.value}
-                      held
-                      onClick={() => toggleHold(d.id)}
-                      disabled={!holdable}
-                      label="Click to return"
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -348,7 +305,6 @@ export function Yacht({ onDone }: Props) {
 
         <div
           className="mt-auto rounded-xl border border-[var(--color-border)] px-3 py-3"
-          style={{ height: YACHT_FOOTER_BAND_HEIGHT }}
         >
           <div className="grid grid-cols-3 gap-3 text-center">
             <div>

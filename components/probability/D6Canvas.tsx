@@ -19,6 +19,11 @@ const MAX_SETTLE  = 5500   // ms hard timeout
 const LINEUP_READY_VEL = 2.0   // lineup fires even while dice are barely rolling
 const LINEUP_READY_ANG = 2.0
 
+const HELD_ZONE_Z       = 4.15  // world Z of held-die center (past front wall)
+const HELD_ZONE_FLOOR_D = 1.65  // depth of held zone floor slab
+const HELD_ZONE_END_Z   = 5.2   // camera bottom extent when held zone is active
+const ZONE_ANIM_MS      = 300   // ms for hold/unhold transition
+
 // Die face colours matching the palette
 const DIE_COLOR = '#0D4F49'
 const DIE_EDGE_COLOR = '#1A8C80'
@@ -509,6 +514,15 @@ function snapPolyhedronFaceUp(body: CANNON.Body, faceDefs: PolyFaceDef[]) {
 
 // ── Per-die state ─────────────────────────────────────────────────────────────
 
+interface ZoneAnim {
+  fromPos: THREE.Vector3
+  fromQuat: THREE.Quaternion
+  toPos: THREE.Vector3
+  toQuat: THREE.Quaternion
+  startAt: number
+  duration: number
+}
+
 interface DieEntry {
   id: string
   sides: number
@@ -521,6 +535,8 @@ interface DieEntry {
   maxTimer: ReturnType<typeof setTimeout> | null
   resultValue: number | null
   resultTexture?: THREE.CanvasTexture  // tracks dynamically-created result texture for safe disposal
+  zone: 'tray' | 'held'
+  zoneAnim?: ZoneAnim
   faceDefs: PolyFaceDef[]     // logical numbered faces for d10 and future d100
   supportVertices: CANNON.Vec3[]
   lineupStartPos: THREE.Vector3
@@ -545,6 +561,11 @@ function getSupportHeight(
 
 function threeQuatToCannon(quat: THREE.Quaternion) {
   return new CANNON.Quaternion(quat.x, quat.y, quat.z, quat.w)
+}
+
+function computeHeldSlotX(idx: number, total: number): number {
+  const gap = 1.05
+  return -(total - 1) * gap / 2 + idx * gap
 }
 
 function keepDieInsideTray(entry: DieEntry) {
@@ -589,6 +610,7 @@ export interface D6CanvasHandle {
   rollSome: (idsToRoll: string[]) => void
   clearAll: () => void
   stageAll: () => void
+  setDieZone: (id: string, zone: 'tray' | 'held') => void
 }
 
 export interface D6CanvasProps {
@@ -597,6 +619,7 @@ export interface D6CanvasProps {
   onLineupComplete?: () => void
   tuning?: DiceTuning
   disableLineup?: boolean
+  enableHeldZone?: boolean
 }
 
 export interface DiceTuning {
@@ -624,13 +647,15 @@ export const DEFAULT_DICE_TUNING: DiceTuning = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
-  function D6Canvas({ onDieSettled, onDieClick, onLineupComplete, tuning, disableLineup }, ref) {
+  function D6Canvas({ onDieSettled, onDieClick, onLineupComplete, tuning, disableLineup, enableHeldZone }, ref) {
     const mountRef        = useRef<HTMLDivElement>(null)
     const onSettledRef    = useRef(onDieSettled)
     const onDieClickRef   = useRef(onDieClick)
     const onLineupCompleteRef = useRef(onLineupComplete)
     const tuningRef       = useRef<DiceTuning>({ ...DEFAULT_DICE_TUNING, ...tuning })
     const disableLineupRef = useRef(disableLineup ?? false)
+    const enableHeldZoneRef = useRef(enableHeldZone ?? false)
+    useEffect(() => { enableHeldZoneRef.current = enableHeldZone ?? false }, [enableHeldZone])
     useEffect(() => { onSettledRef.current = onDieSettled })
     useEffect(() => { onDieClickRef.current = onDieClick }, [onDieClick])
     useEffect(() => { onLineupCompleteRef.current = onLineupComplete }, [onLineupComplete])
@@ -802,23 +827,30 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
     function fitCamera(w: number, h: number) {
       const cam = cameraRef.current
       if (!cam) return
-      const trW = TRAY_W + WALL_T * 2 + 0.6   // total visible world width
-      const trH = TRAY_D + WALL_T * 2 + 0.6
+      const trW = TRAY_W + WALL_T * 2 + 0.6
+      const topExtent    = TRAY_D / 2 + WALL_T + 0.3   // world Z shown above center
+      const bottomExtent = enableHeldZoneRef.current
+        ? HELD_ZONE_END_Z + 0.25               // world Z shown below center (held zone)
+        : topExtent
+      const trH = topExtent + bottomExtent
       const aspect = w / h
-      let hW: number, hH: number
+      let hW: number, top: number, bottom: number
       if (aspect >= trW / trH) {
-        // canvas wider → fit height, extend sides
-        hH = trH / 2
-        hW = hH * aspect
+        // canvas wider than needed → fit height, extend sides
+        top    = topExtent
+        bottom = bottomExtent
+        hW     = (trH * aspect) / 2
       } else {
-        // canvas taller → fit width, extend top/bottom
-        hW = trW / 2
-        hH = hW / aspect
+        // canvas taller → fit width, scale height proportionally
+        hW     = trW / 2
+        const scale = (trW / aspect) / trH
+        top    = topExtent * scale
+        bottom = bottomExtent * scale
       }
       cam.left   = -hW
       cam.right  =  hW
-      cam.top    =  hH
-      cam.bottom = -hH
+      cam.top    =  top
+      cam.bottom = -bottom
       cam.updateProjectionMatrix()
     }
 
@@ -882,6 +914,28 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
       floor.position.y = -0.03
       floor.receiveShadow = true
       scene.add(floor)
+
+      // ── Held zone (Yacht) ─────────────────────────────────────────────────
+      if (enableHeldZone) {
+        // Extended floor for the held area (slightly warmer felt tone)
+        const heldFloorMat = new THREE.MeshLambertMaterial({ color: 0x28B5A8, map: getFeltTexture() })
+        const heldFloor = new THREE.Mesh(
+          new THREE.BoxGeometry(TRAY_W, 0.06, HELD_ZONE_FLOOR_D),
+          heldFloorMat,
+        )
+        heldFloor.position.set(0, -0.03, TRAY_D / 2 + WALL_T + 0.1 + HELD_ZONE_FLOOR_D / 2)
+        heldFloor.receiveShadow = true
+        scene.add(heldFloor)
+
+        // Thin separator rail between tray and held zone
+        const railMat = new THREE.MeshLambertMaterial({ color: 0x1A3A34 })
+        const rail = new THREE.Mesh(
+          new THREE.BoxGeometry(TRAY_W + WALL_T * 2, 0.12, 0.1),
+          railMat,
+        )
+        rail.position.set(0, 0.06, TRAY_D / 2 + WALL_T + 0.05)
+        scene.add(rail)
+      }
 
       // Dark-wood walls
       const wallMat = new THREE.MeshLambertMaterial({ color: 0x2D3748 })
@@ -949,10 +1003,32 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
         world.step(fixedStep, dt, 3)
 
         for (const entry of dieEntriesRef.current) {
-          // Sync mesh → body
+          // Zone animation (hold/unhold): takes priority over physics sync
+          if (entry.zoneAnim) {
+            const za = entry.zoneAnim
+            const t = Math.min(1, (now - za.startAt) / za.duration)
+            const eased = 1 - Math.pow(1 - t, 3)
+            entry.mesh.position.lerpVectors(za.fromPos, za.toPos, eased)
+            entry.mesh.quaternion.copy(za.fromQuat).slerp(za.toQuat, eased)
+            // Keep sleeping body in sync so physics starts from correct position
+            const mp = entry.mesh.position
+            const mq = entry.mesh.quaternion
+            entry.body.position.set(mp.x, mp.y, mp.z)
+            entry.body.quaternion.set(mq.x, mq.y, mq.z, mq.w)
+            if (t >= 1) {
+              entry.mesh.position.copy(za.toPos)
+              entry.mesh.quaternion.copy(za.toQuat)
+              entry.body.position.set(za.toPos.x, za.toPos.y, za.toPos.z)
+              entry.body.quaternion.set(za.toQuat.x, za.toQuat.y, za.toQuat.z, za.toQuat.w)
+              entry.zoneAnim = undefined
+            }
+            continue
+          }
+
+          // Normal physics sync
           const b = entry.body
           if (!lineupRef.current.active && !lineupRef.current.completed) {
-            keepDieInsideTray(entry)
+            if (entry.zone !== 'held') keepDieInsideTray(entry)
             entry.mesh.position.set(b.position.x, b.position.y, b.position.z)
             entry.mesh.quaternion.set(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w)
 
@@ -1064,7 +1140,8 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
         // Clear all die timers
         dieEntriesRef.current.forEach(e => { if (e.maxTimer) clearTimeout(e.maxTimer) })
       }
-    }, []) // mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []) // mount only — enableHeldZone is intentionally snapshotted at mount
 
     // ── Imperative API ────────────────────────────────────────────────────────
 
@@ -1139,6 +1216,8 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           body, mesh, slotIndex, settled: false, settleCount: 0,
           maxTimer: null,
           resultValue: null,
+          zone: 'tray' as const,
+          zoneAnim: undefined,
           faceDefs,
           supportVertices,
           lineupStartPos: new THREE.Vector3(),
@@ -1351,12 +1430,88 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           entry.resultValue = null
           entry.settled = true
           entry.settleCount = 0
+          entry.zone = 'tray'
+          entry.zoneAnim = undefined
           if (entry.sides === 6) restoreD6FaceMaps(entry)
           stageDieAtSlot(entry, i)
         }
         lineupRef.current.active = false
         lineupRef.current.completed = false
         lineupRef.current.readyAt = null
+      },
+
+      setDieZone(id: string, zone: 'tray' | 'held') {
+        if (!enableHeldZoneRef.current) return
+        const entry = dieEntriesRef.current.find(e => e.id === id)
+        if (!entry || entry.zone === zone) return
+
+        const now = performance.now()
+
+        // Freeze the body so physics doesn't fight the animation
+        entry.body.velocity.set(0, 0, 0)
+        entry.body.angularVelocity.set(0, 0, 0)
+        entry.body.sleep()
+        entry.settled = true
+        entry.zone = zone
+
+        // ── Compute target position for this die ──────────────────────────
+        let toPos: THREE.Vector3
+        const toQuat = new THREE.Quaternion()  // identity = face-up
+
+        if (zone === 'held') {
+          const heldEntries = dieEntriesRef.current.filter(e => e.zone === 'held')
+          const slotIdx = heldEntries.findIndex(e => e.id === id)
+          const total   = heldEntries.length
+          toPos = new THREE.Vector3(computeHeldSlotX(slotIdx, total), DIE_HALF, HELD_ZONE_Z)
+
+          // Shuffle other held dice to their new centered positions
+          heldEntries.forEach((he, idx) => {
+            if (he.id === id) return
+            const nx = computeHeldSlotX(idx, total)
+            if (Math.abs(he.mesh.position.x - nx) < 0.01 && Math.abs(he.mesh.position.z - HELD_ZONE_Z) < 0.01) return
+            he.zoneAnim = {
+              fromPos: he.mesh.position.clone(),
+              fromQuat: he.mesh.quaternion.clone(),
+              toPos: new THREE.Vector3(nx, DIE_HALF, HELD_ZONE_Z),
+              toQuat: new THREE.Quaternion(),
+              startAt: now,
+              duration: ZONE_ANIM_MS,
+            }
+          })
+        } else {
+          // Return to original tray slot
+          const cols = Math.max(1, Math.floor((TRAY_W - 1.2) / 1.1))
+          const startX = -TRAY_W / 2 + DIE_HALF + 0.5
+          const startZ = -TRAY_D / 2 + DIE_HALF + 0.45
+          const col = entry.slotIndex % cols
+          const row = Math.floor(entry.slotIndex / cols)
+          toPos = new THREE.Vector3(startX + col * 1.1, DIE_HALF, startZ + row * 1.1)
+
+          // Re-center remaining held dice
+          const heldEntries = dieEntriesRef.current.filter(e => e.zone === 'held')
+          const total = heldEntries.length
+          heldEntries.forEach((he, idx) => {
+            const nx = computeHeldSlotX(idx, total)
+            if (Math.abs(he.mesh.position.x - nx) < 0.01 && Math.abs(he.mesh.position.z - HELD_ZONE_Z) < 0.01) return
+            he.zoneAnim = {
+              fromPos: he.mesh.position.clone(),
+              fromQuat: he.mesh.quaternion.clone(),
+              toPos: new THREE.Vector3(nx, DIE_HALF, HELD_ZONE_Z),
+              toQuat: new THREE.Quaternion(),
+              startAt: now,
+              duration: ZONE_ANIM_MS,
+            }
+          })
+        }
+
+        entry.zoneAnim = {
+          fromPos: entry.mesh.position.clone(),
+          fromQuat: entry.mesh.quaternion.clone(),
+          toPos,
+          toQuat,
+          startAt: now,
+          duration: ZONE_ANIM_MS,
+        }
       },
     }))
 

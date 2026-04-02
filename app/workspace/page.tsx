@@ -70,7 +70,6 @@ function GroupedAddCardMenu({
           <Plus size={14} />
           <span>Add Card</span>
         </span>
-        <span className="text-[10px] opacity-70">▾</span>
       </button>
 
       {open && (

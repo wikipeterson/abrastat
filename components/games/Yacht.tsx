@@ -14,6 +14,7 @@ import {
 const NUM_DICE = 5
 const NUM_TURNS = 13
 const DIE_IDS = Array.from({ length: NUM_DICE }, (_, i) => `y${i}`)
+const YACHT_FOOTER_BAND_HEIGHT = 112
 
 export const YACHT_MAX_SCORE = 357
 
@@ -245,9 +246,12 @@ export function Yacht({ onDone }: Props) {
           </div>
 
           <div className="mt-3 flex flex-1 flex-col">
-            <div className="grid min-h-[136px] gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)]">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)]">
             <div className="flex h-full flex-col">
-              <div className="flex h-full flex-wrap content-start gap-3 rounded-xl border border-dashed border-[var(--color-accent)] bg-[var(--color-accent-light)]/50 p-3">
+              <div
+                className="flex flex-wrap content-start gap-3 rounded-xl border border-dashed border-[var(--color-accent)] bg-[var(--color-accent-light)]/50 p-3"
+                style={{ height: YACHT_FOOTER_BAND_HEIGHT }}
+              >
                 {heldDice.length === 0 ? (
                   <div className="flex items-center text-xs text-[var(--color-muted)]">Click a die in the tray to hold it out. Click a held die to return it.</div>
                 ) : (
@@ -269,11 +273,12 @@ export function Yacht({ onDone }: Props) {
                 onClick={roll}
                 disabled={rollsLeft === 0 || isRolling || activeDice.length === 0}
                 className={[
-                  'my-auto w-full rounded-xl py-3 text-sm font-bold transition-all lg:self-stretch',
+                  'w-full rounded-xl py-3 text-sm font-bold transition-all lg:self-stretch',
                   rollsLeft > 0 && !isRolling && activeDice.length > 0
                     ? 'bg-[var(--color-accent)] text-white shadow-sm hover:opacity-90'
                     : 'cursor-not-allowed bg-slate-200 text-[var(--color-muted)]',
                 ].join(' ')}
+                style={{ height: YACHT_FOOTER_BAND_HEIGHT }}
               >
                 {isRolling
                   ? 'Rolling…'
@@ -368,7 +373,10 @@ export function Yacht({ onDone }: Props) {
         </div>
         </div>
 
-        <div className="mt-auto rounded-xl border border-[var(--color-border)] px-3 py-3">
+        <div
+          className="mt-auto rounded-xl border border-[var(--color-border)] px-3 py-3"
+          style={{ height: YACHT_FOOTER_BAND_HEIGHT }}
+        >
           <div className="grid grid-cols-3 gap-3 text-center">
             <div>
               <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">Upper</div>

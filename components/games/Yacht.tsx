@@ -181,7 +181,10 @@ export function Yacht({ onDone }: Props) {
     setShowRollOverlay(true)
     rollingIdsRef.current = new Set()
     settledValRef.current = new Map()
-    if (diceInitializedRef.current) canvasRef.current?.stageAll()
+    if (diceInitializedRef.current) {
+      canvasRef.current?.clearAll()
+      diceInitializedRef.current = false
+    }
     setDice(DIE_IDS.map(id => ({ id, value: null, held: false })))
   }
 

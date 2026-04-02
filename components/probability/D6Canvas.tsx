@@ -20,7 +20,7 @@ const LINEUP_READY_VEL = 2.0   // lineup fires even while dice are barely rollin
 const LINEUP_READY_ANG = 2.0
 
 const HELD_ZONE_Z     = 4.15  // world Z of held-die center (past front wall)
-const HELD_ZONE_END_Z = 5.2   // camera bottom extent when held zone is active
+const HELD_ZONE_END_Z = 4.72  // camera bottom extent when held zone is active
 const ZONE_ANIM_MS    = 300   // ms for hold/unhold transition
 
 // Die face colours matching the palette

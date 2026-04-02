@@ -8,7 +8,6 @@ import { ScoreEntry } from './ScoreEntry'
 import { Leaderboard } from './Leaderboard'
 import { GuessCorrelation } from './GuessCorrelation'
 import { MoreVariability } from './MoreVariability'
-import { RealOrRandom } from './RealOrRandom'
 import { GuessResidual } from './GuessResidual'
 import { MeanVsMedian } from './MeanVsMedian'
 import { Yacht, YACHT_MAX_SCORE } from './Yacht'
@@ -33,13 +32,6 @@ const GAMES: {
     icon: '📊',
     title: 'Which Has More Variability?',
     description: `Two distributions side by side. Pick the one with greater spread. ${ROUNDS_PER_GAME} rounds.`,
-    maxScore: ROUNDS_PER_GAME * 100,
-  },
-  {
-    id: GAME_IDS.realOrRandom,
-    icon: '🌍',
-    title: 'Real or Random?',
-    description: `Is the scatter plot a real-world relationship or random noise? ${ROUNDS_PER_GAME} rounds.`,
     maxScore: ROUNDS_PER_GAME * 100,
   },
   {
@@ -181,9 +173,6 @@ export function GameHub({ onChromeChange }: GameHubProps) {
           )}
           {state.gameId === GAME_IDS.moreVariability && (
             <MoreVariability onDone={s => handleDone(state.gameId, s)} />
-          )}
-          {state.gameId === GAME_IDS.realOrRandom && (
-            <RealOrRandom onDone={s => handleDone(state.gameId, s)} />
           )}
           {state.gameId === GAME_IDS.guessResidual && (
             <GuessResidual onDone={s => handleDone(state.gameId, s)} />

@@ -19,10 +19,9 @@ const MAX_SETTLE  = 5500   // ms hard timeout
 const LINEUP_READY_VEL = 2.0   // lineup fires even while dice are barely rolling
 const LINEUP_READY_ANG = 2.0
 
-const HELD_ZONE_Z       = 4.15  // world Z of held-die center (past front wall)
-const HELD_ZONE_FLOOR_D = 1.65  // depth of held zone floor slab
-const HELD_ZONE_END_Z   = 5.2   // camera bottom extent when held zone is active
-const ZONE_ANIM_MS      = 300   // ms for hold/unhold transition
+const HELD_ZONE_Z     = 4.15  // world Z of held-die center (past front wall)
+const HELD_ZONE_END_Z = 5.2   // camera bottom extent when held zone is active
+const ZONE_ANIM_MS    = 300   // ms for hold/unhold transition
 
 // Die face colours matching the palette
 const DIE_COLOR = '#0D4F49'
@@ -921,28 +920,6 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
       floor.position.y = -0.03
       floor.receiveShadow = true
       scene.add(floor)
-
-      // ── Held zone (Yacht) ─────────────────────────────────────────────────
-      if (enableHeldZone) {
-        // Extended floor for the held area (slightly warmer felt tone)
-        const heldFloorMat = new THREE.MeshLambertMaterial({ color: 0x28B5A8, map: getFeltTexture() })
-        const heldFloor = new THREE.Mesh(
-          new THREE.BoxGeometry(TRAY_W, 0.06, HELD_ZONE_FLOOR_D),
-          heldFloorMat,
-        )
-        heldFloor.position.set(0, -0.03, TRAY_D / 2 + WALL_T + 0.1 + HELD_ZONE_FLOOR_D / 2)
-        heldFloor.receiveShadow = true
-        scene.add(heldFloor)
-
-        // Thin separator rail between tray and held zone
-        const railMat = new THREE.MeshLambertMaterial({ color: 0x1A3A34 })
-        const rail = new THREE.Mesh(
-          new THREE.BoxGeometry(TRAY_W + WALL_T * 2, 0.12, 0.1),
-          railMat,
-        )
-        rail.position.set(0, 0.06, TRAY_D / 2 + WALL_T + 0.05)
-        scene.add(rail)
-      }
 
       // Dark-wood walls
       const wallMat = new THREE.MeshLambertMaterial({ color: 0x2D3748 })

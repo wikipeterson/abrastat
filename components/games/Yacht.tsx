@@ -214,7 +214,7 @@ export function Yacht({ onDone }: Props) {
               enableHeldZone
             />
             {canShowRollOverlay && (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="pointer-events-none absolute inset-x-0 top-[42%] flex -translate-y-1/2 justify-center">
                 <button
                   onClick={roll}
                   className="pointer-events-auto rounded-2xl border-2 border-[var(--color-accent)] bg-white px-10 py-4 text-2xl font-bold text-[var(--color-accent)] shadow-lg transition-all hover:bg-[var(--color-accent)] hover:text-white"

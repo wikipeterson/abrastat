@@ -213,7 +213,7 @@ export function Yacht({ onDone }: Props) {
   return (
     <div className="grid items-stretch gap-4 xl:grid-cols-[1.45fr_1fr]">
       <div className="flex h-full flex-col">
-        <div className="flex h-full flex-col rounded-2xl border border-[var(--color-border)] bg-white p-1.5">
+        <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white">
           <div
             className="relative flex-1 overflow-hidden bg-white"
             style={{ minHeight: 480 }}

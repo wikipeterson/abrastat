@@ -227,8 +227,8 @@ export function Yacht({ onDone }: Props) {
 
   return (
     <div className="grid items-stretch gap-4 xl:grid-cols-[1.45fr_1fr]">
-      <div className="space-y-3">
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white p-3 space-y-3">
+      <div className="flex h-full flex-col">
+        <div className="flex h-full flex-col rounded-2xl border border-[var(--color-border)] bg-white p-3">
           <div className="overflow-hidden rounded-xl" style={{ height: 250 }}>
             <D6Canvas
               ref={canvasRef}
@@ -237,7 +237,7 @@ export function Yacht({ onDone }: Props) {
             />
           </div>
 
-          <div className="space-y-3">
+          <div className="mt-3 flex flex-1 flex-col">
             <div className="grid gap-3 lg:grid-cols-[1fr_220px]">
             <div>
               <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
@@ -260,21 +260,7 @@ export function Yacht({ onDone }: Props) {
                 )}
               </div>
             </div>
-            <div className="flex flex-col justify-between rounded-xl border border-[var(--color-border)] bg-slate-50/70 p-3">
-              <div className="space-y-2">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
-                  Action
-                </div>
-                {mustScore ? (
-                  <p className="text-xs font-medium text-amber-600">
-                    No rolls left. Pick a category.
-                  </p>
-                ) : (
-                  <p className="text-xs text-[var(--color-muted)]">
-                    Roll the dice still in the tray. Held dice stay out until you return them.
-                  </p>
-                )}
-              </div>
+            <div className="flex flex-col justify-end rounded-xl border border-[var(--color-border)] bg-slate-50/70 p-3">
               <button
                 onClick={roll}
                 disabled={rollsLeft === 0 || isRolling || activeDice.length === 0}

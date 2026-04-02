@@ -60,7 +60,7 @@ const GAMES: {
     id: GAME_IDS.yacht,
     icon: '⚄',
     title: 'Yacht',
-    description: '13 turns, 5 dice, up to 3 rolls per turn. Score in classic Yacht categories for the highest total.',
+    description: '12 rounds, 5 dice, up to 3 rolls per round. Score in Yacht categories for the highest total.',
     maxScore: YACHT_MAX_SCORE,
     wide: true,
   },

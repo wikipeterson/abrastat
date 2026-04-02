@@ -1,6 +1,6 @@
 export type CategoryId =
   | 'ones' | 'twos' | 'threes' | 'fours' | 'fives' | 'sixes'
-  | 'threeOfAKind' | 'fourOfAKind' | 'fullHouse' | 'fourStraight' | 'fiveStraight' | 'yacht' | 'choice'
+  | 'fourOfAKind' | 'fullHouse' | 'fourStraight' | 'fiveStraight' | 'yacht' | 'choice'
 
 export interface CategoryDef {
   id: CategoryId
@@ -15,7 +15,6 @@ export const CATEGORIES: CategoryDef[] = [
   { id: 'fours',        label: '4s',          section: 'upper' },
   { id: 'fives',        label: '5s',          section: 'upper' },
   { id: 'sixes',        label: '6s',          section: 'upper' },
-  { id: 'threeOfAKind', label: '3 of a Kind', section: 'lower' },
   { id: 'fourOfAKind',  label: '4 of a Kind', section: 'lower' },
   { id: 'fullHouse',    label: 'Full House',  section: 'lower' },
   { id: 'fourStraight', label: '4 Straight',  section: 'lower' },
@@ -25,7 +24,7 @@ export const CATEGORIES: CategoryDef[] = [
 ]
 
 export const UPPER_IDS: CategoryId[] = ['ones', 'twos', 'threes', 'fours', 'fives', 'sixes']
-export const LOWER_IDS: CategoryId[] = ['threeOfAKind', 'fourOfAKind', 'fullHouse', 'fourStraight', 'fiveStraight', 'yacht', 'choice']
+export const LOWER_IDS: CategoryId[] = ['fourOfAKind', 'fullHouse', 'fourStraight', 'fiveStraight', 'yacht', 'choice']
 
 function countValues(dice: number[]): Map<number, number> {
   const m = new Map<number, number>()
@@ -42,10 +41,6 @@ export function scoreCategory(id: CategoryId, dice: number[]): number {
     case 'fours':  return dice.filter(d => d === 4).length * 4
     case 'fives':  return dice.filter(d => d === 5).length * 5
     case 'sixes':  return dice.filter(d => d === 6).length * 6
-    case 'threeOfAKind': {
-      for (const [val, cnt] of counts) if (cnt >= 3) return val * 3
-      return 0
-    }
     case 'fourOfAKind': {
       for (const [val, cnt] of counts) if (cnt >= 4) return val * 4
       return 0

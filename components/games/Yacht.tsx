@@ -12,11 +12,11 @@ import {
 } from '@/lib/yachtScoring'
 
 const NUM_DICE = 5
-const NUM_TURNS = 13
+const NUM_TURNS = 12
 const DIE_IDS = Array.from({ length: NUM_DICE }, (_, i) => `y${i}`)
 const YACHT_FOOTER_BAND_HEIGHT = 112
 
-export const YACHT_MAX_SCORE = 357
+export const YACHT_MAX_SCORE = 304
 
 interface DieState {
   id: string
@@ -296,7 +296,8 @@ export function Yacht({ onDone }: Props) {
               {mustScore ? 'Choose a category now.' : 'Potential scores update after each roll.'}
             </div>
           </div>
-          <div className="text-right text-xs">
+          <div className="text-right text-xs space-y-1">
+            <div className="font-semibold text-[var(--color-text)]">Round {Math.min(turn + 1, NUM_TURNS)} / {NUM_TURNS}</div>
             <div className="text-[var(--color-muted)]">Bonus progress</div>
             <div className={`font-bold ${bonusAchieved ? 'text-[var(--color-accent)]' : 'text-[var(--color-text)]'}`}>
               {upperSubtotal} / 63

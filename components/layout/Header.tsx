@@ -14,6 +14,7 @@ interface HeaderProps {
   onSave?: () => void
   onToggleSidebar?: () => void
   datasetName?: string
+  centerTitle?: string | null
   labActions?: ReactNode
   showSave?: boolean
   showHomeLink?: boolean
@@ -24,6 +25,7 @@ export function Header({
   onSave,
   onToggleSidebar,
   datasetName,
+  centerTitle,
   labActions,
   showSave = true,
   showHomeLink = true,
@@ -41,7 +43,7 @@ export function Header({
 
   return (
     <>
-      <header className="h-[4.5rem] flex items-center justify-between px-4 border-b border-[var(--color-border)] bg-white flex-shrink-0 gap-4">
+      <header className="relative h-[4.5rem] flex items-center justify-between px-4 border-b border-[var(--color-border)] bg-white flex-shrink-0 gap-4">
         <div className="flex items-center gap-4 min-w-0">
           {onToggleSidebar && (
             <button
@@ -69,6 +71,14 @@ export function Header({
           )}
         </div>
 
+        {centerTitle && (
+          <div className="pointer-events-none absolute inset-0 hidden items-center justify-center md:flex">
+            <div className="max-w-[40vw] truncate px-4 text-2xl font-semibold tracking-tight text-[var(--color-text)]">
+              {centerTitle}
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-1 sm:gap-2">
           {labActions}
 
@@ -84,8 +94,7 @@ export function Header({
                 aria-label="Save dataset"
               >
                 <Save size={14} />
-                <span className="hidden sm:inline">Save Data{isDirty ? ' ●' : ''}</span>
-                {isDirty && <span className="sm:hidden">●</span>}
+                <span className="hidden sm:inline">Save Data</span>
               </button>
             </>
           )}

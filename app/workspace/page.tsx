@@ -64,7 +64,7 @@ function GroupedAddCardMenu({
           open
             ? 'bg-[var(--color-text)] text-white'
             : 'bg-[var(--color-accent)] text-white hover:brightness-105'
-        } ${highlight ? 'shadow-[0_0_0_4px_rgba(214,245,242,0.95)] animate-pulse' : ''}`}
+        } ${highlight ? 'shadow-[0_0_0_4px_rgba(214,245,242,0.95)]' : ''}`}
       >
         <span className="flex items-center gap-1.5">
           <Plus size={14} />

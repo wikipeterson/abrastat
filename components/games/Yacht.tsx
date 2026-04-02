@@ -213,10 +213,10 @@ export function Yacht({ onDone }: Props) {
   return (
     <div className="grid items-stretch gap-4 xl:grid-cols-[1.45fr_1fr]">
       <div className="flex h-full flex-col">
-        <div className="flex h-full flex-col rounded-2xl border border-[var(--color-border)] bg-white p-3">
+        <div className="flex h-full flex-col rounded-2xl border border-[var(--color-border)] bg-white p-1.5">
           <div
-            className="relative mx-auto flex-1 overflow-hidden rounded-xl"
-            style={{ minHeight: 480, width: 'min(100%, 860px)' }}
+            className="relative flex-1 overflow-hidden rounded-[1.15rem]"
+            style={{ minHeight: 480 }}
           >
             <D6Canvas
               ref={canvasRef}

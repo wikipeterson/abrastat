@@ -45,7 +45,7 @@ export function DropZone({ id, label, hint, assignedCol, onClear, variant = 'hor
     return (
       <div
         ref={setDropRef}
-        className={`rounded-xl border-2 w-full h-full min-h-[100px] flex items-center justify-center transition-colors ${
+        className={`rounded-xl border-2 w-full h-full flex items-center justify-center transition-colors ${
           assignedCol ? filledColors : emptyColors
         }`}
       >
@@ -80,7 +80,7 @@ export function DropZone({ id, label, hint, assignedCol, onClear, variant = 'hor
         ) : (
           <span
             style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-            className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide leading-none select-none px-1"
+            className="text-[11px] font-semibold text-[var(--color-muted)] uppercase tracking-wide leading-tight select-none px-1 text-center"
           >
             {label}
           </span>

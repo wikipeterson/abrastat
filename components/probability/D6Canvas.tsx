@@ -396,21 +396,34 @@ function makeD10TrapezohedronGeometry(r: number): {
       )
       .normalize()
 
+    // faceUp: project (top pole – face centroid) onto the face plane
+    const centroid = new THREE.Vector3().add(a).add(b).add(c).add(d).multiplyScalar(0.25)
+    const raw = new THREE.Vector3().subVectors(a, centroid)
+    const fu = raw.clone().addScaledVector(norm, -raw.dot(norm)).normalize()
+
+    // Compute UVs by projecting vertices onto the face plane (correct orientation, no distortion)
+    const faceRight = new THREE.Vector3().crossVectors(fu, norm)
+    let maxE = 0
+    for (const v of [a, b, c, d]) {
+      const dv = new THREE.Vector3().subVectors(v, centroid)
+      maxE = Math.max(maxE, Math.abs(dv.dot(fu)), Math.abs(dv.dot(faceRight)))
+    }
+    const uvS = 0.42 / maxE
+    const puv = (v: THREE.Vector3): [number, number] => {
+      const dv = new THREE.Vector3().subVectors(v, centroid)
+      return [0.5 + dv.dot(faceRight) * uvS, 0.5 + dv.dot(fu) * uvS]
+    }
+    const [au, av] = puv(a), [bu, bv] = puv(b), [cu, cv] = puv(c), [dU, dV] = puv(d)
+
     positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z)   // tri 1
     for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
-    uvs.push(0.5, 0.05,  0.5, 0.95,  0.12, 0.50)
+    uvs.push(au, av, bu, bv, cu, cv)
 
     positions.push(a.x, a.y, a.z, d.x, d.y, d.z, b.x, b.y, b.z)   // tri 2
     for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
-    uvs.push(0.5, 0.05,  0.88, 0.50,  0.5, 0.95)
+    uvs.push(au, av, dU, dV, bu, bv)
 
-    // faceUp: project (top pole – face centroid) onto the face plane
-    {
-      const centroid = new THREE.Vector3().add(a).add(b).add(c).add(d).multiplyScalar(0.25)
-      const raw = new THREE.Vector3().subVectors(a, centroid)
-      const fu = raw.clone().addScaledVector(norm, -raw.dot(norm)).normalize()
-      faceDefs.push({ value: upperValues[i], normal: new CANNON.Vec3(norm.x, norm.y, norm.z), faceUp: new CANNON.Vec3(fu.x, fu.y, fu.z) })
-    }
+    faceDefs.push({ value: upperValues[i], normal: new CANNON.Vec3(norm.x, norm.y, norm.z), faceUp: new CANNON.Vec3(fu.x, fu.y, fu.z) })
   }
 
   // Lower kite i = (bottom, lower[i], upper[(i+1)%n], lower[(i+1)%n])
@@ -424,21 +437,34 @@ function makeD10TrapezohedronGeometry(r: number): {
       )
       .normalize()
 
+    // faceUp: project (upper ring vertex – face centroid) onto the face plane
+    const centroid = new THREE.Vector3().add(a).add(b).add(c).add(d).multiplyScalar(0.25)
+    const raw = new THREE.Vector3().subVectors(c, centroid)
+    const fu = raw.clone().addScaledVector(norm, -raw.dot(norm)).normalize()
+
+    // Compute UVs by projecting vertices onto the face plane (correct orientation, no distortion)
+    const faceRight = new THREE.Vector3().crossVectors(fu, norm)
+    let maxE = 0
+    for (const v of [a, b, c, d]) {
+      const dv = new THREE.Vector3().subVectors(v, centroid)
+      maxE = Math.max(maxE, Math.abs(dv.dot(fu)), Math.abs(dv.dot(faceRight)))
+    }
+    const uvS = 0.42 / maxE
+    const puv = (v: THREE.Vector3): [number, number] => {
+      const dv = new THREE.Vector3().subVectors(v, centroid)
+      return [0.5 + dv.dot(faceRight) * uvS, 0.5 + dv.dot(fu) * uvS]
+    }
+    const [au, av] = puv(a), [bu, bv] = puv(b), [cu, cv] = puv(c), [dU, dV] = puv(d)
+
     positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z)   // tri 1
     for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
-    uvs.push(0.5, 0.95,  0.12, 0.50,  0.5, 0.05)
+    uvs.push(au, av, bu, bv, cu, cv)
 
     positions.push(a.x, a.y, a.z, c.x, c.y, c.z, d.x, d.y, d.z)   // tri 2
     for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
-    uvs.push(0.5, 0.95,  0.5, 0.05,  0.88, 0.50)
+    uvs.push(au, av, cu, cv, dU, dV)
 
-    // faceUp: project (upper ring vertex – face centroid) onto the face plane
-    {
-      const centroid = new THREE.Vector3().add(a).add(b).add(c).add(d).multiplyScalar(0.25)
-      const raw = new THREE.Vector3().subVectors(c, centroid)
-      const fu = raw.clone().addScaledVector(norm, -raw.dot(norm)).normalize()
-      faceDefs.push({ value: lowerValues[i], normal: new CANNON.Vec3(norm.x, norm.y, norm.z), faceUp: new CANNON.Vec3(fu.x, fu.y, fu.z) })
-    }
+    faceDefs.push({ value: lowerValues[i], normal: new CANNON.Vec3(norm.x, norm.y, norm.z), faceUp: new CANNON.Vec3(fu.x, fu.y, fu.z) })
   }
 
   const geo = new THREE.BufferGeometry()

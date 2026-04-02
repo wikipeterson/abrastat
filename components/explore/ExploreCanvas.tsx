@@ -171,6 +171,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
     worldX: number
     worldY: number
   } | null>(null)
+  const [tableInputModes, setTableInputModes] = useState<Record<string, 'raw' | 'manual'>>({})
   const scrollRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef(1)
@@ -694,6 +695,26 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                                 {filledRowCount} rows {columnCount} columns
                               </span>
                             )}
+                            {card.config.type === 'table' && (
+                              <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden bg-white">
+                                {(['raw', 'manual'] as const).map(mode => (
+                                  <button
+                                    key={mode}
+                                    onPointerDown={e => e.stopPropagation()}
+                                    onClick={() =>
+                                      setTableInputModes(prev => ({ ...prev, [card.id]: mode }))
+                                    }
+                                    className={`px-3 py-1 text-xs font-medium normal-case tracking-normal transition-colors ${
+                                      (tableInputModes[card.id] ?? 'raw') === mode
+                                        ? 'bg-[var(--color-accent)] text-white'
+                                        : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                                    }`}
+                                  >
+                                    {mode === 'raw' ? 'Raw Data' : 'Enter Table'}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-slate-300 text-xs select-none opacity-0 group-hover:opacity-100 transition-opacity">⠿ drag to move</span>
@@ -750,6 +771,10 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                                 rowsColId={card.config.rowsColId}
                                 colsColId={card.config.colsColId}
                                 onClearZone={z => clearZone(card.id, z)}
+                                inputMode={tableInputModes[card.id] ?? 'raw'}
+                                onInputModeChange={mode =>
+                                  setTableInputModes(prev => ({ ...prev, [card.id]: mode }))
+                                }
                               />
                             </div>
                           )}

@@ -341,9 +341,18 @@ interface TwoWayTableProps {
   rowsColId?: string | null
   colsColId?: string | null
   onClearZone?: (zone: string) => void
+  inputMode?: InputMode
+  onInputModeChange?: (mode: InputMode) => void
 }
 
-export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWayTableProps = {}) {
+export function TwoWayTable({
+  cardId,
+  rowsColId,
+  colsColId,
+  onClearZone,
+  inputMode: controlledInputMode,
+  onInputModeChange,
+}: TwoWayTableProps = {}) {
   const { grid } = useStore()
   function handleNativeDrop(zone: 'rows' | 'cols') {
     return (e: React.DragEvent) => {
@@ -370,7 +379,9 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
 
   const isCardMode = !!cardId
 
-  const [inputMode, setInputMode] = useState<InputMode>('raw')
+  const [localInputMode, setLocalInputMode] = useState<InputMode>('raw')
+  const inputMode = controlledInputMode ?? localInputMode
+  const setInputMode = onInputModeChange ?? setLocalInputMode
   // Local state only used in standalone (non-card) mode
   const [explColIdLocal, setExplColIdLocal] = useState('')
   const [respColIdLocal, setRespColIdLocal] = useState('')
@@ -608,21 +619,23 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
 
       {/* Top controls */}
       <div className="flex flex-wrap items-end gap-4">
-        <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden bg-white">
-          {(['raw', 'manual'] as InputMode[]).map(m => (
-            <button
-              key={m}
-              onClick={() => setInputMode(m)}
-              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-                inputMode === m
-                  ? 'bg-[var(--color-accent)] text-white'
-                  : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
-              }`}
-            >
-              {m === 'raw' ? 'Raw Data' : 'Enter Table'}
-            </button>
-          ))}
-        </div>
+        {!isCardMode && (
+          <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden bg-white">
+            {(['raw', 'manual'] as InputMode[]).map(m => (
+              <button
+                key={m}
+                onClick={() => setInputMode(m)}
+                className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                  inputMode === m
+                    ? 'bg-[var(--color-accent)] text-white'
+                    : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                }`}
+              >
+                {m === 'raw' ? 'Raw Data' : 'Enter Table'}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Column selectors — raw mode */}
         {inputMode === 'raw' && !isCardMode && (
@@ -681,8 +694,7 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
             <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('rows')}>
               <DropZone
                 id={`${cardId}:rows`}
-                label="Response Variable"
-                hint="rows of the table"
+                label="Response Variable (rows)"
                 assignedCol={grid.columns.find(c => c.id === respColId) ?? null}
                 onClear={() => onClearZone?.('rows')}
                 variant="vertical"
@@ -694,8 +706,7 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
             <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('cols')}>
               <DropZone
                 id={`${cardId}:cols`}
-                label="Explanatory Variable"
-                hint="columns of the table"
+                label="Explanatory Variable (columns)"
                 assignedCol={grid.columns.find(c => c.id === explColId) ?? null}
                 onClear={() => onClearZone?.('cols')}
               />

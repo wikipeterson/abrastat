@@ -606,73 +606,64 @@ export function TwoWayTable({ cardId, rowsColId, colsColId, onClearZone }: TwoWa
   return (
     <div className="max-w-5xl mx-auto py-6 px-4 space-y-5">
 
-      {/* Top control bar */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-        <div className="flex flex-wrap items-end gap-5">
-
-          {/* Input mode toggle */}
-          <div>
-            <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
-              Input
-            </div>
-            <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden">
-              {(['raw', 'manual'] as InputMode[]).map(m => (
-                <button
-                  key={m}
-                  onClick={() => setInputMode(m)}
-                  className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-                    inputMode === m
-                      ? 'bg-[var(--color-accent)] text-white'
-                      : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
-                  }`}
-                >
-                  {m === 'raw' ? 'Raw Data' : 'Enter Table'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Column selectors — raw mode */}
-          {inputMode === 'raw' && !isCardMode && (
-            <>
-              <div>
-                <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
-                  Explanatory Variable
-                </div>
-                <select
-                  value={explColIdLocal}
-                  onChange={e => setExplColIdLocal(e.target.value)}
-                  className="text-sm border border-[var(--color-border)] rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-[var(--color-accent)]"
-                >
-                  <option value="">— select —</option>
-                  {categoricalCols.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
-                  Response Variable
-                </div>
-                <select
-                  value={respColIdLocal}
-                  onChange={e => setRespColIdLocal(e.target.value)}
-                  className="text-sm border border-[var(--color-border)] rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-[var(--color-accent)]"
-                >
-                  <option value="">— select —</option>
-                  {categoricalCols.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              {categoricalCols.length < 2 && (
-                <p className="text-sm text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg self-center">
-                  Add two categorical variables to use raw-data mode, or switch to Enter Table.
-                </p>
-              )}
-            </>
-          )}
+      {/* Top controls */}
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden bg-white">
+          {(['raw', 'manual'] as InputMode[]).map(m => (
+            <button
+              key={m}
+              onClick={() => setInputMode(m)}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                inputMode === m
+                  ? 'bg-[var(--color-accent)] text-white'
+                  : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
+              }`}
+            >
+              {m === 'raw' ? 'Raw Data' : 'Enter Table'}
+            </button>
+          ))}
         </div>
+
+        {/* Column selectors — raw mode */}
+        {inputMode === 'raw' && !isCardMode && (
+          <>
+            <div>
+              <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
+                Explanatory Variable
+              </div>
+              <select
+                value={explColIdLocal}
+                onChange={e => setExplColIdLocal(e.target.value)}
+                className="text-sm border border-[var(--color-border)] rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-[var(--color-accent)]"
+              >
+                <option value="">— select —</option>
+                {categoricalCols.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
+                Response Variable
+              </div>
+              <select
+                value={respColIdLocal}
+                onChange={e => setRespColIdLocal(e.target.value)}
+                className="text-sm border border-[var(--color-border)] rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-[var(--color-accent)]"
+              >
+                <option value="">— select —</option>
+                {categoricalCols.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            {categoricalCols.length < 2 && (
+              <p className="text-sm text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg self-center">
+                Add two categorical variables to use raw-data mode, or switch to Enter Table.
+              </p>
+            )}
+          </>
+        )}
       </div>
 
       {/* Drop zones — card mode, raw data */}

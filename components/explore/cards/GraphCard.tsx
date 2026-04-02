@@ -177,42 +177,46 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
       <div className="flex-shrink-0 flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 flex-wrap min-h-[40px]">
           {manualTable && (
-            <>
-              <span className="text-xs font-medium text-[var(--color-muted)]">Graph:</span>
-              {([
-                ['segmented', 'Segmented Bar'],
-                ['sidebyside', 'Side-by-Side Bar'],
-              ] as const).map(([type, label]) => (
-                <button
-                  key={type}
-                  onClick={() => setManualTableGraphType(type)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                    manualTableGraphType === type
-                      ? 'bg-[var(--color-accent)] text-white'
-                      : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-              <span className="text-xs font-medium text-[var(--color-muted)] ml-2">Values:</span>
-              {([
-                ['count', 'Counts'],
-                ['row', 'Row %'],
-              ] as const).map(([mode, label]) => (
-                <button
-                  key={mode}
-                  onClick={() => setManualTableValueMode(mode)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                    manualTableValueMode === mode
-                      ? 'bg-slate-600 text-white'
-                      : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </>
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-medium text-[var(--color-muted)] whitespace-nowrap">Graph:</span>
+                {([
+                  ['segmented', 'Segmented Bar'],
+                  ['sidebyside', 'Side-by-Side Bar'],
+                ] as const).map(([type, label]) => (
+                  <button
+                    key={type}
+                    onClick={() => setManualTableGraphType(type)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                      manualTableGraphType === type
+                        ? 'bg-[var(--color-accent)] text-white'
+                        : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-medium text-[var(--color-muted)] whitespace-nowrap">Values:</span>
+                {([
+                  ['count', 'Counts'],
+                  ['row', 'Row %'],
+                ] as const).map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    onClick={() => setManualTableValueMode(mode)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                      manualTableValueMode === mode
+                        ? 'bg-slate-600 text-white'
+                        : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
           {!manualTable && chartButtons.length > 0 && (
             <>

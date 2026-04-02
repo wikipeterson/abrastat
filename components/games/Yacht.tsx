@@ -229,7 +229,7 @@ export function Yacht({ onDone }: Props) {
     <div className="grid items-stretch gap-4 xl:grid-cols-[1.45fr_1fr]">
       <div className="flex h-full flex-col">
         <div className="flex h-full flex-col rounded-2xl border border-[var(--color-border)] bg-white p-3">
-          <div className="overflow-hidden rounded-xl" style={{ height: 250 }}>
+          <div className="flex-1 overflow-hidden rounded-xl" style={{ minHeight: 310 }}>
             <D6Canvas
               ref={canvasRef}
               onDieSettled={handleDieSettled}
@@ -260,7 +260,7 @@ export function Yacht({ onDone }: Props) {
                 )}
               </div>
             </div>
-            <div className="flex flex-col justify-end rounded-xl border border-[var(--color-border)] bg-slate-50/70 p-3">
+            <div className="flex flex-col justify-end">
               <button
                 onClick={roll}
                 disabled={rollsLeft === 0 || isRolling || activeDice.length === 0}

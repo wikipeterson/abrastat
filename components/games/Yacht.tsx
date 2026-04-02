@@ -214,7 +214,10 @@ export function Yacht({ onDone }: Props) {
     <div className="grid items-stretch gap-4 xl:grid-cols-[1.45fr_1fr]">
       <div className="flex h-full flex-col">
         <div className="flex h-full flex-col rounded-2xl border border-[var(--color-border)] bg-white p-3">
-          <div className="relative flex-1 overflow-hidden rounded-xl" style={{ minHeight: 480 }}>
+          <div
+            className="relative mx-auto flex-1 overflow-hidden rounded-xl"
+            style={{ minHeight: 480, width: 'min(100%, 1040px)' }}
+          >
             <D6Canvas
               ref={canvasRef}
               onDieSettled={handleDieSettled}

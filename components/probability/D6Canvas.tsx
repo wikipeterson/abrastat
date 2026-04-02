@@ -57,6 +57,7 @@ const CUBE_VERTICES = [
 interface PolyFaceDef {
   value: number
   normal: CANNON.Vec3
+  faceUp?: CANNON.Vec3
 }
 
 // ── Textures ──────────────────────────────────────────────────────────────────
@@ -181,6 +182,19 @@ function makeColorFaceTexture(label: string): THREE.CanvasTexture {
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(label, S/2, S/2)
+  return finalizeTexture(new THREE.CanvasTexture(c))
+}
+
+function makeBlankFaceTexture(): THREE.CanvasTexture {
+  const S = 192
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const ctx = c.getContext('2d')!
+  ctx.fillStyle = DIE_COLOR
+  ctx.fillRect(0, 0, S, S)
+  ctx.strokeStyle = DIE_EDGE_COLOR
+  ctx.lineWidth = 4
+  ctx.strokeRect(2, 2, S - 4, S - 4)
   return finalizeTexture(new THREE.CanvasTexture(c))
 }
 
@@ -384,13 +398,19 @@ function makeD10TrapezohedronGeometry(r: number): {
 
     positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z)   // tri 1
     for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
-    uvs.push(0.5, 0.07, 0.07, 0.9, 0.9, 0.9)
+    uvs.push(0.5, 0.05,  0.5, 0.95,  0.12, 0.50)
 
     positions.push(a.x, a.y, a.z, d.x, d.y, d.z, b.x, b.y, b.z)   // tri 2
     for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
-    uvs.push(0.5, 0.07, 0.9, 0.9, 0.07, 0.9)
+    uvs.push(0.5, 0.05,  0.88, 0.50,  0.5, 0.95)
 
-    faceDefs.push({ value: upperValues[i], normal: new CANNON.Vec3(norm.x, norm.y, norm.z) })
+    // faceUp: project (top pole – face centroid) onto the face plane
+    {
+      const centroid = new THREE.Vector3().add(a).add(b).add(c).add(d).multiplyScalar(0.25)
+      const raw = new THREE.Vector3().subVectors(a, centroid)
+      const fu = raw.clone().addScaledVector(norm, -raw.dot(norm)).normalize()
+      faceDefs.push({ value: upperValues[i], normal: new CANNON.Vec3(norm.x, norm.y, norm.z), faceUp: new CANNON.Vec3(fu.x, fu.y, fu.z) })
+    }
   }
 
   // Lower kite i = (bottom, lower[i], upper[(i+1)%n], lower[(i+1)%n])
@@ -406,19 +426,26 @@ function makeD10TrapezohedronGeometry(r: number): {
 
     positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z)   // tri 1
     for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
-    uvs.push(0.5, 0.93, 0.07, 0.1, 0.9, 0.1)
+    uvs.push(0.5, 0.95,  0.12, 0.50,  0.5, 0.05)
 
     positions.push(a.x, a.y, a.z, c.x, c.y, c.z, d.x, d.y, d.z)   // tri 2
     for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
-    uvs.push(0.5, 0.93, 0.9, 0.1, 0.07, 0.1)
+    uvs.push(0.5, 0.95,  0.5, 0.05,  0.88, 0.50)
 
-    faceDefs.push({ value: lowerValues[i], normal: new CANNON.Vec3(norm.x, norm.y, norm.z) })
+    // faceUp: project (upper ring vertex – face centroid) onto the face plane
+    {
+      const centroid = new THREE.Vector3().add(a).add(b).add(c).add(d).multiplyScalar(0.25)
+      const raw = new THREE.Vector3().subVectors(c, centroid)
+      const fu = raw.clone().addScaledVector(norm, -raw.dot(norm)).normalize()
+      faceDefs.push({ value: lowerValues[i], normal: new CANNON.Vec3(norm.x, norm.y, norm.z), faceUp: new CANNON.Vec3(fu.x, fu.y, fu.z) })
+    }
   }
 
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
   geo.setAttribute('normal',   new THREE.Float32BufferAttribute(normals,   3))
   geo.setAttribute('uv',       new THREE.Float32BufferAttribute(uvs,       2))
+  for (let i = 0; i < 10; i++) geo.addGroup(i * 6, 6, i)
 
   return { geo, faceDefs }
 }
@@ -748,9 +775,32 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
         const targetX = baseX + col * gapX
         const targetZ = baseZ - row * gapZ
         // d6: always show result face up (identity = face-1 up)
-        // non-d6: hold the snapped-face-up orientation from settleEntry
+        // d10: compute upright orientation from faceUp
+        // other non-d6: hold the snapped-face-up orientation from settleEntry
         if (entry.sides === 6) {
           entry.lineupTargetQuat.identity()
+        } else if (entry.sides === 10 && entry.resultValue !== null) {
+          const faceIdx = entry.faceDefs.findIndex(fd => fd.value === entry.resultValue)
+          const fd = faceIdx >= 0 ? entry.faceDefs[faceIdx] : null
+          if (fd?.faceUp) {
+            const worldUp = new THREE.Vector3(0, 1, 0)
+            const localNorm = new THREE.Vector3(fd.normal.x, fd.normal.y, fd.normal.z)
+            const q1 = new THREE.Quaternion().setFromUnitVectors(localNorm, worldUp)
+            const localUp = new THREE.Vector3(fd.faceUp.x, fd.faceUp.y, fd.faceUp.z)
+            const rotatedUp = localUp.clone().applyQuaternion(q1)
+            rotatedUp.y = 0
+            if (rotatedUp.lengthSq() > 0.001) {
+              rotatedUp.normalize()
+              // Angle to rotate around Y so rotatedUp aligns with world -Z (screen up)
+              const angle = Math.atan2(rotatedUp.x, -rotatedUp.z)
+              const q2 = new THREE.Quaternion().setFromAxisAngle(worldUp, -angle)
+              entry.lineupTargetQuat.copy(q2.multiply(q1))
+            } else {
+              entry.lineupTargetQuat.copy(q1)
+            }
+          } else {
+            entry.lineupTargetQuat.copy(entry.mesh.quaternion)
+          }
         } else {
           entry.lineupTargetQuat.copy(entry.mesh.quaternion)
         }
@@ -788,11 +838,16 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
       } else if (entry.sides === 10) {
         snapPolyhedronFaceUp(entry.body, entry.faceDefs)
         result = getPolyFaceUp(entry.body, entry.faceDefs)
-        const mat = entry.mesh.material as THREE.MeshPhongMaterial
-        const oldTex = mat.map
-        mat.map = makeResultTexture(result)
-        mat.needsUpdate = true
-        oldTex?.dispose()
+        const mats10 = entry.mesh.material as THREE.MeshPhongMaterial[]
+        const topFaceIdx = entry.faceDefs.findIndex(fd => fd.value === result)
+        if (topFaceIdx >= 0) {
+          entry.resultTexture?.dispose()
+          const resultTex = makeResultTexture(result)
+          mats10[topFaceIdx].map?.dispose()
+          mats10[topFaceIdx].map = resultTex
+          mats10[topFaceIdx].needsUpdate = true
+          entry.resultTexture = resultTex
+        }
       } else {
         result = entry.precomputedResult
         if (entry.faceDefs.length > 0) {
@@ -1166,15 +1221,27 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           faceDefs = logicalFaces
           supportVertices = convex.vertices
 
-          meshMaterial = new THREE.MeshPhongMaterial({
-            map: makeColorFaceTexture(`d${sides}`),
-            color: DIE_MATERIAL_COLOR,
-            emissive: DIE_EMISSIVE_COLOR,
-            emissiveIntensity: 0.24,
-            specular: new THREE.Color(DIE_SPECULAR_COLOR),
-            shininess: 60,
-            reflectivity: 0.88,
-          })
+          if (isD10) {
+            meshMaterial = Array.from({ length: 10 }, () => new THREE.MeshPhongMaterial({
+              map: makeBlankFaceTexture(),
+              color: DIE_MATERIAL_COLOR,
+              emissive: DIE_EMISSIVE_COLOR,
+              emissiveIntensity: 0.24,
+              specular: new THREE.Color(DIE_SPECULAR_COLOR),
+              shininess: 60,
+              reflectivity: 0.88,
+            }))
+          } else {
+            meshMaterial = new THREE.MeshPhongMaterial({
+              map: makeColorFaceTexture(`d${sides}`),
+              color: DIE_MATERIAL_COLOR,
+              emissive: DIE_EMISSIVE_COLOR,
+              emissiveIntensity: 0.24,
+              specular: new THREE.Color(DIE_SPECULAR_COLOR),
+              shininess: 60,
+              reflectivity: 0.88,
+            })
+          }
         }
 
         const mesh = new THREE.Mesh(geo, meshMaterial)
@@ -1186,10 +1253,10 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           mass:            1,
           shape:           physicsShape,
           position:        new CANNON.Vec3(0, DIE_HALF, 0),
-          linearDamping:   LINEAR_DAMPING,
-          angularDamping:  ANGULAR_DAMPING,
+          linearDamping:   isD10 ? 0.52 : LINEAR_DAMPING,
+          angularDamping:  isD10 ? 0.62 : ANGULAR_DAMPING,
           material:        diceMatRef.current ?? undefined,
-          sleepSpeedLimit: 0.5,
+          sleepSpeedLimit: isD10 ? 0.8 : 0.5,
           sleepTimeLimit:  0.1,
         })
         world.addBody(body)
@@ -1278,11 +1345,16 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
             mat.needsUpdate = true
             oldTex?.dispose()
           } else if (entry.sides === 10) {
-            const mat = entry.mesh.material as THREE.MeshPhongMaterial
-            const oldTex = mat.map
-            mat.map = makeColorFaceTexture('d10')
-            mat.needsUpdate = true
-            oldTex?.dispose()
+            if (entry.resultValue !== null) {
+              const mats10 = entry.mesh.material as THREE.MeshPhongMaterial[]
+              const topFaceIdx = entry.faceDefs.findIndex(fd => fd.value === entry.resultValue)
+              if (topFaceIdx >= 0) {
+                entry.resultTexture?.dispose()
+                entry.resultTexture = undefined
+                mats10[topFaceIdx].map = makeBlankFaceTexture()
+                mats10[topFaceIdx].needsUpdate = true
+              }
+            }
           } else if (entry.sides === 6) {
             restoreD6FaceMaps(entry)
           }
@@ -1344,12 +1416,16 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
             mat.needsUpdate = true
             oldTex?.dispose()
           } else if (entry.sides === 10) {
-            // Single material — swap back to label so result is hidden while rolling
-            const mat = entry.mesh.material as THREE.MeshPhongMaterial
-            const oldTex = mat.map
-            mat.map = makeColorFaceTexture('d10')
-            mat.needsUpdate = true
-            oldTex?.dispose()
+            if (entry.resultValue !== null) {
+              const mats10 = entry.mesh.material as THREE.MeshPhongMaterial[]
+              const topFaceIdx = entry.faceDefs.findIndex(fd => fd.value === entry.resultValue)
+              if (topFaceIdx >= 0) {
+                entry.resultTexture?.dispose()
+                entry.resultTexture = undefined
+                mats10[topFaceIdx].map = makeBlankFaceTexture()
+                mats10[topFaceIdx].needsUpdate = true
+              }
+            }
           } else if (entry.sides === 6) {
             restoreD6FaceMaps(entry)
           }
@@ -1409,6 +1485,17 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
         for (let i = 0; i < dieEntriesRef.current.length; i++) {
           const entry = dieEntriesRef.current[i]
           clearSettleTimer(entry)
+          // Restore face textures before clearing resultValue
+          if (entry.sides === 6) {
+            restoreD6FaceMaps(entry)
+          } else if (entry.sides === 10 && entry.resultValue !== null) {
+            const mats10 = entry.mesh.material as THREE.MeshPhongMaterial[]
+            const topFaceIdx = entry.faceDefs.findIndex(fd => fd.value === entry.resultValue)
+            if (topFaceIdx >= 0) {
+              mats10[topFaceIdx].map = makeBlankFaceTexture()
+              mats10[topFaceIdx].needsUpdate = true
+            }
+          }
           entry.resultTexture?.dispose()
           entry.resultTexture = undefined
           entry.resultValue = null
@@ -1416,7 +1503,6 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           entry.settleCount = 0
           entry.zone = 'tray'
           entry.zoneAnim = undefined
-          if (entry.sides === 6) restoreD6FaceMaps(entry)
           stageDieAtSlot(entry, i)
         }
         lineupRef.current.active = false

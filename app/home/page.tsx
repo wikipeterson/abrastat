@@ -200,6 +200,7 @@ const HOME_TABS: { id: HomeTab; label: string; soon?: boolean }[] = [
 
 function HomeContent() {
   const [tab, setTab] = useState<HomeTab>('datasets')
+  const [gameChrome, setGameChrome] = useState<{ title: string; onBack: () => void } | null>(null)
   const router = useRouter()
   const clearGrid = useStore(s => s.clearGrid)
 
@@ -210,6 +211,7 @@ function HomeContent() {
       router.push('/workspace')
       return
     }
+    if (tabId !== 'games') setGameChrome(null)
     setTab(tabId)
   }
 
@@ -217,28 +219,48 @@ function HomeContent() {
     <div className="flex flex-col min-h-full" style={{ background: 'var(--color-bg)' }}>
       {/* Top-level section tabs */}
       <div className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-white flex-shrink-0">
-        <div className="max-w-5xl mx-auto px-4 flex items-center gap-1">
-          {HOME_TABS.map(t => (
-            <button
-              key={t.id}
-              onClick={() => handleTopTabClick(t.id, t.soon)}
-              disabled={t.soon}
-              className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                tab === t.id
-                  ? 'border-[var(--color-accent)] text-[var(--color-accent)]'
-                  : t.soon
-                    ? 'border-transparent text-[var(--color-border)] cursor-default'
-                    : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-text)]'
-              }`}
-            >
-              {t.label}
-              {t.soon && (
-                <span className="text-[10px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full">
-                  soon
-                </span>
-              )}
-            </button>
-          ))}
+        <div className="relative max-w-5xl mx-auto px-4">
+          <div className="flex items-center gap-1">
+            {tab === 'games' && gameChrome && (
+              <button
+                onClick={gameChrome.onBack}
+                className="flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 -mb-px border-transparent text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
+              >
+                <span aria-hidden="true">←</span>
+                <span>Back</span>
+              </button>
+            )}
+
+            {HOME_TABS.map(t => (
+              <button
+                key={t.id}
+                onClick={() => handleTopTabClick(t.id, t.soon)}
+                disabled={t.soon}
+                className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                  tab === t.id
+                    ? 'border-[var(--color-accent)] text-[var(--color-accent)]'
+                    : t.soon
+                      ? 'border-transparent text-[var(--color-border)] cursor-default'
+                      : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-text)]'
+                }`}
+              >
+                {t.label}
+                {t.soon && (
+                  <span className="text-[10px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full">
+                    soon
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {tab === 'games' && gameChrome && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">
+                {gameChrome.title}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -248,7 +270,7 @@ function HomeContent() {
             <DatasetsSection />
           </div>
         )}
-        {tab === 'games' && <GameHub />}
+        {tab === 'games' && <GameHub onChromeChange={setGameChrome} />}
       </div>
     </div>
   )

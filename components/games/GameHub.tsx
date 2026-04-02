@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { GAME_IDS, GameId, submitScore } from '@/lib/leaderboard'
 import { ROUNDS_PER_GAME } from '@/lib/gameData'
 import { useStore } from '@/lib/store'
@@ -71,7 +71,11 @@ type State =
   | { view: 'playing'; gameId: GameId }
   | { view: 'done'; gameId: GameId; score: number; submittedInitials: string | null }
 
-export function GameHub() {
+interface GameHubProps {
+  onChromeChange?: (chrome: { title: string; onBack: () => void } | null) => void
+}
+
+export function GameHub({ onChromeChange }: GameHubProps) {
   const { user } = useStore()
   const [state, setState] = useState<State>({ view: 'hub' })
   const [submitting, setSubmitting] = useState(false)
@@ -102,6 +106,28 @@ export function GameHub() {
       setSubmitting(false)
     }
   }
+
+  useEffect(() => {
+    if (!onChromeChange) return
+    if (state.view === 'hub') {
+      onChromeChange(null)
+      return
+    }
+
+    const meta = GAMES.find(g => g.id === state.gameId)
+    onChromeChange(
+      meta
+        ? {
+            title: meta.title,
+            onBack: () => setState({ view: 'hub' }),
+          }
+        : null,
+    )
+
+    return () => {
+      onChromeChange(null)
+    }
+  }, [onChromeChange, state])
 
   if (state.view === 'hub') {
     return (
@@ -149,18 +175,6 @@ export function GameHub() {
       : 'max-w-lg mx-auto py-6 px-4 space-y-4'
     return (
       <div className={containerClass}>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setState({ view: 'hub' })}
-            className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
-          >
-            ← Back
-          </button>
-          <span className="text-lg font-semibold text-[var(--color-text)]">
-            {gameMeta.icon} {gameMeta.title}
-          </span>
-        </div>
-
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
           {state.gameId === GAME_IDS.guessCorrelation && (
             <GuessCorrelation onDone={s => handleDone(state.gameId, s)} />

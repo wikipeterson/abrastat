@@ -41,7 +41,6 @@ const EXPLORE_CARD_OPTIONS: CardOption[] = [
 const PROBABILITY_CARD_OPTIONS: CardOption[] = [
   { type: 'distribution', icon: '🔔', label: 'Distributions' },
   { type: 'generator',    icon: '🎛️', label: 'Random Number Generator' },
-  { type: 'dice-roller',  icon: '🎲', label: 'Dice Roller' },
   { type: 'simulation',   icon: '🔀', label: 'Coin Flipper' },
 ]
 
@@ -417,6 +416,24 @@ function AppletsBrowser() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Link
+            href="/applets/dice-roller"
+            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-start gap-4">
+              <div className="text-3xl leading-none">🎲</div>
+              <div className="space-y-1">
+                <div className="text-lg font-semibold text-[var(--color-text)]">Dice Roller</div>
+                <p className="text-sm text-[var(--color-muted)] max-w-md">
+                  Roll d6, d10, and d100 with fast batches and linked results.
+                </p>
+              </div>
+            </div>
+            <span className="px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white whitespace-nowrap">
+              Open
+            </span>
+          </Link>
+
           <Link
             href="/applets/spinner"
             className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow"

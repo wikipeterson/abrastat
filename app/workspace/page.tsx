@@ -61,7 +61,7 @@ function sampleDatasetToMeta(sample: (typeof SAMPLE_DATASETS)[number]): DatasetM
   return {
     id: sample.id ?? `sample:${sample.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
     ownerId: 'abrastat',
-    ownerName: 'AbraStat',
+    ownerName: 'Demo',
     ownerPhotoURL: '',
     name: sample.name,
     description: sample.description ?? '',
@@ -313,21 +313,23 @@ function DatasetsBrowser({
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    let result = [...builtInDatasets, ...datasets].filter(d =>
+    const matchesQuery = (d: DatasetMeta) =>
       !q ||
       d.name.toLowerCase().includes(q) ||
       d.description?.toLowerCase().includes(q) ||
       d.source?.toLowerCase().includes(q) ||
       d.tags?.some(tag => tag.toLowerCase().includes(q))
-    )
-    result = [...result].sort((a, b) => {
+    const sortItems = (items: DatasetMeta[]) => [...items].sort((a, b) => {
       if (sort === 'newest') return b.updatedAt.getTime() - a.updatedAt.getTime()
       if (sort === 'oldest') return a.updatedAt.getTime() - b.updatedAt.getTime()
       if (sort === 'name') return a.name.localeCompare(b.name)
       if (sort === 'rows') return b.rowCount - a.rowCount
       return 0
     })
-    return result
+
+    const demoItems = sortItems(builtInDatasets.filter(matchesQuery))
+    const publicItems = sortItems(datasets.filter(matchesQuery))
+    return [...demoItems, ...publicItems]
   }, [builtInDatasets, datasets, search, sort])
 
   return (

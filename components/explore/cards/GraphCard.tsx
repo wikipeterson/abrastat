@@ -30,7 +30,7 @@ interface GraphCardProps {
 
 export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
   const { grid } = useStore()
-  const [showBestFitLine, setShowBestFitLine] = useState(false)
+  const [bestFitMode, setBestFitMode] = useState<'none' | 'overall' | 'group'>('none')
   const [manualTableGraphType, setManualTableGraphType] = useState<'segmented' | 'sidebyside' | 'mosaic'>('segmented')
   const [manualTableValueMode, setManualTableValueMode] = useState<'count' | 'row'>('count')
   const manualTable = config.manualTable ?? null
@@ -146,7 +146,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
           : hNumAndVCat
             ? <BoxPlot colId={config.xColId} groupColId={config.yColId} orientation="h" />
             : <BoxPlot colId={mainColId} groupColId={config.groupColId} orientation={orientation} />
-      case 'scatter':    return <ScatterPlot xColId={config.xColId} yColId={config.yColId} colorByColId={config.groupColId} />
+      case 'scatter':    return <ScatterPlot xColId={config.xColId} yColId={config.yColId} colorByColId={config.groupColId} bestFitMode={bestFitMode} />
       case 'bar':        return <BarChart colId={mainColId} orientation={orientation} />
       case 'pie':        return <PieChart colId={mainColId} groupColId={effectiveGroupColId} />
       case 'segmented':  return (
@@ -264,15 +264,18 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
             </>
           )}
           {currentChart === 'scatter' && xCol?.type === 'numeric' && yCol?.type === 'numeric' && (
-            <label className="flex items-center gap-1.5 text-xs text-[var(--color-muted)] cursor-pointer whitespace-nowrap ml-1">
-              <input
-                type="checkbox"
-                checked={showBestFitLine}
-                onChange={e => setShowBestFitLine(e.target.checked)}
-                className="accent-[var(--color-accent)]"
-              />
-              Show best-fit line
-            </label>
+            <div className="flex items-center gap-2 text-xs text-[var(--color-muted)] whitespace-nowrap ml-1">
+              <span>Best-fit line:</span>
+              <select
+                value={bestFitMode}
+                onChange={e => setBestFitMode(e.target.value as 'none' | 'overall' | 'group')}
+                className="rounded-lg border border-[var(--color-border)] bg-white px-2 py-1 text-xs text-[var(--color-text)]"
+              >
+                <option value="none">None</option>
+                <option value="overall">Overall</option>
+                {groupCol?.type === 'categorical' && <option value="group">By group</option>}
+              </select>
+            </div>
           )}
         </div>
 
@@ -349,11 +352,11 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
               key={activeTransition!.nonce}
               spec={activeTransition!.to}
               fromSpec={activeTransition!.from}
-              showBestFitLine={activeTransition!.to.kind === 'scatter' ? showBestFitLine : false}
+              showBestFitLine={activeTransition!.to.kind === 'scatter' ? bestFitMode === 'overall' : false}
               onRest={() => setActiveTransition(null)}
             />
           ) : showSettledCustom ? (
-            <AnimatedCaseLayer key="stable" spec={morphSpec!} showBestFitLine={morphSpec!.kind === 'scatter' ? showBestFitLine : false} />
+            <AnimatedCaseLayer key="stable" spec={morphSpec!} showBestFitLine={morphSpec!.kind === 'scatter' ? bestFitMode === 'overall' : false} />
           ) : isBlank ? (
             <div className="h-full flex flex-col items-center justify-center gap-2 text-center p-6">
               <span className="text-4xl opacity-25 select-none">📈</span>

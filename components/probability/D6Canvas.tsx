@@ -1564,13 +1564,19 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
             }
           })
         } else {
-          // Return to original tray slot
-          const cols = Math.max(1, Math.floor((TRAY_W - 1.2) / 1.1))
-          const startX = -TRAY_W / 2 + DIE_HALF + 0.5
-          const startZ = -TRAY_D / 2 + DIE_HALF + 0.45
-          const col = entry.slotIndex % cols
-          const row = Math.floor(entry.slotIndex / cols)
-          toPos = new THREE.Vector3(startX + col * 1.1, DIE_HALF, startZ + row * 1.1)
+          // If the tray has already lined up, return this die to its saved lineup slot
+          // instead of the original top staging slot.
+          if (lineupRef.current.completed) {
+            toPos = entry.lineupTargetPos.clone()
+            toQuat.copy(entry.lineupTargetQuat)
+          } else {
+            const cols = Math.max(1, Math.floor((TRAY_W - 1.2) / 1.1))
+            const startX = -TRAY_W / 2 + DIE_HALF + 0.5
+            const startZ = -TRAY_D / 2 + DIE_HALF + 0.45
+            const col = entry.slotIndex % cols
+            const row = Math.floor(entry.slotIndex / cols)
+            toPos = new THREE.Vector3(startX + col * 1.1, DIE_HALF, startZ + row * 1.1)
+          }
 
           // Re-center remaining held dice
           const heldEntries = dieEntriesRef.current.filter(e => e.zone === 'held')

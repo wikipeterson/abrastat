@@ -13,6 +13,7 @@ interface ScatterPlotProps {
   xColId: string | null
   yColId: string | null
   colorByColId?: string | null
+  bestFitMode?: 'none' | 'overall' | 'group'
 }
 
 interface ScatterPoint {
@@ -58,10 +59,9 @@ function useAnimatedY(targetY: number[], animate: boolean): number[] {
   return animate ? displayY : targetY
 }
 
-export function ScatterPlot({ xColId, yColId, colorByColId }: ScatterPlotProps) {
+export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none' }: ScatterPlotProps) {
   const { grid } = useStore()
   const { hideAxisTitles } = useGraphCardContext()
-  const [showBestFit, setShowBestFit] = useState(false)
   const prevYColIdRef = useRef<string | null>(null)
   const [shouldAnimate, setShouldAnimate] = useState(false)
 
@@ -179,7 +179,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId }: ScatterPlotProps) 
   }
 
   let annotations: Partial<Annotations>[] = []
-  if (showBestFit && xValues.length >= 2) {
+  if (bestFitMode === 'overall' && xValues.length >= 2) {
     const { slope, intercept, r } = linearRegression(xValues, rawYValues)
     const xMin = Math.min(...xValues)
     const xMax = Math.max(...xValues)
@@ -207,14 +207,30 @@ export function ScatterPlot({ xColId, yColId, colorByColId }: ScatterPlotProps) 
     }]
   }
 
+  if (bestFitMode === 'group' && useColorGroups && colorByColId) {
+    const uniqueGroups = [...new Set(allPoints.map(p => p.group))].sort()
+    uniqueGroups.forEach((group, i) => {
+      const pts = allPoints.filter(p => p.group === group)
+      if (pts.length < 2) return
+      const xs = pts.map(p => p.x)
+      const ys = pts.map(p => p.y)
+      const { slope, intercept } = linearRegression(xs, ys)
+      const xMin = Math.min(...xs)
+      const xMax = Math.max(...xs)
+      traces.push({
+        type: 'scatter',
+        mode: 'lines',
+        name: `${group} best fit`,
+        x: [xMin, xMax],
+        y: [slope * xMin + intercept, slope * xMax + intercept],
+        line: { color: ABRA_COLORS[i % ABRA_COLORS.length], width: 2 },
+        hovertemplate: `${group}<br>ŷ = ${slope.toFixed(3)}x + ${intercept.toFixed(3)}<extra></extra>`,
+      })
+    })
+  }
+
   return (
     <div className="h-full flex flex-col">
-      <div className="flex-shrink-0 px-4 pt-2">
-        <label className="flex items-center gap-2 text-sm text-[var(--color-muted)] cursor-pointer">
-          <input type="checkbox" checked={showBestFit} onChange={e => setShowBestFit(e.target.checked)} className="accent-[var(--color-accent)]" />
-          Show best-fit line
-        </label>
-      </div>
       <div className="flex-1 min-h-0 px-4">
         <PlotlyChart
           data={traces as import("plotly.js").Data[]}

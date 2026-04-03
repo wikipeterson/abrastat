@@ -19,20 +19,6 @@ export interface SampleDataset {
   grid: GridState
 }
 
-const classSurveyHeaders = ['age', 'height_in', 'sleep_hrs', 'subject', 'gpa']
-const classSurveyRows = [
-  [16, 64, 7, 'Math', 3.8], [17, 70, 6, 'Science', 3.5], [16, 62, 8, 'English', 3.9],
-  [18, 68, 5, 'Math', 3.2], [17, 65, 7, 'History', 3.6], [16, 72, 9, 'Science', 4.0],
-  [17, 63, 6, 'Math', 3.4], [18, 71, 7, 'English', 3.7], [16, 66, 8, 'Science', 3.8],
-  [17, 69, 6, 'History', 3.1], [18, 64, 7, 'Math', 3.5], [16, 67, 8, 'Science', 3.9],
-  [17, 73, 6, 'English', 3.3], [18, 65, 9, 'Math', 4.0], [16, 68, 7, 'History', 3.6],
-  [17, 70, 6, 'Science', 3.7], [18, 62, 8, 'Math', 3.4], [16, 66, 7, 'English', 3.8],
-  [17, 71, 5, 'Science', 3.2], [18, 64, 8, 'History', 3.9], [16, 68, 7, 'Math', 3.5],
-  [17, 65, 6, 'English', 3.6], [18, 72, 8, 'Science', 4.0], [16, 69, 7, 'Math', 3.3],
-  [17, 63, 9, 'History', 3.7], [18, 67, 6, 'Science', 3.8], [16, 70, 7, 'Math', 3.4],
-  [17, 64, 8, 'English', 3.9], [18, 66, 6, 'Science', 3.5], [16, 71, 7, 'History', 3.6],
-]
-
 const weatherHeaders = ['city', 'state', 'avg_temp_f', 'rainfall_in', 'snow_days']
 const weatherRows = [
   ['Phoenix', 'AZ', 75, 8, 0], ['Miami', 'FL', 77, 62, 0], ['Seattle', 'WA', 52, 38, 6],
@@ -71,24 +57,6 @@ const nbaRows = [
   ['Jalen Brunson', 'NYK', 28.7, 6.7, 3.6, 77],
 ]
 
-const olympicHeaders = ['country', 'year', 'gold', 'silver', 'bronze', 'total']
-const olympicRows = [
-  ['USA', 2020, 39, 41, 33, 113], ['China', 2020, 38, 32, 18, 88], ['GB', 2020, 22, 21, 22, 65],
-  ['ROC', 2020, 20, 28, 23, 71], ['Australia', 2020, 17, 7, 22, 46], ['Japan', 2020, 27, 14, 17, 58],
-  ['Germany', 2020, 10, 11, 16, 37], ['Netherlands', 2020, 10, 12, 14, 36], ['France', 2020, 10, 12, 11, 33],
-  ['Italy', 2020, 10, 10, 20, 40], ['Canada', 2020, 7, 6, 11, 24], ['Brazil', 2020, 7, 6, 8, 21],
-  ['New Zealand', 2020, 7, 6, 7, 20], ['Cuba', 2020, 7, 3, 5, 15], ['Hungary', 2020, 6, 7, 7, 20],
-  ['South Korea', 2020, 6, 4, 10, 20], ['Poland', 2020, 4, 5, 11, 20], ['Czech Republic', 2020, 4, 4, 3, 11],
-  ['Kenya', 2020, 4, 4, 2, 10], ['Norway', 2020, 4, 2, 2, 8], ['Jamaica', 2020, 4, 1, 4, 9],
-  ['Spain', 2020, 3, 8, 6, 17], ['Sweden', 2020, 3, 6, 0, 9], ['Switzerland', 2020, 3, 4, 6, 13],
-  ['Denmark', 2020, 3, 4, 4, 11], ['Croatia', 2020, 3, 3, 2, 8], ['Iran', 2020, 3, 2, 2, 7],
-  ['Serbia', 2020, 3, 1, 5, 9], ['Belgium', 2020, 3, 1, 3, 7], ['Bulgaria', 2020, 3, 1, 2, 6],
-  ['Slovakia', 2020, 3, 1, 1, 5], ['Georgia', 2020, 2, 5, 1, 8], ['Greece', 2020, 2, 1, 1, 4],
-  ['Ecuador', 2020, 2, 1, 0, 3], ['Ethiopia', 2020, 2, 0, 2, 4], ['Ireland', 2020, 2, 0, 2, 4],
-  ['Israel', 2020, 2, 0, 2, 4], ['Qatar', 2020, 2, 0, 1, 3], ['Bahamas', 2020, 2, 0, 0, 2],
-  ['Kosovo', 2020, 2, 0, 0, 2],
-]
-
 const carHeaders = ['make', 'mpg', 'cylinders', 'horsepower', 'weight_lbs']
 const carRows = [
   ['Chevrolet', 18, 8, 307, 3504], ['Buick', 15, 8, 350, 3693], ['Plymouth', 18, 8, 318, 3436],
@@ -110,33 +78,7 @@ const carRows = [
   ['Chevrolet', 13, 8, 360, 4654], ['Buick', 14, 8, 307, 4654],
 ]
 
-const studentSurveyHeaders = ['grade', 'gender', 'sport', 'phone_hrs', 'gpa', 'lunch']
-const studentSurveyRows = [
-  ['9th', 'Female', 'Soccer', 3, 3.8, 'Packed'], ['10th', 'Male', 'Basketball', 4, 3.2, 'School'],
-  ['11th', 'Female', 'Swimming', 2, 3.9, 'Packed'], ['12th', 'Male', 'Track', 3, 3.5, 'School'],
-  ['9th', 'Male', 'Basketball', 5, 2.9, 'School'], ['10th', 'Female', 'Soccer', 2, 3.7, 'Packed'],
-  ['11th', 'Male', 'None', 6, 2.8, 'School'], ['12th', 'Female', 'Swimming', 1, 4.0, 'Packed'],
-  ['9th', 'Female', 'Track', 3, 3.6, 'School'], ['10th', 'Male', 'Soccer', 4, 3.1, 'School'],
-  ['11th', 'Female', 'Basketball', 2, 3.8, 'Packed'], ['12th', 'Male', 'None', 5, 2.7, 'School'],
-  ['9th', 'Male', 'Swimming', 3, 3.4, 'Packed'], ['10th', 'Female', 'Track', 2, 3.9, 'Packed'],
-  ['11th', 'Male', 'Basketball', 4, 3.0, 'School'], ['12th', 'Female', 'Soccer', 2, 3.7, 'Packed'],
-  ['9th', 'Female', 'None', 4, 3.3, 'School'], ['10th', 'Male', 'Swimming', 3, 3.5, 'Packed'],
-  ['11th', 'Female', 'Soccer', 2, 3.8, 'Packed'], ['12th', 'Male', 'Track', 3, 3.2, 'School'],
-  ['9th', 'Male', 'None', 6, 2.6, 'School'], ['10th', 'Female', 'Basketball', 3, 3.6, 'Packed'],
-  ['11th', 'Male', 'Soccer', 4, 3.1, 'School'], ['12th', 'Female', 'None', 2, 3.9, 'Packed'],
-  ['9th', 'Female', 'Swimming', 1, 4.0, 'Packed'], ['10th', 'Male', 'Track', 4, 3.3, 'School'],
-  ['11th', 'Female', 'Track', 2, 3.7, 'Packed'], ['12th', 'Male', 'Basketball', 5, 2.9, 'School'],
-  ['9th', 'Male', 'Soccer', 3, 3.5, 'School'], ['10th', 'Female', 'None', 3, 3.4, 'Packed'],
-  ['11th', 'Male', 'Swimming', 2, 3.8, 'Packed'], ['12th', 'Female', 'Track', 2, 3.9, 'Packed'],
-  ['9th', 'Female', 'Basketball', 4, 3.2, 'School'], ['10th', 'Male', 'None', 5, 2.8, 'School'],
-  ['11th', 'Female', 'None', 3, 3.6, 'Packed'], ['12th', 'Male', 'Swimming', 2, 3.7, 'School'],
-  ['9th', 'Male', 'Track', 3, 3.3, 'Packed'], ['10th', 'Female', 'Swimming', 1, 4.0, 'Packed'],
-  ['11th', 'Male', 'Track', 4, 3.1, 'School'], ['12th', 'Female', 'Basketball', 3, 3.5, 'Packed'],
-]
-
 export const SAMPLE_DATASETS: SampleDataset[] = [
-  { name: 'Class Survey', emoji: '📋', description: 'A small sample of student measurements, sleep, GPA, and favorite subject.', grid: parsedRowsToGrid(classSurveyHeaders, classSurveyRows) },
-  { name: 'Student Survey', emoji: '🎓', description: 'Categorical and quantitative survey responses from high school students.', grid: parsedRowsToGrid(studentSurveyHeaders, studentSurveyRows) },
   {
     name: 'Titanic Passengers',
     emoji: '🚢',
@@ -223,6 +165,5 @@ export const SAMPLE_DATASETS: SampleDataset[] = [
   },
   { name: 'US Weather', emoji: '🌡️', description: 'Average temperature, rainfall, and snowfall patterns for U.S. cities.', grid: parsedRowsToGrid(weatherHeaders, weatherRows) },
   { name: 'NBA Season', emoji: '🏀', description: 'Scoring and performance stats for NBA players.', grid: parsedRowsToGrid(nbaHeaders, nbaRows) },
-  { name: 'Olympic Medals', emoji: '🥇', description: 'Country medal counts from the 2020 Olympic Games.', grid: parsedRowsToGrid(olympicHeaders, olympicRows) },
   { name: 'Car Data', emoji: '🚗', description: 'Classic car data with fuel economy, cylinders, horsepower, and weight.', grid: parsedRowsToGrid(carHeaders, carRows) },
 ]

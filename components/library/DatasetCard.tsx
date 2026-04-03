@@ -54,6 +54,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, view = '
   const isOwner = dataset.ownerId === currentUserId
   const canDelete = isOwner && onDelete
   const canCopyLink = !dataset.id.startsWith('sample:')
+  const isSample = dataset.id.startsWith('sample:')
 
   if (view === 'card') {
     return (
@@ -103,7 +104,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, view = '
       </div>
       <div className="hidden sm:flex items-center gap-6 text-xs text-[var(--color-muted)] flex-shrink-0">
         <span className="w-28 truncate">{dataset.ownerName}</span>
-        <span className="w-20">{timeAgo(dataset.updatedAt)}</span>
+        <span className="w-20">{isSample ? 'Built-in' : timeAgo(dataset.updatedAt)}</span>
         <span className="w-16 text-right">{dataset.rowCount} rows</span>
       </div>
       <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all">

@@ -48,7 +48,7 @@ const PROBABILITY_CARD_OPTIONS: CardOption[] = [
   { type: 'distribution', icon: '🔔', label: 'Distributions' },
   { type: 'generator', icon: '🎛️', label: 'Random Number Generator' },
   { type: 'dice-roller', icon: '🎲', label: 'Dice Roller' },
-  { type: 'simulation', icon: '🔀', label: 'Coin Flip Simulator' },
+  { type: 'simulation', icon: '🔀', label: 'Coin Flipper' },
 ]
 
 const INFERENCE_CARD_OPTIONS: CardOption[] = [
@@ -86,10 +86,20 @@ function cardLabel(type: CardConfig['type']): string {
     case 'dice-roller':  return 'Dice Roller'
     case 'sim-results':   return 'Roll Results'
     case 'testinterval': return 'Test / Interval'
-    case 'simulation':   return 'Coin Flip Simulator'
+    case 'simulation':   return 'Coin Flipper'
     case 'means':        return 'Means'
     default:             return 'Card'
   }
+}
+
+function getVisibleCardLabel(card: ExploreCard): string {
+  if (card.config.type === 'sim-results') {
+    const sourceLabel = card.config.sourceLabel === 'Coin Flip Simulator'
+      ? 'Coin Flipper'
+      : card.config.sourceLabel
+    if (sourceLabel === 'Coin Flipper') return 'Coin Flipper Results'
+  }
+  return cardLabel(card.config.type)
 }
 
 // ─── Placeholder for unimplemented card types ─────────────────────────────────
@@ -186,8 +196,19 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
 
   const BASE_CANVAS_WIDTH = 2200
   const BASE_CANVAS_HEIGHT = 1800
+  const CANVAS_EDGE_BUFFER = 220
+  const MINIMIZED_HEIGHT = 62
   const MIN_ZOOM = 0.6
   const MAX_ZOOM = 1.8
+
+  const canvasWidth = Math.max(
+    BASE_CANVAS_WIDTH,
+    ...cards.map(card => card.x + card.width + CANVAS_EDGE_BUFFER),
+  )
+  const canvasHeight = Math.max(
+    BASE_CANVAS_HEIGHT,
+    ...cards.map(card => card.y + (card.minimized ? MINIMIZED_HEIGHT : (card.height ?? 520)) + CANVAS_EDGE_BUFFER),
+  )
 
   useEffect(() => {
     zoomRef.current = zoom
@@ -645,8 +666,6 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
   const activeCol = activeColId ? (grid.columns.find(c => c.id === activeColId) ?? null) : null
   const filledRowCount = grid.rows.filter(row => Object.values(row).some(v => String(v).trim())).length
   const columnCount = grid.columns.length
-  const MINIMIZED_HEIGHT = 62
-
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <SwapAnimContext.Provider value={swapAnim}>
@@ -662,7 +681,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
               ref={innerRef}
               onPointerDown={startPan}
               className="relative rounded-lg"
-              style={{ width: BASE_CANVAS_WIDTH * zoom, minWidth: BASE_CANVAS_WIDTH * zoom, height: BASE_CANVAS_HEIGHT * zoom, minHeight: BASE_CANVAS_HEIGHT * zoom }}
+              style={{ width: canvasWidth * zoom, minWidth: canvasWidth * zoom, height: canvasHeight * zoom, minHeight: canvasHeight * zoom }}
             >
               {cards.map(card => {
                 const cardH = card.height ?? 520
@@ -692,7 +711,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                         >
                           <div className="min-w-0 flex items-center gap-3">
                             <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">
-                              {cardLabel(card.config.type)}
+                              {getVisibleCardLabel(card)}
                             </span>
                             {card.config.type === 'data-grid' && (
                               <span className="text-xs text-[var(--color-muted)] whitespace-nowrap">

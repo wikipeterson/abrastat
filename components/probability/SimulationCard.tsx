@@ -98,7 +98,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
       cardId,
       'sum',
       position,
-      'Coin Flip Simulator',
+      'Coin Flipper',
       range,
       'Heads',
     )

@@ -81,7 +81,9 @@ function DotPlot({ values, trackedMode, minValue, maxValue, xLabel }: DotPlotPro
   const MG = { t: 12, r: 16, b: 32, l: 16 }
   const plotW = VIEW_W - MG.l - MG.r
   const plotH = VIEW_H - MG.t - MG.b
-  const DOT_R = 6
+  const maxCount = Math.max(1, ...counts.values(), 1)
+  const stackStep = Math.min(13, plotH / maxCount)
+  const DOT_R = Math.max(2, Math.min(6, stackStep / 2 - 0.35))
 
   const xOf = (v: number) =>
     minValue === maxValue ? plotW / 2 : ((v - minValue) / (maxValue - minValue)) * plotW
@@ -101,7 +103,7 @@ function DotPlot({ values, trackedMode, minValue, maxValue, xLabel }: DotPlotPro
     for (let i = 0; i < count; i++) {
       circles.push({
         cx,
-        cy: plotH - i * (DOT_R * 2 + 1) - DOT_R,
+        cy: plotH - i * stackStep - DOT_R,
         key: `${val}-${i}`,
       })
     }
@@ -183,6 +185,7 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
   const clearSimResults  = useStore(s => s.clearSimResults)
   const updateExploreCard = useStore(s => s.updateExploreCard)
   const { values, trackedMode, sourceLabel, valueLabel, minValue, maxValue, rolls, supportsDifference } = config
+  const displaySourceLabel = sourceLabel === 'Coin Flip Simulator' ? 'Coin Flipper' : sourceLabel
   const rollCount = values.length
   const xLabel = valueLabel ?? (trackedMode === 'sum' ? 'Sum' : '|Difference|')
 
@@ -205,7 +208,7 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
                       border-b border-[var(--color-border)] bg-slate-50">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-            {sourceLabel}
+            {displaySourceLabel}
           </span>
           <ModeSelector mode={trackedMode} supportsDifference={supportsDifference} onSelect={handleModeChange} />
           <span className="text-[10px] text-[var(--color-muted)]">

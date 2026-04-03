@@ -420,12 +420,16 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
                 </>
               )}
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">α =</span>
-                <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
-                  {['0.01', '0.05', '0.10'].map((a, i) => (
-                    <button key={a} onClick={() => setAlpha(a)} className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alpha === a ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}>{a}</button>
-                  ))}
-                </div>
+                <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">α =</label>
+                <input
+                  type="number"
+                  min={0.0001}
+                  max={0.9999}
+                  step={0.001}
+                  value={alpha}
+                  onChange={e => setAlpha(e.target.value)}
+                  className="w-24 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                />
               </div>
             </div>
 

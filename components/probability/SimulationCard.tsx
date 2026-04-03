@@ -80,7 +80,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
       config: {
         ...cfg,
         minValue: range.minValue,
-        maxValue: range.maxValue,
+        maxValue: cfg.valueMode === 'proportion' ? 100 : range.maxValue,
         valueLabel: 'Heads',
       },
     })
@@ -181,32 +181,32 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
           </label>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
           <button
             type="button"
             onClick={simulateOneGroup}
-            className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+            className="shrink-0 rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
           >
             Flip One Group
           </button>
           <button
             type="button"
             onClick={simulateManyGroups}
-            className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] hover:bg-slate-50"
+            className="shrink-0 rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] hover:bg-slate-50"
           >
             Run {groupCount} Groups
           </button>
           <button
             type="button"
             onClick={ensureResultsCard}
-            className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] hover:bg-slate-50"
+            className="shrink-0 rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] hover:bg-slate-50"
           >
             Graph Results
           </button>
           <button
             type="button"
             onClick={reset}
-            className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-slate-50"
+            className="shrink-0 rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-slate-50"
           >
             Reset
           </button>

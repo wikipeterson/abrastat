@@ -7,7 +7,13 @@ import { SimResultsCardConfig } from '@/lib/exploreTypes'
 function deriveTrackedValues(
   rolls: number[][],
   trackedMode: 'sum' | 'difference',
+  valueMode: 'count' | 'proportion' = 'count',
 ): number[] {
+  if (valueMode === 'proportion') {
+    return rolls
+      .filter(roll => roll.length > 0)
+      .map(roll => (roll.reduce((sum, value) => sum + value, 0) / roll.length) * 100)
+  }
   if (trackedMode === 'sum') {
     return rolls.map(roll => roll.reduce((sum, value) => sum + value, 0))
   }
@@ -21,10 +27,12 @@ function deriveTrackedValues(
 function ModeSelector({
   mode,
   supportsDifference,
+  labels,
   onSelect,
 }: {
   mode: 'sum' | 'difference'
   supportsDifference: boolean
+  labels?: { primary: string; secondary: string }
   onSelect: (m: 'sum' | 'difference') => void
 }) {
   return (
@@ -37,7 +45,7 @@ function ModeSelector({
             : 'text-[var(--color-muted)] hover:bg-slate-50'
         }`}
       >
-        Sum
+        {labels?.primary ?? 'Sum'}
       </button>
       {supportsDifference && (
         <button
@@ -48,7 +56,7 @@ function ModeSelector({
               : 'text-[var(--color-muted)] hover:bg-slate-50'
           }`}
         >
-          |Δ|
+          {labels?.secondary ?? '|Δ|'}
         </button>
       )}
     </div>
@@ -63,18 +71,21 @@ interface DotPlotProps {
   minValue: number
   maxValue: number
   xLabel: string
+  tickValues?: number[]
+  tickFormat?: (value: number) => string
 }
 
-function DotPlot({ values, trackedMode, minValue, maxValue, xLabel }: DotPlotProps) {
+function DotPlot({ values, trackedMode, minValue, maxValue, xLabel, tickValues, tickFormat }: DotPlotProps) {
   const clipId = useId()
 
   // Count occurrences
   const counts = new Map<number, number>()
   for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1)
-  const domainValues = Array.from(
-    { length: Math.max(1, maxValue - minValue + 1) },
+  const defaultDomainValues = Array.from(
+    { length: Math.max(1, Math.round(maxValue - minValue) + 1) },
     (_, index) => minValue + index,
   )
+  const domainValues = tickValues ?? defaultDomainValues
 
   const VIEW_W = 400
   const VIEW_H = 220
@@ -139,7 +150,7 @@ function DotPlot({ values, trackedMode, minValue, maxValue, xLabel }: DotPlotPro
               fill="#64748B"
               fontFamily="DM Sans, sans-serif"
             >
-              {v}
+              {tickFormat ? tickFormat(v) : v}
             </text>
           </g>
         ))}
@@ -184,10 +195,19 @@ interface SimResultsCardProps {
 export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
   const clearSimResults  = useStore(s => s.clearSimResults)
   const updateExploreCard = useStore(s => s.updateExploreCard)
-  const { values, trackedMode, sourceLabel, valueLabel, minValue, maxValue, rolls, supportsDifference } = config
+  const { values, trackedMode, valueMode = 'count', sourceLabel, valueLabel, minValue, maxValue, rolls, supportsDifference } = config
   const displaySourceLabel = sourceLabel === 'Coin Flip Simulator' ? 'Coin Flipper' : sourceLabel
+  const isCoinFlipper = displaySourceLabel === 'Coin Flipper'
   const rollCount = values.length
-  const xLabel = valueLabel ?? (trackedMode === 'sum' ? 'Sum' : '|Difference|')
+  const xLabel = isCoinFlipper
+    ? (valueMode === 'proportion' ? '% Heads' : 'Heads')
+    : valueLabel ?? (trackedMode === 'sum' ? 'Sum' : '|Difference|')
+  const emptyMessage = displaySourceLabel === 'Coin Flipper'
+    ? 'Run the coin flipper to start recording outcomes.'
+    : 'Roll to start recording outcomes.'
+  const tickValues = isCoinFlipper && valueMode === 'proportion'
+    ? [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+    : undefined
 
   function handleModeChange(mode: 'sum' | 'difference') {
     if (mode === 'difference' && !supportsDifference) return
@@ -196,7 +216,20 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
       config: {
         ...config,
         trackedMode: mode,
-        values: deriveTrackedValues(rolls, mode),
+        values: deriveTrackedValues(rolls, mode, valueMode),
+      },
+    })
+  }
+
+  function handleCoinValueMode(mode: 'count' | 'proportion') {
+    if (mode === valueMode) return
+    updateExploreCard(cardId, {
+      config: {
+        ...config,
+        valueMode: mode,
+        minValue: mode === 'proportion' ? 0 : 0,
+        maxValue: mode === 'proportion' ? 100 : (rolls[0]?.length ?? maxValue),
+        values: deriveTrackedValues(rolls, trackedMode, mode),
       },
     })
   }
@@ -210,9 +243,34 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
           <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
             {displaySourceLabel}
           </span>
-          <ModeSelector mode={trackedMode} supportsDifference={supportsDifference} onSelect={handleModeChange} />
+          {isCoinFlipper ? (
+            <div className="flex rounded-lg overflow-hidden border border-[var(--color-border)] text-[10px]">
+              <button
+                onClick={() => handleCoinValueMode('count')}
+                className={`px-2.5 py-1 transition-colors ${
+                  valueMode === 'count'
+                    ? 'bg-[var(--color-accent)] text-white'
+                    : 'text-[var(--color-muted)] hover:bg-slate-50'
+                }`}
+              >
+                Heads
+              </button>
+              <button
+                onClick={() => handleCoinValueMode('proportion')}
+                className={`px-2.5 py-1 border-l border-[var(--color-border)] transition-colors ${
+                  valueMode === 'proportion'
+                    ? 'bg-[var(--color-accent)] text-white'
+                    : 'text-[var(--color-muted)] hover:bg-slate-50'
+                }`}
+              >
+                % Heads
+              </button>
+            </div>
+          ) : (
+            <ModeSelector mode={trackedMode} supportsDifference={supportsDifference} onSelect={handleModeChange} />
+          )}
           <span className="text-[10px] text-[var(--color-muted)]">
-            {rollCount} roll{rollCount !== 1 ? 's' : ''}
+            {rollCount} {isCoinFlipper ? `group${rollCount !== 1 ? 's' : ''}` : `roll${rollCount !== 1 ? 's' : ''}`}
           </span>
         </div>
         <button
@@ -226,19 +284,35 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
       </div>
 
       {/* ── Dot plot ── */}
-      <div className="flex-1 min-h-0 flex flex-col items-center justify-end p-4 pt-8">
-        <DotPlot
-          values={values}
-          trackedMode={trackedMode}
-          minValue={minValue}
-          maxValue={maxValue}
-          xLabel={xLabel}
-        />
-        {rollCount === 0 && (
-          <div className="-mt-8 text-center">
-            <p className="text-xs text-[var(--color-muted)]">
-              Roll the dice to start recording outcomes.
-            </p>
+      <div className="flex-1 min-h-0 p-4 pt-8">
+        {rollCount === 0 ? (
+          <div className="flex h-full flex-col justify-end">
+            <div className="pb-4 text-center">
+              <p className="text-xs text-[var(--color-muted)]">
+                {emptyMessage}
+              </p>
+            </div>
+            <div className="flex justify-center">
+              <DotPlot
+                values={values}
+                trackedMode={trackedMode}
+                minValue={minValue}
+                maxValue={maxValue}
+                xLabel={xLabel}
+                tickValues={tickValues}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-full flex-col items-center justify-end">
+            <DotPlot
+              values={values}
+              trackedMode={trackedMode}
+              minValue={minValue}
+              maxValue={maxValue}
+              xLabel={xLabel}
+              tickValues={tickValues}
+            />
           </div>
         )}
       </div>

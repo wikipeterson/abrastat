@@ -100,6 +100,7 @@ export interface SimResultsCardConfig {
   sourceLabel: string        // e.g. 'Dice Roller'
   valueLabel?: string
   trackedMode: 'sum' | 'difference'
+  valueMode?: 'count' | 'proportion'
   supportsDifference: boolean
   minValue: number
   maxValue: number

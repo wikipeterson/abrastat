@@ -24,7 +24,13 @@ function createDataGridCard(): ExploreCard {
 function deriveSimValue(
   roll: number[],
   trackedMode: 'sum' | 'difference',
+  valueMode: 'count' | 'proportion' = 'count',
 ): number | null {
+  if (valueMode === 'proportion') {
+    if (roll.length === 0) return null
+    const heads = roll.reduce((sum, value) => sum + value, 0)
+    return (heads / roll.length) * 100
+  }
   if (trackedMode === 'sum') {
     return roll.reduce((sum, value) => sum + value, 0)
   }
@@ -301,7 +307,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'testinterval' ? { type: 'testinterval' } :
       type === 'means'        ? { type: 'means', var1ColId: null, var2ColId: null } :
       type === 'dice-roller'  ? { type: 'dice-roller', linkedResultsCardId: null, trackedMode: 'sum' } :
-      type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', supportsDifference: false, minValue: 1, maxValue: 6, rolls: [], values: [] } :
+      type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', valueMode: 'count', supportsDifference: false, minValue: 1, maxValue: 6, rolls: [], values: [] } :
                                  { type: 'simulation', linkedResultsCardId: null }
     const { width, height } =
       type === 'summary' ? { width: 700, height: 620 } :
@@ -343,6 +349,7 @@ export const useStore = create<AbraStatStore>((set) => ({
           sourceLabel,
           valueLabel,
           trackedMode,
+          valueMode: 'count',
           supportsDifference: trackedMode === 'difference',
           minValue: range.minValue,
           maxValue: range.maxValue,
@@ -390,7 +397,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       c.id === cardId && c.config.type === 'sim-results'
         ? (() => {
             const cfg = c.config as SimResultsCardConfig
-            const derived = deriveSimValue(roll, cfg.trackedMode)
+            const derived = deriveSimValue(roll, cfg.trackedMode, cfg.valueMode)
             if (derived == null) return c
             return {
               ...c,
@@ -411,7 +418,7 @@ export const useStore = create<AbraStatStore>((set) => ({
             if (rolls.length === 0) return c
             const cfg = c.config as SimResultsCardConfig
             const derived = rolls
-              .map(roll => deriveSimValue(roll, cfg.trackedMode))
+              .map(roll => deriveSimValue(roll, cfg.trackedMode, cfg.valueMode))
               .filter((value): value is number => value != null)
             if (derived.length === 0) return c
             return {

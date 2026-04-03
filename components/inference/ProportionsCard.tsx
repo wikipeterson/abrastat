@@ -27,7 +27,6 @@ interface PropResult {
   stat: number
   p: number
   ci: [number, number]
-  pooled?: number
 }
 
 function fmt(n: number, sig = 4): string {
@@ -96,16 +95,12 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
 
   const responseLevels = useMemo(() => {
     if (!config.var1ColId) return []
-    return [...new Set(
-      grid.rows.map(r => String(r[config.var1ColId!] ?? '').trim()).filter(Boolean)
-    )].sort()
+    return [...new Set(grid.rows.map(r => String(r[config.var1ColId!] ?? '').trim()).filter(Boolean))].sort()
   }, [grid.rows, config.var1ColId])
 
   const groupLevels = useMemo(() => {
     if (!config.var2ColId || !hasGroup) return []
-    return [...new Set(
-      grid.rows.map(r => String(r[config.var2ColId!] ?? '').trim()).filter(Boolean)
-    )].sort()
+    return [...new Set(grid.rows.map(r => String(r[config.var2ColId!] ?? '').trim()).filter(Boolean))].sort()
   }, [grid.rows, config.var2ColId, hasGroup])
 
   const [successLevel, setSuccessLevel] = useState('')
@@ -176,7 +171,7 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
       const diff = a.phat - b.phat
       const z = (diff - h0Val) / seTest
       const p = calcP(z, alternative)
-      return { stat: z, p, pooled, ci: clampCi([diff - zStar * seCi, diff + zStar * seCi]) }
+      return { stat: z, p, ci: clampCi([diff - zStar * seCi, diff + zStar * seCi]) }
     }
 
     const s = oneSampleSummary
@@ -196,7 +191,6 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
     const xs = Array.from({ length: nPts }, (_, i) => -absMax + (2 * absMax * i) / (nPts - 1))
     const ys = xs.map(x => jS.normal.pdf(x, 0, 1))
     const yMax = Math.max(...ys)
-
     function shadeTrace(fromX: number, toX: number) {
       const pts = xs.filter(x => x >= fromX && x <= toX)
       if (pts.length === 0) return null
@@ -212,7 +206,6 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
         showlegend: false,
       }
     }
-
     const shades = []
     const absStat = Math.abs(result.stat)
     if (alternative === 'less') {
@@ -223,28 +216,11 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
       const t1 = shadeTrace(-absMax, -absStat); if (t1) shades.push(t1)
       const t2 = shadeTrace(absStat, absMax); if (t2) shades.push(t2)
     }
-
     return {
       traces: [
         ...shades,
-        {
-          type: 'scatter' as const,
-          mode: 'lines' as const,
-          x: xs,
-          y: ys,
-          line: { color: '#475569', width: 2 },
-          hoverinfo: 'skip' as const,
-          showlegend: false,
-        },
-        {
-          type: 'scatter' as const,
-          mode: 'lines' as const,
-          x: [result.stat, result.stat],
-          y: [0, Math.min(jS.normal.pdf(result.stat, 0, 1) * 1.05, yMax)],
-          line: { color: '#EF4444', width: 2, dash: 'dash' as const },
-          hoverinfo: 'skip' as const,
-          showlegend: false,
-        },
+        { type: 'scatter' as const, mode: 'lines' as const, x: xs, y: ys, line: { color: '#475569', width: 2 }, hoverinfo: 'skip' as const, showlegend: false },
+        { type: 'scatter' as const, mode: 'lines' as const, x: [result.stat, result.stat], y: [0, Math.min(jS.normal.pdf(result.stat, 0, 1) * 1.05, yMax)], line: { color: '#EF4444', width: 2, dash: 'dash' as const }, hoverinfo: 'skip' as const, showlegend: false },
       ],
       absMax,
       yMax,
@@ -257,226 +233,164 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
   const altLabel = hasGroup ? 'p₁ − p₂' : 'p'
 
   return (
-    <div className="h-full flex flex-col gap-3 overflow-y-auto text-sm">
+    <div className="h-full flex flex-col gap-3 overflow-hidden text-sm">
       <div className="flex gap-2 flex-shrink-0">
         <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var1')}>
-          <DropZone
-            id={`${cardId}:var1`}
-            label="Response Variable"
-            hint="categorical only"
-            assignedCol={responseCol}
-            onClear={() => onClearZone('var1')}
-          />
+          <DropZone id={`${cardId}:var1`} label="Response Variable" hint="categorical only" assignedCol={responseCol} onClear={() => onClearZone('var1')} />
         </div>
         <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var2')}>
-          <DropZone
-            id={`${cardId}:var2`}
-            label="2nd Variable or Group By"
-            hint="categorical only"
-            assignedCol={groupCol}
-            onClear={() => onClearZone('var2')}
-          />
+          <DropZone id={`${cardId}:var2`} label="2nd Variable or Group By" hint="categorical only" assignedCol={groupCol} onClear={() => onClearZone('var2')} />
         </div>
       </div>
-
-      {responseLevels.length > 1 && (
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-xs text-[var(--color-muted)] whitespace-nowrap">Success</span>
-          <select
-            value={successLevel}
-            onChange={e => setSuccessLevel(e.target.value)}
-            className="flex-1 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
-          >
-            {responseLevels.map(level => (
-              <option key={level} value={level}>{level}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {hasGroup && groupLevels.length > 2 && (
-        <div className="flex gap-2 flex-shrink-0">
-          {([['Compare', groupA, setGroupA, groupB], ['vs.', groupB, setGroupB, groupA]] as [string, string, (v: string) => void, string][]).map(
-            ([label, value, setter, other]) => (
-              <div key={label} className="flex-1 flex items-center gap-1.5">
-                <span className="text-[10px] font-semibold text-[var(--color-muted)] flex-shrink-0">{label}</span>
-                <select
-                  value={value}
-                  onChange={e => setter(e.target.value)}
-                  className="flex-1 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
-                >
-                  {groupLevels.filter(g => g !== other).map(g => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
-              </div>
-            ),
-          )}
-        </div>
-      )}
-
-      <div className="bg-slate-50 rounded-xl p-3 flex-shrink-0 space-y-2">
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">H₀: {h0Label}</label>
-          <input
-            type="number"
-            min={hasGroup ? -1 : 0}
-            max={1}
-            step={0.01}
-            value={h0}
-            onChange={e => setH0(e.target.value)}
-            className="w-24 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Hₐ:</span>
-          <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
-            {(['less', 'two-sided', 'greater'] as Alternative[]).map((a, i) => (
-              <button
-                key={a}
-                onClick={() => setAlternative(a)}
-                className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${
-                  alternative === a ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
-                }`}
-              >
-                {a === 'less' ? '< (left)' : a === 'two-sided' ? '≠ (two)' : '> (right)'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">α =</span>
-          <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
-            {['0.01', '0.05', '0.10'].map((a, i) => (
-              <button
-                key={a}
-                onClick={() => setAlpha(a)}
-                className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${
-                  alpha === a ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
-                }`}
-              >
-                {a}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {(oneSampleSummary || groupedSummaries.a) && (
-        <div className="flex-shrink-0">
-          <p className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
-            Summary Statistics
-          </p>
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="text-[var(--color-muted)] text-[10px]">
-                <th className="text-left font-semibold pb-1 pr-2">Group</th>
-                <th className="text-right font-semibold pb-1 px-2">n</th>
-                <th className="text-right font-semibold pb-1 px-2">x</th>
-                <th className="text-right font-semibold pb-1 pl-2">p̂</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--color-border)]">
-              {hasGroup ? (
-                <>
-                  {groupedSummaries.a && <PropSummaryRow label={groupA || 'Group A'} s={groupedSummaries.a} />}
-                  {groupedSummaries.b && <PropSummaryRow label={groupB || 'Group B'} s={groupedSummaries.b} />}
-                </>
-              ) : (
-                oneSampleSummary && <PropSummaryRow label={successLevel || 'Success'} s={oneSampleSummary} />
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {chartTraces && result && (
-        <div className="flex-shrink-0 rounded-xl overflow-hidden border border-[var(--color-border)]">
-          <PlotlyChart
-            data={chartTraces.traces as never}
-            layout={{
-              xaxis: {
-                range: [-chartTraces.absMax, chartTraces.absMax],
-                title: { text: 'z', font: { size: 11 } },
-                zeroline: false,
-                showgrid: false,
-              },
-              yaxis: { visible: false, range: [0, chartTraces.yMax * 1.12] },
-              margin: { t: 8, r: 8, b: 32, l: 8 },
-              height: 160,
-              showlegend: false,
-              annotations: [{
-                x: result.stat,
-                y: chartTraces.yMax * 1.08,
-                text: `z = ${fmt(result.stat, 3)}`,
-                showarrow: false,
-                font: { size: 11, color: '#EF4444' },
-                xanchor: result.stat >= 0 ? 'right' : 'left',
-              }],
-            }}
-          />
-        </div>
-      )}
 
       {!responseCol ? (
-        <div className="flex-1 flex items-center justify-center text-center">
+        <div className="flex-1 flex items-center justify-center text-center min-h-0">
           <div>
             <p className="text-3xl opacity-20 mb-2">p̂</p>
             <p className="text-xs text-[var(--color-muted)]">Drop a categorical response variable to begin</p>
           </div>
         </div>
-      ) : result ? (
-        <div className="space-y-2.5 flex-shrink-0">
-          <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 space-y-1">
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-[var(--color-muted)] w-6">H₀</span>
-              <span className="text-xs font-mono font-medium">{h0Label} {h0}</span>
+      ) : (
+        <div className="grid grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-3 flex-1 min-h-0">
+          <div className="min-h-0 flex flex-col gap-3">
+            {responseLevels.length > 1 && (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-xs text-[var(--color-muted)] whitespace-nowrap">Success</span>
+                <select value={successLevel} onChange={e => setSuccessLevel(e.target.value)} className="flex-1 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]">
+                  {responseLevels.map(level => <option key={level} value={level}>{level}</option>)}
+                </select>
+              </div>
+            )}
+
+            {hasGroup && groupLevels.length > 2 && (
+              <div className="flex gap-2 flex-shrink-0">
+                {([['Compare', groupA, setGroupA, groupB], ['vs.', groupB, setGroupB, groupA]] as [string, string, (v: string) => void, string][]).map(
+                  ([label, value, setter, other]) => (
+                    <div key={label} className="flex-1 flex items-center gap-1.5">
+                      <span className="text-[10px] font-semibold text-[var(--color-muted)] flex-shrink-0">{label}</span>
+                      <select value={value} onChange={e => setter(e.target.value)} className="flex-1 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]">
+                        {groupLevels.filter(g => g !== other).map(g => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                    </div>
+                  ),
+                )}
+              </div>
+            )}
+
+            <div className="bg-slate-50 rounded-xl p-3 flex-shrink-0 space-y-2">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">H₀: {h0Label}</label>
+                <input type="number" min={hasGroup ? -1 : 0} max={1} step={0.01} value={h0} onChange={e => setH0(e.target.value)} className="w-24 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Hₐ:</span>
+                <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+                  {(['less', 'two-sided', 'greater'] as Alternative[]).map((a, i) => (
+                    <button key={a} onClick={() => setAlternative(a)} className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alternative === a ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}>
+                      {a === 'less' ? '< (left)' : a === 'two-sided' ? '≠ (two)' : '> (right)'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">α =</span>
+                <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+                  {['0.01', '0.05', '0.10'].map((a, i) => (
+                    <button key={a} onClick={() => setAlpha(a)} className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alpha === a ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}>{a}</button>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-[var(--color-muted)] w-6">Hₐ</span>
-              <span className="text-xs font-mono font-medium">{altLabel} {altSymbol} {h0}</span>
-            </div>
+
+            {(oneSampleSummary || groupedSummaries.a) && (
+              <div className="flex-shrink-0">
+                <p className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">Summary Statistics</p>
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="text-[var(--color-muted)] text-[10px]">
+                      <th className="text-left font-semibold pb-1 pr-2">Group</th>
+                      <th className="text-right font-semibold pb-1 px-2">n</th>
+                      <th className="text-right font-semibold pb-1 px-2">x</th>
+                      <th className="text-right font-semibold pb-1 pl-2">p̂</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--color-border)]">
+                    {hasGroup ? (
+                      <>
+                        {groupedSummaries.a && <PropSummaryRow label={groupA || 'Group A'} s={groupedSummaries.a} />}
+                        {groupedSummaries.b && <PropSummaryRow label={groupB || 'Group B'} s={groupedSummaries.b} />}
+                      </>
+                    ) : oneSampleSummary && <PropSummaryRow label={successLevel || 'Success'} s={oneSampleSummary} />}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {!result && (
+              <p className="text-xs text-[var(--color-muted)] italic flex-shrink-0">
+                {!successLevel
+                  ? 'Choose a success level.'
+                  : hasGroup && (!groupA || !groupB)
+                    ? 'Assign a grouping variable with at least 2 distinct values.'
+                    : hasGroup && (!groupedSummaries.a || !groupedSummaries.b)
+                      ? 'Need data in both groups.'
+                      : 'Need non-empty categorical data to compute results.'}
+              </p>
+            )}
           </div>
 
-          <div className="grid gap-2 grid-cols-2">
-            <StatBox label="z-statistic" value={fmt(result.stat, 4)} />
-            <StatBox label="p-value" value={fmtP(result.p)} highlight={rejected ? 'reject' : 'keep'} />
-          </div>
+          <div className="min-h-0 flex flex-col gap-3">
+            {chartTraces && result && (
+              <div className="flex-shrink-0 rounded-xl overflow-hidden border border-[var(--color-border)]">
+                <PlotlyChart
+                  data={chartTraces.traces as never}
+                  layout={{
+                    xaxis: { range: [-chartTraces.absMax, chartTraces.absMax], title: { text: 'z', font: { size: 11 } }, zeroline: false, showgrid: false },
+                    yaxis: { visible: false, range: [0, chartTraces.yMax * 1.12] },
+                    margin: { t: 8, r: 8, b: 32, l: 8 },
+                    height: 140,
+                    showlegend: false,
+                    annotations: [{ x: result.stat, y: chartTraces.yMax * 1.08, text: `z = ${fmt(result.stat, 3)}`, showarrow: false, font: { size: 11, color: '#EF4444' }, xanchor: result.stat >= 0 ? 'right' : 'left' }],
+                  }}
+                />
+              </div>
+            )}
 
-          <div className="rounded-xl border border-[var(--color-border)] bg-white p-3">
-            <p className="text-[10px] text-[var(--color-muted)] mb-1">
-              {Math.round((1 - alphaVal) * 100)}% Confidence Interval
-            </p>
-            <p className="text-xs font-mono font-medium">
-              ({fmt(result.ci[0])}, {fmt(result.ci[1])})
-            </p>
-          </div>
+            {result && (
+              <div className="space-y-2.5 flex-shrink-0">
+                <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 space-y-1">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-[var(--color-muted)] w-6">H₀</span>
+                    <span className="text-xs font-mono font-medium">{h0Label} {h0}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-[var(--color-muted)] w-6">Hₐ</span>
+                    <span className="text-xs font-mono font-medium">{altLabel} {altSymbol} {h0}</span>
+                  </div>
+                </div>
 
-          <div className={`rounded-xl p-3 border ${rejected ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
-            <p className={`text-xs font-semibold mb-1 ${rejected ? 'text-red-700' : 'text-green-700'}`}>
-              {rejected ? 'Reject H₀' : 'Fail to Reject H₀'}
-            </p>
-            <p className="text-xs text-[var(--color-muted)] leading-relaxed">
-              {rejected
-                ? `At α = ${alpha}, there is sufficient evidence to conclude ${altLabel} ${altSymbol} ${h0}.`
-                : `At α = ${alpha}, there is not sufficient evidence to conclude ${altLabel} ${altSymbol} ${h0}.`
-              }
-            </p>
+                <div className="grid gap-2 grid-cols-2">
+                  <StatBox label="z-statistic" value={fmt(result.stat, 4)} />
+                  <StatBox label="p-value" value={fmtP(result.p)} highlight={rejected ? 'reject' : 'keep'} />
+                </div>
+
+                <div className="rounded-xl border border-[var(--color-border)] bg-white p-3">
+                  <p className="text-[10px] text-[var(--color-muted)] mb-1">{Math.round((1 - alphaVal) * 100)}% Confidence Interval</p>
+                  <p className="text-xs font-mono font-medium">({fmt(result.ci[0])}, {fmt(result.ci[1])})</p>
+                </div>
+
+                <div className={`rounded-xl p-3 border ${rejected ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                  <p className={`text-xs font-semibold mb-1 ${rejected ? 'text-red-700' : 'text-green-700'}`}>{rejected ? 'Reject H₀' : 'Fail to Reject H₀'}</p>
+                  <p className="text-xs text-[var(--color-muted)] leading-relaxed">
+                    {rejected
+                      ? `At α = ${alpha}, there is sufficient evidence to conclude ${altLabel} ${altSymbol} ${h0}.`
+                      : `At α = ${alpha}, there is not sufficient evidence to conclude ${altLabel} ${altSymbol} ${h0}.`}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      ) : responseCol && (
-        <p className="text-xs text-[var(--color-muted)] italic flex-shrink-0">
-          {!successLevel
-            ? 'Choose a success level.'
-            : hasGroup && (!groupA || !groupB)
-              ? 'Assign a grouping variable with at least 2 distinct values.'
-              : hasGroup && (!groupedSummaries.a || !groupedSummaries.b)
-                ? 'Need data in both groups.'
-                : 'Need non-empty categorical data to compute results.'
-          }
-        </p>
       )}
     </div>
   )
@@ -493,23 +407,9 @@ function PropSummaryRow({ label, s }: { label: string; s: PropSummary }) {
   )
 }
 
-function StatBox({
-  label,
-  value,
-  highlight,
-}: {
-  label: string
-  value: string
-  highlight?: 'reject' | 'keep'
-}) {
+function StatBox({ label, value, highlight }: { label: string; value: string; highlight?: 'reject' | 'keep' }) {
   return (
-    <div className={`rounded-xl border p-3 ${
-      highlight === 'reject'
-        ? 'border-red-200 bg-red-50'
-        : highlight === 'keep'
-          ? 'border-green-200 bg-green-50'
-          : 'border-[var(--color-border)] bg-white'
-    }`}>
+    <div className={`rounded-xl border p-3 ${highlight === 'reject' ? 'border-red-200 bg-red-50' : highlight === 'keep' ? 'border-green-200 bg-green-50' : 'border-[var(--color-border)] bg-white'}`}>
       <p className="text-[10px] text-[var(--color-muted)] uppercase tracking-wide mb-1">{label}</p>
       <p className="text-base font-semibold text-[var(--color-text)]">{value}</p>
     </div>

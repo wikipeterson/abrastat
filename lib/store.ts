@@ -351,8 +351,8 @@ export const useStore = create<AbraStatStore>((set) => ({
         } as SimResultsCardConfig,
         x: position.x,
         y: position.y,
-        width: 420,
-        height: 460,
+        width: 500,
+        height: 560,
       }],
     }))
     return id

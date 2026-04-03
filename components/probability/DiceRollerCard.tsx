@@ -106,8 +106,7 @@ interface DiceRollerCardProps {
 export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardProps) {
   const [tray, setTray]               = useState<DieInTray[]>([])
   const [finalResults, setFinalResults] = useState<Record<string, number>>({})
-  const [showTuning, setShowTuning] = useState(false)
-  const [tuning, setTuning] = useState<DiceTuning>(DEFAULT_DICE_TUNING)
+  const [tuning] = useState<DiceTuning>(DEFAULT_DICE_TUNING)
   const [fastRollCount, setFastRollCount] = useState('100')
   const canvasRef = useRef<D6CanvasHandle>(null)
 
@@ -252,148 +251,79 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
     setFinalResults(prev => ({ ...prev, [id]: value }))
   }
 
-  function setTune<K extends keyof DiceTuning>(key: K, value: DiceTuning[K]) {
-    setTuning(prev => ({ ...prev, [key]: value }))
-  }
-
   const inner = (
     <div className="flex flex-col h-full">
 
       {/* ── Palette ── */}
-      <div className="flex-shrink-0 px-3 pt-3 pb-3 border-b border-[var(--color-border)]">
-        <div className="flex items-center gap-2">
-          <div className="flex flex-wrap gap-2 flex-1">
-          {DICE_TYPES.map(sides => (
-            <PaletteDie
-              key={sides}
-              sides={sides}
-              count={dieCounts[sides]}
-              onClick={() => addDie(sides)}
-            />
-          ))}
+      <div className="flex-shrink-0 px-3 pt-3 pb-3 border-b border-[var(--color-border)] space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3 flex-1">
+            {DICE_TYPES.map(sides => (
+              <PaletteDie
+                key={sides}
+                sides={sides}
+                count={dieCounts[sides]}
+                onClick={() => addDie(sides)}
+              />
+            ))}
           </div>
-          <button
-            onClick={rollAll}
-            disabled={tray.length === 0}
-            className="rounded-xl bg-[var(--color-accent)] text-white font-semibold px-4 py-2.5
-                       disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-105 transition"
-          >
-            Roll
-          </button>
-          <button
-            onClick={clearAll}
-            disabled={tray.length === 0}
-            className="px-4 py-2.5 rounded-xl border border-[var(--color-border)] text-sm
-                       text-[var(--color-muted)] hover:text-red-500 hover:border-red-200 transition
-                       disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Clear
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={rollAll}
+              disabled={tray.length === 0}
+              className="rounded-xl bg-[var(--color-accent)] text-white font-semibold px-5 py-2.5
+                         disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-105 transition"
+            >
+              Roll
+            </button>
+            <button
+              onClick={clearAll}
+              disabled={tray.length === 0}
+              className="px-4 py-2.5 rounded-xl border border-[var(--color-border)] text-sm
+                         text-[var(--color-muted)] hover:text-red-500 hover:border-red-200 transition
+                         disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Clear
+            </button>
+          </div>
         </div>
 
-        <div className="mt-2 flex items-center gap-2">
-          <span className="text-[11px] font-medium text-[var(--color-muted)] whitespace-nowrap">
-            Roll fast
-          </span>
-          <input
-            type="number"
-            min={1}
-            max={10000}
-            step={1}
-            value={fastRollCount}
-            onChange={e => setFastRollCount(e.target.value)}
-            className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"
-          />
-          <button
-            onClick={fastRollMany}
-            disabled={tray.length === 0}
-            className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Roll X Times
-          </button>
-          {!hasLinkedCard && (
-            <span className="text-[10px] text-[var(--color-muted)]">
-              Link results to record batches.
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)]/60 pt-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-medium text-[var(--color-muted)] whitespace-nowrap">
+              Fast roll
             </span>
-          )}
-        </div>
+            <input
+              type="number"
+              min={1}
+              max={10000}
+              step={1}
+              value={fastRollCount}
+              onChange={e => setFastRollCount(e.target.value)}
+              className="w-24 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"
+            />
+            <button
+              onClick={fastRollMany}
+              disabled={tray.length === 0}
+              className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Roll X Times
+            </button>
+          </div>
 
-        {/* ── Tracking controls ── */}
-        {cardId && (
-          <div className="mt-2 pt-2 border-t border-[var(--color-border)]/60 flex items-center gap-2">
+          {cardId && (
             <button
               onClick={handleTrackResults}
-              className={`flex-1 text-[10px] rounded-lg py-1 px-2 transition-colors
-                          border ${
+              className={`rounded-lg py-2 px-3 text-sm transition-colors border ${
                 hasLinkedCard
                   ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
                   : 'border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
               }`}
             >
-              {hasLinkedCard ? '📊 Results linked' : '📊 Track results'}
+              {hasLinkedCard ? '📊 Results linked' : '📊 Link results'}
             </button>
-            <button
-              onClick={() => setShowTuning(v => !v)}
-              className={`text-[10px] rounded-lg py-1 px-2 border transition-colors ${
-                showTuning
-                  ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
-                  : 'border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
-              }`}
-            >
-              Tune
-            </button>
-          </div>
-        )}
-
-        {showTuning && (
-          <div className="mt-2 rounded-xl border border-[var(--color-border)] bg-slate-50/80 p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-                Dice Tuning
-              </span>
-              <button
-                onClick={() => setTuning(DEFAULT_DICE_TUNING)}
-                className="text-[10px] text-[var(--color-muted)] hover:text-[var(--color-text)]"
-              >
-                Reset
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">
-              <label className="flex flex-col gap-1">
-                <span className="text-[var(--color-muted)]">Launch speed {tuning.launchSpeed.toFixed(1)}</span>
-                <input type="range" min="10" max="45" step="0.5" value={tuning.launchSpeed} onChange={e => setTune('launchSpeed', Number(e.target.value))} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-[var(--color-muted)]">Launch spread {tuning.launchSpread.toFixed(1)}</span>
-                <input type="range" min="0" max="16" step="0.2" value={tuning.launchSpread} onChange={e => setTune('launchSpread', Number(e.target.value))} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-[var(--color-muted)]">Spin {tuning.launchSpin.toFixed(0)}</span>
-                <input type="range" min="20" max="120" step="1" value={tuning.launchSpin} onChange={e => setTune('launchSpin', Number(e.target.value))} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-[var(--color-muted)]">Settle velocity {tuning.settleVelocity.toFixed(2)}</span>
-                <input type="range" min="0.05" max="1" step="0.01" value={tuning.settleVelocity} onChange={e => setTune('settleVelocity', Number(e.target.value))} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-[var(--color-muted)]">Settle angular {tuning.settleAngular.toFixed(2)}</span>
-                <input type="range" min="0.05" max="1" step="0.01" value={tuning.settleAngular} onChange={e => setTune('settleAngular', Number(e.target.value))} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-[var(--color-muted)]">Hold frames {tuning.settleHoldFrames}</span>
-                <input type="range" min="1" max="20" step="1" value={tuning.settleHoldFrames} onChange={e => setTune('settleHoldFrames', Number(e.target.value))} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-[var(--color-muted)]">Lineup delay {tuning.lineupDelayMs}ms</span>
-                <input type="range" min="0" max="800" step="10" value={tuning.lineupDelayMs} onChange={e => setTune('lineupDelayMs', Number(e.target.value))} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-[var(--color-muted)]">Lineup duration {tuning.lineupDurationMs}ms</span>
-                <input type="range" min="120" max="1000" step="10" value={tuning.lineupDurationMs} onChange={e => setTune('lineupDurationMs', Number(e.target.value))} />
-              </label>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* ── Physics tray — fills remaining space ── */}

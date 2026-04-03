@@ -223,7 +223,7 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
       </div>
 
       {/* ── Dot plot ── */}
-      <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-4">
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-end p-4 pt-8">
         <DotPlot
           values={values}
           trackedMode={trackedMode}

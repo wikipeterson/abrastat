@@ -370,14 +370,21 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       if (zone === 'group') newConfig = { ...cfg, groupColId: colId }
     }
     if (cfg.type === 'regression') {
+      const droppedCol = grid.columns.find(c => c.id === colId)
+      if (!droppedCol) return
+      if ((targetZone === 'x' || targetZone === 'y') && droppedCol.type !== 'numeric') return
+      if (targetZone === 'group' && droppedCol.type !== 'categorical') return
       let c = { ...cfg }
       const prevX = c.xColId
       const prevY = c.yColId
+      const prevGroup = c.groupColId
       if (targetZone === 'x') c = { ...c, xColId: colId }
       if (targetZone === 'y') c = { ...c, yColId: colId }
+      if (targetZone === 'group') c = { ...c, groupColId: colId }
       if (sourceZone && sourceZone !== targetZone) {
-        if (sourceZone === 'x') c = { ...c, xColId: targetZone === 'y' ? prevY : null }
-        if (sourceZone === 'y') c = { ...c, yColId: targetZone === 'x' ? prevX : null }
+        if (sourceZone === 'x') c = { ...c, xColId: targetZone === 'y' ? prevY : targetZone === 'group' ? prevGroup : null }
+        if (sourceZone === 'y') c = { ...c, yColId: targetZone === 'x' ? prevX : targetZone === 'group' ? prevGroup : null }
+        if (sourceZone === 'group') c = { ...c, groupColId: targetZone === 'x' ? prevX : targetZone === 'y' ? prevY : null }
       }
       newConfig = c
     }
@@ -429,7 +436,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
         // Zone left-to-right order per card type; used to infer the arrival direction
         const ZONE_ORDER: Record<string, string[]> = {
           graph:      ['x', 'y', 'group'],
-          regression: ['x', 'y'],
+          regression: ['x', 'y', 'group'],
           means:      ['var1', 'var2'],
           proportions:['var1', 'var2'],
           table:      ['rows', 'cols'],
@@ -470,6 +477,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
     if (cfg.type === 'regression') {
       if (zone === 'x') newConfig = { ...cfg, xColId: null }
       if (zone === 'y') newConfig = { ...cfg, yColId: null }
+      if (zone === 'group') newConfig = { ...cfg, groupColId: null }
     }
     if (cfg.type === 'table') {
       if (zone === 'rows') newConfig = { ...cfg, rowsColId: null }

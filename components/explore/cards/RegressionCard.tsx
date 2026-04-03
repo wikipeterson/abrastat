@@ -5,13 +5,14 @@ import type { Data } from 'plotly.js'
 import { useStore } from '@/lib/store'
 import { linearRegression } from '@/lib/statistics'
 import { getNumericPairs } from '@/lib/gridHelpers'
+import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { DropZone } from '../DropZone'
 import { PlotlyChart } from '@/components/charts/PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 interface RegressionCardProps {
   cardId: string
-  config: { xColId: string | null; yColId: string | null }
+  config: { xColId: string | null; yColId: string | null; groupColId: string | null }
   onClearZone: (zone: string) => void
   onRemove: () => void
   hideHeader?: boolean
@@ -21,20 +22,39 @@ function fmt(n: number): string {
   return parseFloat(n.toPrecision(4)).toLocaleString()
 }
 
+type RegressionSummary = {
+  label: string
+  xs: number[]
+  ys: number[]
+  slope: number
+  intercept: number
+  interceptSign: string
+  r: number
+  r2: number
+  residuals: number[]
+  rmse: number
+  n: number
+  color: string
+}
+
 export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHeader }: RegressionCardProps) {
   const { grid } = useStore()
 
-  function handleNativeDrop(zone: 'x' | 'y') {
+  function handleNativeDrop(zone: 'x' | 'y' | 'group') {
     return (e: React.DragEvent) => {
       const colId = e.dataTransfer.getData('text/plain')
       if (!colId) return
       e.preventDefault()
       const current = useStore.getState().exploreCards.find(c => c.id === cardId)
       if (!current || current.config.type !== 'regression') return
+      const droppedCol = grid.columns.find(c => c.id === colId)
+      if (!droppedCol) return
+      if ((zone === 'x' || zone === 'y') && droppedCol.type !== 'numeric') return
+      if (zone === 'group' && droppedCol.type !== 'categorical') return
       useStore.getState().updateExploreCard(cardId, {
         config: {
           ...current.config,
-          ...(zone === 'x' ? { xColId: colId } : { yColId: colId }),
+          ...(zone === 'x' ? { xColId: colId } : zone === 'y' ? { yColId: colId } : { groupColId: colId }),
         },
       })
     }
@@ -49,6 +69,7 @@ export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHead
 
   const xCol = config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
   const yCol = config.yColId ? (grid.columns.find(c => c.id === config.yColId) ?? null) : null
+  const groupCol = config.groupColId ? (grid.columns.find(c => c.id === config.groupColId) ?? null) : null
 
   const paired = useMemo(() => {
     if (!config.xColId || !config.yColId) return { xs: [] as number[], ys: [] as number[] }
@@ -56,34 +77,88 @@ export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHead
     return { xs: pairs.map(p => p[0]), ys: pairs.map(p => p[1]) }
   }, [grid, config.xColId, config.yColId])
 
-  const stats = useMemo(() => {
-    if (!xCol || !yCol || xCol.type !== 'numeric' || yCol.type !== 'numeric' || paired.xs.length < 2) {
-      return null
+  const regressions = useMemo<RegressionSummary[]>(() => {
+    if (!xCol || !yCol || xCol.type !== 'numeric' || yCol.type !== 'numeric') return []
+
+    if (!groupCol) {
+      if (paired.xs.length < 2) return []
+      const { slope, intercept, r } = linearRegression(paired.xs, paired.ys)
+      const fitted = paired.xs.map(x => slope * x + intercept)
+      const residuals = paired.ys.map((y, i) => y - fitted[i])
+      const ssRes = residuals.reduce((sum, r0) => sum + r0 ** 2, 0)
+      return [{
+        label: 'Overall',
+        xs: paired.xs,
+        ys: paired.ys,
+        slope,
+        intercept,
+        interceptSign: intercept >= 0 ? '+' : '−',
+        r,
+        r2: r * r,
+        residuals,
+        rmse: Math.sqrt(ssRes / paired.xs.length),
+        n: paired.xs.length,
+        color: ABRA_COLORS[0],
+      }]
     }
 
-    const { slope, intercept, r } = linearRegression(paired.xs, paired.ys)
-    const fitted = paired.xs.map(x => slope * x + intercept)
-    const residuals = paired.ys.map((y, i) => y - fitted[i])
-    const ssRes = residuals.reduce((sum, r0) => sum + r0 ** 2, 0)
-    const rmse = Math.sqrt(ssRes / paired.xs.length)
-    const r2 = r * r
-    const interceptSign = intercept >= 0 ? '+' : '−'
+    if (groupCol.type !== 'categorical' || !config.xColId || !config.yColId || !config.groupColId) return []
 
-    return { slope, intercept, interceptSign, r, r2, residuals, rmse, n: paired.xs.length }
-  }, [xCol, yCol, paired])
+    const groups = new Map<string, { xs: number[]; ys: number[] }>()
+    for (const row of grid.rows) {
+      const rawX = row[config.xColId]
+      const rawY = row[config.yColId]
+      const rawGroup = row[config.groupColId]
+      if (rawX === '' || rawX == null || rawY === '' || rawY == null || rawGroup === '' || rawGroup == null) continue
+      const x = Number(rawX)
+      const y = Number(rawY)
+      const label = String(rawGroup).trim()
+      if (!isFinite(x) || !isFinite(y) || !label) continue
+      const bucket = groups.get(label) ?? { xs: [], ys: [] }
+      bucket.xs.push(x)
+      bucket.ys.push(y)
+      groups.set(label, bucket)
+    }
+
+    return [...groups.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .filter(([, values]) => values.xs.length >= 2)
+      .map(([label, values], index) => {
+        const { slope, intercept, r } = linearRegression(values.xs, values.ys)
+        const fitted = values.xs.map(x => slope * x + intercept)
+        const residuals = values.ys.map((y, i) => y - fitted[i])
+        const ssRes = residuals.reduce((sum, r0) => sum + r0 ** 2, 0)
+        return {
+          label,
+          xs: values.xs,
+          ys: values.ys,
+          slope,
+          intercept,
+          interceptSign: intercept >= 0 ? '+' : '−',
+          r,
+          r2: r * r,
+          residuals,
+          rmse: Math.sqrt(ssRes / values.xs.length),
+          n: values.xs.length,
+          color: ABRA_COLORS[index % ABRA_COLORS.length],
+        }
+      })
+  }, [config.groupColId, config.xColId, config.yColId, grid.rows, groupCol, paired.xs, paired.ys, xCol, yCol])
+
+  const primary = regressions[0] ?? null
 
   const residualTrace = useMemo<Data[]>(() => {
-    if (!stats) return []
-    return [{
+    if (!regressions.length) return []
+    return regressions.map(regression => ({
       type: 'scatter',
       mode: 'markers',
-      name: 'Residuals',
-      x: paired.xs,
-      y: stats.residuals,
-      marker: { color: '#14B8A6', size: 7, opacity: 0.9, line: { width: 0 } },
-      hovertemplate: `${xCol?.name}: %{x}<br>Residual: %{y}<extra></extra>`,
-    }]
-  }, [stats, paired.xs, xCol?.name])
+      name: groupCol ? regression.label : 'Residuals',
+      x: regression.xs,
+      y: regression.residuals,
+      marker: { color: regression.color, size: 7, opacity: 0.9, line: { width: 0 } },
+      hovertemplate: `${xCol?.name}: %{x}<br>Residual: %{y}${groupCol ? `<extra>${regression.label}</extra>` : '<extra></extra>'}`,
+    }))
+  }, [groupCol, regressions, xCol?.name])
 
   const content = (() => {
     if (!xCol || !yCol) {
@@ -92,30 +167,64 @@ export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHead
     if (xCol.type !== 'numeric' || yCol.type !== 'numeric') {
       return <EmptyState icon="📉" title="Numeric variables only" description="Regression requires both Explanatory and Response variables to be numeric." />
     }
-    if (!stats) {
+    if (groupCol && groupCol.type !== 'categorical') {
+      return <EmptyState icon="📉" title="Categorical groups only" description="The optional Group variable must be categorical to run separate regressions." />
+    }
+    if (!regressions.length) {
       return <EmptyState icon="📉" title="Not enough paired data" description="Need at least two rows with valid values in both variables." />
     }
 
     return (
       <div className="space-y-4">
         <div className="bg-[var(--color-accent-light)] rounded-xl px-4 py-3">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-1">Regression Equation</div>
-          <div className="font-mono text-lg font-semibold text-[var(--color-text)]">
-            {yCol.name}&#770; = {fmt(stats.slope)}{xCol.name} {stats.interceptSign} {fmt(Math.abs(stats.intercept))}
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-1">
+            {groupCol ? 'Separate Regression Equations' : 'Regression Equation'}
           </div>
+          {groupCol ? (
+            <div className="space-y-2">
+              {regressions.map(regression => (
+                <div key={regression.label} className="flex items-center justify-between gap-3 text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: regression.color }} />
+                    <span className="font-semibold text-[var(--color-text)] truncate">{regression.label}</span>
+                  </div>
+                  <div className="font-mono text-[var(--color-text)] text-right">
+                    {yCol.name}&#770; = {fmt(regression.slope)}{xCol.name} {regression.interceptSign} {fmt(Math.abs(regression.intercept))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : primary ? (
+            <div className="font-mono text-lg font-semibold text-[var(--color-text)]">
+              {yCol.name}&#770; = {fmt(primary.slope)}{xCol.name} {primary.interceptSign} {fmt(Math.abs(primary.intercept))}
+            </div>
+          ) : null}
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-          {[
-            { label: 'r', value: stats.r.toFixed(4), sub: 'correlation' },
-            { label: 'r²', value: stats.r2.toFixed(4), sub: `${(stats.r2 * 100).toFixed(1)}% explained` },
-            { label: 'Slope', value: fmt(stats.slope), sub: `per +1 ${xCol.name}` },
-            { label: 'Intercept', value: fmt(stats.intercept), sub: `when ${xCol.name} = 0` },
-            { label: 'n', value: String(stats.n), sub: 'paired rows' },
-            { label: 'RMSE', value: fmt(stats.rmse), sub: 'typical prediction error' },
-          ].map(item => (
+        <div className={`grid gap-3 ${groupCol ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-2 lg:grid-cols-3'}`}>
+          {(groupCol ? regressions.map(regression => ({
+            key: regression.label,
+            label: regression.label,
+            value: `r = ${regression.r.toFixed(4)}`,
+            sub: `r² = ${regression.r2.toFixed(4)} • n = ${regression.n} • RMSE = ${fmt(regression.rmse)}`,
+            color: regression.color,
+          })) : primary ? [
+            { key: 'r', label: 'r', value: primary.r.toFixed(4), sub: 'correlation' },
+            { key: 'r2', label: 'r²', value: primary.r2.toFixed(4), sub: `${(primary.r2 * 100).toFixed(1)}% explained` },
+            { key: 'slope', label: 'Slope', value: fmt(primary.slope), sub: `per +1 ${xCol.name}` },
+            { key: 'intercept', label: 'Intercept', value: fmt(primary.intercept), sub: `when ${xCol.name} = 0` },
+            { key: 'n', label: 'n', value: String(primary.n), sub: 'paired rows' },
+            { key: 'rmse', label: 'RMSE', value: fmt(primary.rmse), sub: 'typical prediction error' },
+          ] : []).map(item => (
             <div key={item.label} className="bg-slate-50 rounded-xl p-3 text-center">
-              <div className="text-xs text-[var(--color-muted)] mb-0.5">{item.label}</div>
+              {groupCol && 'color' in item ? (
+                <div className="flex items-center justify-center gap-2 text-xs text-[var(--color-muted)] mb-0.5">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span>{item.label}</span>
+                </div>
+              ) : (
+                <div className="text-xs text-[var(--color-muted)] mb-0.5">{item.label}</div>
+              )}
               <div className="font-mono font-semibold text-[var(--color-text)] text-base">{item.value}</div>
               <div className="text-[10px] text-[var(--color-muted)] mt-0.5 leading-tight">{item.sub}</div>
             </div>
@@ -170,6 +279,16 @@ export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHead
             onClear={() => onClearZone('y')}
           />
         </div>
+      </div>
+
+      <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('group')}>
+        <DropZone
+          id={`${cardId}:group`}
+          label="Group Variable (Optional)"
+          hint="categorical variable"
+          assignedCol={groupCol}
+          onClear={() => onClearZone('group')}
+        />
       </div>
 
       <div className="flex-1 min-h-0 overflow-auto">

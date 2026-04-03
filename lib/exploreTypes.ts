@@ -44,6 +44,7 @@ export interface RegressionCardConfig {
   type: 'regression'
   xColId: string | null
   yColId: string | null
+  groupColId: string | null
 }
 
 // ─── Distribution pre-fill context ───────────────────────────────────────────

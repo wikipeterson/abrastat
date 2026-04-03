@@ -301,7 +301,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'graph'        ? { type: 'graph',       xColId: null, yColId: null, groupColId: null } :
       type === 'summary'      ? { type: 'summary',     variableColIds: [], groupColId: null } :
       type === 'table'        ? { type: 'table',       rowsColId: null, colsColId: null } :
-      type === 'regression'   ? { type: 'regression',  xColId: null, yColId: null } :
+      type === 'regression'   ? { type: 'regression',  xColId: null, yColId: null, groupColId: null } :
       type === 'distribution' ? { type: 'distribution', preFill: scanChiSquareContext(state.exploreCards, state.grid) } :
       type === 'generator'    ? { type: 'generator' } :
       type === 'proportions'  ? { type: 'proportions', var1ColId: null, var2ColId: null } :
@@ -336,7 +336,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       if (cfg.type === 'graph')      return { ...card, config: { ...cfg, xColId: nil(cfg.xColId), yColId: nil(cfg.yColId), groupColId: nil(cfg.groupColId) } }
       if (cfg.type === 'summary')    return { ...card, config: { ...cfg, variableColIds: cfg.variableColIds.filter(id => validIds.has(id)), groupColId: nil(cfg.groupColId) } }
       if (cfg.type === 'table')      return { ...card, config: { ...cfg, rowsColId: nil(cfg.rowsColId), colsColId: nil(cfg.colsColId) } }
-      if (cfg.type === 'regression') return { ...card, config: { ...cfg, xColId: nil(cfg.xColId), yColId: nil(cfg.yColId) } }
+      if (cfg.type === 'regression') return { ...card, config: { ...cfg, xColId: nil(cfg.xColId), yColId: nil(cfg.yColId), groupColId: nil(cfg.groupColId) } }
       if (cfg.type === 'means')      return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }
       if (cfg.type === 'proportions') return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }
       return card

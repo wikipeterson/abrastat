@@ -307,7 +307,7 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
               disabled={tray.length === 0}
               className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Roll X Times
+              Roll {Math.max(1, Math.min(10000, Math.floor(Number(fastRollCount) || 0)))} Times
             </button>
           </div>
 

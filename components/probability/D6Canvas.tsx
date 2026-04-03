@@ -791,10 +791,11 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
     function startLineup(now: number) {
       if (lineupRef.current.active || dieEntriesRef.current.length === 0) return
 
-      const perRow = Math.max(1, Math.floor((TRAY_W - 1.2) / 1.05))
+      const gapForSides = (sides: number) => (sides === 10 || sides === 100 ? DIE_HALF * 2 + 0.42 : DIE_HALF * 2 + 0.22)
+      const maxGapX = DIE_HALF * 2 + 0.42
+      const perRow = Math.max(1, Math.floor((TRAY_W - 1.2) / maxGapX))
       const baseX = -TRAY_W / 2 + DIE_HALF + 0.5
       const baseZ = TRAY_D / 2 - DIE_HALF - 0.45
-      const gapX = DIE_HALF * 2 + 0.22
       const gapZ = DIE_HALF * 2 + 0.24
 
       dieEntriesRef.current.forEach((entry, index) => {
@@ -807,9 +808,11 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
         }
         const col = index % perRow
         const row = Math.floor(index / perRow)
+        const targetX = baseX + dieEntriesRef.current
+          .slice(0, col)
+          .reduce((sum, priorEntry) => sum + gapForSides(priorEntry.sides), 0)
         entry.lineupStartPos.copy(entry.mesh.position)
         entry.lineupStartQuat.copy(entry.mesh.quaternion)
-        const targetX = baseX + col * gapX
         const targetZ = baseZ - row * gapZ
         // d6: always show result face up (identity = face-1 up)
         // d10: compute upright orientation from faceUp
@@ -1127,6 +1130,7 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
         }
 
         if (!lineupRef.current.active && !lineupRef.current.completed && dieEntriesRef.current.length > 0 && !disableLineupRef.current) {
+          const hasRolledResult = dieEntriesRef.current.some(entry => entry.resultValue !== null)
           const allReadyForLineup = dieEntriesRef.current.every(entry => {
             if (entry.settled) return true
             const body = entry.body
@@ -1137,7 +1141,7 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
             )
           })
 
-          if (allReadyForLineup) {
+          if (hasRolledResult && allReadyForLineup) {
             if (lineupRef.current.readyAt === null) {
               lineupRef.current.readyAt = now
             }
@@ -1303,7 +1307,7 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
         const slotIndex = dieEntriesRef.current.length
         const entry: DieEntry = {
           id, sides, precomputedResult: precomputed,
-          body, mesh, slotIndex, settled: false, settleCount: 0,
+          body, mesh, slotIndex, settled: true, settleCount: 0,
           maxTimer: null,
           resultValue: null,
           zone: 'tray' as const,

@@ -79,6 +79,10 @@ export interface ProportionsCardConfig {
   var2ColId: string | null
 }
 
+export interface TwoPropRandomizationCardConfig {
+  type: 'two-prop-randomization'
+}
+
 export interface SimulationCardConfig {
   type: 'simulation'
   linkedResultsCardId?: string | null
@@ -122,6 +126,7 @@ export type CardConfig =
   | DistributionCardConfig
   | RandomGeneratorCardConfig
   | ProportionsCardConfig
+  | TwoPropRandomizationCardConfig
   | SimulationCardConfig
   | MeansCardConfig
   | DiceRollerCardConfig

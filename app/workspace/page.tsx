@@ -1,22 +1,31 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { Header } from '@/components/layout/Header'
 import { ExploreCanvas } from '@/components/explore/ExploreCanvas'
 import { SaveDatasetModal } from '@/components/library/SaveDatasetModal'
 import { ShareDatasetModal } from '@/components/library/ShareDatasetModal'
+import { DatasetCard } from '@/components/library/DatasetCard'
+import { DatasetListSkeleton } from '@/components/ui/Skeleton'
+import { GameHub } from '@/components/games/GameHub'
+import { useAuth } from '@/components/auth/AuthProvider'
+import { subscribeToMyDatasets, subscribeToPublicDatasets, deleteDataset, loadDataset, saveDataset } from '@/lib/firestore'
+import { SAMPLE_DATASETS } from '@/lib/sampleData'
 import { useStore } from '@/lib/store'
 import { CardConfig } from '@/lib/exploreTypes'
-
-// ─── Card option definitions ──────────────────────────────────────────────────
+import { DatasetMeta } from '@/types'
 
 interface CardOption {
   type: CardConfig['type']
   icon: string
   label: string
 }
+
+type WorkspaceMode = 'library' | 'lab'
+type LibrarySection = 'all' | 'mine' | 'games' | 'polls'
+type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 
 const EXPLORE_CARD_OPTIONS: CardOption[] = [
   { type: 'graph',      icon: '📈', label: 'Graph' },
@@ -33,11 +42,17 @@ const PROBABILITY_CARD_OPTIONS: CardOption[] = [
 ]
 
 const INFERENCE_CARD_OPTIONS: CardOption[] = [
-  { type: 'means',        icon: '📐', label: 'Means' },
-  { type: 'proportions',  icon: '⚖️',  label: 'Proportions' },
+  { type: 'means',                  icon: '📐', label: 'Means' },
+  { type: 'proportions',            icon: '⚖️', label: 'Proportions' },
+  { type: 'two-prop-randomization', icon: '🎲', label: 'Two-Prop Randomization Test' },
 ]
 
-// ─── Grouped Add Card menu ────────────────────────────────────────────────────
+const LIBRARY_ITEMS: { id: LibrarySection; label: string; soon?: boolean }[] = [
+  { id: 'all', label: 'All Datasets' },
+  { id: 'mine', label: 'My Datasets' },
+  { id: 'games', label: 'Games' },
+  { id: 'polls', label: 'Polls', soon: true },
+]
 
 function GroupedAddCardMenu({
   onAdd,
@@ -82,14 +97,14 @@ function GroupedAddCardMenu({
                   {group.label}
                 </div>
                 <div className="pb-2">
-                  {group.options.map(o => (
+                  {group.options.map(option => (
                     <button
-                      key={o.type}
-                      onClick={() => { onAdd(o.type); setOpen(false) }}
+                      key={option.type}
+                      onClick={() => { onAdd(option.type); setOpen(false) }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 text-left"
                     >
-                      <span className="text-base leading-none">{o.icon}</span>
-                      <span className="text-sm font-medium text-[var(--color-text)]">{o.label}</span>
+                      <span className="text-base leading-none">{option.icon}</span>
+                      <span className="text-sm font-medium text-[var(--color-text)]">{option.label}</span>
                     </button>
                   ))}
                 </div>
@@ -102,9 +117,7 @@ function GroupedAddCardMenu({
   )
 }
 
-// ─── Column sidebar ────────────────────────────────────────────────────────────
-
-function ColumnSidebar({
+function VariableSidebar({
   open,
   onClose,
 }: {
@@ -126,9 +139,7 @@ function ColumnSidebar({
         ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <div className="px-3 py-2 border-b border-[var(--color-border)] flex items-center justify-between">
-          <div className="min-w-0">
-            <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Variables</div>
-          </div>
+          <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Variables</div>
           <button onClick={onClose} className="md:hidden text-[var(--color-muted)] text-lg leading-none">×</button>
         </div>
 
@@ -151,18 +162,15 @@ function ColumnSidebar({
                 }}
                 onClick={() => toggleColumnSelection(col.id)}
                 title="Click to select for stats"
-                className={`
-                  flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm font-medium
-                  cursor-pointer select-none transition-colors
-                  ${isSelected
+                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer select-none transition-colors ${
+                  isSelected
                     ? isNumeric
                       ? 'bg-[var(--color-accent)] text-white'
                       : 'bg-slate-600 text-white'
                     : isNumeric
                       ? 'bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100'
                       : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200'
-                  }
-                `}
+                }`}
               >
                 <span className={`text-[10px] font-mono font-bold flex-shrink-0 ${isSelected ? 'opacity-70' : 'opacity-50'}`}>
                   {isNumeric ? '#' : 'A'}
@@ -188,7 +196,234 @@ function ColumnSidebar({
   )
 }
 
-// ─── Unsaved changes guard ─────────────────────────────────────────────────────
+function LibrarySidebar({
+  open,
+  onClose,
+  section,
+  onSectionChange,
+}: {
+  open: boolean
+  onClose: () => void
+  section: LibrarySection
+  onSectionChange: (section: LibrarySection) => void
+}) {
+  return (
+    <>
+      {open && (
+        <div className="fixed inset-0 bg-black/30 z-20 md:hidden" onClick={onClose} />
+      )}
+
+      <aside className={`
+        flex-shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col
+        md:relative md:w-56 md:translate-x-0 md:z-auto
+        fixed inset-y-0 left-0 z-30 w-60 transition-transform duration-200
+        ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
+        <div className="px-3 py-2 border-b border-[var(--color-border)] flex items-center justify-between">
+          <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Library</div>
+          <button onClick={onClose} className="md:hidden text-[var(--color-muted)] text-lg leading-none">×</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
+          {LIBRARY_ITEMS.map(item => (
+            <button
+              key={item.id}
+              onClick={() => {
+                if (item.soon) return
+                onSectionChange(item.id)
+                onClose()
+              }}
+              className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                section === item.id
+                  ? 'bg-[var(--color-accent)] text-white'
+                  : item.soon
+                    ? 'text-[var(--color-border)] cursor-default'
+                    : 'text-[var(--color-text)] hover:bg-slate-100'
+              }`}
+            >
+              <span>{item.label}</span>
+              {item.soon && (
+                <span className="ml-2 text-[10px] uppercase tracking-wide">Soon</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </aside>
+    </>
+  )
+}
+
+function DatasetsBrowser({
+  scope,
+  onStartNew,
+  onOpenDataset,
+}: {
+  scope: 'all' | 'mine'
+  onStartNew: () => void
+  onOpenDataset: (id: string) => Promise<void>
+}) {
+  const { user } = useAuth()
+  const [publicDatasets, setPublicDatasets] = useState<DatasetMeta[]>([])
+  const [myDatasets, setMyDatasets] = useState<DatasetMeta[]>([])
+  const [search, setSearch] = useState('')
+  const [sort, setSort] = useState<SortKey>('newest')
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [seeding, setSeeding] = useState(false)
+
+  useEffect(() => {
+    if (!user) return
+    if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') {
+      setLoading(false)
+      return
+    }
+    const unsub1 = subscribeToPublicDatasets(data => { setPublicDatasets(data); setLoading(false) })
+    const unsub2 = subscribeToMyDatasets(user.uid, setMyDatasets)
+    return () => { unsub1(); unsub2() }
+  }, [user])
+
+  async function handleSeedSamples() {
+    if (!user) return
+    setSeeding(true)
+    try {
+      for (const sample of SAMPLE_DATASETS) {
+        await saveDataset(user, sample.name, sample.description ?? '', sample.emoji, true, sample.grid, {
+          tags: sample.tags,
+          source: sample.source,
+          sourceUrl: sample.sourceUrl,
+          citation: sample.citation,
+          notes: sample.notes,
+          variableInfo: sample.variableInfo,
+        })
+      }
+    } finally {
+      setSeeding(false)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    await deleteDataset(id)
+    setConfirmDelete(null)
+  }
+
+  const datasets = scope === 'all' ? publicDatasets : myDatasets
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase()
+    let result = datasets.filter(d =>
+      !q ||
+      d.name.toLowerCase().includes(q) ||
+      d.description?.toLowerCase().includes(q) ||
+      d.source?.toLowerCase().includes(q) ||
+      d.tags?.some(tag => tag.toLowerCase().includes(q))
+    )
+    result = [...result].sort((a, b) => {
+      if (sort === 'newest') return b.updatedAt.getTime() - a.updatedAt.getTime()
+      if (sort === 'oldest') return a.updatedAt.getTime() - b.updatedAt.getTime()
+      if (sort === 'name') return a.name.localeCompare(b.name)
+      if (sort === 'rows') return b.rowCount - a.rowCount
+      return 0
+    })
+    return result
+  }, [datasets, search, sort])
+
+  return (
+    <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="max-w-5xl mx-auto w-full px-6 py-6 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--color-text)]">
+              {scope === 'all' ? 'All Datasets' : 'My Datasets'}
+            </h2>
+            <p className="text-sm text-[var(--color-muted)]">
+              {scope === 'all'
+                ? 'Browse published datasets and open one directly into the Lab.'
+                : 'Your saved datasets, ready to reopen and edit.'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSeedSamples}
+              disabled={seeding}
+              className="px-3 py-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-light)] rounded-lg transition-colors disabled:opacity-50"
+            >
+              {seeding ? 'Adding…' : '+ Sample Datasets'}
+            </button>
+            <button
+              onClick={onStartNew}
+              className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg text-sm font-medium"
+            >
+              + New Dataset
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search datasets…"
+            className="flex-1 min-w-[240px] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] bg-white"
+          />
+          <select value={sort} onChange={e => setSort(e.target.value as SortKey)} className="border border-[var(--color-border)] rounded-lg px-2 py-2 text-sm bg-white">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="name">Name A–Z</option>
+            <option value="rows">Most rows</option>
+          </select>
+        </div>
+
+        {loading ? (
+          <DatasetListSkeleton />
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16 text-[var(--color-muted)]">
+            {search ? 'No datasets match your search.' : 'No datasets yet. Add sample datasets or start a new one.'}
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-[var(--color-border)]">
+            {filtered.map(dataset => (
+              <DatasetCard
+                key={dataset.id}
+                dataset={dataset}
+                currentUserId={user?.uid}
+                onOpen={onOpenDataset}
+                onDelete={id => setConfirmDelete(id)}
+                view="list"
+              />
+            ))}
+          </div>
+        )}
+
+        {confirmDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmDelete(null)} />
+            <div className="relative bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
+              <h3 className="font-semibold text-[var(--color-text)] mb-2">Delete dataset?</h3>
+              <p className="text-sm text-[var(--color-muted)] mb-4">This cannot be undone.</p>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setConfirmDelete(null)} className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-slate-100">Cancel</button>
+                <button onClick={() => handleDelete(confirmDelete)} className="px-4 py-2 rounded-lg text-sm bg-red-500 text-white font-medium">Delete</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PollsPlaceholder() {
+  return (
+    <div className="flex-1 flex items-center justify-center px-6">
+      <div className="max-w-xl text-center space-y-2">
+        <h2 className="text-xl font-semibold text-[var(--color-text)]">Polls</h2>
+        <p className="text-[var(--color-muted)]">
+          Polls will live here in the library shell. For now, this section is still being built.
+        </p>
+      </div>
+    </div>
+  )
+}
 
 function UnsavedGuard({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
@@ -206,8 +441,6 @@ function UnsavedGuard({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
   )
 }
 
-// ─── Main workspace ───────────────────────────────────────────────────────────
-
 function WorkspaceContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [confirmNew, setConfirmNew] = useState(false)
@@ -215,7 +448,10 @@ function WorkspaceContent() {
   const [showShare, setShowShare] = useState(false)
   const [shareDatasetId, setShareDatasetId] = useState<string | null>(null)
   const [shareIsPublic, setShareIsPublic] = useState(false)
-  const { isDirty, clearGrid, activeDatasetId, activeDatasetName, addExploreCard, exploreCards } = useStore()
+  const [mode, setMode] = useState<WorkspaceMode>('lab')
+  const [librarySection, setLibrarySection] = useState<LibrarySection>('all')
+  const [gameChrome, setGameChrome] = useState<{ title: string; onBack: () => void } | null>(null)
+  const { isDirty, clearGrid, activeDatasetId, activeDatasetName, addExploreCard, exploreCards, setGrid, setActiveDatasetId, setActiveDatasetName } = useStore()
   const hasOnlyDataGrid = exploreCards.every(card => card.config.type === 'data-grid')
 
   useEffect(() => {
@@ -232,9 +468,19 @@ function WorkspaceContent() {
   function handleNewDataset() {
     if (isDirty) {
       setConfirmNew(true)
-    } else {
-      clearGrid()
+      return
     }
+    clearGrid()
+    setMode('lab')
+  }
+
+  function handleModeChange(nextMode: string) {
+    const resolvedMode = nextMode === 'library' ? 'library' : 'lab'
+    if (resolvedMode !== 'library') {
+      setGameChrome(null)
+    }
+    setMode(resolvedMode)
+    setSidebarOpen(false)
   }
 
   function handleSaveClick() {
@@ -257,26 +503,90 @@ function WorkspaceContent() {
     setShowShare(true)
   }
 
+  async function handleOpenDataset(id: string) {
+    try {
+      const { meta, grid } = await loadDataset(id)
+      setGrid(grid)
+      setActiveDatasetId(id)
+      setActiveDatasetName(meta.name)
+      setMode('lab')
+      setSidebarOpen(false)
+    } catch {
+      alert('Could not load this dataset.')
+    }
+  }
+
+  function renderLibraryContent() {
+    if (librarySection === 'all' || librarySection === 'mine') {
+      return (
+        <DatasetsBrowser
+          scope={librarySection}
+          onStartNew={handleNewDataset}
+          onOpenDataset={handleOpenDataset}
+        />
+      )
+    }
+    if (librarySection === 'games') {
+      return <GameHub onChromeChange={setGameChrome} />
+    }
+    return <PollsPlaceholder />
+  }
+
   return (
     <div className="flex flex-col h-screen">
       <Header
-        onNew={handleNewDataset}
-        onSave={handleSaveClick}
+        onNew={mode === 'lab' ? handleNewDataset : undefined}
+        onSave={mode === 'lab' ? handleSaveClick : undefined}
         onToggleSidebar={() => setSidebarOpen(v => !v)}
-        datasetName={activeDatasetName}
-        labActions={<GroupedAddCardMenu onAdd={type => addExploreCard(type)} highlight={hasOnlyDataGrid} />}
+        datasetName={mode === 'lab' ? activeDatasetName : undefined}
+        centerTitle={mode === 'library' && librarySection === 'games' ? gameChrome?.title ?? null : null}
+        leadingNav={
+          mode === 'library' && librarySection === 'games' && gameChrome
+            ? (
+              <button
+                onClick={gameChrome.onBack}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-slate-100 transition-colors"
+              >
+                Back
+              </button>
+            )
+            : undefined
+        }
+        modeTabs={[
+          { id: 'library', label: 'Library' },
+          { id: 'lab', label: 'Lab' },
+        ]}
+        activeModeId={mode}
+        onModeChange={handleModeChange}
+        labActions={mode === 'lab' ? <GroupedAddCardMenu onAdd={type => addExploreCard(type)} highlight={hasOnlyDataGrid} /> : undefined}
+        showSave={mode === 'lab'}
+        showHomeLink={false}
       />
 
       <div className="flex flex-1 min-h-0">
-        <ColumnSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          <ExploreCanvas onShareDataset={handleShareClick} />
+        {mode === 'lab' ? (
+          <VariableSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        ) : (
+          <LibrarySidebar
+            open={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            section={librarySection}
+            onSectionChange={setLibrarySection}
+          />
+        )}
+
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col bg-[var(--color-bg)]">
+          {mode === 'lab' ? (
+            <ExploreCanvas onShareDataset={handleShareClick} />
+          ) : (
+            renderLibraryContent()
+          )}
         </div>
       </div>
 
       {confirmNew && (
         <UnsavedGuard
-          onConfirm={() => { clearGrid(); setConfirmNew(false) }}
+          onConfirm={() => { clearGrid(); setConfirmNew(false); setMode('lab') }}
           onCancel={() => setConfirmNew(false)}
         />
       )}

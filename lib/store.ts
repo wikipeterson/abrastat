@@ -305,6 +305,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'distribution' ? { type: 'distribution', preFill: scanChiSquareContext(state.exploreCards, state.grid) } :
       type === 'generator'    ? { type: 'generator' } :
       type === 'proportions'  ? { type: 'proportions', var1ColId: null, var2ColId: null } :
+      type === 'two-prop-randomization' ? { type: 'two-prop-randomization' } :
       type === 'means'        ? { type: 'means', var1ColId: null, var2ColId: null } :
       type === 'dice-roller'  ? { type: 'dice-roller', linkedResultsCardId: null, trackedMode: 'sum' } :
       type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', valueMode: 'count', thresholdOp: '>=', thresholdValue: 1, supportsDifference: false, minValue: 1, maxValue: 6, rolls: [], values: [] } :
@@ -313,6 +314,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'summary'     ? { width: 700, height: 620 } :
       type === 'means'       ? { width: 760, height: 500 } :
       type === 'proportions' ? { width: 860, height: 620 } :
+      type === 'two-prop-randomization' ? { width: 980, height: 760 } :
       type === 'dice-roller' ? { width: 760, height: 700 } :
                            { width: 620, height: 520 }
     return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width, height }] }

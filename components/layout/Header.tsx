@@ -16,6 +16,10 @@ interface HeaderProps {
   datasetName?: string
   centerTitle?: string | null
   labActions?: ReactNode
+  leadingNav?: ReactNode
+  modeTabs?: { id: string; label: string }[]
+  activeModeId?: string
+  onModeChange?: (id: string) => void
   showSave?: boolean
   showHomeLink?: boolean
 }
@@ -27,6 +31,10 @@ export function Header({
   datasetName,
   centerTitle,
   labActions,
+  leadingNav,
+  modeTabs,
+  activeModeId,
+  onModeChange,
   showSave = true,
   showHomeLink = true,
 }: HeaderProps) {
@@ -82,6 +90,32 @@ export function Header({
           {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="AbraStat" style={{ width: 248, height: 'auto' }} />
           </Link>
+
+          {(leadingNav || modeTabs?.length) && (
+            <div className="hidden md:flex items-center gap-2">
+              {leadingNav}
+              {modeTabs && modeTabs.length > 0 && (
+                <div className="flex items-center rounded-xl border border-[var(--color-border)] bg-white p-1">
+                  {modeTabs.map(tab => {
+                    const active = tab.id === activeModeId
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => onModeChange?.(tab.id)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          active
+                            ? 'bg-[var(--color-accent)] text-white'
+                            : 'text-[var(--color-muted)] hover:bg-slate-100'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {datasetName && (
             <div className="hidden md:flex min-w-0 max-w-[380px] flex-col justify-center px-1">

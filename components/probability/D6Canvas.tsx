@@ -727,6 +727,16 @@ export const D6Canvas = forwardRef<D6CanvasHandle, D6CanvasProps>(
       entry.mesh.quaternion.set(0, 0, 0, 1)
     }
 
+    function syncBodyToMesh(entry: DieEntry) {
+      const mp = entry.mesh.position
+      const mq = entry.mesh.quaternion
+      entry.body.position.set(mp.x, mp.y, mp.z)
+      entry.body.quaternion.set(mq.x, mq.y, mq.z, mq.w)
+      entry.body.velocity.set(0, 0, 0)
+      entry.body.angularVelocity.set(0, 0, 0)
+      entry.body.sleep()
+    }
+
 function restoreD6FaceMaps(entry: DieEntry) {
       const mats = entry.mesh.material as THREE.MeshPhongMaterial[]
       const tex = getD6Textures()
@@ -1283,9 +1293,6 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           lineupTargetQuat: new THREE.Quaternion(),
         }
         dieEntriesRef.current.push(entry)
-        lineupRef.current.active = false
-        lineupRef.current.completed = false
-        lineupRef.current.readyAt = null
         stageDieAtSlot(entry, slotIndex)
         if (initialValue !== undefined && sides === 6) {
           entry.settled = true
@@ -1313,9 +1320,9 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
         }
         scene.remove(entry.mesh)
         dieEntriesRef.current.splice(idx, 1)
-        lineupRef.current.active = false
-        lineupRef.current.completed = false
-        lineupRef.current.readyAt = null
+        for (const remaining of dieEntriesRef.current) {
+          syncBodyToMesh(remaining)
+        }
         dieEntriesRef.current.forEach((remaining, index) => {
           stageDieAtSlot(remaining, index)
         })

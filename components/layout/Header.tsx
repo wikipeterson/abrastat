@@ -106,7 +106,7 @@ export function Header({
               aria-label="New dataset"
             >
               <FilePlus size={14} />
-              <span className="hidden sm:inline">New</span>
+              <span className="hidden sm:inline">New Data</span>
             </button>
           )}
 

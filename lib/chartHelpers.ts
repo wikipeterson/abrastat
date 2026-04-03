@@ -48,5 +48,9 @@ export function inferCharts(
     return { primary: 'box', alternatives: ['dot', 'histogram'], orientation: 'h' }
   }
 
+  if (hType === 'categorical' && vType === 'categorical') {
+    return { primary: 'segmented', alternatives: ['pie'], orientation: 'h' }
+  }
+
   return { primary: null, alternatives: [], orientation: 'h' }
 }

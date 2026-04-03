@@ -45,7 +45,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
   )
   const usesAxisGrouping =
     (xCol?.type === 'numeric' && yCol?.type === 'categorical') ||
-    (xCol?.type === 'categorical' && yCol?.type === 'numeric')
+    (xCol?.type === 'categorical' && yCol?.type === 'numeric') ||
+    (xCol?.type === 'categorical' && yCol?.type === 'categorical')
 
   const currentChart = config.chartType ?? primary
   const morphSpec = deriveGraphMorphSpec({
@@ -112,6 +113,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
     const mainColId = orientation === 'h' ? config.xColId : config.yColId
     const hCatAndVNum = xCol?.type === 'categorical' && yCol?.type === 'numeric'
     const hNumAndVCat = xCol?.type === 'numeric' && yCol?.type === 'categorical'
+    const hCatAndVCat = xCol?.type === 'categorical' && yCol?.type === 'categorical'
+    const effectiveGroupColId = config.groupColId ?? (hCatAndVCat ? config.yColId : null)
 
     switch (currentChart) {
       case 'histogram':
@@ -132,11 +135,11 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
             : <BoxPlot colId={mainColId} groupColId={config.groupColId} orientation={orientation} />
       case 'scatter':    return <ScatterPlot xColId={config.xColId} yColId={config.yColId} colorByColId={config.groupColId} />
       case 'bar':        return <BarChart colId={mainColId} orientation={orientation} />
-      case 'pie':        return <PieChart colId={mainColId} groupColId={config.groupColId} />
+      case 'pie':        return <PieChart colId={mainColId} groupColId={effectiveGroupColId} />
       case 'segmented':  return (
         <SegmentedBar
           xColId={config.xColId}
-          fillColId={config.groupColId}
+          fillColId={effectiveGroupColId}
           manualTable={manualTable ?? undefined}
           modeOverride={manualTable ? manualTableValueMode : undefined}
           barmodeOverride={manualTable ? (manualTableGraphType === 'segmented' ? 'stack' : 'group') : undefined}

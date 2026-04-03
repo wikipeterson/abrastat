@@ -16,6 +16,7 @@ const jS = jStat as unknown as {
 }
 
 type Alternative = 'less' | 'two-sided' | 'greater'
+type ProcedureMode = 'test' | 'interval'
 
 interface PropSummary {
   n: number
@@ -106,8 +107,10 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
   const [successLevel, setSuccessLevel] = useState('')
   const [groupA, setGroupA] = useState('')
   const [groupB, setGroupB] = useState('')
+  const [mode, setMode] = useState<ProcedureMode>('test')
   const [h0, setH0] = useState('0.5')
   const [alpha, setAlpha] = useState('0.05')
+  const [confidenceLevel, setConfidenceLevel] = useState('95')
   const [alternative, setAlternative] = useState<Alternative>('two-sided')
 
   useEffect(() => {
@@ -155,10 +158,13 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
 
   const alphaVal = parseFloat(alpha)
   const h0Val = parseFloat(h0)
+  const confidenceVal = parseFloat(confidenceLevel)
 
   const result = useMemo<PropResult | null>(() => {
     if (!isFinite(alphaVal) || alphaVal <= 0 || alphaVal >= 1 || !isFinite(h0Val)) return null
-    const zStar = jS.normal.inv(1 - alphaVal / 2, 0, 1)
+    if (!isFinite(confidenceVal) || confidenceVal <= 0 || confidenceVal >= 100) return null
+    const ciAlpha = 1 - confidenceVal / 100
+    const zStar = jS.normal.inv(1 - ciAlpha / 2, 0, 1)
 
     if (hasGroup) {
       const a = groupedSummaries.a
@@ -182,7 +188,7 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
     const z = (s.phat - h0Val) / seTest
     const p = calcP(z, alternative)
     return { stat: z, p, ci: clampCi([s.phat - zStar * seCi, s.phat + zStar * seCi]) }
-  }, [alphaVal, groupedSummaries.a, groupedSummaries.b, h0Val, hasGroup, oneSampleSummary, alternative])
+  }, [alphaVal, confidenceVal, groupedSummaries.a, groupedSummaries.b, h0Val, hasGroup, oneSampleSummary, alternative])
 
   const chartTraces = useMemo(() => {
     if (!result) return null
@@ -231,6 +237,9 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
   const altSymbol = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
   const h0Label = hasGroup ? 'p₁ − p₂ =' : 'p ='
   const altLabel = hasGroup ? 'p₁ − p₂' : 'p'
+  const procedureLabel = hasGroup
+    ? (mode === 'test' ? '2-proportion z-test' : '2-proportion z-interval')
+    : (mode === 'test' ? '1-proportion z-test' : '1-proportion z-interval')
 
   return (
     <div className="h-full flex flex-col gap-3 overflow-hidden text-sm">
@@ -279,27 +288,62 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
 
             <div className="bg-slate-50 rounded-xl p-3 flex-shrink-0 space-y-2">
               <div className="flex items-center gap-2">
-                <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">H₀: {h0Label}</label>
-                <input type="number" min={hasGroup ? -1 : 0} max={1} step={0.01} value={h0} onChange={e => setH0(e.target.value)} className="w-24 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Hₐ:</span>
+                <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Procedure</span>
                 <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
-                  {(['less', 'two-sided', 'greater'] as Alternative[]).map((a, i) => (
-                    <button key={a} onClick={() => setAlternative(a)} className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alternative === a ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}>
-                      {a === 'less' ? '< (left)' : a === 'two-sided' ? '≠ (two)' : '> (right)'}
+                  {([
+                    ['test', procedureLabel.replace('interval', 'test')],
+                    ['interval', procedureLabel.replace('test', 'interval')],
+                  ] as [ProcedureMode, string][]).map(([nextMode, label], i) => (
+                    <button
+                      key={nextMode}
+                      onClick={() => setMode(nextMode)}
+                      className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${mode === nextMode ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}
+                    >
+                      {label}
                     </button>
                   ))}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">α =</span>
-                <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
-                  {['0.01', '0.05', '0.10'].map((a, i) => (
-                    <button key={a} onClick={() => setAlpha(a)} className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alpha === a ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}>{a}</button>
-                  ))}
+              {mode === 'test' ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">H₀: {h0Label}</label>
+                    <input type="number" min={hasGroup ? -1 : 0} max={1} step={0.01} value={h0} onChange={e => setH0(e.target.value)} className="w-24 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Hₐ:</span>
+                    <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+                      {(['less', 'two-sided', 'greater'] as Alternative[]).map((a, i) => (
+                        <button key={a} onClick={() => setAlternative(a)} className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alternative === a ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}>
+                          {a === 'less' ? '< (left)' : a === 'two-sided' ? '≠ (two)' : '> (right)'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">α =</span>
+                    <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+                      {['0.01', '0.05', '0.10'].map((a, i) => (
+                        <button key={a} onClick={() => setAlpha(a)} className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alpha === a ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}>{a}</button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Level</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={99.99}
+                    step={1}
+                    value={confidenceLevel}
+                    onChange={e => setConfidenceLevel(e.target.value)}
+                    className="w-24 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                  />
+                  <span className="text-xs text-[var(--color-muted)]">% confidence</span>
                 </div>
-              </div>
+              )}
             </div>
 
             {(oneSampleSummary || groupedSummaries.a) && (
@@ -340,7 +384,7 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
           </div>
 
           <div className="min-h-0 flex flex-col gap-3">
-            {chartTraces && result && (
+            {mode === 'test' && chartTraces && result && (
               <div className="flex-shrink-0 rounded-xl overflow-hidden border border-[var(--color-border)]">
                 <PlotlyChart
                   data={chartTraces.traces as never}
@@ -358,35 +402,45 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
 
             {result && (
               <div className="space-y-2.5 flex-shrink-0">
-                <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 space-y-1">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-[var(--color-muted)] w-6">H₀</span>
-                    <span className="text-xs font-mono font-medium">{h0Label} {h0}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-[var(--color-muted)] w-6">Hₐ</span>
-                    <span className="text-xs font-mono font-medium">{altLabel} {altSymbol} {h0}</span>
-                  </div>
-                </div>
-
-                <div className="grid gap-2 grid-cols-2">
-                  <StatBox label="z-statistic" value={fmt(result.stat, 4)} />
-                  <StatBox label="p-value" value={fmtP(result.p)} highlight={rejected ? 'reject' : 'keep'} />
-                </div>
-
                 <div className="rounded-xl border border-[var(--color-border)] bg-white p-3">
-                  <p className="text-[10px] text-[var(--color-muted)] mb-1">{Math.round((1 - alphaVal) * 100)}% Confidence Interval</p>
+                  <p className="text-[10px] text-[var(--color-muted)] mb-1">{confidenceLevel}% Confidence Interval</p>
                   <p className="text-xs font-mono font-medium">({fmt(result.ci[0])}, {fmt(result.ci[1])})</p>
                 </div>
+                {mode === 'test' ? (
+                  <>
+                    <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 space-y-1">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-[var(--color-muted)] w-6">H₀</span>
+                        <span className="text-xs font-mono font-medium">{h0Label} {h0}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-[var(--color-muted)] w-6">Hₐ</span>
+                        <span className="text-xs font-mono font-medium">{altLabel} {altSymbol} {h0}</span>
+                      </div>
+                    </div>
 
-                <div className={`rounded-xl p-3 border ${rejected ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
-                  <p className={`text-xs font-semibold mb-1 ${rejected ? 'text-red-700' : 'text-green-700'}`}>{rejected ? 'Reject H₀' : 'Fail to Reject H₀'}</p>
-                  <p className="text-xs text-[var(--color-muted)] leading-relaxed">
-                    {rejected
-                      ? `At α = ${alpha}, there is sufficient evidence to conclude ${altLabel} ${altSymbol} ${h0}.`
-                      : `At α = ${alpha}, there is not sufficient evidence to conclude ${altLabel} ${altSymbol} ${h0}.`}
-                  </p>
-                </div>
+                    <div className="grid gap-2 grid-cols-2">
+                      <StatBox label="z-statistic" value={fmt(result.stat, 4)} />
+                      <StatBox label="p-value" value={fmtP(result.p)} highlight={rejected ? 'reject' : 'keep'} />
+                    </div>
+
+                    <div className={`rounded-xl p-3 border ${rejected ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                      <p className={`text-xs font-semibold mb-1 ${rejected ? 'text-red-700' : 'text-green-700'}`}>{rejected ? 'Reject H₀' : 'Fail to Reject H₀'}</p>
+                      <p className="text-xs text-[var(--color-muted)] leading-relaxed">
+                        {rejected
+                          ? `At α = ${alpha}, there is sufficient evidence to conclude ${altLabel} ${altSymbol} ${h0}.`
+                          : `At α = ${alpha}, there is not sufficient evidence to conclude ${altLabel} ${altSymbol} ${h0}.`}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-xl border border-sky-200 bg-sky-50 p-3">
+                    <p className="text-xs font-semibold text-sky-700 mb-1">{confidenceLevel}% Confidence Interval</p>
+                    <p className="text-xs text-[var(--color-muted)] leading-relaxed">
+                      We are {confidenceLevel}% confident that {hasGroup ? 'the true difference in proportions' : 'the true population proportion'} lies between {fmt(result.ci[0])} and {fmt(result.ci[1])}.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

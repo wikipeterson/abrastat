@@ -5,11 +5,14 @@ import { useStore } from '@/lib/store'
 
 // ── Physics constants ─────────────────────────────────────────────────────────
 
-const FRICTION_K     = 1.2   // exponential decay (higher = shorter spin)
-const STOP_OMEGA     = 0.04  // rad/s — stop threshold
-const TICKER_SPRING  = 320   // spring constant (rad/s² per rad)
-const TICKER_DAMPER  = 24    // damping coefficient
-const TICKER_IMPULSE = 0.65  // ticker angular velocity impulse per boundary cross
+const FRICTION_K            = 0.9   // base wheel friction (ticker adds extra braking)
+const STOP_OMEGA            = 0.06  // rad/s — stop threshold
+const TICKER_SPRING         = 300   // ticker spring return (rad/s² per rad deflection)
+const TICKER_DAMPER         = 18    // damping (ζ ≈ 0.52 — underdamped for visible bounce)
+const TICKER_IMPULSE        = 1.2   // upward angular velocity impulse to ticker per peg hit
+const WHEEL_BRAKE_IMPULSE   = 0.28  // rad/s removed from wheel per peg crossing (discrete)
+const TICKER_WHEEL_COUPLING = 14    // continuous coupling: deflection (rad) → wheel braking (rad/s² per rad)
+const TICKER_MAX_ANGLE      = 0.06  // rad — mechanical stop (ticker rests against wheel rim)
 
 // ── Canvas geometry ───────────────────────────────────────────────────────────
 
@@ -349,29 +352,55 @@ export function SpinnerCard() {
 
     if (dt > 0) {
       const prevAngle = wheelAngleRef.current
+      const n         = sectorsRef.current.length
 
-      // Integrate wheel
+      // ── Wheel integration ─────────────────────────────────────────────────
       wheelAngleRef.current += omegaRef.current * dt
       omegaRef.current      *= Math.exp(-FRICTION_K * dt)
 
-      // Boundary crossing detection
-      const n        = sectorsRef.current.length
-      const prevIdx  = getSectorAt(prevAngle, n)
-      const currIdx  = getSectorAt(wheelAngleRef.current, n)
+      // ── Peg / boundary crossing detection ─────────────────────────────────
+      // Each time a sector boundary sweeps past the ticker tip:
+      //   • The peg knocks the ticker upward (CCW angular impulse)
+      //   • The ticker spring pushes back on the peg, braking the wheel
+      const prevIdx = getSectorAt(prevAngle, n)
+      const currIdx = getSectorAt(wheelAngleRef.current, n)
 
       if (prevIdx !== currIdx) {
-        // Ticker flick: deflect UP (negative = CCW)
-        const speed = Math.abs(omegaRef.current)
-        tickerOmegaRef.current -= TICKER_IMPULSE * Math.min(1.8, speed / 5 + 0.4)
-      }
-      prevSectorRef.current = currIdx
+        // Count actual boundaries crossed this frame (usually 1; 2-3 at high n + high speed)
+        const nCrossings = Math.min(3, ((prevIdx - currIdx) + n) % n)
 
-      // Ticker spring-damper
+        for (let k = 0; k < nCrossings; k++) {
+          // Ticker: peg sweeps upward past tip → CCW (negative) angular impulse
+          tickerOmegaRef.current -= TICKER_IMPULSE
+
+          // Wheel: ticker spring reaction brakes the wheel.
+          // Capped at 60% of current speed so the wheel never reverses or jerks.
+          const brakeAmount = Math.min(WHEEL_BRAKE_IMPULSE, Math.abs(omegaRef.current) * 0.6)
+          omegaRef.current  -= Math.sign(omegaRef.current) * brakeAmount
+        }
+      }
+
+      // ── Ticker spring-damper ───────────────────────────────────────────────
       tickerOmegaRef.current +=
         (-TICKER_SPRING * tickerAngleRef.current - TICKER_DAMPER * tickerOmegaRef.current) * dt
       tickerAngleRef.current += tickerOmegaRef.current * dt
 
-      // Stop condition
+      // Mechanical stop: ticker rests against the wheel rim, can't push past it
+      if (tickerAngleRef.current > TICKER_MAX_ANGLE) {
+        tickerAngleRef.current = TICKER_MAX_ANGLE
+        if (tickerOmegaRef.current > 0) tickerOmegaRef.current = 0
+      }
+
+      // ── Continuous ticker → wheel coupling ────────────────────────────────
+      // While the ticker is deflected upward it presses against the peg that
+      // just passed, providing smooth braking between discrete crossing events.
+      // This is what makes low-speed settling feel physical rather than random.
+      if (tickerAngleRef.current < 0 && omegaRef.current > 0) {
+        const continuousBrake = (-tickerAngleRef.current) * TICKER_WHEEL_COUPLING * dt
+        omegaRef.current = Math.max(0, omegaRef.current - continuousBrake)
+      }
+
+      // ── Stop condition ─────────────────────────────────────────────────────
       if (isSpinningRef.current && Math.abs(omegaRef.current) < STOP_OMEGA) {
         omegaRef.current      = 0
         isSpinningRef.current = false

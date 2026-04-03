@@ -1,16 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
-type GeneratorMode = 'coin' | 'die'
-type CoinFace = 'Heads' | 'Tails'
-
-function randomCoin(): CoinFace {
-  return Math.random() < 0.5 ? 'Heads' : 'Tails'
-}
-
-function randomDie(): number {
-  return 1 + Math.floor(Math.random() * 6)
+function randomInteger(minValue: number, maxValue: number): number {
+  const min = Math.ceil(Math.min(minValue, maxValue))
+  const max = Math.floor(Math.max(minValue, maxValue))
+  return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
 function StatPill({ label, value }: { label: string; value: string | number }) {
@@ -22,94 +17,85 @@ function StatPill({ label, value }: { label: string; value: string | number }) {
   )
 }
 
-function BarRow({ label, value, max }: { label: string; value: number; max: number }) {
-  const pct = max > 0 ? (value / max) * 100 : 0
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-[var(--color-text)]">{label}</span>
-        <span className="font-mono text-[var(--color-muted)]">{value}</span>
-      </div>
-      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-        <div className="h-full rounded-full bg-[var(--color-accent)]" style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  )
-}
-
 export function RandomGeneratorCard() {
-  const [mode, setMode] = useState<GeneratorMode>('coin')
-  const [trials, setTrials] = useState(10)
-  const [coinHistory, setCoinHistory] = useState<CoinFace[]>([])
-  const [dieHistory, setDieHistory] = useState<number[]>([])
+  const [minValue, setMinValue] = useState(1)
+  const [maxValue, setMaxValue] = useState(10)
+  const [count, setCount] = useState(10)
+  const [results, setResults] = useState<number[]>([])
 
-  const lastCoin = coinHistory[coinHistory.length - 1] ?? null
-  const lastDie = dieHistory[dieHistory.length - 1] ?? null
+  const normalizedMin = Math.min(minValue, maxValue)
+  const normalizedMax = Math.max(minValue, maxValue)
+  const lastValue = results.at(-1) ?? '—'
 
-  const heads = coinHistory.filter(v => v === 'Heads').length
-  const tails = coinHistory.length - heads
-  const dieCounts = [1, 2, 3, 4, 5, 6].map(face => ({
-    face,
-    count: dieHistory.filter(v => v === face).length,
-  }))
-  const dieMax = Math.max(0, ...dieCounts.map(d => d.count))
-
-  function runSingle() {
-    if (mode === 'coin') {
-      setCoinHistory(prev => [...prev, randomCoin()])
-      return
+  const summary = useMemo(() => {
+    if (results.length === 0) {
+      return {
+        total: 0,
+        min: '—',
+        max: '—',
+        mean: '—',
+      }
     }
-    setDieHistory(prev => [...prev, randomDie()])
+
+    const total = results.length
+    const observedMin = Math.min(...results)
+    const observedMax = Math.max(...results)
+    const mean = (results.reduce((sum, value) => sum + value, 0) / total).toFixed(2)
+
+    return {
+      total,
+      min: observedMin,
+      max: observedMax,
+      mean,
+    }
+  }, [results])
+
+  function generateOnce() {
+    setResults(prev => [...prev, randomInteger(normalizedMin, normalizedMax)])
   }
 
-  function runMany() {
-    if (mode === 'coin') {
-      const next = Array.from({ length: trials }, () => randomCoin())
-      setCoinHistory(prev => [...prev, ...next])
-      return
-    }
-    const next = Array.from({ length: trials }, () => randomDie())
-    setDieHistory(prev => [...prev, ...next])
+  function generateMany() {
+    const next = Array.from({ length: count }, () => randomInteger(normalizedMin, normalizedMax))
+    setResults(prev => [...prev, ...next])
   }
 
   function reset() {
-    if (mode === 'coin') {
-      setCoinHistory([])
-      return
-    }
-    setDieHistory([])
+    setResults([])
   }
 
   return (
     <div className="h-full overflow-auto">
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex rounded-xl border border-[var(--color-border)] overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setMode('coin')}
-              className={`px-4 py-2 text-sm font-medium ${mode === 'coin' ? 'bg-[var(--color-accent)] text-white' : 'bg-white text-[var(--color-text)] hover:bg-slate-50'}`}
-            >
-              Coin Flip
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('die')}
-              className={`px-4 py-2 text-sm font-medium border-l border-[var(--color-border)] ${mode === 'die' ? 'bg-[var(--color-accent)] text-white' : 'bg-white text-[var(--color-text)] hover:bg-slate-50'}`}
-            >
-              Dice Roll
-            </button>
-          </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_auto_auto] sm:items-end">
+          <label className="space-y-1.5">
+            <span className="text-sm font-medium text-[var(--color-text)]">Minimum</span>
+            <input
+              type="number"
+              value={minValue}
+              onChange={e => setMinValue(Number(e.target.value) || 0)}
+              className="w-28 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
+            />
+          </label>
 
-          <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
-            <span>Trials</span>
+          <label className="space-y-1.5">
+            <span className="text-sm font-medium text-[var(--color-text)]">Maximum</span>
+            <input
+              type="number"
+              value={maxValue}
+              onChange={e => setMaxValue(Number(e.target.value) || 0)}
+              className="w-28 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
+            />
+          </label>
+
+          <label className="space-y-1.5">
+            <span className="text-sm font-medium text-[var(--color-text)]">How Many</span>
             <input
               type="number"
               min={1}
-              max={500}
-              value={trials}
-              onChange={e => setTrials(Math.max(1, Math.min(500, Number(e.target.value) || 1)))}
-              className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm"
+              max={10000}
+              value={count}
+              onChange={e => setCount(Math.max(1, Math.min(10000, Number(e.target.value) || 1)))}
+              className="w-28 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
             />
           </label>
         </div>
@@ -117,17 +103,17 @@ export function RandomGeneratorCard() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={runSingle}
+            onClick={generateOnce}
             className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
           >
-            {mode === 'coin' ? 'Flip Once' : 'Roll Once'}
+            Generate One
           </button>
           <button
             type="button"
-            onClick={runMany}
+            onClick={generateMany}
             className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] hover:bg-slate-50"
           >
-            Run {trials}
+            Generate {count}
           </button>
           <button
             type="button"
@@ -138,79 +124,45 @@ export function RandomGeneratorCard() {
           </button>
         </div>
 
-        {mode === 'coin' ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <StatPill label="Last Flip" value={lastCoin ?? '—'} />
-              <StatPill label="Heads" value={heads} />
-              <StatPill label="Tails" value={tails} />
-            </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+          <StatPill label="Last Value" value={lastValue} />
+          <StatPill label="Generated" value={summary.total} />
+          <StatPill label="Observed Min" value={summary.min} />
+          <StatPill label="Observed Max" value={summary.max} />
+        </div>
 
-            <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-              <div className="mb-3 text-sm font-semibold text-[var(--color-text)]">Tally</div>
-              <div className="space-y-3">
-                <BarRow label="Heads" value={heads} max={Math.max(heads, tails)} />
-                <BarRow label="Tails" value={tails} max={Math.max(heads, tails)} />
+        <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-sm font-semibold text-[var(--color-text)]">Output</div>
+              <div className="text-xs text-[var(--color-muted)]">
+                Random integers from {normalizedMin} to {normalizedMax}
               </div>
             </div>
-
-            <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-              <div className="mb-2 text-sm font-semibold text-[var(--color-text)]">Recent Flips</div>
-              <div className="flex flex-wrap gap-2">
-                {coinHistory.length === 0 ? (
-                  <span className="text-sm text-[var(--color-muted)]">No flips yet</span>
-                ) : (
-                  coinHistory.slice(-24).map((flip, i) => (
-                    <span
-                      key={`${flip}-${coinHistory.length - 24 + i}`}
-                      className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-800 border border-teal-100"
-                    >
-                      {flip}
-                    </span>
-                  ))
-                )}
-              </div>
+            <div className="text-sm text-[var(--color-muted)]">
+              Mean: <span className="font-semibold text-[var(--color-text)]">{summary.mean}</span>
             </div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <StatPill label="Last Roll" value={lastDie ?? '—'} />
-              <StatPill label="Total Rolls" value={dieHistory.length} />
-              <StatPill
-                label="Mean"
-                value={dieHistory.length ? (dieHistory.reduce((sum, v) => sum + v, 0) / dieHistory.length).toFixed(2) : '—'}
-              />
-            </div>
 
-            <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-              <div className="mb-3 text-sm font-semibold text-[var(--color-text)]">Frequency by Face</div>
-              <div className="space-y-3">
-                {dieCounts.map(({ face, count }) => (
-                  <BarRow key={face} label={`Face ${face}`} value={count} max={dieMax} />
+          <div className="mt-4 rounded-xl bg-slate-50 border border-slate-100 p-3 min-h-[140px]">
+            {results.length === 0 ? (
+              <div className="text-sm text-[var(--color-muted)]">
+                No random numbers yet. Set a range and generate values.
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {results.map((value, index) => (
+                  <span
+                    key={`${value}-${index}`}
+                    className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-800 border border-teal-100"
+                  >
+                    {value}
+                  </span>
                 ))}
               </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-              <div className="mb-2 text-sm font-semibold text-[var(--color-text)]">Recent Rolls</div>
-              <div className="flex flex-wrap gap-2">
-                {dieHistory.length === 0 ? (
-                  <span className="text-sm text-[var(--color-muted)]">No rolls yet</span>
-                ) : (
-                  dieHistory.slice(-30).map((roll, i) => (
-                    <span
-                      key={`${roll}-${dieHistory.length - 30 + i}`}
-                      className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-800 border border-teal-100"
-                    >
-                      {roll}
-                    </span>
-                  ))
-                )}
-              </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

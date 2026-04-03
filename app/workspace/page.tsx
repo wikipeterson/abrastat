@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { Header } from '@/components/layout/Header'
@@ -24,7 +25,7 @@ interface CardOption {
 }
 
 type WorkspaceMode = 'library' | 'lab'
-type LibrarySection = 'all' | 'mine' | 'games' | 'polls'
+type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls'
 type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 
 const SIDEBAR_WIDTH_CLASS = 'md:w-48'
@@ -53,6 +54,7 @@ const LIBRARY_ITEMS: { id: LibrarySection; label: string; soon?: boolean }[] = [
   { id: 'all', label: 'Public Datasets' },
   { id: 'mine', label: 'My Datasets' },
   { id: 'games', label: 'Games' },
+  { id: 'applets', label: 'Applets' },
   { id: 'polls', label: 'Polls', soon: true },
 ]
 
@@ -402,6 +404,41 @@ function PollsPlaceholder() {
   )
 }
 
+function AppletsBrowser() {
+  return (
+    <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="max-w-5xl mx-auto w-full px-6 py-6 space-y-4">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold text-[var(--color-text)]">Applets</h2>
+          <p className="text-[var(--color-muted)]">
+            Standalone interactive tools you can open directly.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Link
+            href="/applets/spinner"
+            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-start gap-4">
+              <div className="text-3xl leading-none">🎡</div>
+              <div className="space-y-1">
+                <div className="text-lg font-semibold text-[var(--color-text)]">Spinner</div>
+                <p className="text-sm text-[var(--color-muted)] max-w-md">
+                  Prize-wheel randomizer for probability demonstrations and classroom activities.
+                </p>
+              </div>
+            </div>
+            <span className="px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white whitespace-nowrap">
+              Open
+            </span>
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function UnsavedGuard({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -515,6 +552,9 @@ function WorkspaceContent() {
     }
     if (librarySection === 'games') {
       return <GameHub onChromeChange={setGameChrome} />
+    }
+    if (librarySection === 'applets') {
+      return <AppletsBrowser />
     }
     return <PollsPlaceholder />
   }

@@ -178,7 +178,7 @@ function makeColorFaceTexture(label: string): THREE.CanvasTexture {
   ctx.lineWidth = 4
   ctx.strokeRect(2, 2, S - 4, S - 4)
   ctx.fillStyle = 'rgba(255,255,255,0.72)'
-  ctx.font = 'bold 42px sans-serif'
+  ctx.font = 'bold 80px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(label, S/2, S/2)
@@ -338,8 +338,7 @@ function makeExplicitD10Geometry(r: number): {
 }
 
 // Pentagonal trapezohedron — the correct d10 shape (10 kite-shaped faces, 12 vertices).
-// Upper kites neighbour the top pole (odd values 1,3,5,7,9).
-// Lower kites neighbour the bottom pole (even values 2,4,6,8,10).
+// Values 0–9 on the 10 numbered faces.
 // Reference-based d10 geometry: 10 equatorial vertices + top/bottom poles.
 // 10 numbered triangular faces (each includes a pole vertex) + 10 unnumbered equatorial cap triangles.
 // UV mapped with the reference's polar approach (af = Math.PI*6/5) so numbers always appear centered and upright.
@@ -367,9 +366,9 @@ function makeD10Geometry(r: number): {
   verts.push(new THREE.Vector3(0, -1, 0).multiplyScalar(r))  // index 10: bottom pole (−Y)
   verts.push(new THREE.Vector3(0,  1, 0).multiplyScalar(r))  // index 11: top pole    (+Y)
 
-  // 10 numbered faces: [v0, v1, v2=pole, dieValue]. v2 is the pole vertex.
+  // 10 numbered faces: [v0, v1, v2=pole, dieValue]. v2 is the pole vertex. Values 0–9.
   const numberedFaces: [number, number, number, number][] = [
-    [5, 7, 11, 10], [4, 2, 10,  1], [1, 3, 11,  2], [0, 8, 10,  3], [7, 9, 11,  4],
+    [5, 7, 11,  0], [4, 2, 10,  1], [1, 3, 11,  2], [0, 8, 10,  3], [7, 9, 11,  4],
     [8, 6, 10,  5], [9, 1, 11,  6], [2, 0, 10,  7], [3, 5, 11,  8], [6, 4, 10,  9],
   ]
 
@@ -1260,10 +1259,10 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           mass:            1,
           shape:           physicsShape,
           position:        new CANNON.Vec3(0, DIE_HALF, 0),
-          linearDamping:   isD10 ? 0.72 : LINEAR_DAMPING,
-          angularDamping:  isD10 ? 0.78 : ANGULAR_DAMPING,
+          linearDamping:   isD10 ? 0.88 : LINEAR_DAMPING,
+          angularDamping:  isD10 ? 0.92 : ANGULAR_DAMPING,
           material:        diceMatRef.current ?? undefined,
-          sleepSpeedLimit: isD10 ? 1.2 : 0.5,
+          sleepSpeedLimit: isD10 ? 2.0 : 0.5,
           sleepTimeLimit:  0.1,
         })
         world.addBody(body)

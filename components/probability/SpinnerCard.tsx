@@ -7,12 +7,15 @@ import { useStore } from '@/lib/store'
 
 const FRICTION_K            = 0.9   // base wheel friction (ticker adds extra braking)
 const STOP_OMEGA            = 0.06  // rad/s — stop threshold
-const TICKER_SPRING         = 300   // ticker spring return (rad/s² per rad deflection)
-const TICKER_DAMPER         = 18    // damping (ζ ≈ 0.52 — underdamped for visible bounce)
-const TICKER_IMPULSE        = 1.2   // upward angular velocity impulse to ticker per peg hit
+const TICKER_SPRING         = 210   // ticker spring return (softer = more pliable)
+const TICKER_DAMPER         = 16    // damping (keeps a visible but controlled flap)
+const TICKER_IMPULSE        = 1.0   // upward angular velocity impulse to ticker per peg hit
 const WHEEL_BRAKE_IMPULSE   = 0.28  // rad/s removed from wheel per peg crossing (discrete)
 const TICKER_WHEEL_COUPLING = 14    // continuous coupling: deflection (rad) → wheel braking (rad/s² per rad)
 const TICKER_MAX_ANGLE      = 0.06  // rad — mechanical stop (ticker rests against wheel rim)
+const TICKER_MIN_ANGLE      = -0.24 // rad — max upward bend when pegs push the ticker back
+const CONTACT_LIFT_WINDOW   = 0.15  // rad — how close a peg must be to start lifting the ticker
+const CONTACT_LIFT_ANGLE    = 0.14  // rad — minimum upward lift near direct peg contact
 
 // ── Canvas geometry ───────────────────────────────────────────────────────────
 
@@ -57,6 +60,12 @@ function normAngle(a: number): number {
 function sectorUnderTicker(wheelAngle: number, n: number): number {
   const sectorAngle = (2 * Math.PI) / n
   return Math.floor(normAngle(TICKER_WORLD_ANGLE - wheelAngle) / sectorAngle) % n
+}
+
+function boundaryDistanceAtTicker(wheelAngle: number, n: number): number {
+  const sectorAngle = (2 * Math.PI) / n
+  const phase = normAngle(TICKER_WORLD_ANGLE - wheelAngle) % sectorAngle
+  return Math.min(phase, sectorAngle - phase)
 }
 
 function lighten(hex: string, t: number): string {
@@ -422,6 +431,18 @@ export function SpinnerCard() {
         }
       }
 
+      // Pre-contact lift: as a peg approaches the ticker tip, the wheel should
+      // visibly push the ticker out of the way rather than letting the peg clip
+      // through the flap before the impulse happens.
+      const boundaryDistance = boundaryDistanceAtTicker(wheelAngleRef.current, n)
+      const liftWindow = Math.min(CONTACT_LIFT_WINDOW, ((2 * Math.PI) / n) * 0.45)
+      if (boundaryDistance < liftWindow && omegaRef.current > 0) {
+        const closeness = 1 - boundaryDistance / liftWindow
+        const speedFactor = Math.min(1, Math.abs(omegaRef.current) / 8)
+        const desiredLift = -CONTACT_LIFT_ANGLE * (0.45 + 0.55 * speedFactor) * closeness * closeness
+        tickerAngleRef.current = Math.min(tickerAngleRef.current, desiredLift)
+      }
+
       // ── Ticker spring-damper ───────────────────────────────────────────────
       tickerOmegaRef.current +=
         (-TICKER_SPRING * tickerAngleRef.current - TICKER_DAMPER * tickerOmegaRef.current) * dt
@@ -431,6 +452,10 @@ export function SpinnerCard() {
       if (tickerAngleRef.current > TICKER_MAX_ANGLE) {
         tickerAngleRef.current = TICKER_MAX_ANGLE
         if (tickerOmegaRef.current > 0) tickerOmegaRef.current = 0
+      }
+      if (tickerAngleRef.current < TICKER_MIN_ANGLE) {
+        tickerAngleRef.current = TICKER_MIN_ANGLE
+        if (tickerOmegaRef.current < 0) tickerOmegaRef.current = 0
       }
 
       // ── Continuous ticker → wheel coupling ────────────────────────────────

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { ReactNode, useState } from 'react'
+import { ReactNode, useEffect, useRef, useState } from 'react'
 import { Save, Library, LogOut, ChevronDown, FilePlus } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { signOut } from '@/lib/auth'
@@ -33,7 +33,31 @@ export function Header({
   const { user, isGuest } = useAuth()
   const { isDirty, clearGrid } = useStore()
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement | null>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    if (!showUserMenu) return
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!userMenuRef.current?.contains(event.target as Node)) {
+        setShowUserMenu(false)
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setShowUserMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [showUserMenu])
 
   async function handleSignOut() {
     await signOut()
@@ -118,7 +142,7 @@ export function Header({
           )}
 
           {user && (
-            <div className="relative">
+            <div ref={userMenuRef} className="relative">
               <button
                 onClick={() => setShowUserMenu(v => !v)}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"

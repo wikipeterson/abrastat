@@ -27,6 +27,8 @@ type WorkspaceMode = 'library' | 'lab'
 type LibrarySection = 'all' | 'mine' | 'games' | 'polls'
 type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 
+const SIDEBAR_WIDTH_CLASS = 'md:w-56'
+
 const EXPLORE_CARD_OPTIONS: CardOption[] = [
   { type: 'graph',      icon: '📈', label: 'Graph' },
   { type: 'summary',    icon: '📊', label: 'Summary Statistics' },
@@ -134,7 +136,7 @@ function VariableSidebar({
 
       <aside className={`
         flex-shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col
-        md:relative md:w-48 md:translate-x-0 md:z-auto
+        md:relative ${SIDEBAR_WIDTH_CLASS} md:translate-x-0 md:z-auto
         fixed inset-y-0 left-0 z-30 w-56 transition-transform duration-200
         ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
@@ -215,7 +217,7 @@ function LibrarySidebar({
 
       <aside className={`
         flex-shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col
-        md:relative md:w-56 md:translate-x-0 md:z-auto
+        md:relative ${SIDEBAR_WIDTH_CLASS} md:translate-x-0 md:z-auto
         fixed inset-y-0 left-0 z-30 w-60 transition-transform duration-200
         ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>

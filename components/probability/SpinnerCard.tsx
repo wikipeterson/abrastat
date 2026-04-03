@@ -312,6 +312,8 @@ export function SpinnerCard() {
 
   // ── Canvas + animation refs ───────────────────────────────────────────────
   const canvasRef       = useRef<HTMLCanvasElement>(null)
+  const tickAudioPoolRef = useRef<HTMLAudioElement[]>([])
+  const tickAudioIndexRef = useRef(0)
   const rafRef          = useRef<number | null>(null)
   const lastTimeRef     = useRef<number | null>(null)
   const wheelAngleRef   = useRef(0)
@@ -326,6 +328,45 @@ export function SpinnerCard() {
 
   useEffect(() => { sectorsRef.current  = sectors },    [sectors])
   useEffect(() => { showLabelsRef.current = showLabels }, [showLabels])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const pool = Array.from({ length: 6 }, () => {
+      const audio = new Audio('/sounds/clicksound.mp3')
+      audio.preload = 'auto'
+      audio.volume = 0.3
+      return audio
+    })
+
+    tickAudioPoolRef.current = pool
+    tickAudioIndexRef.current = 0
+
+    return () => {
+      pool.forEach(audio => {
+        audio.pause()
+        audio.src = ''
+      })
+      tickAudioPoolRef.current = []
+    }
+  }, [])
+
+  const playTickSound = useCallback((wheelSpeed: number) => {
+    const pool = tickAudioPoolRef.current
+    if (pool.length === 0) return
+
+    const audio = pool[tickAudioIndexRef.current % pool.length]
+    tickAudioIndexRef.current = (tickAudioIndexRef.current + 1) % pool.length
+
+    audio.pause()
+    audio.currentTime = 0
+    audio.playbackRate = Math.max(0.9, Math.min(1.35, 0.9 + wheelSpeed / 20))
+
+    void audio.play().catch(() => {
+      // Ignore autoplay/playback interruptions; the next user-initiated spin
+      // will retry naturally.
+    })
+  }, [])
 
   // ── Draw (static, for non-spinning state) ─────────────────────────────────
   const redraw = useCallback(() => {
@@ -372,6 +413,7 @@ export function SpinnerCard() {
         for (let k = 0; k < nCrossings; k++) {
           // Ticker: peg sweeps upward past tip → CCW (negative) angular impulse
           tickerOmegaRef.current -= TICKER_IMPULSE
+          playTickSound(Math.abs(omegaRef.current))
 
           // Wheel: ticker spring reaction brakes the wheel.
           // Capped at 60% of current speed so the wheel never reverses or jerks.
@@ -436,7 +478,7 @@ export function SpinnerCard() {
       rafRef.current = null
       lastTimeRef.current = null
     }
-  }, [])
+  }, [playTickSound])
 
   // ── Spin handler ──────────────────────────────────────────────────────────
   function handleSpin() {

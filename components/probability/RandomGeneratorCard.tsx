@@ -8,15 +8,6 @@ function randomInteger(minValue: number, maxValue: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
-function StatPill({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2 text-center">
-      <div className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">{label}</div>
-      <div className="mt-1 text-base font-semibold text-[var(--color-text)]">{value}</div>
-    </div>
-  )
-}
-
 export function RandomGeneratorCard() {
   const [minValue, setMinValue] = useState(1)
   const [maxValue, setMaxValue] = useState(10)
@@ -25,7 +16,6 @@ export function RandomGeneratorCard() {
 
   const normalizedMin = Math.min(minValue, maxValue)
   const normalizedMax = Math.max(minValue, maxValue)
-  const lastValue = results.at(-1) ?? '—'
 
   const summary = useMemo(() => {
     if (results.length === 0) {
@@ -50,11 +40,7 @@ export function RandomGeneratorCard() {
     }
   }, [results])
 
-  function generateOnce() {
-    setResults(prev => [...prev, randomInteger(normalizedMin, normalizedMax)])
-  }
-
-  function generateMany() {
+  function generate() {
     const next = Array.from({ length: count }, () => randomInteger(normalizedMin, normalizedMax))
     setResults(prev => [...prev, ...next])
   }
@@ -103,15 +89,8 @@ export function RandomGeneratorCard() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={generateOnce}
+            onClick={generate}
             className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-          >
-            Generate One
-          </button>
-          <button
-            type="button"
-            onClick={generateMany}
-            className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] hover:bg-slate-50"
           >
             Generate {count}
           </button>
@@ -122,13 +101,6 @@ export function RandomGeneratorCard() {
           >
             Reset
           </button>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-          <StatPill label="Last Value" value={lastValue} />
-          <StatPill label="Generated" value={summary.total} />
-          <StatPill label="Observed Min" value={summary.min} />
-          <StatPill label="Observed Max" value={summary.max} />
         </div>
 
         <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">

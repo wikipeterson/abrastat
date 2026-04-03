@@ -312,7 +312,7 @@ export const useStore = create<AbraStatStore>((set) => ({
     const { width, height } =
       type === 'summary'     ? { width: 700, height: 620 } :
       type === 'means'       ? { width: 760, height: 500 } :
-      type === 'proportions' ? { width: 760, height: 500 } :
+      type === 'proportions' ? { width: 860, height: 620 } :
       type === 'dice-roller' ? { width: 760, height: 700 } :
                            { width: 620, height: 520 }
     return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width, height }] }

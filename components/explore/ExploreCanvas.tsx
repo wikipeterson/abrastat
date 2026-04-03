@@ -533,7 +533,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       case 'dice-roller':  return { minWidth: 760, minHeight: 700 }
       case 'sim-results':  return { minWidth: 360, minHeight: 360 }
       case 'means':        return { minWidth: 700, minHeight: 460 }
-      case 'proportions':  return { minWidth: 700, minHeight: 460 }
+      case 'proportions':  return { minWidth: 820, minHeight: 580 }
       default:             return { minWidth: 360, minHeight: 280 }
     }
   }

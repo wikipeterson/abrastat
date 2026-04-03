@@ -127,6 +127,16 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupLevels.join(',')])
 
+  useEffect(() => {
+    setH0(current => {
+      const parsed = parseFloat(current)
+      if (!isFinite(parsed)) return hasGroup ? '0' : '0.5'
+      if (hasGroup && parsed === 0.5) return '0'
+      if (!hasGroup && parsed === 0) return '0.5'
+      return current
+    })
+  }, [hasGroup])
+
   const oneSampleSummary = useMemo<PropSummary | null>(() => {
     if (!config.var1ColId || !successLevel) return null
     const values = grid.rows.map(r => String(r[config.var1ColId!] ?? '').trim()).filter(Boolean)
@@ -370,6 +380,13 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
               </div>
             )}
 
+            {mode === 'test' && result && (
+              <div className="grid gap-2 grid-cols-2 flex-shrink-0">
+                <StatBox label="z-statistic" value={fmt(result.stat, 4)} />
+                <StatBox label="p-value" value={fmtP(result.p)} highlight={rejected ? 'reject' : 'keep'} />
+              </div>
+            )}
+
             {!result && (
               <p className="text-xs text-[var(--color-muted)] italic flex-shrink-0">
                 {!successLevel
@@ -404,11 +421,6 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
               <div className="space-y-2.5 flex-shrink-0">
                 {mode === 'test' ? (
                   <>
-                    <div className="grid gap-2 grid-cols-2">
-                      <StatBox label="z-statistic" value={fmt(result.stat, 4)} />
-                      <StatBox label="p-value" value={fmtP(result.p)} highlight={rejected ? 'reject' : 'keep'} />
-                    </div>
-
                     <div className={`rounded-xl p-3 border ${rejected ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
                       <p className={`text-xs font-semibold mb-1 ${rejected ? 'text-red-700' : 'text-green-700'}`}>{rejected ? 'Reject H₀' : 'Fail to Reject H₀'}</p>
                       <p className="text-xs text-[var(--color-muted)] leading-relaxed">

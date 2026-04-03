@@ -53,6 +53,7 @@ function CopyLinkButton({ datasetId }: { datasetId: string }) {
 export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, view = 'list' }: DatasetCardProps) {
   const isOwner = dataset.ownerId === currentUserId
   const canDelete = isOwner && onDelete
+  const canCopyLink = !dataset.id.startsWith('sample:')
 
   if (view === 'card') {
     return (
@@ -60,7 +61,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, view = '
         <div className="flex items-start justify-between">
           <DatasetCoverThumb cover={dataset.emoji} size="md" />
           <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all">
-            <CopyLinkButton datasetId={dataset.id} />
+            {canCopyLink && <CopyLinkButton datasetId={dataset.id} />}
             {canDelete && (
               <button
                 onClick={e => { e.stopPropagation(); onDelete!(dataset.id) }}
@@ -106,7 +107,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, view = '
         <span className="w-16 text-right">{dataset.rowCount} rows</span>
       </div>
       <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all">
-        <CopyLinkButton datasetId={dataset.id} />
+        {canCopyLink && <CopyLinkButton datasetId={dataset.id} />}
         {canDelete && (
           <button
             onClick={e => { e.stopPropagation(); onDelete!(dataset.id) }}

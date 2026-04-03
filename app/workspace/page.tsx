@@ -11,7 +11,7 @@ import { DatasetCard } from '@/components/library/DatasetCard'
 import { DatasetListSkeleton } from '@/components/ui/Skeleton'
 import { GameHub } from '@/components/games/GameHub'
 import { useAuth } from '@/components/auth/AuthProvider'
-import { subscribeToMyDatasets, subscribeToPublicDatasets, deleteDataset, loadDataset, saveDataset } from '@/lib/firestore'
+import { subscribeToMyDatasets, subscribeToPublicDatasets, deleteDataset, loadDataset } from '@/lib/firestore'
 import { SAMPLE_DATASETS } from '@/lib/sampleData'
 import { useStore } from '@/lib/store'
 import { CardConfig } from '@/lib/exploreTypes'
@@ -50,11 +50,36 @@ const INFERENCE_CARD_OPTIONS: CardOption[] = [
 ]
 
 const LIBRARY_ITEMS: { id: LibrarySection; label: string; soon?: boolean }[] = [
-  { id: 'all', label: 'All Datasets' },
+  { id: 'all', label: 'Public Datasets' },
   { id: 'mine', label: 'My Datasets' },
   { id: 'games', label: 'Games' },
   { id: 'polls', label: 'Polls', soon: true },
 ]
+
+function sampleDatasetToMeta(sample: (typeof SAMPLE_DATASETS)[number]): DatasetMeta {
+  const now = new Date('2024-01-01T00:00:00Z')
+  return {
+    id: sample.id ?? `sample:${sample.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    ownerId: 'abrastat',
+    ownerName: 'AbraStat',
+    ownerPhotoURL: '',
+    name: sample.name,
+    description: sample.description ?? '',
+    emoji: sample.emoji,
+    isPublic: true,
+    rowCount: sample.grid.rows.length,
+    columnCount: sample.grid.columns.length,
+    columns: sample.grid.columns.map(col => ({ name: col.name, type: col.type })),
+    tags: sample.tags ?? [],
+    source: sample.source ?? '',
+    sourceUrl: sample.sourceUrl ?? '',
+    citation: sample.citation ?? '',
+    notes: sample.notes ?? '',
+    variableInfo: sample.variableInfo ?? [],
+    createdAt: now,
+    updatedAt: now,
+  }
+}
 
 function GroupedAddCardMenu({
   onAdd,
@@ -284,10 +309,11 @@ function DatasetsBrowser({
   }
 
   const datasets = scope === 'all' ? publicDatasets : myDatasets
+  const builtInDatasets = useMemo(() => (scope === 'all' ? SAMPLE_DATASETS.map(sampleDatasetToMeta) : []), [scope])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    let result = datasets.filter(d =>
+    let result = [...builtInDatasets, ...datasets].filter(d =>
       !q ||
       d.name.toLowerCase().includes(q) ||
       d.description?.toLowerCase().includes(q) ||
@@ -302,7 +328,7 @@ function DatasetsBrowser({
       return 0
     })
     return result
-  }, [datasets, search, sort])
+  }, [builtInDatasets, datasets, search, sort])
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
@@ -391,7 +417,6 @@ function UnsavedGuard({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
 }
 
 function WorkspaceContent() {
-  const { user } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [confirmNew, setConfirmNew] = useState(false)
   const [showSave, setShowSave] = useState(false)
@@ -401,7 +426,6 @@ function WorkspaceContent() {
   const [mode, setMode] = useState<WorkspaceMode>('lab')
   const [librarySection, setLibrarySection] = useState<LibrarySection>('all')
   const [gameChrome, setGameChrome] = useState<{ title: string; onBack: () => void } | null>(null)
-  const [seeding, setSeeding] = useState(false)
   const { isDirty, clearGrid, activeDatasetId, activeDatasetName, addExploreCard, exploreCards, setGrid, setActiveDatasetId, setActiveDatasetName } = useStore()
   const hasOnlyDataGrid = exploreCards.every(card => card.config.type === 'data-grid')
 
@@ -454,26 +478,18 @@ function WorkspaceContent() {
     setShowShare(true)
   }
 
-  async function handleSeedSamples() {
-    if (!user) return
-    setSeeding(true)
-    try {
-      for (const sample of SAMPLE_DATASETS) {
-        await saveDataset(user, sample.name, sample.description ?? '', sample.emoji, true, sample.grid, {
-          tags: sample.tags,
-          source: sample.source,
-          sourceUrl: sample.sourceUrl,
-          citation: sample.citation,
-          notes: sample.notes,
-          variableInfo: sample.variableInfo,
-        })
-      }
-    } finally {
-      setSeeding(false)
-    }
-  }
-
   async function handleOpenDataset(id: string) {
+    if (id.startsWith('sample:')) {
+      const sample = SAMPLE_DATASETS.find(entry => (entry.id ?? `sample:${entry.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`) === id)
+      if (!sample) return
+      setGrid(sample.grid)
+      setActiveDatasetId(null)
+      setActiveDatasetName(sample.name)
+      setMode('lab')
+      setSidebarOpen(false)
+      return
+    }
+
     try {
       const { meta, grid } = await loadDataset(id)
       setGrid(grid)
@@ -504,13 +520,6 @@ function WorkspaceContent() {
   const libraryHeaderActions = mode === 'library' && (librarySection === 'all' || librarySection === 'mine')
     ? (
       <div className="flex items-center gap-2">
-        <button
-          onClick={handleSeedSamples}
-          disabled={seeding}
-          className="px-3 py-2 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-slate-100 hover:text-[var(--color-accent)] transition-colors disabled:opacity-50"
-        >
-          {seeding ? 'Adding…' : '+ Sample Datasets'}
-        </button>
         <button
           onClick={handleNewDataset}
           className="px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white hover:brightness-105 transition-all"

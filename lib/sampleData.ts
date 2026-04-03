@@ -1,10 +1,12 @@
 import { parsedRowsToGrid } from './gridHelpers'
 import { DatasetVariableInfo, GridState } from '@/types'
 import { BIRTH_WEIGHTS_HEADERS, BIRTH_WEIGHTS_META, BIRTH_WEIGHTS_ROWS } from './sampleBirthWeights'
+import { IRIS_HEADERS, IRIS_META, IRIS_ROWS } from './sampleIris'
 import { PENGUINS_HEADERS, PENGUINS_META, PENGUINS_ROWS } from './samplePenguins'
 import { TITANIC_STUDENT_HEADERS, TITANIC_STUDENT_META, TITANIC_STUDENT_ROWS } from './sampleTitanic'
 
 export interface SampleDataset {
+  id?: string
   name: string
   emoji: string
   description?: string
@@ -155,6 +157,25 @@ export const SAMPLE_DATASETS: SampleDataset[] = [
       { name: 'embarked', description: 'Port where the passenger boarded: Southampton, Cherbourg, or Queenstown.' },
     ],
     grid: parsedRowsToGrid([...TITANIC_STUDENT_HEADERS], TITANIC_STUDENT_ROWS.map(row => [...row] as unknown[])),
+  },
+  {
+    id: 'sample:iris',
+    name: 'Iris Flowers',
+    emoji: '🌸',
+    description: IRIS_META.description,
+    tags: [...IRIS_META.tags],
+    source: IRIS_META.source,
+    sourceUrl: IRIS_META.sourceUrl,
+    citation: IRIS_META.citation,
+    notes: IRIS_META.notes,
+    variableInfo: [
+      { name: 'sepal_length', description: 'Sepal length in centimeters.' },
+      { name: 'sepal_width', description: 'Sepal width in centimeters.' },
+      { name: 'petal_length', description: 'Petal length in centimeters.' },
+      { name: 'petal_width', description: 'Petal width in centimeters.' },
+      { name: 'species', description: 'Iris species: Setosa, Versicolor, or Virginica.' },
+    ],
+    grid: parsedRowsToGrid([...IRIS_HEADERS], IRIS_ROWS.map(row => [...row] as unknown[])),
   },
   {
     name: 'Palmer Penguins',

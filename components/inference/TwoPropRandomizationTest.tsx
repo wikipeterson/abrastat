@@ -301,6 +301,7 @@ function colStats(
 export function TwoPropRandomizationTest() {
   const [presetKey, setPresetKey]             = useState<string>('titanic')
   const [alternative, setAlternative]         = useState<Alternative>('less')
+  const [nullDiff, setNullDiff]               = useState('0')
   const [demoMode, setDemoMode]               = useState(true)
   const [animSpeed, setAnimSpeed]             = useState(1)
   const [stage, setStage]                     = useState<Stage>('observed')
@@ -429,6 +430,8 @@ export function TwoPropRandomizationTest() {
   // Column header labels
   const leftLabel  = data.group1Label
   const rightLabel = data.group2Label
+  const altSymbol = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
+  const altStatement = `p₁ − p₂ ${altSymbol} ${nullDiff}`
 
   return (
     <div className="space-y-4">
@@ -449,6 +452,20 @@ export function TwoPropRandomizationTest() {
         </div>
 
         <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₀: p₁ − p₂ =</span>
+          <input
+            type="number"
+            min={-1}
+            max={1}
+            step={0.01}
+            value={nullDiff}
+            onChange={e => setNullDiff(e.target.value)}
+            disabled={isAnimating}
+            className="w-24 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₁</span>
           <select
             value={alternative}
@@ -456,10 +473,11 @@ export function TwoPropRandomizationTest() {
             disabled={isAnimating}
             className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white"
           >
-            <option value="less">p₁ − p₂ &lt; 0</option>
-            <option value="greater">p₁ − p₂ &gt; 0</option>
-            <option value="two">p₁ − p₂ ≠ 0</option>
+            <option value="less">&lt;</option>
+            <option value="greater">&gt;</option>
+            <option value="two">≠</option>
           </select>
+          <span className="text-sm font-mono font-medium text-[var(--color-text)]">{altStatement}</span>
         </div>
 
         <div className="ml-auto flex items-center gap-2">

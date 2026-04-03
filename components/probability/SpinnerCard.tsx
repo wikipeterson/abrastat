@@ -7,15 +7,15 @@ import { useStore } from '@/lib/store'
 
 const FRICTION_K            = 0.9   // base wheel friction (ticker adds extra braking)
 const STOP_OMEGA            = 0.06  // rad/s — stop threshold
-const TICKER_SPRING         = 150   // ticker spring return (softer = more pliable)
-const TICKER_DAMPER         = 12    // damping (keeps a visible but controlled flap)
-const TICKER_IMPULSE        = 0.9   // upward angular velocity impulse to ticker per peg hit
+const TICKER_SPRING         = 72    // ticker spring return (much softer so the flap yields visibly)
+const TICKER_DAMPER         = 8     // lighter damping so it can stay bent back a little longer
+const TICKER_IMPULSE        = 0.7   // smaller hit impulse because contact lift now does more of the work
 const WHEEL_BRAKE_IMPULSE   = 0.28  // rad/s removed from wheel per peg crossing (discrete)
-const TICKER_WHEEL_COUPLING = 14    // continuous coupling: deflection (rad) → wheel braking (rad/s² per rad)
+const TICKER_WHEEL_COUPLING = 10    // continuous coupling: deflection (rad) → wheel braking (rad/s² per rad)
 const TICKER_MAX_ANGLE      = 0.06  // rad — mechanical stop (ticker rests against wheel rim)
-const TICKER_MIN_ANGLE      = -0.34 // rad — max upward bend when pegs push the ticker back
-const CONTACT_LIFT_WINDOW   = 0.22  // rad — how close a peg must be to start lifting the ticker
-const CONTACT_LIFT_ANGLE    = 0.22  // rad — minimum upward lift near direct peg contact
+const TICKER_MIN_ANGLE      = -0.62 // rad — allow a much deeper bend when posts push the ticker back
+const CONTACT_LIFT_WINDOW   = 0.42  // rad — start yielding much earlier before peg contact
+const CONTACT_LIFT_ANGLE    = 0.42  // rad — strong visible lift as pegs approach
 
 // ── Canvas geometry ───────────────────────────────────────────────────────────
 

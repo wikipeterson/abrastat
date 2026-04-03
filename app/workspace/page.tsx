@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { Header } from '@/components/layout/Header'
@@ -456,14 +457,22 @@ function UnsavedGuard({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
 }
 
 function WorkspaceContent() {
+  const searchParams = useSearchParams()
+  const initialMode = searchParams.get('mode') === 'library' ? 'library' : 'lab'
+  const initialLibrarySection = (() => {
+    const section = searchParams.get('section')
+    return section === 'all' || section === 'mine' || section === 'games' || section === 'applets' || section === 'polls'
+      ? section
+      : 'all'
+  })()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [confirmNew, setConfirmNew] = useState(false)
   const [showSave, setShowSave] = useState(false)
   const [showShare, setShowShare] = useState(false)
   const [shareDatasetId, setShareDatasetId] = useState<string | null>(null)
   const [shareIsPublic, setShareIsPublic] = useState(false)
-  const [mode, setMode] = useState<WorkspaceMode>('lab')
-  const [librarySection, setLibrarySection] = useState<LibrarySection>('all')
+  const [mode, setMode] = useState<WorkspaceMode>(initialMode)
+  const [librarySection, setLibrarySection] = useState<LibrarySection>(initialLibrarySection)
   const [gameChrome, setGameChrome] = useState<{ title: string; onBack: () => void } | null>(null)
   const { isDirty, clearGrid, activeDatasetId, activeDatasetName, addExploreCard, exploreCards, setGrid, setActiveDatasetId, setActiveDatasetName } = useStore()
   const hasOnlyDataGrid = exploreCards.every(card => card.config.type === 'data-grid')

@@ -435,6 +435,24 @@ function AppletsBrowser() {
           </Link>
 
           <Link
+            href="/applets/galton-board"
+            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-start gap-4">
+              <div className="text-3xl leading-none">🟢</div>
+              <div className="space-y-1">
+                <div className="text-lg font-semibold text-[var(--color-text)]">Galton Board</div>
+                <p className="text-sm text-[var(--color-muted)] max-w-md">
+                  Drop balls through pegs and watch the distribution build bin by bin.
+                </p>
+              </div>
+            </div>
+            <span className="px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white whitespace-nowrap">
+              Open
+            </span>
+          </Link>
+
+          <Link
             href="/applets/spinner"
             className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow"
           >

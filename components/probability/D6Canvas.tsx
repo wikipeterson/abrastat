@@ -15,7 +15,7 @@ const GRAVITY  = -32
 
 const LINEAR_DAMPING  = 0.28
 const ANGULAR_DAMPING = 0.38
-const MAX_SETTLE  = 3500   // ms hard timeout
+const MAX_SETTLE  = 2500   // ms hard timeout
 const LINEUP_READY_VEL = 2.0   // lineup fires even while dice are barely rolling
 const LINEUP_READY_ANG = 2.0
 
@@ -462,7 +462,7 @@ function getNonD6DieShapes(sides: number): {
       geo = new THREE.OctahedronGeometry(r * 1.08, 0)
       break
     case 10: {
-      const t = makeD10Geometry(r)
+      const t = makeD10Geometry(r * 1.25)
       geo = t.geo
       faceDefs = t.faceDefs
       break
@@ -1259,10 +1259,10 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           mass:            1,
           shape:           physicsShape,
           position:        new CANNON.Vec3(0, DIE_HALF, 0),
-          linearDamping:   isD10 ? 0.88 : LINEAR_DAMPING,
-          angularDamping:  isD10 ? 0.92 : ANGULAR_DAMPING,
+          linearDamping:   isD10 ? 0.96 : LINEAR_DAMPING,
+          angularDamping:  isD10 ? 0.97 : ANGULAR_DAMPING,
           material:        diceMatRef.current ?? undefined,
-          sleepSpeedLimit: isD10 ? 2.0 : 0.5,
+          sleepSpeedLimit: isD10 ? 3.5 : 0.5,
           sleepTimeLimit:  0.1,
         })
         world.addBody(body)

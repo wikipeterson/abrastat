@@ -17,6 +17,8 @@ const jS = jStat as unknown as {
 
 type Alternative = 'less' | 'two-sided' | 'greater'
 type ProcedureMode = 'test' | 'interval'
+type SourceMode = 'data' | 'manual'
+type ManualKind = 'one' | 'two'
 
 interface PropSummary {
   n: number
@@ -93,6 +95,8 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
   const responseCol = config.var1ColId ? (grid.columns.find(c => c.id === config.var1ColId) ?? null) : null
   const groupCol = config.var2ColId ? (grid.columns.find(c => c.id === config.var2ColId) ?? null) : null
   const hasGroup = groupCol?.type === 'categorical'
+  const [sourceMode, setSourceMode] = useState<SourceMode>('data')
+  const [manualKind, setManualKind] = useState<ManualKind>('one')
 
   const responseLevels = useMemo(() => {
     if (!config.var1ColId) return []
@@ -107,6 +111,10 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
   const [successLevel, setSuccessLevel] = useState('')
   const [groupA, setGroupA] = useState('')
   const [groupB, setGroupB] = useState('')
+  const [manualN1, setManualN1] = useState('100')
+  const [manualX1, setManualX1] = useState('50')
+  const [manualN2, setManualN2] = useState('100')
+  const [manualX2, setManualX2] = useState('50')
   const [mode, setMode] = useState<ProcedureMode>('test')
   const [h0, setH0] = useState('0.5')
   const [alpha, setAlpha] = useState('0.05')
@@ -169,6 +177,24 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
   const alphaVal = parseFloat(alpha)
   const h0Val = parseFloat(h0)
   const confidenceVal = parseFloat(confidenceLevel)
+  const useManual = sourceMode === 'manual'
+  const effectiveHasGroup = useManual ? manualKind === 'two' : hasGroup
+
+  const manualSummary1 = useMemo<PropSummary | null>(() => {
+    if (!useManual) return null
+    const n = parseInt(manualN1, 10)
+    const success = parseInt(manualX1, 10)
+    if (!isFinite(n) || !isFinite(success) || n <= 0 || success < 0 || success > n) return null
+    return { n, success, phat: success / n }
+  }, [manualN1, manualX1, useManual])
+
+  const manualSummary2 = useMemo<PropSummary | null>(() => {
+    if (!useManual || manualKind !== 'two') return null
+    const n = parseInt(manualN2, 10)
+    const success = parseInt(manualX2, 10)
+    if (!isFinite(n) || !isFinite(success) || n <= 0 || success < 0 || success > n) return null
+    return { n, success, phat: success / n }
+  }, [manualKind, manualN2, manualX2, useManual])
 
   const result = useMemo<PropResult | null>(() => {
     if (!isFinite(alphaVal) || alphaVal <= 0 || alphaVal >= 1 || !isFinite(h0Val)) return null
@@ -176,9 +202,9 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
     const ciAlpha = 1 - confidenceVal / 100
     const zStar = jS.normal.inv(1 - ciAlpha / 2, 0, 1)
 
-    if (hasGroup) {
-      const a = groupedSummaries.a
-      const b = groupedSummaries.b
+    if (effectiveHasGroup) {
+      const a = useManual ? manualSummary1 : groupedSummaries.a
+      const b = useManual ? manualSummary2 : groupedSummaries.b
       if (!a || !b) return null
       const pooled = (a.success + b.success) / (a.n + b.n)
       const seTest = Math.sqrt(pooled * (1 - pooled) * (1 / a.n + 1 / b.n))
@@ -190,7 +216,7 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
       return { stat: z, p, ci: clampCi([diff - zStar * seCi, diff + zStar * seCi]) }
     }
 
-    const s = oneSampleSummary
+    const s = useManual ? manualSummary1 : oneSampleSummary
     if (!s || h0Val <= 0 || h0Val >= 1) return null
     const seTest = Math.sqrt((h0Val * (1 - h0Val)) / s.n)
     const seCi = Math.sqrt((s.phat * (1 - s.phat)) / s.n)
@@ -198,7 +224,7 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
     const z = (s.phat - h0Val) / seTest
     const p = calcP(z, alternative)
     return { stat: z, p, ci: clampCi([s.phat - zStar * seCi, s.phat + zStar * seCi]) }
-  }, [alphaVal, confidenceVal, groupedSummaries.a, groupedSummaries.b, h0Val, hasGroup, oneSampleSummary, alternative])
+  }, [alphaVal, confidenceVal, effectiveHasGroup, groupedSummaries.a, groupedSummaries.b, h0Val, manualSummary1, manualSummary2, oneSampleSummary, alternative, useManual])
 
   const chartTraces = useMemo(() => {
     if (!result) return null
@@ -245,24 +271,63 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
 
   const rejected = result ? result.p < alphaVal : false
   const altSymbol = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
-  const h0Label = hasGroup ? 'p₁ − p₂ =' : 'p ='
-  const altLabel = hasGroup ? 'p₁ − p₂' : 'p'
-  const procedureLabel = hasGroup
+  const h0Label = effectiveHasGroup ? 'p₁ − p₂ =' : 'p ='
+  const altLabel = effectiveHasGroup ? 'p₁ − p₂' : 'p'
+  const procedureLabel = effectiveHasGroup
     ? (mode === 'test' ? '2-proportion z-test' : '2-proportion z-interval')
     : (mode === 'test' ? '1-proportion z-test' : '1-proportion z-interval')
 
   return (
     <div className="h-full flex flex-col gap-3 overflow-hidden text-sm">
-      <div className="flex gap-2 flex-shrink-0">
-        <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var1')}>
-          <DropZone id={`${cardId}:var1`} label="Response Variable" hint="categorical only" assignedCol={responseCol} onClear={() => onClearZone('var1')} />
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span className="text-xs text-[var(--color-muted)]">Source</span>
+        <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+          {([
+            ['data', 'Use Data'],
+            ['manual', 'Enter Info'],
+          ] as [SourceMode, string][]).map(([nextMode, label], i) => (
+            <button
+              key={nextMode}
+              onClick={() => setSourceMode(nextMode)}
+              className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === nextMode ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
-        <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var2')}>
-          <DropZone id={`${cardId}:var2`} label="2nd Variable or Group By" hint="categorical only" assignedCol={groupCol} onClear={() => onClearZone('var2')} />
-        </div>
+        {useManual && (
+          <>
+            <span className="ml-2 text-xs text-[var(--color-muted)]">Setup</span>
+            <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+              {([
+                ['one', '1 proportion'],
+                ['two', '2 proportions'],
+              ] as [ManualKind, string][]).map(([nextKind, label], i) => (
+                <button
+                  key={nextKind}
+                  onClick={() => setManualKind(nextKind)}
+                  className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${manualKind === nextKind ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
-      {!responseCol ? (
+      {!useManual && (
+        <div className="flex gap-2 flex-shrink-0">
+          <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var1')}>
+            <DropZone id={`${cardId}:var1`} label="Response Variable" hint="categorical only" assignedCol={responseCol} onClear={() => onClearZone('var1')} />
+          </div>
+          <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var2')}>
+            <DropZone id={`${cardId}:var2`} label="2nd Variable or Group By" hint="categorical only" assignedCol={groupCol} onClear={() => onClearZone('var2')} />
+          </div>
+        </div>
+      )}
+
+      {!useManual && !responseCol ? (
         <div className="flex-1 flex items-center justify-center text-center min-h-0">
           <div>
             <p className="text-3xl opacity-20 mb-2">p̂</p>
@@ -272,7 +337,7 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
       ) : (
         <div className="grid grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-3 flex-1 min-h-0">
           <div className="min-h-0 flex flex-col gap-3">
-            {responseLevels.length > 1 && (
+            {!useManual && responseLevels.length > 1 && (
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className="text-xs text-[var(--color-muted)] whitespace-nowrap">Success</span>
                 <select value={successLevel} onChange={e => setSuccessLevel(e.target.value)} className="flex-1 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]">
@@ -281,7 +346,7 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
               </div>
             )}
 
-            {hasGroup && groupLevels.length > 2 && (
+            {!useManual && hasGroup && groupLevels.length > 2 && (
               <div className="flex gap-2 flex-shrink-0">
                 {([['Compare', groupA, setGroupA, groupB], ['vs.', groupB, setGroupB, groupA]] as [string, string, (v: string) => void, string][]).map(
                   ([label, value, setter, other]) => (
@@ -292,6 +357,33 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
                       </select>
                     </div>
                   ),
+                )}
+              </div>
+            )}
+
+            {useManual && (
+              <div className="bg-slate-50 rounded-xl p-3 flex-shrink-0 space-y-2">
+                <div className="grid gap-2 grid-cols-2">
+                  <label className="text-xs text-[var(--color-muted)]">
+                    n₁
+                    <input type="number" min={1} step={1} value={manualN1} onChange={e => setManualN1(e.target.value)} className="mt-1 w-full px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
+                  </label>
+                  <label className="text-xs text-[var(--color-muted)]">
+                    x₁
+                    <input type="number" min={0} step={1} value={manualX1} onChange={e => setManualX1(e.target.value)} className="mt-1 w-full px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
+                  </label>
+                </div>
+                {manualKind === 'two' && (
+                  <div className="grid gap-2 grid-cols-2">
+                    <label className="text-xs text-[var(--color-muted)]">
+                      n₂
+                      <input type="number" min={1} step={1} value={manualN2} onChange={e => setManualN2(e.target.value)} className="mt-1 w-full px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
+                    </label>
+                    <label className="text-xs text-[var(--color-muted)]">
+                      x₂
+                      <input type="number" min={0} step={1} value={manualX2} onChange={e => setManualX2(e.target.value)} className="mt-1 w-full px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
+                    </label>
+                  </div>
                 )}
               </div>
             )}
@@ -318,7 +410,7 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
                 <>
                   <div className="flex items-center gap-2">
                     <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">H₀: {h0Label}</label>
-                    <input type="number" min={hasGroup ? -1 : 0} max={1} step={0.01} value={h0} onChange={e => setH0(e.target.value)} className="w-24 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
+                    <input type="number" min={effectiveHasGroup ? -1 : 0} max={1} step={0.01} value={h0} onChange={e => setH0(e.target.value)} className="w-24 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Hₐ:</span>
@@ -356,7 +448,7 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
               )}
             </div>
 
-            {(oneSampleSummary || groupedSummaries.a) && (
+            {((useManual && manualSummary1) || (!useManual && (oneSampleSummary || groupedSummaries.a))) && (
               <div className="flex-shrink-0">
                 <p className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">Summary Statistics</p>
                 <table className="w-full text-xs border-collapse">
@@ -369,12 +461,23 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--color-border)]">
-                    {hasGroup ? (
+                    {effectiveHasGroup ? (
+                      useManual ? (
+                        <>
+                          {manualSummary1 && <PropSummaryRow label="Group 1" s={manualSummary1} />}
+                          {manualSummary2 && <PropSummaryRow label="Group 2" s={manualSummary2} />}
+                        </>
+                      ) : (
                       <>
                         {groupedSummaries.a && <PropSummaryRow label={groupA || 'Group A'} s={groupedSummaries.a} />}
                         {groupedSummaries.b && <PropSummaryRow label={groupB || 'Group B'} s={groupedSummaries.b} />}
                       </>
-                    ) : oneSampleSummary && <PropSummaryRow label={successLevel || 'Success'} s={oneSampleSummary} />}
+                      )
+                    ) : (
+                      useManual
+                        ? manualSummary1 && <PropSummaryRow label="Successes" s={manualSummary1} />
+                        : oneSampleSummary && <PropSummaryRow label={successLevel || 'Success'} s={oneSampleSummary} />
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -389,8 +492,10 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
 
             {!result && (
               <p className="text-xs text-[var(--color-muted)] italic flex-shrink-0">
-                {!successLevel
-                  ? 'Choose a success level.'
+                {useManual
+                  ? 'Enter valid counts to compute results.'
+                  : !successLevel
+                    ? 'Choose a success level.'
                   : hasGroup && (!groupA || !groupB)
                     ? 'Assign a grouping variable with at least 2 distinct values.'
                     : hasGroup && (!groupedSummaries.a || !groupedSummaries.b)

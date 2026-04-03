@@ -178,10 +178,12 @@ function makeColorFaceTexture(label: string): THREE.CanvasTexture {
   ctx.strokeStyle = DIE_EDGE_COLOR
   ctx.lineWidth = 4
   ctx.strokeRect(2, 2, S - 4, S - 4)
-  ctx.fillStyle = 'rgba(255,255,255,0.72)'
-  ctx.font = 'bold 80px sans-serif'
+  ctx.fillStyle = DIE_TEXT_COLOR
+  ctx.font = `900 ${label.length >= 3 ? 64 : label.length === 2 ? 88 : 110}px sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
+  ctx.shadowColor = 'rgba(255,255,255,0.4)'
+  ctx.shadowBlur = 8
   ctx.fillText(label, S/2, S/2)
   return finalizeTexture(new THREE.CanvasTexture(c))
 }

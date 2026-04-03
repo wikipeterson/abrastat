@@ -154,6 +154,7 @@ interface AbraStatStore {
     position: { x: number; y: number },
   ) => string
   pushSimResult: (cardId: string, roll: number[]) => void
+  pushSimResultsBatch: (cardId: string, rolls: number[][]) => void
   clearSimResults: (cardId: string) => void
 
   // Inference canvas (separate state, same canvas model)
@@ -395,6 +396,28 @@ export const useStore = create<AbraStatStore>((set) => ({
                 ...cfg,
                 rolls: [...cfg.rolls, roll],
                 values: [...cfg.values, derived],
+              },
+            }
+          })()
+        : c,
+    ),
+  })),
+  pushSimResultsBatch: (cardId, rolls) => set(state => ({
+    exploreCards: state.exploreCards.map(c =>
+      c.id === cardId && c.config.type === 'sim-results'
+        ? (() => {
+            if (rolls.length === 0) return c
+            const cfg = c.config as SimResultsCardConfig
+            const derived = rolls
+              .map(roll => deriveSimValue(roll, cfg.trackedMode))
+              .filter((value): value is number => value != null)
+            if (derived.length === 0) return c
+            return {
+              ...c,
+              config: {
+                ...cfg,
+                rolls: [...cfg.rolls, ...rolls],
+                values: [...cfg.values, ...derived],
               },
             }
           })()

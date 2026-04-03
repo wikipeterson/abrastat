@@ -116,6 +116,7 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   const [finalResults, setFinalResults] = useState<Record<string, number>>({})
   const [showTuning, setShowTuning] = useState(false)
   const [tuning, setTuning] = useState<DiceTuning>(DEFAULT_DICE_TUNING)
+  const [fastRollCount, setFastRollCount] = useState('100')
   const canvasRef = useRef<D6CanvasHandle>(null)
 
   // ── Store connections for linked results ──────────────────────────────────
@@ -123,6 +124,7 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   const updateExploreCard = useStore(s => s.updateExploreCard)
   const addSimResultsCard = useStore(s => s.addSimResultsCard)
   const pushSimResult     = useStore(s => s.pushSimResult)
+  const pushSimResultsBatch = useStore(s => s.pushSimResultsBatch)
 
   const diceConfig = cardId
     ? (exploreCards.find(c => c.id === cardId)?.config as DiceRollerCardConfig | undefined)
@@ -151,6 +153,22 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
     setFinalResults({})
     rollInProgressRef.current = true
     canvasRef.current?.rollAll()
+  }
+
+  function fastRollMany() {
+    const count = Math.max(1, Math.min(10000, Math.floor(Number(fastRollCount) || 0)))
+    if (tray.length === 0 || count < 1) return
+
+    const rolls = Array.from({ length: count }, () =>
+      tray.map(die => Math.floor(Math.random() * die.sides) + 1),
+    )
+
+    if (linkedResultsCardId) {
+      pushSimResultsBatch(linkedResultsCardId, rolls)
+    }
+
+    const lastRoll = rolls[rolls.length - 1]
+    setFinalResults(Object.fromEntries(tray.map((die, index) => [die.id, lastRoll[index]])))
   }
 
   // ── Roll-complete detection → push tracked value to linked results ──────────
@@ -279,6 +297,33 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
           >
             Clear
           </button>
+        </div>
+
+        <div className="mt-2 flex items-center gap-2">
+          <span className="text-[11px] font-medium text-[var(--color-muted)] whitespace-nowrap">
+            Roll fast
+          </span>
+          <input
+            type="number"
+            min={1}
+            max={10000}
+            step={1}
+            value={fastRollCount}
+            onChange={e => setFastRollCount(e.target.value)}
+            className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"
+          />
+          <button
+            onClick={fastRollMany}
+            disabled={tray.length === 0}
+            className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Roll X Times
+          </button>
+          {!hasLinkedCard && (
+            <span className="text-[10px] text-[var(--color-muted)]">
+              Link results to record batches.
+            </span>
+          )}
         </div>
 
         {/* ── Tracking controls ── */}

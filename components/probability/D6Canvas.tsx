@@ -185,18 +185,6 @@ function makeColorFaceTexture(label: string): THREE.CanvasTexture {
   return finalizeTexture(new THREE.CanvasTexture(c))
 }
 
-function makeBlankFaceTexture(): THREE.CanvasTexture {
-  const S = 192
-  const c = document.createElement('canvas')
-  c.width = c.height = S
-  const ctx = c.getContext('2d')!
-  ctx.fillStyle = DIE_COLOR
-  ctx.fillRect(0, 0, S, S)
-  ctx.strokeStyle = DIE_EDGE_COLOR
-  ctx.lineWidth = 4
-  ctx.strokeRect(2, 2, S - 4, S - 4)
-  return finalizeTexture(new THREE.CanvasTexture(c))
-}
 
 function makeResultTexture(value: number): THREE.CanvasTexture {
   const S = 192
@@ -352,126 +340,106 @@ function makeExplicitD10Geometry(r: number): {
 // Pentagonal trapezohedron — the correct d10 shape (10 kite-shaped faces, 12 vertices).
 // Upper kites neighbour the top pole (odd values 1,3,5,7,9).
 // Lower kites neighbour the bottom pole (even values 2,4,6,8,10).
-function makeD10TrapezohedronGeometry(r: number): {
+// Reference-based d10 geometry: 10 equatorial vertices + top/bottom poles.
+// 10 numbered triangular faces (each includes a pole vertex) + 10 unnumbered equatorial cap triangles.
+// UV mapped with the reference's polar approach (af = Math.PI*6/5) so numbers always appear centered and upright.
+// Geometry is rotated to Y-up (poles along ±Y) to match our scene convention.
+function makeD10Geometry(r: number): {
   geo: THREE.BufferGeometry
   faceDefs: PolyFaceDef[]
 } {
-  const n = 5
-  const hPole  = r * 0.94  // pole height
-  const yUpper =  r * 0.18 // upper equatorial ring Y
-  const yLower = -r * 0.18 // lower equatorial ring Y
-  const rEq    =  r * 0.84 // equatorial radius
+  const a = Math.PI * 2 / 10
+  const h = 0.105
 
-  const top    = new THREE.Vector3(0,  hPole, 0)
-  const bottom = new THREE.Vector3(0, -hPole, 0)
-  const upper: THREE.Vector3[] = []
-  const lower: THREE.Vector3[] = []
-
-  for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2
-    upper.push(new THREE.Vector3(rEq * Math.cos(a), yUpper, rEq * Math.sin(a)))
+  // 10 equatorial vertices, alternating ±h offset in Y.
+  // Applying the Z-up → Y-up rotation (x, yOld, zOld) → (x, zOld, -yOld) to the reference's
+  // (cos, sin, ±h) layout gives: (cos(angle), ±h, -sin(angle)) — preserves handedness.
+  const verts: THREE.Vector3[] = []
+  for (let i = 0; i < 10; i++) {
+    const angle = i * a
+    const yEq = h * (i % 2 ? 1 : -1)
+    verts.push(
+      new THREE.Vector3(Math.cos(angle), yEq, -Math.sin(angle))
+        .normalize()
+        .multiplyScalar(r),
+    )
   }
-  for (let i = 0; i < n; i++) {
-    const a = ((i + 0.5) / n) * Math.PI * 2
-    lower.push(new THREE.Vector3(rEq * Math.cos(a), yLower, rEq * Math.sin(a)))
-  }
+  verts.push(new THREE.Vector3(0, -1, 0).multiplyScalar(r))  // index 10: bottom pole (−Y)
+  verts.push(new THREE.Vector3(0,  1, 0).multiplyScalar(r))  // index 11: top pole    (+Y)
 
-  // Standard d10 arrangement: odd on upper kites, even on lower (10 instead of 0)
-  const upperValues = [9, 7, 5, 3, 1]
-  const lowerValues = [8, 6, 4, 2, 10]
+  // 10 numbered faces: [v0, v1, v2=pole, dieValue]. v2 is the pole vertex.
+  const numberedFaces: [number, number, number, number][] = [
+    [5, 7, 11, 10], [4, 2, 10,  1], [1, 3, 11,  2], [0, 8, 10,  3], [7, 9, 11,  4],
+    [8, 6, 10,  5], [9, 1, 11,  6], [2, 0, 10,  7], [3, 5, 11,  8], [6, 4, 10,  9],
+  ]
+
+  // 10 unnumbered equatorial cap triangles (all share material 10)
+  const capFaces: [number, number, number][] = [
+    [1, 0, 2], [1, 2, 3], [3, 2, 4], [3, 4, 5], [5, 4, 6],
+    [5, 6, 7], [7, 6, 8], [7, 8, 9], [9, 8, 0], [9, 0, 1],
+  ]
+
+  // Polar UV parameters (from reference: tab=0, af=6π/5, triangles so aa=2π/3)
+  const af = Math.PI * 6 / 5
+  const aa = Math.PI * 2 / 3
 
   const positions: number[] = []
   const normals:   number[] = []
   const uvs:       number[] = []
   const faceDefs: PolyFaceDef[] = []
 
-  // Upper kite i = (top, lower[i], upper[i], upper[(i+1)%n])
-  // Correct CCW winding from outside: tri1=(top, lower[i], upper[i])  tri2=(top, upper[(i+1)%n], lower[i])
-  for (let i = 0; i < n; i++) {
-    const a = top, b = lower[i], c = upper[i], d = upper[(i + 1) % n]
+  for (const [i0, i1, i2, value] of numberedFaces) {
+    const v0 = verts[i0], v1 = verts[i1], v2 = verts[i2]
     const norm = new THREE.Vector3()
       .crossVectors(
-        new THREE.Vector3().subVectors(b, a),
-        new THREE.Vector3().subVectors(c, a),
+        new THREE.Vector3().subVectors(v1, v0),
+        new THREE.Vector3().subVectors(v2, v0),
       )
       .normalize()
 
-    // faceUp: project (top pole – face centroid) onto the face plane
-    const centroid = new THREE.Vector3().add(a).add(b).add(c).add(d).multiplyScalar(0.25)
-    const raw = new THREE.Vector3().subVectors(a, centroid)
+    positions.push(v0.x, v0.y, v0.z, v1.x, v1.y, v1.z, v2.x, v2.y, v2.z)
+    for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
+
+    // Polar UV: place three vertices evenly on a circle.
+    // j=2 (the pole) lands at angle af+2*aa ≈ 96° → UV y≈1 (top of texture) → number upright.
+    for (let j = 0; j < 3; j++) {
+      const ang = af + aa * j
+      uvs.push((Math.cos(ang) + 1) / 2, (Math.sin(ang) + 1) / 2)
+    }
+
+    // faceUp: project the pole vertex direction onto the face plane.
+    // After lineup this direction points toward screen-up so numbers appear upright.
+    const centroid = new THREE.Vector3().add(v0).add(v1).add(v2).divideScalar(3)
+    const raw = new THREE.Vector3().subVectors(v2, centroid)
     const fu = raw.clone().addScaledVector(norm, -raw.dot(norm)).normalize()
 
-    // Compute UVs by projecting vertices onto the face plane (correct orientation, no distortion)
-    const faceRight = new THREE.Vector3().crossVectors(fu, norm)
-    let maxE = 0
-    for (const v of [a, b, c, d]) {
-      const dv = new THREE.Vector3().subVectors(v, centroid)
-      maxE = Math.max(maxE, Math.abs(dv.dot(fu)), Math.abs(dv.dot(faceRight)))
-    }
-    const uvS = 0.42 / maxE
-    const puv = (v: THREE.Vector3): [number, number] => {
-      const dv = new THREE.Vector3().subVectors(v, centroid)
-      return [0.5 + dv.dot(faceRight) * uvS, 0.5 + dv.dot(fu) * uvS]
-    }
-    const [au, av] = puv(a), [bu, bv] = puv(b), [cu, cv] = puv(c), [dU, dV] = puv(d)
-
-    positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z)   // tri 1
-    for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
-    uvs.push(au, av, bu, bv, cu, cv)
-
-    positions.push(a.x, a.y, a.z, d.x, d.y, d.z, b.x, b.y, b.z)   // tri 2
-    for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
-    uvs.push(au, av, dU, dV, bu, bv)
-
-    faceDefs.push({ value: upperValues[i], normal: new CANNON.Vec3(norm.x, norm.y, norm.z), faceUp: new CANNON.Vec3(fu.x, fu.y, fu.z) })
+    faceDefs.push({
+      value,
+      normal: new CANNON.Vec3(norm.x, norm.y, norm.z),
+      faceUp: new CANNON.Vec3(fu.x, fu.y, fu.z),
+    })
   }
 
-  // Lower kite i = (bottom, lower[i], upper[(i+1)%n], lower[(i+1)%n])
-  // Correct CCW winding from outside: tri1=(bottom, lower[i], upper[(i+1)%n])  tri2=(bottom, upper[(i+1)%n], lower[(i+1)%n])
-  for (let i = 0; i < n; i++) {
-    const a = bottom, b = lower[i], c = upper[(i + 1) % n], d = lower[(i + 1) % n]
+  // Cap faces — plain texture, one shared material group
+  for (const [i0, i1, i2] of capFaces) {
+    const v0 = verts[i0], v1 = verts[i1], v2 = verts[i2]
     const norm = new THREE.Vector3()
       .crossVectors(
-        new THREE.Vector3().subVectors(b, a),
-        new THREE.Vector3().subVectors(c, a),
+        new THREE.Vector3().subVectors(v1, v0),
+        new THREE.Vector3().subVectors(v2, v0),
       )
       .normalize()
-
-    // faceUp: project (upper ring vertex – face centroid) onto the face plane
-    const centroid = new THREE.Vector3().add(a).add(b).add(c).add(d).multiplyScalar(0.25)
-    const raw = new THREE.Vector3().subVectors(c, centroid)
-    const fu = raw.clone().addScaledVector(norm, -raw.dot(norm)).normalize()
-
-    // Compute UVs by projecting vertices onto the face plane (correct orientation, no distortion)
-    const faceRight = new THREE.Vector3().crossVectors(fu, norm)
-    let maxE = 0
-    for (const v of [a, b, c, d]) {
-      const dv = new THREE.Vector3().subVectors(v, centroid)
-      maxE = Math.max(maxE, Math.abs(dv.dot(fu)), Math.abs(dv.dot(faceRight)))
-    }
-    const uvS = 0.42 / maxE
-    const puv = (v: THREE.Vector3): [number, number] => {
-      const dv = new THREE.Vector3().subVectors(v, centroid)
-      return [0.5 + dv.dot(faceRight) * uvS, 0.5 + dv.dot(fu) * uvS]
-    }
-    const [au, av] = puv(a), [bu, bv] = puv(b), [cu, cv] = puv(c), [dU, dV] = puv(d)
-
-    positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z)   // tri 1
+    positions.push(v0.x, v0.y, v0.z, v1.x, v1.y, v1.z, v2.x, v2.y, v2.z)
     for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
-    uvs.push(au, av, bu, bv, cu, cv)
-
-    positions.push(a.x, a.y, a.z, c.x, c.y, c.z, d.x, d.y, d.z)   // tri 2
-    for (let k = 0; k < 3; k++) normals.push(norm.x, norm.y, norm.z)
-    uvs.push(au, av, cu, cv, dU, dV)
-
-    faceDefs.push({ value: lowerValues[i], normal: new CANNON.Vec3(norm.x, norm.y, norm.z), faceUp: new CANNON.Vec3(fu.x, fu.y, fu.z) })
+    uvs.push(0.5, 0.5, 0.5, 0.5, 0.5, 0.5)
   }
 
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
   geo.setAttribute('normal',   new THREE.Float32BufferAttribute(normals,   3))
   geo.setAttribute('uv',       new THREE.Float32BufferAttribute(uvs,       2))
-  for (let i = 0; i < 10; i++) geo.addGroup(i * 6, 6, i)
+  for (let i = 0; i < 10; i++) geo.addGroup(i * 3, 3, i)   // numbered face i → material i
+  geo.addGroup(30, 30, 10)                                   // all cap faces  → material 10
 
   return { geo, faceDefs }
 }
@@ -495,8 +463,7 @@ function getNonD6DieShapes(sides: number): {
       geo = new THREE.OctahedronGeometry(r * 1.08, 0)
       break
     case 10: {
-      // Use the correct pentagonal trapezohedron shape
-      const t = makeD10TrapezohedronGeometry(r * 1.08)
+      const t = makeD10Geometry(r)
       geo = t.geo
       faceDefs = t.faceDefs
       break
@@ -768,6 +735,19 @@ function restoreD6FaceMaps(entry: DieEntry) {
         mats[index].map = tex[value - 1]
         mats[index].needsUpdate = true
       })
+}
+
+function restoreD10FaceMaps(entry: DieEntry) {
+  const mats = entry.mesh.material as THREE.MeshPhongMaterial[]
+  entry.faceDefs.forEach((fd, index) => {
+    if (mats[index]) {
+      mats[index].map?.dispose()
+      mats[index].map = makeColorFaceTexture(String(fd.value))
+      mats[index].needsUpdate = true
+    }
+  })
+  entry.resultTexture = undefined
+  // mats[10] (cap faces) stays unchanged
 }
 
 function showD6ResultOnTop(entry: DieEntry, result: number) {
@@ -1248,15 +1228,16 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           supportVertices = convex.vertices
 
           if (isD10) {
-            meshMaterial = Array.from({ length: 10 }, () => new THREE.MeshPhongMaterial({
-              map: makeBlankFaceTexture(),
-              color: DIE_MATERIAL_COLOR,
-              emissive: DIE_EMISSIVE_COLOR,
-              emissiveIntensity: 0.24,
-              specular: new THREE.Color(DIE_SPECULAR_COLOR),
-              shininess: 60,
-              reflectivity: 0.88,
-            }))
+            const d10MatProps = {
+              color: DIE_MATERIAL_COLOR, emissive: DIE_EMISSIVE_COLOR, emissiveIntensity: 0.24,
+              specular: new THREE.Color(DIE_SPECULAR_COLOR), shininess: 60, reflectivity: 0.88,
+            }
+            meshMaterial = [
+              ...faceDefs.map(fd => new THREE.MeshPhongMaterial({
+                map: makeColorFaceTexture(String(fd.value)), ...d10MatProps,
+              })),
+              new THREE.MeshPhongMaterial({ map: makeColorFaceTexture(''), ...d10MatProps }),
+            ]
           } else {
             meshMaterial = new THREE.MeshPhongMaterial({
               map: makeColorFaceTexture(`d${sides}`),
@@ -1371,16 +1352,7 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
             mat.needsUpdate = true
             oldTex?.dispose()
           } else if (entry.sides === 10) {
-            if (entry.resultValue !== null) {
-              const mats10 = entry.mesh.material as THREE.MeshPhongMaterial[]
-              const topFaceIdx = entry.faceDefs.findIndex(fd => fd.value === entry.resultValue)
-              if (topFaceIdx >= 0) {
-                entry.resultTexture?.dispose()
-                entry.resultTexture = undefined
-                mats10[topFaceIdx].map = makeBlankFaceTexture()
-                mats10[topFaceIdx].needsUpdate = true
-              }
-            }
+            restoreD10FaceMaps(entry)
           } else if (entry.sides === 6) {
             restoreD6FaceMaps(entry)
           }
@@ -1442,16 +1414,7 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
             mat.needsUpdate = true
             oldTex?.dispose()
           } else if (entry.sides === 10) {
-            if (entry.resultValue !== null) {
-              const mats10 = entry.mesh.material as THREE.MeshPhongMaterial[]
-              const topFaceIdx = entry.faceDefs.findIndex(fd => fd.value === entry.resultValue)
-              if (topFaceIdx >= 0) {
-                entry.resultTexture?.dispose()
-                entry.resultTexture = undefined
-                mats10[topFaceIdx].map = makeBlankFaceTexture()
-                mats10[topFaceIdx].needsUpdate = true
-              }
-            }
+            restoreD10FaceMaps(entry)
           } else if (entry.sides === 6) {
             restoreD6FaceMaps(entry)
           }
@@ -1514,16 +1477,9 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           // Restore face textures before clearing resultValue
           if (entry.sides === 6) {
             restoreD6FaceMaps(entry)
-          } else if (entry.sides === 10 && entry.resultValue !== null) {
-            const mats10 = entry.mesh.material as THREE.MeshPhongMaterial[]
-            const topFaceIdx = entry.faceDefs.findIndex(fd => fd.value === entry.resultValue)
-            if (topFaceIdx >= 0) {
-              mats10[topFaceIdx].map = makeBlankFaceTexture()
-              mats10[topFaceIdx].needsUpdate = true
-            }
+          } else if (entry.sides === 10) {
+            restoreD10FaceMaps(entry)
           }
-          entry.resultTexture?.dispose()
-          entry.resultTexture = undefined
           entry.resultValue = null
           entry.settled = true
           entry.settleCount = 0

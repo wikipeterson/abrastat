@@ -27,7 +27,7 @@ type WorkspaceMode = 'library' | 'lab'
 type LibrarySection = 'all' | 'mine' | 'games' | 'polls'
 type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 
-const SIDEBAR_WIDTH_CLASS = 'md:w-56'
+const SIDEBAR_WIDTH_CLASS = 'md:w-48'
 
 const EXPLORE_CARD_OPTIONS: CardOption[] = [
   { type: 'graph',      icon: '📈', label: 'Graph' },
@@ -257,11 +257,9 @@ function LibrarySidebar({
 
 function DatasetsBrowser({
   scope,
-  onStartNew,
   onOpenDataset,
 }: {
   scope: 'all' | 'mine'
-  onStartNew: () => void
   onOpenDataset: (id: string) => Promise<void>
 }) {
   const { user } = useAuth()
@@ -270,38 +268,15 @@ function DatasetsBrowser({
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<SortKey>('newest')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [seeding, setSeeding] = useState(false)
+  const [loading, setLoading] = useState(process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH !== 'true')
 
   useEffect(() => {
     if (!user) return
-    if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') {
-      setLoading(false)
-      return
-    }
+    if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') return
     const unsub1 = subscribeToPublicDatasets(data => { setPublicDatasets(data); setLoading(false) })
     const unsub2 = subscribeToMyDatasets(user.uid, setMyDatasets)
     return () => { unsub1(); unsub2() }
   }, [user])
-
-  async function handleSeedSamples() {
-    if (!user) return
-    setSeeding(true)
-    try {
-      for (const sample of SAMPLE_DATASETS) {
-        await saveDataset(user, sample.name, sample.description ?? '', sample.emoji, true, sample.grid, {
-          tags: sample.tags,
-          source: sample.source,
-          sourceUrl: sample.sourceUrl,
-          citation: sample.citation,
-          notes: sample.notes,
-          variableInfo: sample.variableInfo,
-        })
-      }
-    } finally {
-      setSeeding(false)
-    }
-  }
 
   async function handleDelete(id: string) {
     await deleteDataset(id)
@@ -332,34 +307,6 @@ function DatasetsBrowser({
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
       <div className="max-w-5xl mx-auto w-full px-6 py-6 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-[var(--color-text)]">
-              {scope === 'all' ? 'All Datasets' : 'My Datasets'}
-            </h2>
-            <p className="text-sm text-[var(--color-muted)]">
-              {scope === 'all'
-                ? 'Browse published datasets and open one directly into the Lab.'
-                : 'Your saved datasets, ready to reopen and edit.'}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleSeedSamples}
-              disabled={seeding}
-              className="px-3 py-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-light)] rounded-lg transition-colors disabled:opacity-50"
-            >
-              {seeding ? 'Adding…' : '+ Sample Datasets'}
-            </button>
-            <button
-              onClick={onStartNew}
-              className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg text-sm font-medium"
-            >
-              + New Dataset
-            </button>
-          </div>
-        </div>
-
         <div className="flex flex-wrap items-center gap-2">
           <input
             value={search}
@@ -444,6 +391,7 @@ function UnsavedGuard({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
 }
 
 function WorkspaceContent() {
+  const { user } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [confirmNew, setConfirmNew] = useState(false)
   const [showSave, setShowSave] = useState(false)
@@ -453,6 +401,7 @@ function WorkspaceContent() {
   const [mode, setMode] = useState<WorkspaceMode>('lab')
   const [librarySection, setLibrarySection] = useState<LibrarySection>('all')
   const [gameChrome, setGameChrome] = useState<{ title: string; onBack: () => void } | null>(null)
+  const [seeding, setSeeding] = useState(false)
   const { isDirty, clearGrid, activeDatasetId, activeDatasetName, addExploreCard, exploreCards, setGrid, setActiveDatasetId, setActiveDatasetName } = useStore()
   const hasOnlyDataGrid = exploreCards.every(card => card.config.type === 'data-grid')
 
@@ -505,6 +454,25 @@ function WorkspaceContent() {
     setShowShare(true)
   }
 
+  async function handleSeedSamples() {
+    if (!user) return
+    setSeeding(true)
+    try {
+      for (const sample of SAMPLE_DATASETS) {
+        await saveDataset(user, sample.name, sample.description ?? '', sample.emoji, true, sample.grid, {
+          tags: sample.tags,
+          source: sample.source,
+          sourceUrl: sample.sourceUrl,
+          citation: sample.citation,
+          notes: sample.notes,
+          variableInfo: sample.variableInfo,
+        })
+      }
+    } finally {
+      setSeeding(false)
+    }
+  }
+
   async function handleOpenDataset(id: string) {
     try {
       const { meta, grid } = await loadDataset(id)
@@ -523,7 +491,6 @@ function WorkspaceContent() {
       return (
         <DatasetsBrowser
           scope={librarySection}
-          onStartNew={handleNewDataset}
           onOpenDataset={handleOpenDataset}
         />
       )
@@ -533,6 +500,26 @@ function WorkspaceContent() {
     }
     return <PollsPlaceholder />
   }
+
+  const libraryHeaderActions = mode === 'library' && (librarySection === 'all' || librarySection === 'mine')
+    ? (
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleSeedSamples}
+          disabled={seeding}
+          className="px-3 py-2 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-slate-100 hover:text-[var(--color-accent)] transition-colors disabled:opacity-50"
+        >
+          {seeding ? 'Adding…' : '+ Sample Datasets'}
+        </button>
+        <button
+          onClick={handleNewDataset}
+          className="px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white hover:brightness-105 transition-all"
+        >
+          + New Dataset
+        </button>
+      </div>
+    )
+    : undefined
 
   return (
     <div className="flex flex-col h-screen">
@@ -560,7 +547,7 @@ function WorkspaceContent() {
         ]}
         activeModeId={mode}
         onModeChange={handleModeChange}
-        labActions={mode === 'lab' ? <GroupedAddCardMenu onAdd={type => addExploreCard(type)} highlight={hasOnlyDataGrid} /> : undefined}
+        labActions={mode === 'lab' ? <GroupedAddCardMenu onAdd={type => addExploreCard(type)} highlight={hasOnlyDataGrid} /> : libraryHeaderActions}
         showSave={mode === 'lab'}
         showHomeLink={false}
       />
@@ -577,7 +564,7 @@ function WorkspaceContent() {
           />
         )}
 
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col bg-[var(--color-bg)]">
+        <div className={`flex-1 min-h-0 flex flex-col bg-[var(--color-bg)] ${mode === 'lab' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           {mode === 'lab' ? (
             <ExploreCanvas onShareDataset={handleShareClick} />
           ) : (

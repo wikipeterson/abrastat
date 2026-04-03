@@ -304,14 +304,15 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'regression'   ? { type: 'regression',  xColId: null, yColId: null } :
       type === 'distribution' ? { type: 'distribution', preFill: scanChiSquareContext(state.exploreCards, state.grid) } :
       type === 'generator'    ? { type: 'generator' } :
-      type === 'testinterval' ? { type: 'testinterval' } :
+      type === 'proportions'  ? { type: 'proportions', var1ColId: null, var2ColId: null } :
       type === 'means'        ? { type: 'means', var1ColId: null, var2ColId: null } :
       type === 'dice-roller'  ? { type: 'dice-roller', linkedResultsCardId: null, trackedMode: 'sum' } :
       type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', valueMode: 'count', thresholdOp: '>=', thresholdValue: 1, supportsDifference: false, minValue: 1, maxValue: 6, rolls: [], values: [] } :
                                  { type: 'simulation', linkedResultsCardId: null }
     const { width, height } =
-      type === 'summary' ? { width: 700, height: 620 } :
-      type === 'means'   ? { width: 580, height: 580 } :
+      type === 'summary'     ? { width: 700, height: 620 } :
+      type === 'means'       ? { width: 580, height: 580 } :
+      type === 'proportions' ? { width: 580, height: 580 } :
       type === 'dice-roller' ? { width: 760, height: 700 } :
                            { width: 620, height: 520 }
     return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width, height }] }
@@ -335,6 +336,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       if (cfg.type === 'table')      return { ...card, config: { ...cfg, rowsColId: nil(cfg.rowsColId), colsColId: nil(cfg.colsColId) } }
       if (cfg.type === 'regression') return { ...card, config: { ...cfg, xColId: nil(cfg.xColId), yColId: nil(cfg.yColId) } }
       if (cfg.type === 'means')      return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }
+      if (cfg.type === 'proportions') return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }
       return card
     }),
   })),
@@ -453,7 +455,7 @@ export const useStore = create<AbraStatStore>((set) => ({
     const y = position?.y ?? 20 + Math.floor(idx / 2) * 520
     const config: CardConfig =
       type === 'distribution' ? { type: 'distribution' } :
-      type === 'testinterval' ? { type: 'testinterval' } :
+      type === 'proportions' ? { type: 'proportions', var1ColId: null, var2ColId: null } :
                                  { type: 'simulation' }
     return { inferenceCards: [...state.inferenceCards, { id: uuid(), config, x, y, width: 620, height: 520 }] }
   }),

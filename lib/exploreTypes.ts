@@ -73,8 +73,10 @@ export interface RandomGeneratorCardConfig {
   type: 'generator'
 }
 
-export interface TestIntervalCardConfig {
-  type: 'testinterval'
+export interface ProportionsCardConfig {
+  type: 'proportions'
+  var1ColId: string | null
+  var2ColId: string | null
 }
 
 export interface SimulationCardConfig {
@@ -119,7 +121,7 @@ export type CardConfig =
   | RegressionCardConfig
   | DistributionCardConfig
   | RandomGeneratorCardConfig
-  | TestIntervalCardConfig
+  | ProportionsCardConfig
   | SimulationCardConfig
   | MeansCardConfig
   | DiceRollerCardConfig

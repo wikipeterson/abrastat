@@ -16,16 +16,24 @@ const jS = jStat as unknown as {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Procedure  = 'one-sample-t' | 'one-sample-z' | 'two-sample-t' | 'paired-t'
+type Procedure =
+  | 'one-sample-t-test'
+  | 'one-sample-t-interval'
+  | 'one-sample-z-test'
+  | 'one-sample-z-interval'
+  | 'two-sample-t-test'
+  | 'two-sample-t-interval'
+  | 'paired-t-test'
+  | 'paired-t-interval'
 type Alternative = 'less' | 'two-sided' | 'greater'
 
 interface SummaryStats { n: number; mean: number; sd: number; se: number }
 
 interface TestResult {
-  stat: number
-  statLabel: string
+  stat: number | null
+  statLabel: string | null
   df: number | null
-  p: number
+  p: number | null
   ci: [number, number]
   se: number
   diffN?: number
@@ -60,6 +68,14 @@ function calcP(stat: number, df: number | null, alt: Alternative): number {
   if (alt === 'less')    return cdf
   if (alt === 'greater') return 1 - cdf
   return 2 * Math.min(cdf, 1 - cdf)
+}
+
+function isTestProcedure(procedure: Procedure) {
+  return procedure.endsWith('-test')
+}
+
+function isZProcedure(procedure: Procedure) {
+  return procedure.includes('-z-')
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -128,15 +144,25 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
 
   // Procedure options
   const validProcedures: Procedure[] = (() => {
-    if (!hasBoth || var2IsCategorical) return ['one-sample-t', 'one-sample-z']
-    return ['two-sample-t', 'paired-t']
+    if (!hasBoth) return [
+      'one-sample-t-test',
+      'one-sample-t-interval',
+      'one-sample-z-test',
+      'one-sample-z-interval',
+    ]
+    if (var2IsCategorical) return ['two-sample-t-test', 'two-sample-t-interval']
+    return [
+      'two-sample-t-test',
+      'two-sample-t-interval',
+      'paired-t-test',
+      'paired-t-interval',
+    ]
   })()
 
-  const [procedure, setProcedure] = useState<Procedure>('one-sample-t')
+  const [procedure, setProcedure] = useState<Procedure>('one-sample-t-test')
   const effectiveProcedure: Procedure = (() => {
-    if (hasBoth && var2IsCategorical) return 'two-sample-t'
     if (validProcedures.includes(procedure)) return procedure
-    return hasBoth ? 'two-sample-t' : 'one-sample-t'
+    return validProcedures[0]
   })()
 
   const [h0, setH0]                   = useState('0')
@@ -186,9 +212,11 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
 
   // ─── Compute test ─────────────────────────────────────────────────────────
   const result = useMemo((): TestResult | null => {
-    const h0Val    = parseFloat(h0)
     const alphaVal = parseFloat(alpha)
-    if (!isFinite(h0Val) || !isFinite(alphaVal) || alphaVal <= 0 || alphaVal >= 1) return null
+    if (!isFinite(alphaVal) || alphaVal <= 0 || alphaVal >= 1) return null
+    const h0Val = parseFloat(h0)
+    const needsNull = isTestProcedure(effectiveProcedure)
+    if (needsNull && !isFinite(h0Val)) return null
 
     // Two-sample via grouping variable
     if (var2IsCategorical && statsA && statsB) {
@@ -196,54 +224,66 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
       const { n: n2, mean: m2, sd: s2 } = statsB
       const se  = Math.sqrt(s1 ** 2 / n1 + s2 ** 2 / n2)
       if (!isFinite(se) || se === 0) return null
-      const t   = ((m1 - m2) - h0Val) / se
       const num = (s1 ** 2 / n1 + s2 ** 2 / n2) ** 2
       const den = (s1 ** 2 / n1) ** 2 / (n1 - 1) + (s2 ** 2 / n2) ** 2 / (n2 - 1)
       const df  = num / den
-      const p   = calcP(t, df, alternative)
       const tStar = jS.studentt.inv(1 - alphaVal / 2, df)
       const diff  = m1 - m2
-      return { stat: t, statLabel: 't', df, p, ci: [diff - tStar * se, diff + tStar * se], se }
+      if (effectiveProcedure === 'two-sample-t-test') {
+        const t = (diff - h0Val) / se
+        const p = calcP(t, df, alternative)
+        return { stat: t, statLabel: 't', df, p, ci: [diff - tStar * se, diff + tStar * se], se }
+      }
+      return { stat: null, statLabel: null, df, p: null, ci: [diff - tStar * se, diff + tStar * se], se }
     }
 
-    if (effectiveProcedure === 'one-sample-t') {
+    if (effectiveProcedure === 'one-sample-t-test' || effectiveProcedure === 'one-sample-t-interval') {
       if (!stats1) return null
       const { n, mean, se } = stats1
       const df = n - 1
-      const t  = (mean - h0Val) / se
-      const p  = calcP(t, df, alternative)
       const tStar = jS.studentt.inv(1 - alphaVal / 2, df)
-      return { stat: t, statLabel: 't', df, p, ci: [mean - tStar * se, mean + tStar * se], se }
+      if (effectiveProcedure === 'one-sample-t-test') {
+        const t = (mean - h0Val) / se
+        const p = calcP(t, df, alternative)
+        return { stat: t, statLabel: 't', df, p, ci: [mean - tStar * se, mean + tStar * se], se }
+      }
+      return { stat: null, statLabel: null, df, p: null, ci: [mean - tStar * se, mean + tStar * se], se }
     }
 
-    if (effectiveProcedure === 'one-sample-z') {
+    if (effectiveProcedure === 'one-sample-z-test' || effectiveProcedure === 'one-sample-z-interval') {
       const sigmaVal = parseFloat(sigma)
       if (!stats1 || !isFinite(sigmaVal) || sigmaVal <= 0) return null
       const { n, mean } = stats1
       const se   = sigmaVal / Math.sqrt(n)
-      const z    = (mean - h0Val) / se
-      const p    = calcP(z, null, alternative)
       const zStar = jS.normal.inv(1 - alphaVal / 2, 0, 1)
-      return { stat: z, statLabel: 'z', df: null, p, ci: [mean - zStar * se, mean + zStar * se], se }
+      if (effectiveProcedure === 'one-sample-z-test') {
+        const z = (mean - h0Val) / se
+        const p = calcP(z, null, alternative)
+        return { stat: z, statLabel: 'z', df: null, p, ci: [mean - zStar * se, mean + zStar * se], se }
+      }
+      return { stat: null, statLabel: null, df: null, p: null, ci: [mean - zStar * se, mean + zStar * se], se }
     }
 
-    if (effectiveProcedure === 'two-sample-t') {
+    if (effectiveProcedure === 'two-sample-t-test' || effectiveProcedure === 'two-sample-t-interval') {
       if (!stats1 || !stats2) return null
       const { n: n1, mean: m1, sd: s1 } = stats1
       const { n: n2, mean: m2, sd: s2 } = stats2
       const se  = Math.sqrt(s1 ** 2 / n1 + s2 ** 2 / n2)
       if (!isFinite(se) || se === 0) return null
-      const t   = ((m1 - m2) - h0Val) / se
       const num = (s1 ** 2 / n1 + s2 ** 2 / n2) ** 2
       const den = (s1 ** 2 / n1) ** 2 / (n1 - 1) + (s2 ** 2 / n2) ** 2 / (n2 - 1)
       const df  = num / den
-      const p   = calcP(t, df, alternative)
       const tStar = jS.studentt.inv(1 - alphaVal / 2, df)
       const diff  = m1 - m2
-      return { stat: t, statLabel: 't', df, p, ci: [diff - tStar * se, diff + tStar * se], se }
+      if (effectiveProcedure === 'two-sample-t-test') {
+        const t = (diff - h0Val) / se
+        const p = calcP(t, df, alternative)
+        return { stat: t, statLabel: 't', df, p, ci: [diff - tStar * se, diff + tStar * se], se }
+      }
+      return { stat: null, statLabel: null, df, p: null, ci: [diff - tStar * se, diff + tStar * se], se }
     }
 
-    if (effectiveProcedure === 'paired-t') {
+    if (effectiveProcedure === 'paired-t-test' || effectiveProcedure === 'paired-t-interval') {
       if (!config.var1ColId || !config.var2ColId) return null
       const diffs: number[] = []
       for (const row of grid.rows) {
@@ -257,10 +297,13 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
       if (!ds) return null
       const { n, mean, se } = ds
       const df = n - 1
-      const t  = (mean - h0Val) / se
-      const p  = calcP(t, df, alternative)
       const tStar = jS.studentt.inv(1 - alphaVal / 2, df)
-      return { stat: t, statLabel: 't', df, p, ci: [mean - tStar * se, mean + tStar * se], se, diffN: n }
+      if (effectiveProcedure === 'paired-t-test') {
+        const t = (mean - h0Val) / se
+        const p = calcP(t, df, alternative)
+        return { stat: t, statLabel: 't', df, p, ci: [mean - tStar * se, mean + tStar * se], se, diffN: n }
+      }
+      return { stat: null, statLabel: null, df, p: null, ci: [mean - tStar * se, mean + tStar * se], se, diffN: n }
     }
 
     return null
@@ -270,6 +313,7 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
   // ─── Distribution chart ────────────────────────────────────────────────────
   const chartTraces = useMemo(() => {
     if (!result) return null
+    if (result.stat === null || result.statLabel === null) return null
     const { stat, df } = result
     const absMax = Math.max(4.5, Math.abs(stat) * 1.4 + 0.5)
     const nPts = 300
@@ -334,26 +378,40 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
     return { traces: [...shades, curveLine, statLine], absMax, yMax }
   }, [result, alternative])
 
+  const testResult =
+    result && result.stat !== null && result.statLabel !== null
+      ? result as TestResult & { stat: number; statLabel: string }
+      : null
+
   const alphaVal = parseFloat(alpha)
-  const rejected = result ? result.p < alphaVal : false
+  const rejected = result?.p != null ? result.p < alphaVal : false
 
   // ─── Labels ────────────────────────────────────────────────────────────────
   const label1 = var2IsCategorical ? (groupA || 'Group A') : (var1Col?.name ?? 'Variable')
   const label2 = var2IsCategorical ? (groupB || 'Group B') : (var2Col?.name ?? 'Variable 2')
 
-  const h0Label = (hasBoth || var2IsCategorical)
-    ? 'μ₁ − μ₂ ='
-    : effectiveProcedure === 'paired-t' ? 'μ_d =' : 'μ ='
-  const altMu   = (hasBoth || var2IsCategorical)
-    ? 'μ₁ − μ₂'
-    : effectiveProcedure === 'paired-t' ? 'μ_d' : 'μ'
+  const isPairedProcedure = effectiveProcedure.startsWith('paired-t')
+  const h0Label = isPairedProcedure
+    ? 'μ_d ='
+    : (hasBoth || var2IsCategorical)
+      ? 'μ₁ − μ₂ ='
+      : 'μ ='
+  const altMu   = isPairedProcedure
+    ? 'μ_d'
+    : (hasBoth || var2IsCategorical)
+      ? 'μ₁ − μ₂'
+      : 'μ'
   const altSymbol = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
 
   const procLabels: Record<Procedure, string> = {
-    'one-sample-t': '1-sample t',
-    'one-sample-z': '1-sample z',
-    'two-sample-t': '2-sample t',
-    'paired-t':     'Paired t',
+    'one-sample-t-test': '1-sample t-test',
+    'one-sample-t-interval': '1-sample t-interval',
+    'one-sample-z-test': '1-sample z-test',
+    'one-sample-z-interval': '1-sample z-interval',
+    'two-sample-t-test': '2-sample t-test',
+    'two-sample-t-interval': '2-sample t-interval',
+    'paired-t-test': 'Paired t-test',
+    'paired-t-interval': 'Paired t-interval',
   }
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -426,7 +484,7 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
       {/* Setup */}
       <div className="bg-slate-50 rounded-xl p-3 flex-shrink-0 space-y-2">
 
-        {effectiveProcedure === 'one-sample-z' && (
+        {isZProcedure(effectiveProcedure) && (
           <div className="flex items-center gap-2">
             <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">σ (known)</label>
             <input
@@ -439,32 +497,36 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
           </div>
         )}
 
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">H₀: {h0Label}</label>
-          <input
-            type="number"
-            value={h0}
-            onChange={e => setH0(e.target.value)}
-            className="w-20 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
-          />
-        </div>
+        {isTestProcedure(effectiveProcedure) && (
+          <>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">H₀: {h0Label}</label>
+              <input
+                type="number"
+                value={h0}
+                onChange={e => setH0(e.target.value)}
+                className="w-20 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+              />
+            </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Hₐ:</span>
-          <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
-            {(['less', 'two-sided', 'greater'] as Alternative[]).map((a, i) => (
-              <button
-                key={a}
-                onClick={() => setAlternative(a)}
-                className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${
-                  alternative === a ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
-                }`}
-              >
-                {a === 'less' ? '< (left)' : a === 'two-sided' ? '≠ (two)' : '> (right)'}
-              </button>
-            ))}
-          </div>
-        </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Hₐ:</span>
+              <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+                {(['less', 'two-sided', 'greater'] as Alternative[]).map((a, i) => (
+                  <button
+                    key={a}
+                    onClick={() => setAlternative(a)}
+                    className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${
+                      alternative === a ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                    }`}
+                  >
+                    {a === 'less' ? '< (left)' : a === 'two-sided' ? '≠ (two)' : '> (right)'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">α =</span>
@@ -514,14 +576,14 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
               )}
             </tbody>
           </table>
-          {effectiveProcedure === 'paired-t' && result?.diffN !== undefined && (
+          {isPairedProcedure && result?.diffN !== undefined && (
             <p className="text-[10px] text-[var(--color-muted)] mt-1 italic">{result.diffN} matched pairs used</p>
           )}
         </div>
       )}
 
       {/* Distribution chart */}
-      {chartTraces && (
+      {isTestProcedure(effectiveProcedure) && chartTraces && testResult && (
         <div className="flex-shrink-0 rounded-xl overflow-hidden border border-[var(--color-border)]">
           <PlotlyChart
             data={chartTraces.traces as never}
@@ -537,12 +599,12 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
               height: 160,
               showlegend: false,
               annotations: [{
-                x: result!.stat,
+                x: testResult.stat,
                 y: chartTraces.yMax * 1.08,
-                text: `${result!.statLabel} = ${fmt(result!.stat, 3)}`,
+                text: `${testResult.statLabel} = ${fmt(testResult.stat, 3)}`,
                 showarrow: false,
                 font: { size: 11, color: '#EF4444' },
-                xanchor: result!.stat >= 0 ? 'right' : 'left',
+                xanchor: testResult.stat >= 0 ? 'right' : 'left',
               }],
             }}
           />
@@ -559,24 +621,26 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
         </div>
       ) : result ? (
         <div className="space-y-2.5 flex-shrink-0">
-          {/* Hypotheses */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 space-y-1">
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-[var(--color-muted)] w-6">H₀</span>
-              <span className="text-xs font-mono font-medium">{h0Label} {h0}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-[var(--color-muted)] w-6">Hₐ</span>
-              <span className="text-xs font-mono font-medium">{altMu} {altSymbol} {h0}</span>
-            </div>
-          </div>
+          {isTestProcedure(effectiveProcedure) && (
+            <>
+              <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 space-y-1">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-[var(--color-muted)] w-6">H₀</span>
+                  <span className="text-xs font-mono font-medium">{h0Label} {h0}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-[var(--color-muted)] w-6">Hₐ</span>
+                  <span className="text-xs font-mono font-medium">{altMu} {altSymbol} {h0}</span>
+                </div>
+              </div>
 
-          {/* Stat grid */}
-          <div className={`grid gap-2 ${result.df !== null ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            <StatBox label={`${result.statLabel}-statistic`} value={fmt(result.stat, 4)} />
-            {result.df !== null && <StatBox label="df" value={fmt(result.df, 4)} />}
-            <StatBox label="p-value" value={fmtP(result.p)} highlight={rejected ? 'reject' : 'keep'} />
-          </div>
+              <div className={`grid gap-2 ${result.df !== null ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                <StatBox label={`${result.statLabel}-statistic`} value={fmt(result.stat ?? NaN, 4)} />
+                {result.df !== null && <StatBox label="df" value={fmt(result.df, 4)} />}
+                <StatBox label="p-value" value={fmtP(result.p ?? NaN)} highlight={rejected ? 'reject' : 'keep'} />
+              </div>
+            </>
+          )}
 
           {/* CI */}
           <div className="rounded-xl border border-[var(--color-border)] bg-white p-3">
@@ -588,22 +652,23 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
             </p>
           </div>
 
-          {/* Conclusion */}
-          <div className={`rounded-xl p-3 border ${rejected ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
-            <p className={`text-xs font-semibold mb-1 ${rejected ? 'text-red-700' : 'text-green-700'}`}>
-              {rejected ? 'Reject H₀' : 'Fail to Reject H₀'}
-            </p>
-            <p className="text-xs text-[var(--color-muted)] leading-relaxed">
-              {rejected
-                ? `At α = ${alpha}, there is sufficient evidence to conclude ${altMu} ${altSymbol} ${h0}.`
-                : `At α = ${alpha}, there is not sufficient evidence to conclude ${altMu} ${altSymbol} ${h0}.`
-              }
-            </p>
-          </div>
+          {isTestProcedure(effectiveProcedure) && (
+            <div className={`rounded-xl p-3 border ${rejected ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+              <p className={`text-xs font-semibold mb-1 ${rejected ? 'text-red-700' : 'text-green-700'}`}>
+                {rejected ? 'Reject H₀' : 'Fail to Reject H₀'}
+              </p>
+              <p className="text-xs text-[var(--color-muted)] leading-relaxed">
+                {rejected
+                  ? `At α = ${alpha}, there is sufficient evidence to conclude ${altMu} ${altSymbol} ${h0}.`
+                  : `At α = ${alpha}, there is not sufficient evidence to conclude ${altMu} ${altSymbol} ${h0}.`
+                }
+              </p>
+            </div>
+          )}
         </div>
       ) : var1Col && (
         <p className="text-xs text-[var(--color-muted)] italic flex-shrink-0">
-          {effectiveProcedure === 'one-sample-z' && (!sigma || !isFinite(parseFloat(sigma)) || parseFloat(sigma) <= 0)
+          {isZProcedure(effectiveProcedure) && (!sigma || !isFinite(parseFloat(sigma)) || parseFloat(sigma) <= 0)
             ? 'Enter the known population standard deviation (σ) above.'
             : var2IsCategorical && (!groupA || !groupB)
               ? 'Assign a grouping variable with at least 2 distinct values.'

@@ -24,6 +24,7 @@ import { TableCard } from './cards/TableCard'
 import { TwoWayTable } from '@/components/applets/TwoWayTable'
 import { DistributionCard } from '@/components/inference/DistributionCard'
 import { MeansCard } from '@/components/inference/MeansCard'
+import { ProportionsCard } from '@/components/inference/ProportionsCard'
 import { RandomGeneratorCard } from '@/components/probability/RandomGeneratorCard'
 import { DiceRollerCard } from '@/components/probability/DiceRollerCard'
 import { SimResultsCard } from '@/components/probability/SimResultsCard'
@@ -53,7 +54,7 @@ const PROBABILITY_CARD_OPTIONS: CardOption[] = [
 
 const INFERENCE_CARD_OPTIONS: CardOption[] = [
   { type: 'means', icon: '📐', label: 'Means' },
-  { type: 'testinterval', icon: '⚖️', label: 'Test / Interval' },
+  { type: 'proportions', icon: '⚖️', label: 'Proportions' },
 ]
 
 const CARD_OPTION_GROUPS = [
@@ -85,7 +86,7 @@ function cardLabel(type: CardConfig['type']): string {
     case 'generator':    return 'Random Number Generator'
     case 'dice-roller':  return 'Dice Roller'
     case 'sim-results':   return 'Roll Results'
-    case 'testinterval': return 'Test / Interval'
+    case 'proportions': return 'Proportions'
     case 'simulation':   return 'Coin Flipper'
     case 'means':        return 'Means'
     default:             return 'Card'
@@ -100,20 +101,6 @@ function getVisibleCardLabel(card: ExploreCard): string {
     if (sourceLabel === 'Coin Flipper') return 'Coin Flipper Results'
   }
   return cardLabel(card.config.type)
-}
-
-// ─── Placeholder for unimplemented card types ─────────────────────────────────
-
-function PlaceholderCard({ label }: { label: string }) {
-  return (
-    <div className="h-full flex flex-col items-center justify-center gap-3 text-center p-6">
-      <span className="text-4xl opacity-20 select-none">🚧</span>
-      <div>
-        <p className="text-sm font-semibold text-[var(--color-text)]">{label}</p>
-        <p className="text-xs text-[var(--color-muted)] mt-1">Coming soon</p>
-      </div>
-    </div>
-  )
 }
 
 function WorkspaceContextMenu({
@@ -347,7 +334,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
     const cfg = card.config
 
     // Only these card types have drop zones
-    if (cfg.type !== 'graph' && cfg.type !== 'summary' && cfg.type !== 'regression' && cfg.type !== 'means' && cfg.type !== 'table') return
+    if (cfg.type !== 'graph' && cfg.type !== 'summary' && cfg.type !== 'regression' && cfg.type !== 'means' && cfg.type !== 'proportions' && cfg.type !== 'table') return
 
     const sourceZone = (sourceZoneId && sourceZoneId.startsWith(cardId + ':'))
       ? sourceZoneId.slice(cardId.length + 1)
@@ -419,6 +406,20 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       }
       newConfig = c
     }
+    if (cfg.type === 'proportions') {
+      const droppedCol = grid.columns.find(c => c.id === colId)
+      if (!droppedCol || droppedCol.type !== 'categorical') return
+      let c = { ...cfg }
+      const prevVar1 = c.var1ColId
+      const prevVar2 = c.var2ColId
+      if (targetZone === 'var1') c = { ...c, var1ColId: colId }
+      if (targetZone === 'var2') c = { ...c, var2ColId: colId }
+      if (sourceZone && sourceZone !== targetZone) {
+        if (sourceZone === 'var1') c = { ...c, var1ColId: targetZone === 'var2' ? prevVar2 : null }
+        if (sourceZone === 'var2') c = { ...c, var2ColId: targetZone === 'var1' ? prevVar1 : null }
+      }
+      newConfig = c
+    }
     if (newConfig) {
       // When two occupied zones swap, animate the displaced chip into its new zone
       if (sourceZone && sourceZone !== targetZone) {
@@ -427,6 +428,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
           graph:      ['x', 'y', 'group'],
           regression: ['x', 'y'],
           means:      ['var1', 'var2'],
+          proportions:['var1', 'var2'],
           table:      ['rows', 'cols'],
         }
         const order = ZONE_ORDER[cfg.type] ?? []
@@ -471,6 +473,10 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       if (zone === 'cols') newConfig = { ...cfg, colsColId: null }
     }
     if (cfg.type === 'means') {
+      if (zone === 'var1') newConfig = { ...cfg, var1ColId: null }
+      if (zone === 'var2') newConfig = { ...cfg, var2ColId: null }
+    }
+    if (cfg.type === 'proportions') {
       if (zone === 'var1') newConfig = { ...cfg, var1ColId: null }
       if (zone === 'var2') newConfig = { ...cfg, var2ColId: null }
     }
@@ -527,6 +533,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       case 'dice-roller':  return { minWidth: 760, minHeight: 700 }
       case 'sim-results':  return { minWidth: 360, minHeight: 360 }
       case 'means':        return { minWidth: 520, minHeight: 520 }
+      case 'proportions':  return { minWidth: 520, minHeight: 520 }
       default:             return { minWidth: 360, minHeight: 280 }
     }
   }
@@ -912,8 +919,12 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                               onClearZone={z => clearZone(card.id, z)}
                             />
                           )}
-                          {card.config.type === 'testinterval' && (
-                            <PlaceholderCard label="Test / Interval" />
+                          {card.config.type === 'proportions' && (
+                            <ProportionsCard
+                              cardId={card.id}
+                              config={card.config}
+                              onClearZone={z => clearZone(card.id, z)}
+                            />
                           )}
                           {card.config.type === 'simulation' && (
                             <SimulationCard cardId={card.id} config={card.config} />

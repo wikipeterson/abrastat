@@ -255,9 +255,9 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
     <div className="flex flex-col h-full">
 
       {/* ── Palette ── */}
-      <div className="flex-shrink-0 px-3 pt-3 pb-3 border-b border-[var(--color-border)] space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3 flex-1">
+      <div className="flex-shrink-0 px-3 py-3 border-b border-[var(--color-border)]">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {DICE_TYPES.map(sides => (
               <PaletteDie
                 key={sides}
@@ -267,6 +267,44 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
               />
             ))}
           </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-medium text-[var(--color-muted)] whitespace-nowrap">
+              Fast roll
+            </span>
+            <input
+              type="number"
+              min={1}
+              max={10000}
+              step={1}
+              value={fastRollCount}
+              onChange={e => setFastRollCount(e.target.value)}
+              className="w-24 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"
+            />
+            <button
+              onClick={fastRollMany}
+              disabled={tray.length === 0}
+              className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              Roll {Math.max(1, Math.min(10000, Math.floor(Number(fastRollCount) || 0)))} Times
+            </button>
+          </div>
+
+          <div className="flex-1 min-w-0" />
+
+          {cardId && (
+            <button
+              onClick={handleTrackResults}
+              className={`rounded-lg py-2 px-3 text-sm transition-colors border whitespace-nowrap ${
+                hasLinkedCard
+                  ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+                  : 'border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
+              }`}
+            >
+              {hasLinkedCard ? '📊 Results linked' : '📊 Link results'}
+            </button>
+          )}
+
           <div className="flex items-center gap-2">
             <button
               onClick={rollAll}
@@ -286,43 +324,6 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
               Clear
             </button>
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)]/60 pt-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-medium text-[var(--color-muted)] whitespace-nowrap">
-              Fast roll
-            </span>
-            <input
-              type="number"
-              min={1}
-              max={10000}
-              step={1}
-              value={fastRollCount}
-              onChange={e => setFastRollCount(e.target.value)}
-              className="w-24 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"
-            />
-            <button
-              onClick={fastRollMany}
-              disabled={tray.length === 0}
-              className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Roll {Math.max(1, Math.min(10000, Math.floor(Number(fastRollCount) || 0)))} Times
-            </button>
-          </div>
-
-          {cardId && (
-            <button
-              onClick={handleTrackResults}
-              className={`rounded-lg py-2 px-3 text-sm transition-colors border ${
-                hasLinkedCard
-                  ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
-                  : 'border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
-              }`}
-            >
-              {hasLinkedCard ? '📊 Results linked' : '📊 Link results'}
-            </button>
-          )}
         </div>
       </div>
 

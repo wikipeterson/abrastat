@@ -1,8 +1,17 @@
 'use client'
 
-import { useId } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useStore } from '@/lib/store'
 import { SimResultsCardConfig } from '@/lib/exploreTypes'
+
+function compareToThreshold(value: number, threshold: number, op: '<' | '<=' | '>' | '>=') {
+  switch (op) {
+    case '<': return value < threshold
+    case '<=': return value <= threshold
+    case '>': return value > threshold
+    case '>=': return value >= threshold
+  }
+}
 
 function deriveTrackedValues(
   rolls: number[][],
@@ -73,9 +82,10 @@ interface DotPlotProps {
   xLabel: string
   tickValues?: number[]
   tickFormat?: (value: number) => string
+  enteringKeys?: Set<string>
 }
 
-function DotPlot({ values, trackedMode, minValue, maxValue, xLabel, tickValues, tickFormat }: DotPlotProps) {
+function DotPlot({ values, trackedMode, minValue, maxValue, xLabel, tickValues, tickFormat, enteringKeys }: DotPlotProps) {
   const clipId = useId()
 
   // Count occurrences
@@ -107,17 +117,19 @@ function DotPlot({ values, trackedMode, minValue, maxValue, xLabel, tickValues, 
           i === 0 || i === arr.length - 1 || i % Math.ceil(arr.length / 9) === 0,
         )
 
-  // Build dot positions
+  // Build dot positions in append order so newly-added points can animate in
+  const seenCounts = new Map<number, number>()
   const circles: { cx: number; cy: number; key: string }[] = []
-  for (const [val, count] of counts) {
+  for (let index = 0; index < values.length; index++) {
+    const val = values[index]
+    const stackIndex = seenCounts.get(val) ?? 0
+    seenCounts.set(val, stackIndex + 1)
     const cx = xOf(val)
-    for (let i = 0; i < count; i++) {
-      circles.push({
-        cx,
-        cy: plotH - i * stackStep - DOT_R,
-        key: `${val}-${i}`,
-      })
-    }
+    circles.push({
+      cx,
+      cy: plotH - stackIndex * stackStep - DOT_R,
+      key: `${val}-${index}`,
+    })
   }
 
   return (
@@ -132,6 +144,18 @@ function DotPlot({ values, trackedMode, minValue, maxValue, xLabel, tickValues, 
           <rect x={-DOT_R} y={0} width={plotW + DOT_R * 2} height={plotH} />
         </clipPath>
       </defs>
+      <style>{`
+        @keyframes sim-dot-drop {
+          from {
+            transform: translateY(-56px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 0.88;
+          }
+        }
+      `}</style>
       <g transform={`translate(${MG.l},${MG.t})`}>
         {/* Baseline */}
         <line
@@ -158,14 +182,25 @@ function DotPlot({ values, trackedMode, minValue, maxValue, xLabel, tickValues, 
         {/* Dots (clipped to plot area) */}
         <g clipPath={`url(#${clipId})`}>
           {circles.map(({ cx, cy, key }) => (
-            <circle
+            <g
               key={key}
-              cx={cx}
-              cy={cy}
-              r={DOT_R - 0.5}
-              fill="#0EA5A0"
-              opacity={0.88}
-            />
+              transform={`translate(${cx},${cy})`}
+              style={
+                enteringKeys?.has(key)
+                  ? {
+                      animation: 'sim-dot-drop 320ms ease-out',
+                    }
+                  : undefined
+              }
+            >
+              <circle
+                cx={0}
+                cy={0}
+                r={DOT_R - 0.5}
+                fill="#0EA5A0"
+                opacity={0.88}
+              />
+            </g>
           ))}
         </g>
 
@@ -195,10 +230,26 @@ interface SimResultsCardProps {
 export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
   const clearSimResults  = useStore(s => s.clearSimResults)
   const updateExploreCard = useStore(s => s.updateExploreCard)
-  const { values, trackedMode, valueMode = 'count', sourceLabel, valueLabel, minValue, maxValue, rolls, supportsDifference } = config
+  const {
+    values,
+    trackedMode,
+    valueMode = 'count',
+    thresholdOp = '>=',
+    thresholdValue,
+    sourceLabel,
+    valueLabel,
+    minValue,
+    maxValue,
+    rolls,
+    supportsDifference,
+  } = config
   const displaySourceLabel = sourceLabel === 'Coin Flip Simulator' ? 'Coin Flipper' : sourceLabel
   const isCoinFlipper = displaySourceLabel === 'Coin Flipper'
-  const rollCount = values.length
+  const [displayedValues, setDisplayedValues] = useState(values)
+  const [enteringKeys, setEnteringKeys] = useState<Set<string>>(new Set())
+  const previousValuesRef = useRef(values)
+  const timeoutIdsRef = useRef<number[]>([])
+  const rollCount = displayedValues.length
   const xLabel = isCoinFlipper
     ? (valueMode === 'proportion' ? '% Heads' : 'Heads')
     : valueLabel ?? (trackedMode === 'sum' ? 'Sum' : '|Difference|')
@@ -208,6 +259,70 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
   const tickValues = isCoinFlipper && valueMode === 'proportion'
     ? [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
     : undefined
+  const activeThresholdValue = thresholdValue ?? (valueMode === 'proportion' ? 50 : maxValue / 2)
+  const matchingCount = displayedValues.filter(value => compareToThreshold(value, activeThresholdValue, thresholdOp)).length
+  const matchingProportion = rollCount > 0 ? matchingCount / rollCount : 0
+
+  useEffect(() => {
+    timeoutIdsRef.current.forEach(id => window.clearTimeout(id))
+    timeoutIdsRef.current = []
+
+    const previous = previousValuesRef.current
+    const samePrefix = previous.every((value, index) => values[index] === value)
+    const delta = values.length - previous.length
+
+    if (!samePrefix || delta <= 0) {
+      previousValuesRef.current = values
+      const resetId = window.setTimeout(() => {
+        setDisplayedValues(values)
+        setEnteringKeys(new Set())
+      }, 0)
+      timeoutIdsRef.current.push(resetId)
+      return
+    }
+
+    if (delta > 10) {
+      previousValuesRef.current = values
+      const syncId = window.setTimeout(() => {
+        setDisplayedValues(values)
+        setEnteringKeys(new Set())
+      }, 0)
+      timeoutIdsRef.current.push(syncId)
+      return
+    }
+
+    const prepId = window.setTimeout(() => {
+      setDisplayedValues(previous)
+      setEnteringKeys(new Set())
+    }, 0)
+    timeoutIdsRef.current.push(prepId)
+
+    for (let offset = 0; offset < delta; offset++) {
+      const appendIndex = previous.length + offset
+      const nextValue = values[appendIndex]
+      const key = `${nextValue}-${appendIndex}`
+      const revealId = window.setTimeout(() => {
+        setDisplayedValues(current => [...current, nextValue])
+        setEnteringKeys(current => new Set(current).add(key))
+        const clearId = window.setTimeout(() => {
+          setEnteringKeys(current => {
+            const next = new Set(current)
+            next.delete(key)
+            return next
+          })
+        }, 360)
+        timeoutIdsRef.current.push(clearId)
+      }, offset * 110)
+      timeoutIdsRef.current.push(revealId)
+    }
+
+    previousValuesRef.current = values
+
+    return () => {
+      timeoutIdsRef.current.forEach(id => window.clearTimeout(id))
+      timeoutIdsRef.current = []
+    }
+  }, [values])
 
   function handleModeChange(mode: 'sum' | 'difference') {
     if (mode === 'difference' && !supportsDifference) return
@@ -229,7 +344,32 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
         valueMode: mode,
         minValue: mode === 'proportion' ? 0 : 0,
         maxValue: mode === 'proportion' ? 100 : (rolls[0]?.length ?? maxValue),
+        thresholdValue:
+          mode === 'proportion'
+            ? 50
+            : Math.round((rolls[0]?.length ?? maxValue) / 2),
         values: deriveTrackedValues(rolls, trackedMode, mode),
+      },
+    })
+  }
+
+  function handleThresholdOpChange(op: '<' | '<=' | '>' | '>=') {
+    updateExploreCard(cardId, {
+      config: {
+        ...config,
+        thresholdOp: op,
+      },
+    })
+  }
+
+  function handleThresholdValueChange(nextValue: number) {
+    const bounded = valueMode === 'proportion'
+      ? Math.max(0, Math.min(100, nextValue))
+      : Math.max(0, Math.min(rolls[0]?.length ?? maxValue, nextValue))
+    updateExploreCard(cardId, {
+      config: {
+        ...config,
+        thresholdValue: bounded,
       },
     })
   }
@@ -283,6 +423,39 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
         </button>
       </div>
 
+      {isCoinFlipper && (
+        <div className="flex-shrink-0 border-b border-[var(--color-border)] bg-white px-3 py-2">
+          <div className="flex flex-wrap items-center gap-2 text-[10px] text-[var(--color-muted)]">
+            <span className="font-semibold uppercase tracking-wide">Simulated Proportion</span>
+            <select
+              value={thresholdOp}
+              onChange={e => handleThresholdOpChange(e.target.value as '<' | '<=' | '>' | '>=')}
+              className="rounded-md border border-[var(--color-border)] bg-white px-2 py-1 text-[12px] text-[var(--color-text)]"
+            >
+              <option value="<">&lt;</option>
+              <option value="<=">&le;</option>
+              <option value=">">&gt;</option>
+              <option value=">=">&ge;</option>
+            </select>
+            <input
+              type="number"
+              min={0}
+              max={valueMode === 'proportion' ? 100 : (rolls[0]?.length ?? maxValue)}
+              step={valueMode === 'proportion' ? 0.1 : 1}
+              value={Number.isFinite(activeThresholdValue) ? activeThresholdValue : ''}
+              onChange={e => handleThresholdValueChange(Number(e.target.value))}
+              className="w-24 rounded-md border border-[var(--color-border)] px-2 py-1 text-[12px] text-[var(--color-text)]"
+            />
+            <span className="text-[12px] text-[var(--color-text)]">
+              = <span className="font-semibold">{matchingProportion.toFixed(4)}</span>
+            </span>
+            <span className="text-[11px] text-[var(--color-muted)]">
+              ({matchingCount} of {rollCount || 0})
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* ── Dot plot ── */}
       <div className="flex-1 min-h-0 p-4 pt-8">
         {rollCount === 0 ? (
@@ -294,24 +467,26 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
             </div>
             <div className="flex justify-center">
               <DotPlot
-                values={values}
+                values={displayedValues}
                 trackedMode={trackedMode}
                 minValue={minValue}
                 maxValue={maxValue}
                 xLabel={xLabel}
                 tickValues={tickValues}
+                enteringKeys={enteringKeys}
               />
             </div>
           </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-end">
             <DotPlot
-              values={values}
+              values={displayedValues}
               trackedMode={trackedMode}
               minValue={minValue}
               maxValue={maxValue}
               xLabel={xLabel}
               tickValues={tickValues}
+              enteringKeys={enteringKeys}
             />
           </div>
         )}
@@ -319,8 +494,8 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
 
       {/* ── Stats footer (shown when at least 2 values) ── */}
       {rollCount >= 2 && (() => {
-        const sorted = [...values].sort((a, b) => a - b)
-        const mean  = values.reduce((s, v) => s + v, 0) / rollCount
+        const sorted = [...displayedValues].sort((a, b) => a - b)
+        const mean  = displayedValues.reduce((s, v) => s + v, 0) / rollCount
         const min   = sorted[0]
         const max   = sorted[sorted.length - 1]
         return (

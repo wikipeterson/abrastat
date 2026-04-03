@@ -101,6 +101,8 @@ export interface SimResultsCardConfig {
   valueLabel?: string
   trackedMode: 'sum' | 'difference'
   valueMode?: 'count' | 'proportion'
+  thresholdOp?: '<' | '<=' | '>' | '>='
+  thresholdValue?: number
   supportsDifference: boolean
   minValue: number
   maxValue: number

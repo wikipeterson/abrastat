@@ -81,6 +81,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
         ...cfg,
         minValue: range.minValue,
         maxValue: cfg.valueMode === 'proportion' ? 100 : range.maxValue,
+        thresholdValue: cfg.thresholdValue ?? (cfg.valueMode === 'proportion' ? 50 : range.maxValue / 2),
         valueLabel: 'Heads',
       },
     })

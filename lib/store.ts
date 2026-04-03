@@ -307,7 +307,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'testinterval' ? { type: 'testinterval' } :
       type === 'means'        ? { type: 'means', var1ColId: null, var2ColId: null } :
       type === 'dice-roller'  ? { type: 'dice-roller', linkedResultsCardId: null, trackedMode: 'sum' } :
-      type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', valueMode: 'count', supportsDifference: false, minValue: 1, maxValue: 6, rolls: [], values: [] } :
+      type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', valueMode: 'count', thresholdOp: '>=', thresholdValue: 1, supportsDifference: false, minValue: 1, maxValue: 6, rolls: [], values: [] } :
                                  { type: 'simulation', linkedResultsCardId: null }
     const { width, height } =
       type === 'summary' ? { width: 700, height: 620 } :
@@ -350,6 +350,10 @@ export const useStore = create<AbraStatStore>((set) => ({
           valueLabel,
           trackedMode,
           valueMode: 'count',
+          thresholdOp: '>=',
+          thresholdValue: sourceLabel === 'Coin Flipper'
+            ? range.minValue + (range.maxValue - range.minValue) / 2
+            : range.minValue,
           supportsDifference: trackedMode === 'difference',
           minValue: range.minValue,
           maxValue: range.maxValue,

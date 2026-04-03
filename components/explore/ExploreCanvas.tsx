@@ -45,7 +45,7 @@ const EXPLORE_CARD_OPTIONS: CardOption[] = [
 ]
 
 const PROBABILITY_CARD_OPTIONS: CardOption[] = [
-  { type: 'distribution', icon: '🔔', label: 'Distribution' },
+  { type: 'distribution', icon: '🔔', label: 'Distributions' },
   { type: 'generator', icon: '🎛️', label: 'Random Number Generator' },
   { type: 'dice-roller', icon: '🎲', label: 'Dice Roller' },
   { type: 'simulation', icon: '🔀', label: 'Coin Flip Simulator' },
@@ -81,7 +81,7 @@ function cardLabel(type: CardConfig['type']): string {
     case 'table':        return 'Two-Way Table'
     case 'table-output': return 'Two-Way Table'
     case 'regression':   return 'Regression'
-    case 'distribution': return 'Distribution'
+    case 'distribution': return 'Distributions'
     case 'generator':    return 'Random Number Generator'
     case 'dice-roller':  return 'Dice Roller'
     case 'sim-results':   return 'Roll Results'

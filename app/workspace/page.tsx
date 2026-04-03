@@ -26,7 +26,7 @@ const EXPLORE_CARD_OPTIONS: CardOption[] = [
 ]
 
 const PROBABILITY_CARD_OPTIONS: CardOption[] = [
-  { type: 'distribution', icon: '🔔', label: 'Distribution' },
+  { type: 'distribution', icon: '🔔', label: 'Distributions' },
   { type: 'generator',    icon: '🎛️', label: 'Random Number Generator' },
   { type: 'dice-roller',  icon: '🎲', label: 'Dice Roller' },
   { type: 'simulation',   icon: '🔀', label: 'Coin Flip Simulator' },

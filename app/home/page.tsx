@@ -14,7 +14,7 @@ import { useStore } from '@/lib/store'
 import { DatasetMeta } from '@/types'
 import { SAMPLE_DATASETS } from '@/lib/sampleData'
 
-type HomeTab = 'datasets' | 'lab' | 'games' | 'polls'
+type HomeTab = 'datasets' | 'lab' | 'applets' | 'games' | 'polls'
 type LibraryTab = 'all' | 'mine'
 type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 
@@ -194,6 +194,7 @@ function DatasetsSection() {
 const HOME_TABS: { id: HomeTab; label: string; soon?: boolean }[] = [
   { id: 'datasets', label: 'Datasets' },
   { id: 'lab',      label: 'Lab' },
+  { id: 'applets',  label: 'Applets' },
   { id: 'games',    label: 'Games' },
   { id: 'polls',    label: 'Polls', soon: true },
 ]
@@ -269,6 +270,31 @@ function HomeContent({ onGameChromeChange }: { onGameChromeChange: (chrome: { ti
         {tab === 'datasets' && (
           <div className="max-w-5xl mx-auto w-full px-4 py-6">
             <DatasetsSection />
+          </div>
+        )}
+        {tab === 'applets' && (
+          <div className="max-w-5xl mx-auto w-full px-4 py-6 space-y-3">
+            <h2 className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">Applets</h2>
+            <p className="text-sm text-[var(--color-muted)]">Interactive statistical demonstrations.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <a
+                href="/applets/two-prop"
+                className="block rounded-2xl border border-slate-100 bg-white shadow-sm p-5 hover:border-[var(--color-accent)] transition-colors group"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">🔀</span>
+                  <div>
+                    <div className="font-semibold text-[var(--color-text)] group-hover:text-[var(--color-accent)] transition-colors">
+                      Two-Proportion Randomization Test
+                    </div>
+                    <div className="text-xs text-[var(--color-muted)] mt-1 leading-snug">
+                      Visualize the null hypothesis — pool outcomes, randomly reassign group labels,
+                      build a null distribution of simulated differences in proportions.
+                    </div>
+                  </div>
+                </div>
+              </a>
+            </div>
           </div>
         )}
         {tab === 'games' && <GameHub onChromeChange={handleGameChromeChange} />}

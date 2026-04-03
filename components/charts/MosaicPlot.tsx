@@ -1,0 +1,296 @@
+'use client'
+
+import { useMemo, useState } from 'react'
+import { useStore } from '@/lib/store'
+import { getStringValues } from '@/lib/gridHelpers'
+import { ABRA_COLORS } from '@/lib/plotlyTheme'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { ManualTwoWayTableSnapshot } from '@/lib/exploreTypes'
+
+interface MosaicPlotProps {
+  xColId: string | null
+  fillColId: string | null
+  manualTable?: ManualTwoWayTableSnapshot
+  modeOverride?: 'count' | 'row'
+  showControls?: boolean
+}
+
+interface MosaicColumn {
+  label: string
+  total: number
+  segments: {
+    label: string
+    count: number
+    columnPercent: number
+    overallPercent: number
+    color: string
+  }[]
+}
+
+interface PositionedMosaicColumn extends MosaicColumn {
+  left: number
+  width: number
+}
+
+export function MosaicPlot({
+  xColId,
+  fillColId,
+  manualTable,
+  modeOverride,
+  showControls = true,
+}: MosaicPlotProps) {
+  const { grid } = useStore()
+  const [mode, setMode] = useState<'count' | 'row'>('count')
+  const effectiveMode = modeOverride ?? mode
+
+  const xCol = grid.columns.find(c => c.id === xColId)
+  const fillCol = grid.columns.find(c => c.id === fillColId)
+
+  const { columns, fillLabels, xAxisTitle, legendTitle } = useMemo(() => {
+    if (manualTable) {
+      const grandTotal = manualTable.cells.flat().reduce((sum, value) => sum + (value ?? 0), 0)
+      const derivedColumns = manualTable.colLabels.map((colLabel, ci) => {
+        const counts = manualTable.rowLabels.map((_, ri) => manualTable.cells[ri]?.[ci] ?? 0)
+        const total = counts.reduce((sum, value) => sum + value, 0)
+        return {
+          label: colLabel,
+          total,
+          segments: manualTable.rowLabels.map((rowLabel, ri) => {
+            const count = counts[ri]
+            return {
+              label: rowLabel,
+              count,
+              columnPercent: total ? count / total : 0,
+              overallPercent: grandTotal ? count / grandTotal : 0,
+              color: ABRA_COLORS[ri % ABRA_COLORS.length],
+            }
+          }),
+        }
+      })
+
+      return {
+        columns: derivedColumns,
+        fillLabels: manualTable.rowLabels,
+        xAxisTitle: manualTable.explName,
+        legendTitle: manualTable.respName,
+      }
+    }
+
+    if (!xCol || !fillCol) {
+      return {
+        columns: [] as MosaicColumn[],
+        fillLabels: [] as string[],
+        xAxisTitle: xCol?.name ?? '',
+        legendTitle: fillCol?.name ?? '',
+      }
+    }
+
+    const xVals = getStringValues(grid, xCol.id)
+    const fillVals = getStringValues(grid, fillCol.id)
+    const xGroups = [...new Set(xVals)].filter(Boolean).sort()
+    const fillGroups = [...new Set(fillVals)].filter(Boolean).sort()
+    const grandTotal = xGroups.reduce(
+      (sum, xGroup) => sum + xVals.filter(value => value === xGroup).length,
+      0,
+    )
+
+    const derivedColumns = xGroups.map((xGroup) => {
+      const total = xVals.filter(value => value === xGroup).length
+      return {
+        label: xGroup,
+        total,
+        segments: fillGroups.map((fillGroup, gi) => {
+          const count = xVals.filter((value, index) => value === xGroup && fillVals[index] === fillGroup).length
+          return {
+            label: fillGroup,
+            count,
+            columnPercent: total ? count / total : 0,
+            overallPercent: grandTotal ? count / grandTotal : 0,
+            color: ABRA_COLORS[gi % ABRA_COLORS.length],
+          }
+        }),
+      }
+    })
+
+    return {
+      columns: derivedColumns,
+      fillLabels: fillGroups,
+      xAxisTitle: xCol.name,
+      legendTitle: fillCol.name,
+    }
+  }, [fillCol, grid, manualTable, xCol])
+
+  const svgWidth = 840
+  const svgHeight = 420
+  const margin = { top: 28, right: 210, bottom: 64, left: 28 }
+  const plotWidth = svgWidth - margin.left - margin.right
+  const plotHeight = svgHeight - margin.top - margin.bottom
+  const legendX = margin.left + plotWidth + 40
+  const grandTotal = columns.reduce((sum, column) => sum + column.total, 0)
+  const positionedColumns = useMemo<PositionedMosaicColumn[]>(() => {
+    return columns.reduce<{
+      items: PositionedMosaicColumn[]
+      nextLeft: number
+    }>((acc, column) => {
+      const width = grandTotal ? (column.total / grandTotal) * plotWidth : 0
+      return {
+        items: [...acc.items, { ...column, left: acc.nextLeft, width }],
+        nextLeft: acc.nextLeft + width,
+      }
+    }, {
+      items: [],
+      nextLeft: margin.left,
+    }).items
+  }, [columns, grandTotal, margin.left, plotWidth])
+
+  if (!manualTable && (!xCol || !fillCol)) {
+    return <EmptyState icon="🧩" title="Select two variables" description="Choose an X variable and a Fill variable above." />
+  }
+
+  if (!columns.length || grandTotal === 0) {
+    return <EmptyState icon="🧩" title="Not enough data" description="Add some counts to see a mosaic plot." />
+  }
+
+  return (
+    <div className="h-full flex flex-col">
+      {showControls && (
+        <div className="flex-shrink-0 flex gap-2 px-4 pt-2">
+          {([
+            ['count', 'Counts'],
+            ['row', 'Row %'],
+          ] as const).map(([nextMode, label]) => (
+            <button
+              key={nextMode}
+              onClick={() => setMode(nextMode)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                effectiveMode === nextMode
+                  ? 'bg-[var(--color-accent)] text-white'
+                  : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="flex-1 min-h-0 px-4 pb-2">
+        <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="h-full w-full">
+          <rect
+            x={margin.left}
+            y={margin.top}
+            width={plotWidth}
+            height={plotHeight}
+            fill="white"
+            stroke="rgba(148, 163, 184, 0.35)"
+            strokeWidth="1"
+            rx="6"
+          />
+
+          {positionedColumns.map((column) => {
+            const columnWidth = column.width
+            const columnLeft = column.left
+            let yCursor = margin.top + plotHeight
+
+            return (
+              <g key={column.label}>
+                {column.segments.map((segment) => {
+                  const segmentRatio = effectiveMode === 'count'
+                    ? segment.columnPercent
+                    : segment.columnPercent
+                  const segmentHeight = segmentRatio * plotHeight
+                  const segmentTop = yCursor - segmentHeight
+                  yCursor = segmentTop
+
+                  const tooltip = effectiveMode === 'count'
+                    ? `${column.label}, ${segment.label}: ${segment.count} (${(segment.overallPercent * 100).toFixed(1)}% of total)`
+                    : `${column.label}, ${segment.label}: ${(segment.columnPercent * 100).toFixed(1)}% within ${column.label}`
+
+                  return (
+                    <g key={`${column.label}:${segment.label}`}>
+                      <rect
+                        x={columnLeft}
+                        y={segmentTop}
+                        width={Math.max(columnWidth, 0)}
+                        height={Math.max(segmentHeight, 0)}
+                        fill={segment.color}
+                        stroke="white"
+                        strokeWidth="1.5"
+                      >
+                        <title>{tooltip}</title>
+                      </rect>
+                      {columnWidth > 68 && segmentHeight > 28 && (
+                        <text
+                          x={columnLeft + columnWidth / 2}
+                          y={segmentTop + segmentHeight / 2}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fill="white"
+                          fontSize="12"
+                          fontWeight="600"
+                        >
+                          {effectiveMode === 'count'
+                            ? segment.count
+                            : `${Math.round(segment.columnPercent * 100)}%`}
+                        </text>
+                      )}
+                    </g>
+                  )
+                })}
+
+                <text
+                  x={columnLeft + columnWidth / 2}
+                  y={margin.top + plotHeight + 24}
+                  textAnchor="middle"
+                  fill="rgb(51 65 85)"
+                  fontSize="12"
+                  fontWeight="600"
+                >
+                  {column.label}
+                </text>
+                <text
+                  x={columnLeft + columnWidth / 2}
+                  y={margin.top + plotHeight + 40}
+                  textAnchor="middle"
+                  fill="rgb(100 116 139)"
+                  fontSize="11"
+                >
+                  {Math.round((column.total / grandTotal) * 100)}%
+                </text>
+              </g>
+            )
+          })}
+
+          <text
+            x={margin.left + plotWidth / 2}
+            y={svgHeight - 12}
+            textAnchor="middle"
+            fill="rgb(51 65 85)"
+            fontSize="13"
+            fontWeight="600"
+          >
+            {xAxisTitle}
+          </text>
+
+          <text
+            x={legendX}
+            y={margin.top + 8}
+            fill="rgb(51 65 85)"
+            fontSize="14"
+            fontWeight="700"
+          >
+            {legendTitle}
+          </text>
+
+          {fillLabels.map((label, index) => (
+            <g key={label} transform={`translate(${legendX}, ${margin.top + 28 + index * 24})`}>
+              <rect width="14" height="14" rx="3" fill={ABRA_COLORS[index % ABRA_COLORS.length]} />
+              <text x="22" y="11" fill="rgb(51 65 85)" fontSize="12" fontWeight="500">
+                {label}
+              </text>
+            </g>
+          ))}
+        </svg>
+      </div>
+    </div>
+  )
+}

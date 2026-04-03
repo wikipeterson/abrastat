@@ -15,7 +15,7 @@ const GRAVITY  = -32
 
 const LINEAR_DAMPING  = 0.28
 const ANGULAR_DAMPING = 0.38
-const MAX_SETTLE  = 5500   // ms hard timeout
+const MAX_SETTLE  = 3500   // ms hard timeout
 const LINEUP_READY_VEL = 2.0   // lineup fires even while dice are barely rolling
 const LINEUP_READY_ANG = 2.0
 
@@ -799,7 +799,7 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
               rotatedUp.normalize()
               // Angle to rotate around Y so rotatedUp aligns with world -Z (screen up)
               const angle = Math.atan2(rotatedUp.x, -rotatedUp.z)
-              const q2 = new THREE.Quaternion().setFromAxisAngle(worldUp, -angle)
+              const q2 = new THREE.Quaternion().setFromAxisAngle(worldUp, angle)
               entry.lineupTargetQuat.copy(q2.multiply(q1))
             } else {
               entry.lineupTargetQuat.copy(q1)
@@ -848,7 +848,7 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
         const topFaceIdx = entry.faceDefs.findIndex(fd => fd.value === result)
         if (topFaceIdx >= 0) {
           entry.resultTexture?.dispose()
-          const resultTex = makeResultTexture(result)
+          const resultTex = makeColorFaceTexture(String(result))
           mats10[topFaceIdx].map?.dispose()
           mats10[topFaceIdx].map = resultTex
           mats10[topFaceIdx].needsUpdate = true
@@ -1260,10 +1260,10 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           mass:            1,
           shape:           physicsShape,
           position:        new CANNON.Vec3(0, DIE_HALF, 0),
-          linearDamping:   isD10 ? 0.52 : LINEAR_DAMPING,
-          angularDamping:  isD10 ? 0.62 : ANGULAR_DAMPING,
+          linearDamping:   isD10 ? 0.72 : LINEAR_DAMPING,
+          angularDamping:  isD10 ? 0.78 : ANGULAR_DAMPING,
           material:        diceMatRef.current ?? undefined,
-          sleepSpeedLimit: isD10 ? 0.8 : 0.5,
+          sleepSpeedLimit: isD10 ? 1.2 : 0.5,
           sleepTimeLimit:  0.1,
         })
         world.addBody(body)

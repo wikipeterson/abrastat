@@ -15,6 +15,7 @@ import { PieChart } from '@/components/charts/PieChart'
 import { DotPlot } from '@/components/charts/DotPlot'
 import { SegmentedBar } from '@/components/charts/SegmentedBar'
 import { NormalProbPlot } from '@/components/charts/NormalProbPlot'
+import { MosaicPlot } from '@/components/charts/MosaicPlot'
 import { AnimatedCaseLayer, deriveGraphMorphSpec, MorphSpec } from '@/components/charts/AnimatedCaseLayer'
 
 interface GraphCardProps {
@@ -30,7 +31,7 @@ interface GraphCardProps {
 export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
   const { grid } = useStore()
   const [showBestFitLine, setShowBestFitLine] = useState(false)
-  const [manualTableGraphType, setManualTableGraphType] = useState<'segmented' | 'sidebyside'>('segmented')
+  const [manualTableGraphType, setManualTableGraphType] = useState<'segmented' | 'sidebyside' | 'mosaic'>('segmented')
   const [manualTableValueMode, setManualTableValueMode] = useState<'count' | 'row'>('count')
   const manualTable = config.manualTable ?? null
 
@@ -97,6 +98,18 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
   }
 
   function renderChart() {
+    if (manualTable && manualTableGraphType === 'mosaic') {
+      return (
+        <MosaicPlot
+          xColId={config.xColId}
+          fillColId={config.groupColId}
+          manualTable={manualTable}
+          modeOverride={manualTableValueMode}
+          showControls={false}
+        />
+      )
+    }
+
     // Y-only: render vertically (values on y-axis)
     if (config.yColId && !config.xColId) {
       switch (currentChart) {
@@ -146,6 +159,15 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
           showControls={!manualTable}
         />
       )
+      case 'mosaic':     return (
+        <MosaicPlot
+          xColId={config.xColId}
+          fillColId={effectiveGroupColId}
+          manualTable={manualTable ?? undefined}
+          modeOverride={manualTable ? manualTableValueMode : undefined}
+          showControls={!manualTable}
+        />
+      )
       case 'normalprob': return <NormalProbPlot colId={mainColId} />
       default:           return null
     }
@@ -186,6 +208,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
                 {([
                   ['segmented', 'Segmented Bar'],
                   ['sidebyside', 'Side-by-Side Bar'],
+                  ['mosaic', 'Mosaic Plot'],
                 ] as const).map(([type, label]) => (
                   <button
                     key={type}

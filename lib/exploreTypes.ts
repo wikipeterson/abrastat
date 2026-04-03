@@ -79,6 +79,7 @@ export interface TestIntervalCardConfig {
 
 export interface SimulationCardConfig {
   type: 'simulation'
+  linkedResultsCardId?: string | null
 }
 
 export interface MeansCardConfig {
@@ -97,6 +98,7 @@ export interface SimResultsCardConfig {
   type: 'sim-results'
   sourceCardId: string
   sourceLabel: string        // e.g. 'Dice Roller'
+  valueLabel?: string
   trackedMode: 'sum' | 'difference'
   supportsDifference: boolean
   minValue: number

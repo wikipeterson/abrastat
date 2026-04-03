@@ -62,9 +62,10 @@ interface DotPlotProps {
   trackedMode: 'sum' | 'difference'
   minValue: number
   maxValue: number
+  xLabel: string
 }
 
-function DotPlot({ values, trackedMode, minValue, maxValue }: DotPlotProps) {
+function DotPlot({ values, trackedMode, minValue, maxValue, xLabel }: DotPlotProps) {
   const clipId = useId()
 
   // Count occurrences
@@ -164,7 +165,7 @@ function DotPlot({ values, trackedMode, minValue, maxValue }: DotPlotProps) {
           fill="#94A3B8"
           fontFamily="DM Sans, sans-serif"
         >
-          {trackedMode === 'sum' ? 'Sum' : '|Difference|'}
+          {xLabel}
         </text>
       </g>
     </svg>
@@ -181,8 +182,9 @@ interface SimResultsCardProps {
 export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
   const clearSimResults  = useStore(s => s.clearSimResults)
   const updateExploreCard = useStore(s => s.updateExploreCard)
-  const { values, trackedMode, sourceLabel, minValue, maxValue, rolls, supportsDifference } = config
+  const { values, trackedMode, sourceLabel, valueLabel, minValue, maxValue, rolls, supportsDifference } = config
   const rollCount = values.length
+  const xLabel = valueLabel ?? (trackedMode === 'sum' ? 'Sum' : '|Difference|')
 
   function handleModeChange(mode: 'sum' | 'difference') {
     if (mode === 'difference' && !supportsDifference) return
@@ -227,10 +229,10 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
           trackedMode={trackedMode}
           minValue={minValue}
           maxValue={maxValue}
+          xLabel={xLabel}
         />
         {rollCount === 0 && (
           <div className="-mt-8 text-center">
-            <div className="text-3xl opacity-20 mb-2">⚅</div>
             <p className="text-xs text-[var(--color-muted)]">
               Roll the dice to start recording outcomes.
             </p>

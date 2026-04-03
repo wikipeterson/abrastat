@@ -144,6 +144,7 @@ interface AbraStatStore {
     position: { x: number; y: number },
     sourceLabel: string,
     range: { minValue: number; maxValue: number },
+    valueLabel?: string,
   ) => string
   addLinkedGraphCard: (
     config: GraphCardConfig,
@@ -301,7 +302,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'means'        ? { type: 'means', var1ColId: null, var2ColId: null } :
       type === 'dice-roller'  ? { type: 'dice-roller', linkedResultsCardId: null, trackedMode: 'sum' } :
       type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', supportsDifference: false, minValue: 1, maxValue: 6, rolls: [], values: [] } :
-                                 { type: 'simulation' }
+                                 { type: 'simulation', linkedResultsCardId: null }
     const { width, height } =
       type === 'summary' ? { width: 700, height: 620 } :
       type === 'means'   ? { width: 580, height: 580 } :
@@ -331,7 +332,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       return card
     }),
   })),
-  addSimResultsCard: (sourceCardId, trackedMode, position, sourceLabel, range) => {
+  addSimResultsCard: (sourceCardId, trackedMode, position, sourceLabel, range, valueLabel) => {
     const id = uuid()
     set(state => ({
       exploreCards: [...state.exploreCards, {
@@ -340,6 +341,7 @@ export const useStore = create<AbraStatStore>((set) => ({
           type: 'sim-results',
           sourceCardId,
           sourceLabel,
+          valueLabel,
           trackedMode,
           supportsDifference: trackedMode === 'difference',
           minValue: range.minValue,

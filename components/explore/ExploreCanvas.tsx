@@ -27,6 +27,7 @@ import { MeansCard } from '@/components/inference/MeansCard'
 import { RandomGeneratorCard } from '@/components/probability/RandomGeneratorCard'
 import { DiceRollerCard } from '@/components/probability/DiceRollerCard'
 import { SimResultsCard } from '@/components/probability/SimResultsCard'
+import { SimulationCard } from '@/components/probability/SimulationCard'
 import { GridToolbar } from '@/components/grid/GridToolbar'
 import { DataGrid } from '@/components/grid/DataGrid'
 
@@ -47,7 +48,7 @@ const PROBABILITY_CARD_OPTIONS: CardOption[] = [
   { type: 'distribution', icon: '🔔', label: 'Distribution' },
   { type: 'generator', icon: '🎛️', label: 'Random Number Generator' },
   { type: 'dice-roller', icon: '🎲', label: 'Dice Roller' },
-  { type: 'simulation', icon: '🔀', label: 'Simulation' },
+  { type: 'simulation', icon: '🔀', label: 'Coin Flip Simulator' },
 ]
 
 const INFERENCE_CARD_OPTIONS: CardOption[] = [
@@ -85,7 +86,7 @@ function cardLabel(type: CardConfig['type']): string {
     case 'dice-roller':  return 'Dice Roller'
     case 'sim-results':   return 'Roll Results'
     case 'testinterval': return 'Test / Interval'
-    case 'simulation':   return 'Simulation'
+    case 'simulation':   return 'Coin Flip Simulator'
     case 'means':        return 'Means'
     default:             return 'Card'
   }
@@ -896,7 +897,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                             <PlaceholderCard label="Test / Interval" />
                           )}
                           {card.config.type === 'simulation' && (
-                            <PlaceholderCard label="Simulation" />
+                            <SimulationCard cardId={card.id} config={card.config} />
                           )}
                         </div>
                         )}

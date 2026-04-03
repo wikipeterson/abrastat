@@ -29,7 +29,7 @@ const PROBABILITY_CARD_OPTIONS: CardOption[] = [
   { type: 'distribution', icon: '🔔', label: 'Distribution' },
   { type: 'generator',    icon: '🎛️', label: 'Random Number Generator' },
   { type: 'dice-roller',  icon: '🎲', label: 'Dice Roller' },
-  { type: 'simulation',   icon: '🔀', label: 'Simulation' },
+  { type: 'simulation',   icon: '🔀', label: 'Coin Flip Simulator' },
 ]
 
 const INFERENCE_CARD_OPTIONS: CardOption[] = [

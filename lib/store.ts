@@ -302,7 +302,6 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', supportsDifference: false, minValue: 1, maxValue: 6, rolls: [], values: [] } :
                                  { type: 'simulation' }
     const { width, height } =
-      type === 'table'   ? { width: 920, height: 700 } :
       type === 'summary' ? { width: 700, height: 620 } :
       type === 'means'   ? { width: 580, height: 580 } :
       type === 'dice-roller' ? { width: 760, height: 700 } :

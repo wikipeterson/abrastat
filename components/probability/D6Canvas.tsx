@@ -56,6 +56,7 @@ const CUBE_VERTICES = [
 
 interface PolyFaceDef {
   value: number
+  label?: string   // display text; defaults to String(value) when absent
   normal: CANNON.Vec3
   faceUp?: CANNON.Vec3
 }
@@ -443,6 +444,19 @@ function makeD10Geometry(r: number): {
   return { geo, faceDefs }
 }
 
+// d100: identical geometry to d10, values 0/10/20…90, labels "00"/"10"…"90".
+function makeD100Geometry(r: number): { geo: THREE.BufferGeometry; faceDefs: PolyFaceDef[] } {
+  const { geo, faceDefs } = makeD10Geometry(r)
+  return {
+    geo,
+    faceDefs: faceDefs.map(fd => ({
+      ...fd,
+      value: fd.value * 10,
+      label: String(fd.value * 10).padStart(2, '0'),
+    })),
+  }
+}
+
 // Returns the geometry and matching ConvexPolyhedron physics shape for each die type.
 // d6 is handled separately (BoxGeometry + CANNON.Box) — this is for non-d6 only.
 function getNonD6DieShapes(sides: number): {
@@ -463,6 +477,12 @@ function getNonD6DieShapes(sides: number): {
       break
     case 10: {
       const t = makeD10Geometry(r * 1.25)
+      geo = t.geo
+      faceDefs = t.faceDefs
+      break
+    }
+    case 100: {
+      const t = makeD100Geometry(r * 1.25)
       geo = t.geo
       faceDefs = t.faceDefs
       break
@@ -751,7 +771,7 @@ function restoreD10FaceMaps(entry: DieEntry) {
   entry.faceDefs.forEach((fd, index) => {
     if (mats[index]) {
       mats[index].map?.dispose()
-      mats[index].map = makeColorFaceTexture(String(fd.value))
+      mats[index].map = makeColorFaceTexture(fd.label ?? String(fd.value))
       mats[index].needsUpdate = true
     }
   })
@@ -794,7 +814,7 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
         // other non-d6: hold the snapped-face-up orientation from settleEntry
         if (entry.sides === 6) {
           entry.lineupTargetQuat.identity()
-        } else if (entry.sides === 10 && entry.resultValue !== null) {
+        } else if ((entry.sides === 10 || entry.sides === 100) && entry.resultValue !== null) {
           const faceIdx = entry.faceDefs.findIndex(fd => fd.value === entry.resultValue)
           const fd = faceIdx >= 0 ? entry.faceDefs[faceIdx] : null
           if (fd?.faceUp) {
@@ -850,14 +870,15 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
         mats[2].map = resultTex
         mats[2].needsUpdate = true
         entry.resultTexture = resultTex
-      } else if (entry.sides === 10) {
+      } else if (entry.sides === 10 || entry.sides === 100) {
         snapPolyhedronFaceUp(entry.body, entry.faceDefs)
         result = getPolyFaceUp(entry.body, entry.faceDefs)
         const mats10 = entry.mesh.material as THREE.MeshPhongMaterial[]
         const topFaceIdx = entry.faceDefs.findIndex(fd => fd.value === result)
         if (topFaceIdx >= 0) {
           entry.resultTexture?.dispose()
-          const resultTex = makeColorFaceTexture(String(result))
+          const topFd = entry.faceDefs[topFaceIdx]
+          const resultTex = makeColorFaceTexture(topFd.label ?? String(result))
           mats10[topFaceIdx].map?.dispose()
           mats10[topFaceIdx].map = resultTex
           mats10[topFaceIdx].needsUpdate = true
@@ -1206,7 +1227,7 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
         if (!world || !scene) return
 
         const isD6    = sides === 6
-        const isD10   = sides === 10
+        const isD10   = sides === 10 || sides === 100
         const precomputed = (isD6 || isD10) ? -1 : Math.floor(Math.random() * sides) + 1
 
         // ── Mesh + Physics shape ─────────────────────────────────────────────
@@ -1243,7 +1264,7 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
             }
             meshMaterial = [
               ...faceDefs.map(fd => new THREE.MeshPhongMaterial({
-                map: makeColorFaceTexture(String(fd.value)), ...d10MatProps,
+                map: makeColorFaceTexture(fd.label ?? String(fd.value)), ...d10MatProps,
               })),
               new THREE.MeshPhongMaterial({ map: makeColorFaceTexture(''), ...d10MatProps }),
             ]
@@ -1350,14 +1371,14 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           entry.resultValue = null
           clearSettleTimer(entry)
 
-          if (entry.sides !== 6 && entry.sides !== 10) {
+          if (entry.sides !== 6 && entry.sides !== 10 && entry.sides !== 100) {
             entry.precomputedResult = Math.floor(Math.random() * entry.sides) + 1
             const mat = entry.mesh.material as THREE.MeshPhongMaterial
             const oldTex = mat.map
             mat.map = makeColorFaceTexture(`d${entry.sides}`)
             mat.needsUpdate = true
             oldTex?.dispose()
-          } else if (entry.sides === 10) {
+          } else if (entry.sides === 10 || entry.sides === 100) {
             restoreD10FaceMaps(entry)
           } else if (entry.sides === 6) {
             restoreD6FaceMaps(entry)
@@ -1411,7 +1432,7 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           clearSettleTimer(entry)
 
           // Re-randomise result for non-d6 dice
-          if (entry.sides !== 6 && entry.sides !== 10) {
+          if (entry.sides !== 6 && entry.sides !== 10 && entry.sides !== 100) {
             entry.precomputedResult = Math.floor(Math.random() * entry.sides) + 1
             // Single material — swap back to label so result is hidden while rolling
             const mat = entry.mesh.material as THREE.MeshPhongMaterial
@@ -1419,7 +1440,7 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
             mat.map = makeColorFaceTexture(`d${entry.sides}`)
             mat.needsUpdate = true
             oldTex?.dispose()
-          } else if (entry.sides === 10) {
+          } else if (entry.sides === 10 || entry.sides === 100) {
             restoreD10FaceMaps(entry)
           } else if (entry.sides === 6) {
             restoreD6FaceMaps(entry)
@@ -1483,7 +1504,7 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           // Restore face textures before clearing resultValue
           if (entry.sides === 6) {
             restoreD6FaceMaps(entry)
-          } else if (entry.sides === 10) {
+          } else if (entry.sides === 10 || entry.sides === 100) {
             restoreD10FaceMaps(entry)
           }
           entry.resultValue = null

@@ -8,26 +8,18 @@ import { DiceRollerCardConfig } from '@/lib/exploreTypes'
 
 // ── Dice configuration ────────────────────────────────────────────────────────
 
-const DICE_TYPES = [4, 6, 8, 10, 12, 20, 100] as const
+const DICE_TYPES = [6, 10, 100] as const
 type DiceSides = typeof DICE_TYPES[number]
 
 const DIE_BG: Record<DiceSides, string> = {
-  4:   '#F59E0B',
   6:   '#0EA5A0',
-  8:   '#6366F1',
   10:  '#10B981',
-  12:  '#EC4899',
-  20:  '#EF4444',
   100: '#8B5CF6',
 }
 
 const DIE_SHAPE: Record<DiceSides, string | null> = {
-  4:   'polygon(50% 3%, 97% 95%, 3% 95%)',
   6:   null,
-  8:   'polygon(50% 3%, 97% 50%, 50% 97%, 3% 50%)',
   10:  'polygon(50% 0%, 80% 18%, 95% 55%, 75% 95%, 25% 95%, 5% 55%, 20% 18%)',
-  12:  'polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)',
-  20:  'polygon(50% 5%, 95% 92%, 5% 92%)',
   100: 'circle(47%)',
 }
 

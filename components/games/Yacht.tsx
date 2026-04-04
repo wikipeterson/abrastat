@@ -86,6 +86,10 @@ function ScoreRow({
 export function Yacht({ onDone }: Props) {
   const canvasRef = useRef<D6CanvasHandle>(null)
   const diceInitializedRef = useRef(false)
+  const rollAudioRef = useRef<HTMLAudioElement | null>(null)
+  const thudPoolRef = useRef<HTMLAudioElement[]>([])
+  const thudIndexRef = useRef(0)
+  const audioPrimedRef = useRef(false)
 
   const [scores, setScores] = useState<Partial<Record<CategoryId, number>>>({})
   const [turn, setTurn] = useState(0)
@@ -107,8 +111,81 @@ export function Yacht({ onDone }: Props) {
     }
   }, [])
 
+  useEffect(() => {
+    rollAudioRef.current = new Audio('/sounds/dieroll.mp3')
+    rollAudioRef.current.preload = 'auto'
+    rollAudioRef.current.volume = 0.8
+    rollAudioRef.current.load()
+
+    thudPoolRef.current = Array.from({ length: 8 }, () => {
+      const audio = new Audio('/sounds/thud.mp3')
+      audio.preload = 'auto'
+      audio.volume = 0.75
+      audio.load()
+      return audio
+    })
+
+    return () => {
+      rollAudioRef.current?.pause()
+      if (rollAudioRef.current) rollAudioRef.current.src = ''
+      thudPoolRef.current.forEach(audio => {
+        audio.pause()
+        audio.src = ''
+      })
+      thudPoolRef.current = []
+    }
+  }, [])
+
+  async function primeAudio() {
+    if (audioPrimedRef.current) return
+    audioPrimedRef.current = true
+
+    const audios = [rollAudioRef.current, ...thudPoolRef.current].filter((audio): audio is HTMLAudioElement => !!audio)
+    await Promise.allSettled(
+      audios.map(async audio => {
+        const originalMuted = audio.muted
+        const originalVolume = audio.volume
+        try {
+          audio.muted = true
+          audio.volume = 0
+          audio.currentTime = 0
+          await audio.play()
+          audio.pause()
+          audio.currentTime = 0
+        } finally {
+          audio.muted = originalMuted
+          audio.volume = originalVolume
+        }
+      }),
+    )
+  }
+
+  function playRollSound() {
+    const audio = rollAudioRef.current
+    if (!audio) return
+    audio.pause()
+    audio.currentTime = 0
+    void audio.play().catch(() => {
+      audioPrimedRef.current = false
+    })
+  }
+
+  function playThudSound(volume = 0.45) {
+    const pool = thudPoolRef.current
+    if (pool.length === 0) return
+    const audio = pool[thudIndexRef.current % pool.length]
+    thudIndexRef.current += 1
+    audio.pause()
+    audio.currentTime = 0
+    audio.volume = volume
+    void audio.play().catch(() => {
+      audioPrimedRef.current = false
+    })
+  }
+
   function handleDieSettled(id: string, value: number) {
     if (!rollingIdsRef.current.has(id)) return
+    playThudSound(0.35)
     settledValRef.current.set(id, value)
     setDice(prev => prev.map(d => d.id === id ? { ...d, value } : d))
     if ([...rollingIdsRef.current].every(rid => settledValRef.current.has(rid))) {
@@ -128,7 +205,7 @@ export function Yacht({ onDone }: Props) {
     }
   }
 
-  function roll() {
+  async function roll() {
     if (rollsLeft <= 0 || isRolling) return
 
     if (!diceInitializedRef.current) {
@@ -148,6 +225,8 @@ export function Yacht({ onDone }: Props) {
     setDice(prev => prev.map(d => activeIds.includes(d.id) ? { ...d, value: null } : d))
     setIsRolling(true)
     setRollsLeft(r => r - 1)
+    await primeAudio()
+    playRollSound()
     canvasRef.current?.rollSome(activeIds)
   }
 
@@ -222,7 +301,10 @@ export function Yacht({ onDone }: Props) {
               ref={canvasRef}
               onDieSettled={handleDieSettled}
               onDieClick={toggleHold}
-              onLineupComplete={() => setShowRollOverlay(true)}
+              onLineupComplete={() => {
+                playThudSound(0.5)
+                setShowRollOverlay(true)
+              }}
               enableHeldZone
             />
             {canShowRollOverlay && (

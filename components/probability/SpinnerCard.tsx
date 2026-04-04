@@ -19,20 +19,20 @@ const CONTACT_LIFT_ANGLE    = 0.42  // rad — strong visible lift as pegs appro
 
 // ── Canvas geometry ───────────────────────────────────────────────────────────
 
-const CW            = 430  // canvas width (extra left room for ticker)
+const CW            = 430  // canvas width (extra right room for ticker)
 const CH            = 420  // canvas height
-const WCX           = 225  // wheel center x
+const WCX           = 205  // wheel center x
 const WCY           = 210  // wheel center y
 const WHEEL_R       = 178  // wheel sector radius
 const RIM_R         = 182  // outer rim radius
 const HUB_R         = 20   // center hub radius
-const TICKER_PX     = 8    // ticker pivot x
+const TICKER_PX     = CW - 8  // ticker pivot x
 const TICKER_PY     = WCY  // ticker pivot y (same height as wheel center)
 const TICKER_LEN    = 50   // pivot → tip length
 const TICKER_W      = 8    // half-width at base
 
-// Ticker is fixed at the left of the wheel (world angle = π)
-const TICKER_WORLD_ANGLE = Math.PI
+// Ticker is fixed at the right of the wheel (world angle = 0)
+const TICKER_WORLD_ANGLE = 0
 
 // ── Color palette ─────────────────────────────────────────────────────────────
 
@@ -226,7 +226,7 @@ function drawWheel(
 function drawTicker(ctx: CanvasRenderingContext2D, tickerAngle: number) {
   ctx.save()
   ctx.translate(TICKER_PX, TICKER_PY)
-  ctx.rotate(tickerAngle)
+  ctx.rotate(Math.PI + tickerAngle)
 
   // Body: leaf-spring shape, widest at base, tapers to point
   ctx.beginPath()

@@ -166,21 +166,40 @@ function drawBoard(
   if (showNormalCurve && totalLanded > 0) {
     const mu = rows * 0.5
     const sigma = Math.sqrt(rows * 0.5 * 0.5)
-    const peakDensity = sigma > 0 ? 1 / (sigma * Math.sqrt(2 * Math.PI)) : 0
+    const normalPdf = (x: number) =>
+      sigma > 0
+        ? (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((x - mu) / sigma) ** 2)
+        : 0
 
     ctx.beginPath()
     for (let step = 0; step <= 240; step++) {
       const xValue = (rows * step) / 240
-      const density = peakDensity > 0
-        ? (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((xValue - mu) / sigma) ** 2)
-        : 0
-      const scaledHeight = peakDensity > 0 ? (density / peakDensity) * maxBarH : 0
+      // Scale the normal approximation to expected counts per 1-bin width,
+      // then map that expected count onto the same histogram height scale.
+      const expectedCount = totalLanded * normalPdf(xValue)
+      const scaledHeight = maxBin > 0 ? (expectedCount / maxBin) * maxBarH : 0
       const x = binCX(xValue, rows, spacing)
       const y = binTop + binH - scaledHeight
       if (step === 0) ctx.moveTo(x, y)
       else ctx.lineTo(x, y)
     }
-    ctx.strokeStyle = '#334155'
+
+    // White halo so the curve stays readable against colored bars.
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)'
+    ctx.lineWidth = 5
+    ctx.stroke()
+
+    ctx.beginPath()
+    for (let step = 0; step <= 240; step++) {
+      const xValue = (rows * step) / 240
+      const expectedCount = totalLanded * normalPdf(xValue)
+      const scaledHeight = maxBin > 0 ? (expectedCount / maxBin) * maxBarH : 0
+      const x = binCX(xValue, rows, spacing)
+      const y = binTop + binH - scaledHeight
+      if (step === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    }
+    ctx.strokeStyle = '#1E293B'
     ctx.lineWidth = 2.5
     ctx.stroke()
   }

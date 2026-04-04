@@ -1,6 +1,9 @@
 'use client'
 
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useStore } from '@/lib/store'
+import { DropZone } from '@/components/explore/DropZone'
+import { TwoPropRandomizationCardConfig } from '@/lib/exploreTypes'
 import {
   Alternative,
   TwoProportionData,
@@ -25,26 +28,6 @@ interface TileLayout {
   size: number   // px per tile side
   step: number   // size + gap
   perRow: number // tiles per column row
-}
-
-// ── Presets ───────────────────────────────────────────────────────────────────
-
-const PRESETS: Record<string, TwoProportionData> = {
-  titanic: buildTwoProportionData(
-    75, 16,   // n1=Male, s1=survived
-    25, 21,   // n2=Female, s2=survived
-    'Male', 'Female', 'Survived', 'Died',
-  ),
-  yawn: buildTwoProportionData(
-    34, 10,   // Seeded group
-    16, 4,    // Control group
-    'Seeded', 'Control', 'Yawned', "Didn't Yawn",
-  ),
-  drug: buildTwoProportionData(
-    40, 28,   // Treatment group
-    40, 14,   // Placebo group
-    'Treatment', 'Placebo', 'Improved', 'No change',
-  ),
 }
 
 // ── Layout constants ──────────────────────────────────────────────────────────
@@ -298,12 +281,28 @@ function colStats(
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function TwoPropRandomizationTest() {
-  const [presetKey, setPresetKey]             = useState<string>('titanic')
+type SourceMode = 'data' | 'manual'
+
+interface Props {
+  cardId: string
+  config: TwoPropRandomizationCardConfig
+  onClearZone: (zone: string) => void
+}
+
+export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props) {
+  const { grid, updateExploreCard } = useStore()
+  const [sourceMode, setSourceMode]             = useState<SourceMode>('data')
   const [alternative, setAlternative]         = useState<Alternative>('less')
   const [nullDiff, setNullDiff]               = useState('0')
   const [demoMode, setDemoMode]               = useState(true)
   const [animSpeed, setAnimSpeed]             = useState(1)
+  const [successLevel, setSuccessLevel]       = useState('')
+  const [groupA, setGroupA]                   = useState('')
+  const [groupB, setGroupB]                   = useState('')
+  const [manualN1, setManualN1]               = useState('100')
+  const [manualS1, setManualS1]               = useState('50')
+  const [manualN2, setManualN2]               = useState('100')
+  const [manualS2, setManualS2]               = useState('50')
   const [stage, setStage]                     = useState<Stage>('observed')
   const [assignment, setAssignment]           = useState<number[]>([])
   const [currentResult, setCurrentResult]     = useState<TwoProportionResult | null>(null)
@@ -312,13 +311,93 @@ export function TwoPropRandomizationTest() {
   const [extremeCount, setExtremeCount]       = useState(0)
   const [highlightSim, setHighlightSim]       = useState(false)
 
-  const data           = PRESETS[presetKey]
-  const cases          = data.cases
+  const responseCol = config.var1ColId ? (grid.columns.find(c => c.id === config.var1ColId) ?? null) : null
+  const groupCol = config.var2ColId ? (grid.columns.find(c => c.id === config.var2ColId) ?? null) : null
+
+  function handleNativeDrop(zone: 'var1' | 'var2') {
+    return (e: React.DragEvent) => {
+      const colId = e.dataTransfer.getData('text/plain')
+      if (!colId) return
+      e.preventDefault()
+      const droppedCol = useStore.getState().grid.columns.find(c => c.id === colId)
+      if (!droppedCol || droppedCol.type !== 'categorical') return
+      const current = useStore.getState().exploreCards.find(c => c.id === cardId)
+      if (!current || current.config.type !== 'two-prop-randomization') return
+      updateExploreCard(cardId, {
+        config: {
+          ...current.config,
+          ...(zone === 'var1' ? { var1ColId: colId } : { var2ColId: colId }),
+        },
+      })
+    }
+  }
+
+  function handleNativeDragOver(e: React.DragEvent) {
+    if (e.dataTransfer.types.includes('text/plain')) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'copy'
+    }
+  }
+
+  const responseLevels = useMemo(() => {
+    if (!config.var1ColId) return []
+    return [...new Set(grid.rows.map(r => String(r[config.var1ColId!] ?? '').trim()).filter(Boolean))].sort()
+  }, [grid.rows, config.var1ColId])
+
+  const groupLevels = useMemo(() => {
+    if (!config.var2ColId) return []
+    return [...new Set(grid.rows.map(r => String(r[config.var2ColId!] ?? '').trim()).filter(Boolean))].sort()
+  }, [grid.rows, config.var2ColId])
+
+  useEffect(() => {
+    if (responseLevels.length > 0) {
+      setSuccessLevel(current => (current && responseLevels.includes(current)) ? current : responseLevels[0])
+    }
+  }, [responseLevels])
+
+  useEffect(() => {
+    if (groupLevels.length >= 2) {
+      setGroupA(current => (current && groupLevels.includes(current)) ? current : groupLevels[0])
+      setGroupB(current => (current && groupLevels.includes(current) && current !== groupLevels[0]) ? current : groupLevels[1])
+    }
+  }, [groupLevels])
+
+  const data = useMemo<TwoProportionData | null>(() => {
+    if (sourceMode === 'manual') {
+      const n1 = parseInt(manualN1, 10)
+      const s1 = parseInt(manualS1, 10)
+      const n2 = parseInt(manualN2, 10)
+      const s2 = parseInt(manualS2, 10)
+      if (![n1, s1, n2, s2].every(Number.isFinite)) return null
+      if (n1 <= 0 || n2 <= 0 || s1 < 0 || s2 < 0 || s1 > n1 || s2 > n2) return null
+      return buildTwoProportionData(n1, s1, n2, s2, 'Group 1', 'Group 2', 'Success', 'Failure')
+    }
+
+    if (!config.var1ColId || !config.var2ColId || !successLevel || !groupA || !groupB) return null
+
+    let n1 = 0, s1 = 0, n2 = 0, s2 = 0
+    for (const row of grid.rows) {
+      const response = String(row[config.var1ColId] ?? '').trim()
+      const group = String(row[config.var2ColId] ?? '').trim()
+      if (!response || !group) continue
+      if (group === groupA) {
+        n1 += 1
+        if (response === successLevel) s1 += 1
+      } else if (group === groupB) {
+        n2 += 1
+        if (response === successLevel) s2 += 1
+      }
+    }
+    if (n1 === 0 || n2 === 0) return null
+    return buildTwoProportionData(n1, s1, n2, s2, groupA, groupB, successLevel, 'Not Success')
+  }, [config.var1ColId, config.var2ColId, grid.rows, groupA, groupB, manualN1, manualN2, manualS1, manualS2, sourceMode, successLevel])
+
+  const cases          = data?.cases ?? []
   const layout         = getTileLayout(cases.length)
   const tDur           = demoMode ? Math.round(480 / animSpeed) : 0
   const isAnimating    = stage !== 'observed' && stage !== 'done'
   const pValue         = simCount > 0 ? extremeCount / simCount : null
-  const positions      = computePositions(data, stage, assignment)
+  const positions      = data ? computePositions(data, stage, assignment) : new Map<number, { x: number; y: number }>()
 
   // Keep mutable refs to avoid stale closures in the stage machine
   const dataRef        = useRef(data)
@@ -328,9 +407,20 @@ export function TwoPropRandomizationTest() {
   useEffect(() => { dataRef.current = data }, [data])
   useEffect(() => { altRef.current  = alternative }, [alternative])
 
+  useEffect(() => {
+    setStage('observed')
+    setAssignment([])
+    setCurrentResult(null)
+    setNullDist([])
+    setSimCount(0)
+    setExtremeCount(0)
+    setHighlightSim(false)
+  }, [data, sourceMode, nullDiff, alternative])
+
   // ── Stage machine ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (stage === 'observed' || stage === 'done') return
+    if (!dataRef.current) return
 
     const base = Math.max(120, tDur + 80)
     let id: ReturnType<typeof setTimeout>
@@ -340,7 +430,9 @@ export function TwoPropRandomizationTest() {
 
     } else if (stage === 'pooled') {
       id = setTimeout(() => {
-        const result = runTwoProportionRandomization(dataRef.current)
+        const currentData = dataRef.current
+        if (!currentData) return
+        const result = runTwoProportionRandomization(currentData)
         resultRef.current = result
         setAssignment(result.assignment)
         setCurrentResult(result)
@@ -362,7 +454,7 @@ export function TwoPropRandomizationTest() {
     } else if (stage === 'plotting') {
       id = setTimeout(() => {
         const result = resultRef.current
-        if (result) {
+        if (result && dataRef.current) {
           setNullDist(prev => [...prev, result.diffSim])
           setSimCount(prev => prev + 1)
           if (isExtremeResult(result.diffSim, dataRef.current.diffObs, altRef.current)) {
@@ -378,11 +470,12 @@ export function TwoPropRandomizationTest() {
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   function handleStep() {
-    if (isAnimating) return
+    if (isAnimating || !data) return
     setStage('pooling')
   }
 
   function runBatch(count: number) {
+    if (!data) return
     const diffs: number[] = []
     let newExtreme = 0
     for (let i = 0; i < count; i++) {
@@ -412,44 +505,103 @@ export function TwoPropRandomizationTest() {
     setHighlightSim(false)
   }
 
-  function handlePresetChange(key: string) {
-    setPresetKey(key)
-    handleReset()
-  }
-
   // ── Derived display values ─────────────────────────────────────────────────
   const showSplit = stage !== 'pooled' && stage !== 'reassigning' && stage !== 'pooling'
   const showCenter = stage === 'pooled' || stage === 'reassigning' || stage === 'pooling'
   const showRandomized = stage === 'computing' || stage === 'plotting' || stage === 'done'
 
-  const leftStats  = colStats(cases, 0, showRandomized ? assignment : null, stage)
-  const rightStats = colStats(cases, 1, showRandomized ? assignment : null, stage)
+  const leftStats  = data ? colStats(cases, 0, showRandomized ? assignment : null, stage) : { n: 0, s: 0, p: 0 }
+  const rightStats = data ? colStats(cases, 1, showRandomized ? assignment : null, stage) : { n: 0, s: 0, p: 0 }
 
   const transitionStyle = `left ${tDur}ms ease-in-out, top ${tDur}ms ease-in-out`
 
   // Column header labels
-  const leftLabel  = data.group1Label
-  const rightLabel = data.group2Label
+  const leftLabel  = data?.group1Label ?? 'Group 1'
+  const rightLabel = data?.group2Label ?? 'Group 2'
+  const successLabel = data?.successLabel ?? 'Success'
+  const failureLabel = data?.failureLabel ?? 'Failure'
   const altSymbol = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
   const altStatement = `p₁ − p₂ ${altSymbol} ${nullDiff}`
 
   return (
     <div className="space-y-4">
       {/* ── Config bar ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--color-border)] bg-white px-4 py-3">
+      <div className="space-y-3 rounded-xl border border-[var(--color-border)] bg-white px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Dataset</span>
-          <select
-            value={presetKey}
-            onChange={e => handlePresetChange(e.target.value)}
-            disabled={isAnimating}
-            className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white"
-          >
-            <option value="titanic">Titanic — Sex vs Survival</option>
-            <option value="yawn">Yawning Experiment</option>
-            <option value="drug">Drug Trial</option>
-          </select>
+          <span className="text-xs text-[var(--color-muted)]">Source</span>
+          <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+            {([
+              ['data', 'Use Data'],
+              ['manual', 'Enter Info'],
+            ] as [SourceMode, string][]).map(([nextMode, label], i) => (
+              <button
+                key={nextMode}
+                onClick={() => setSourceMode(nextMode)}
+                className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === nextMode ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {sourceMode === 'data' ? (
+          <>
+            <div className="flex gap-2">
+              <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var1')}>
+                <DropZone id={`${cardId}:var1`} label="Response Variable" hint="categorical only" assignedCol={responseCol} onClear={() => onClearZone('var1')} />
+              </div>
+              <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var2')}>
+                <DropZone id={`${cardId}:var2`} label="2nd Variable or Group By" hint="categorical only" assignedCol={groupCol} onClear={() => onClearZone('var2')} />
+              </div>
+            </div>
+
+            {responseLevels.length > 1 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[var(--color-muted)] whitespace-nowrap">Success</span>
+                <select value={successLevel} onChange={e => setSuccessLevel(e.target.value)} className="flex-1 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white">
+                  {responseLevels.map(level => <option key={level} value={level}>{level}</option>)}
+                </select>
+              </div>
+            )}
+
+            {groupLevels.length > 2 && (
+              <div className="flex gap-2">
+                {([['Compare', groupA, setGroupA, groupB], ['vs.', groupB, setGroupB, groupA]] as [string, string, (v: string) => void, string][]).map(
+                  ([label, value, setter, other]) => (
+                    <div key={label} className="flex-1 flex items-center gap-1.5">
+                      <span className="text-[10px] font-semibold text-[var(--color-muted)] flex-shrink-0">{label}</span>
+                      <select value={value} onChange={e => setter(e.target.value)} className="flex-1 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white">
+                        {groupLevels.filter(g => g !== other).map(g => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                    </div>
+                  ),
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="grid gap-2 grid-cols-2">
+            <label className="text-xs text-[var(--color-muted)]">
+              n₁
+              <input type="number" min={1} step={1} value={manualN1} onChange={e => setManualN1(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white" />
+            </label>
+            <label className="text-xs text-[var(--color-muted)]">
+              x₁
+              <input type="number" min={0} step={1} value={manualS1} onChange={e => setManualS1(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white" />
+            </label>
+            <label className="text-xs text-[var(--color-muted)]">
+              n₂
+              <input type="number" min={1} step={1} value={manualN2} onChange={e => setManualN2(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white" />
+            </label>
+            <label className="text-xs text-[var(--color-muted)]">
+              x₂
+              <input type="number" min={0} step={1} value={manualS2} onChange={e => setManualS2(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white" />
+            </label>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-3">
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₀: p₁ − p₂ =</span>
@@ -506,6 +658,7 @@ export function TwoPropRandomizationTest() {
             <span className="text-xs text-[var(--color-muted)] w-6">{animSpeed}×</span>
           </div>
         )}
+        </div>
       </div>
 
       {/* ── Main layout ─────────────────────────────────────────────────────── */}
@@ -574,13 +727,13 @@ export function TwoPropRandomizationTest() {
                     opacity: isSuccess ? 0.82 : 0.55,
                     boxSizing: 'border-box',
                   }}
-                  aria-label={isSuccess ? data.successLabel : data.failureLabel}
+                  aria-label={isSuccess ? successLabel : failureLabel}
                 />
               )
             })}
 
             {/* Column stat overlays — shown in observed/done states */}
-            {showSplit && (
+            {data && showSplit && (
               <>
                 <ColStatLabel
                   cx={COL_CX.left}
@@ -608,11 +761,11 @@ export function TwoPropRandomizationTest() {
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
                 <span className="inline-block w-3 h-3 rounded-sm bg-[var(--color-accent)] opacity-80" />
-                {data.successLabel}
+                {data?.successLabel ?? 'Success'}
               </div>
               <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
                 <span className="inline-block w-3 h-3 rounded-sm border-2 border-[var(--color-accent)] opacity-55" />
-                {data.failureLabel}
+                {data?.failureLabel ?? 'Failure'}
               </div>
               <span className="ml-auto text-xs italic text-[var(--color-muted)]">
                 {CAPTIONS[stage]}
@@ -629,20 +782,28 @@ export function TwoPropRandomizationTest() {
             <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-muted)]">
               Observed Data
             </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <StatCell label={data.group1Label} value={`p̂₁ = ${data.p1.toFixed(3)}`} sub={`${data.s1} / ${data.n1}`} />
-              <StatCell label={data.group2Label} value={`p̂₂ = ${data.p2.toFixed(3)}`} sub={`${data.s2} / ${data.n2}`} />
-              <StatCell
-                label="Observed diff"
-                value={data.diffObs.toFixed(3)}
-                sub="p̂₁ − p̂₂"
-                accent
-              />
-            </div>
+            {data ? (
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <StatCell label={data.group1Label} value={`p̂₁ = ${data.p1.toFixed(3)}`} sub={`${data.s1} / ${data.n1}`} />
+                <StatCell label={data.group2Label} value={`p̂₂ = ${data.p2.toFixed(3)}`} sub={`${data.s2} / ${data.n2}`} />
+                <StatCell
+                  label="Observed diff"
+                  value={data.diffObs.toFixed(3)}
+                  sub="p̂₁ − p̂₂"
+                  accent
+                />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-20 text-xs text-[var(--color-muted)]">
+                {sourceMode === 'manual'
+                  ? 'Enter valid counts for both groups.'
+                  : 'Choose a categorical response and grouping variable to begin.'}
+              </div>
+            )}
           </div>
 
           {/* Current simulation stats */}
-          {currentResult && (
+          {currentResult && data && (
             <div className={`rounded-2xl border shadow-sm p-4 space-y-3 transition-colors ${
               highlightSim
                 ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
@@ -683,7 +844,11 @@ export function TwoPropRandomizationTest() {
               </div>
             </div>
 
-            {simCount === 0 ? (
+            {!data ? (
+              <div className="flex items-center justify-center h-32 text-xs text-[var(--color-muted)]">
+                No simulation data yet
+              </div>
+            ) : simCount === 0 ? (
               <div className="flex items-center justify-center h-32 text-xs text-[var(--color-muted)]">
                 Run simulations to build the null distribution
               </div>
@@ -716,7 +881,7 @@ export function TwoPropRandomizationTest() {
         {demoMode && (
           <button
             onClick={handleStep}
-            disabled={isAnimating}
+            disabled={isAnimating || !data}
             className="rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white
                        hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
@@ -728,7 +893,7 @@ export function TwoPropRandomizationTest() {
           <button
             key={n}
             onClick={() => runBatch(n)}
-            disabled={isAnimating}
+            disabled={isAnimating || !data}
             className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm font-medium
                        text-[var(--color-text)] hover:bg-slate-50
                        disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
@@ -747,11 +912,13 @@ export function TwoPropRandomizationTest() {
           Reset
         </button>
 
-        <div className="ml-auto text-xs text-[var(--color-muted)] space-x-3">
-          <span>n₁ = {data.n1}</span>
-          <span>n₂ = {data.n2}</span>
-          <span>Total = {cases.length}</span>
-        </div>
+        {data && (
+          <div className="ml-auto text-xs text-[var(--color-muted)] space-x-3">
+            <span>n₁ = {data.n1}</span>
+            <span>n₂ = {data.n2}</span>
+            <span>Total = {cases.length}</span>
+          </div>
+        )}
       </div>
     </div>
   )

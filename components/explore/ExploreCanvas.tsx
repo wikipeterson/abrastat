@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/core'
 import { useStore } from '@/lib/store'
 import { GridColumn } from '@/types'
-import { CardConfig, GraphCardConfig, MeansCardConfig, ExploreCard, ManualTwoWayTableSnapshot } from '@/lib/exploreTypes'
+import { CardConfig, GraphCardConfig, MeansCardConfig, ExploreCard, ManualTwoWayTableSnapshot, TwoPropRandomizationCardConfig } from '@/lib/exploreTypes'
 import { ChartType, inferCharts } from '@/lib/chartHelpers'
 import { SwapAnimContext, SwapAnimState } from '@/lib/swapAnimContext'
 import { GraphCard } from './cards/GraphCard'
@@ -474,6 +474,20 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       }
       newConfig = c
     }
+    if ((cfg as CardConfig).type === 'two-prop-randomization') {
+      const droppedCol = grid.columns.find(c => c.id === colId)
+      if (!droppedCol || droppedCol.type !== 'categorical') return
+      let c: TwoPropRandomizationCardConfig = { ...(cfg as unknown as TwoPropRandomizationCardConfig) }
+      const prevVar1 = c.var1ColId
+      const prevVar2 = c.var2ColId
+      if (targetZone === 'var1') c = { ...c, var1ColId: colId }
+      if (targetZone === 'var2') c = { ...c, var2ColId: colId }
+      if (sourceZone && sourceZone !== targetZone) {
+        if (sourceZone === 'var1') c = { ...c, var1ColId: targetZone === 'var2' ? prevVar2 : null }
+        if (sourceZone === 'var2') c = { ...c, var2ColId: targetZone === 'var1' ? prevVar1 : null }
+      }
+      newConfig = c
+    }
     if (newConfig) {
       // When two occupied zones swap, animate the displaced chip into its new zone
       if (sourceZone && sourceZone !== targetZone) {
@@ -483,6 +497,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
           regression: ['x', 'y', 'group'],
           means:      ['var1', 'var2'],
           proportions:['var1', 'var2'],
+          'two-prop-randomization': ['var1', 'var2'],
           table:      ['rows', 'cols'],
         }
         const order = ZONE_ORDER[cfg.type] ?? []
@@ -534,6 +549,11 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
     if (cfg.type === 'proportions') {
       if (zone === 'var1') newConfig = { ...cfg, var1ColId: null }
       if (zone === 'var2') newConfig = { ...cfg, var2ColId: null }
+    }
+    if ((cfg as CardConfig).type === 'two-prop-randomization') {
+      const c = cfg as unknown as TwoPropRandomizationCardConfig
+      if (zone === 'var1') newConfig = { ...c, var1ColId: null }
+      if (zone === 'var2') newConfig = { ...c, var2ColId: null }
     }
     if (newConfig) updateCard(cardId, { config: newConfig })
   }
@@ -983,7 +1003,11 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                             />
                           )}
                           {card.config.type === 'two-prop-randomization' && (
-                            <TwoPropRandomizationTest />
+                            <TwoPropRandomizationTest
+                              cardId={card.id}
+                              config={card.config}
+                              onClearZone={z => clearZone(card.id, z)}
+                            />
                           )}
                           {card.config.type === 'simulation' && (
                             <SimulationCard cardId={card.id} config={card.config} />

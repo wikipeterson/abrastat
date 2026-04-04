@@ -82,6 +82,8 @@ export interface ProportionsCardConfig {
 
 export interface TwoPropRandomizationCardConfig {
   type: 'two-prop-randomization'
+  var1ColId: string | null
+  var2ColId: string | null
 }
 
 export interface SimulationCardConfig {

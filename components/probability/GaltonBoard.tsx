@@ -121,6 +121,8 @@ function drawBoard(
   balls:   BallAnim[],
   bins:    number[],
   maxBin:  number,
+  totalLanded: number,
+  showNormalCurve: boolean,
 ) {
   ctx.clearRect(0, 0, CW, CH)
   ctx.fillStyle = '#FFFFFF'
@@ -159,6 +161,28 @@ function drawBoard(
       ctx.textAlign    = 'center'
       ctx.fillText(String(count), cx, CH - 5)
     }
+  }
+
+  if (showNormalCurve && totalLanded > 0) {
+    const mu = rows * 0.5
+    const sigma = Math.sqrt(rows * 0.5 * 0.5)
+    const peakDensity = sigma > 0 ? 1 / (sigma * Math.sqrt(2 * Math.PI)) : 0
+
+    ctx.beginPath()
+    for (let step = 0; step <= 240; step++) {
+      const xValue = (rows * step) / 240
+      const density = peakDensity > 0
+        ? (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((xValue - mu) / sigma) ** 2)
+        : 0
+      const scaledHeight = peakDensity > 0 ? (density / peakDensity) * maxBarH : 0
+      const x = binCX(xValue, rows, spacing)
+      const y = binTop + binH - scaledHeight
+      if (step === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    }
+    ctx.strokeStyle = '#334155'
+    ctx.lineWidth = 2.5
+    ctx.stroke()
   }
 
   // ── Pegs ────────────────────────────────────────────────────────────────────
@@ -213,25 +237,13 @@ function drawBoard(
   }
 }
 
-// ── Binomial PMF (log-space for numerical stability) ─────────────────────────
-
-function binomialPmf(n: number, k: number, p: number): number {
-  function logFact(x: number) {
-    let s = 0
-    for (let i = 2; i <= x; i++) s += Math.log(i)
-    return s
-  }
-  if (p <= 0 || p >= 1) return 0
-  return Math.exp(logFact(n) - logFact(k) - logFact(n - k) + k * Math.log(p) + (n - k) * Math.log(1 - p))
-}
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function GaltonBoard() {
   const [rows,         setRows]         = useState(12)
   const [speed,        setSpeed]        = useState<Speed>('medium')
+  const [showNormalCurve, setShowNormalCurve] = useState(false)
   const [isRunning,    setIsRunning]    = useState(false)
-  const [bins,         setBins]         = useState<number[]>(() => new Array(13).fill(0))
   const [totalDropped, setTotalDropped] = useState(0)
   const [totalLanded,  setTotalLanded]  = useState(0)
 
@@ -257,7 +269,6 @@ export function GaltonBoard() {
   useEffect(() => { speedRef.current = speed }, [speed])
 
   const flushState = useCallback(() => {
-    setBins([...binsRef.current])
     setTotalLanded(totalLandedRef.current)
     setTotalDropped(totalDroppedRef.current)
   }, [])
@@ -269,8 +280,8 @@ export function GaltonBoard() {
     if (!ctx) return
     const n = rowsRef.current
     const { pegSpacing, rowHeight } = getLayout(n)
-    drawBoard(ctx, n, pegSpacing, rowHeight, [], binsRef.current, maxBinRef.current)
-  }, [])
+    drawBoard(ctx, n, pegSpacing, rowHeight, [], binsRef.current, maxBinRef.current, totalLandedRef.current, showNormalCurve)
+  }, [showNormalCurve])
 
   // ── Animation loop ────────────────────────────────────────────────────────
   function animate(time: DOMHighResTimeStamp) {
@@ -337,7 +348,17 @@ export function GaltonBoard() {
       if (ctx) {
         const n = rowsRef.current
         const { pegSpacing, rowHeight } = getLayout(n)
-        drawBoard(ctx, n, pegSpacing, rowHeight, ballsRef.current, binsRef.current, maxBinRef.current)
+        drawBoard(
+          ctx,
+          n,
+          pegSpacing,
+          rowHeight,
+          ballsRef.current,
+          binsRef.current,
+          maxBinRef.current,
+          totalLandedRef.current,
+          showNormalCurve,
+        )
       }
     }
 
@@ -418,7 +439,6 @@ export function GaltonBoard() {
     lastTimeRef.current     = null
     clockRef.current        = 0
     setIsRunning(false)
-    setBins(new Array(n + 1).fill(0))
     setTotalDropped(0)
     setTotalLanded(0)
     requestAnimationFrame(redrawStatic)
@@ -426,7 +446,6 @@ export function GaltonBoard() {
 
   // Reset bins when rows slider changes (slider disabled while running)
   useEffect(() => {
-    const nextBins = new Array(rows + 1).fill(0)
     binsRef.current         = new Array(rows + 1).fill(0)
     maxBinRef.current       = 0
     totalLandedRef.current  = 0
@@ -434,7 +453,6 @@ export function GaltonBoard() {
     clockRef.current        = 0
     pendingLandingsRef.current = []
     requestAnimationFrame(() => {
-      setBins(nextBins)
       setTotalDropped(0)
       setTotalLanded(0)
       redrawStatic()
@@ -513,6 +531,16 @@ export function GaltonBoard() {
               ))}
             </div>
           </div>
+
+          <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
+            <input
+              type="checkbox"
+              checked={showNormalCurve}
+              onChange={e => setShowNormalCurve(e.target.checked)}
+              className="h-4 w-4 rounded border-[var(--color-border)]"
+            />
+            <span>Overlay normal curve</span>
+          </label>
         </div>
 
         {/* Drop controls */}
@@ -538,46 +566,6 @@ export function GaltonBoard() {
             Reset
           </button>
         </div>
-
-        {/* Bin distribution table */}
-        {totalLanded > 0 && (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-white shadow-sm p-4 space-y-2">
-            <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-muted)]">
-              Bin Distribution
-            </div>
-            <div className="space-y-1 max-h-56 overflow-y-auto">
-              {bins.map((count, i) => {
-                const pct    = totalLanded > 0 ? count / totalLanded : 0
-                const theory = binomialPmf(rows, i, 0.5)
-                return (
-                  <div key={i} className="flex items-center gap-2 text-xs">
-                    <span className="text-[var(--color-muted)] w-5 text-right tabular-nums">{i}</span>
-                    <div className="relative flex-1 bg-slate-100 rounded h-2">
-                      <div
-                        className="absolute inset-y-0 left-0 rounded bg-[var(--color-accent)] opacity-80 transition-all duration-150"
-                        style={{ width: `${pct * 100}%` }}
-                      />
-                      {/* Theoretical tick */}
-                      <div
-                        className="absolute top-0 bottom-0 w-px bg-slate-400 opacity-50"
-                        style={{ left: `${theory * 100}%` }}
-                      />
-                    </div>
-                    <span className="tabular-nums w-10 text-right text-[var(--color-muted)]">
-                      {(pct * 100).toFixed(1)}%
-                    </span>
-                    <span className="tabular-nums w-8 text-right font-bold text-[var(--color-text)]">
-                      {count}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-            <div className="text-[10px] text-[var(--color-muted)] border-t border-[var(--color-border)] pt-2">
-              Bar = observed &nbsp;·&nbsp; Tick = theoretical Bin({rows}, 0.5)
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

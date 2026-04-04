@@ -16,6 +16,8 @@ const LIBRARY_LINKS = [
 
 const APPLET_LINKS = [
   { href: '/applets/dice-roller', label: 'Dice Roller' },
+  { href: '/applets/coin-flipper', label: 'Coin Flipper' },
+  { href: '/applets/random-number-generator', label: 'Random Number Generator' },
   { href: '/applets/spinner', label: 'Spinner' },
   { href: '/applets/galton-board', label: 'Galton Board' },
 ]

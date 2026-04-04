@@ -858,6 +858,67 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
       lineupRef.current = { active: true, completed: false, startAt: now, readyAt: null }
     }
 
+    function computeTrayLineupPose(entry: DieEntry) {
+      const gapForSides = (sides: number) => (sides === 10 || sides === 100 ? DIE_HALF * 2 + 0.42 : DIE_HALF * 2 + 0.22)
+      const maxGapX = DIE_HALF * 2 + 0.42
+      const perRow = Math.max(1, Math.floor((TRAY_W - 1.2) / maxGapX))
+      const baseX = -TRAY_W / 2 + DIE_HALF + 0.5
+      const baseZ = TRAY_D / 2 - DIE_HALF - 0.45
+      const gapZ = DIE_HALF * 2 + 0.24
+
+      const trayEntries = dieEntriesRef.current.filter(e => e.zone !== 'held')
+      const trayIndex = Math.max(0, trayEntries.findIndex(e => e.id === entry.id))
+      const col = trayIndex % perRow
+      const row = Math.floor(trayIndex / perRow)
+      const targetX = baseX + trayEntries
+        .slice(0, col)
+        .reduce((sum, priorEntry) => sum + gapForSides(priorEntry.sides), 0)
+      const targetZ = baseZ - row * gapZ
+
+      const targetQuat = new THREE.Quaternion()
+      if (entry.sides === 6) {
+        targetQuat.identity()
+        return {
+          pos: new THREE.Vector3(targetX, DIE_HALF, targetZ),
+          quat: targetQuat,
+        }
+      }
+
+      if ((entry.sides === 10 || entry.sides === 100) && entry.resultValue !== null) {
+        const faceIdx = entry.faceDefs.findIndex(fd => fd.value === entry.resultValue)
+        const fd = faceIdx >= 0 ? entry.faceDefs[faceIdx] : null
+        if (fd?.faceUp) {
+          const worldUp = new THREE.Vector3(0, 1, 0)
+          const localNorm = new THREE.Vector3(fd.normal.x, fd.normal.y, fd.normal.z)
+          const q1 = new THREE.Quaternion().setFromUnitVectors(localNorm, worldUp)
+          const localUp = new THREE.Vector3(fd.faceUp.x, fd.faceUp.y, fd.faceUp.z)
+          const rotatedUp = localUp.clone().applyQuaternion(q1)
+          rotatedUp.y = 0
+          if (rotatedUp.lengthSq() > 0.001) {
+            rotatedUp.normalize()
+            const angle = Math.atan2(rotatedUp.x, -rotatedUp.z)
+            const q2 = new THREE.Quaternion().setFromAxisAngle(worldUp, angle)
+            targetQuat.copy(q2.multiply(q1))
+          } else {
+            targetQuat.copy(q1)
+          }
+        } else {
+          targetQuat.copy(entry.mesh.quaternion)
+        }
+      } else {
+        targetQuat.copy(entry.mesh.quaternion)
+      }
+
+      const supportHeight = getSupportHeight(
+        entry.supportVertices,
+        threeQuatToCannon(targetQuat),
+      )
+      return {
+        pos: new THREE.Vector3(targetX, supportHeight, targetZ),
+        quat: targetQuat,
+      }
+    }
+
     // ── Settle a die ─────────────────────────────────────────────────────────
 
     function settleEntry(entry: DieEntry) {
@@ -1567,8 +1628,11 @@ function showD6ResultOnTop(entry: DieEntry, result: number) {
           // If the tray has already lined up, return this die to its saved lineup slot
           // instead of the original top staging slot.
           if (lineupRef.current.completed) {
-            toPos = entry.lineupTargetPos.clone()
-            toQuat.copy(entry.lineupTargetQuat)
+            const trayPose = computeTrayLineupPose(entry)
+            toPos = trayPose.pos
+            toQuat.copy(trayPose.quat)
+            entry.lineupTargetPos.copy(trayPose.pos)
+            entry.lineupTargetQuat.copy(trayPose.quat)
           } else {
             const cols = Math.max(1, Math.floor((TRAY_W - 1.2) / 1.1))
             const startX = -TRAY_W / 2 + DIE_HALF + 0.5

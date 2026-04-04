@@ -185,10 +185,13 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
     prevMorphSpecRef.current = morphSpec
   }, [morphSpec])
 
-  // dot and scatter stay in the custom-rendered AnimatedCaseLayer permanently
+  const useAnimatedScatter = morphSpec?.kind === 'scatter' && bestFitMode !== 'group'
+
+  // dot and scatter stay in the custom-rendered AnimatedCaseLayer permanently,
+  // except grouped best-fit scatter, which needs the full Plotly renderer.
   const isCustomRendered =
     morphSpec !== null &&
-    (morphSpec.kind === 'dot' || morphSpec.kind === 'scatter')
+    (morphSpec.kind === 'dot' || useAnimatedScatter)
 
   const showAnimatedBlank     = isBlank && !!morphSpec && hasRows
   const showAnimatedTransition = !isBlank && !!activeTransition

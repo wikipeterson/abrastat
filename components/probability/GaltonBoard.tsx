@@ -46,6 +46,11 @@ interface PendingBall {
   launchAt: number    // performance.now() ms when to start animating
 }
 
+interface PendingLanding {
+  finalBin: number
+  landAt: number
+}
+
 // ── Geometry helpers ──────────────────────────────────────────────────────────
 
 function getLayout(rows: number) {
@@ -237,6 +242,7 @@ export function GaltonBoard() {
   const clockRef        = useRef(0)
   const ballsRef        = useRef<BallAnim[]>([])
   const pendingRef      = useRef<PendingBall[]>([])
+  const pendingLandingsRef = useRef<PendingLanding[]>([])
   const binsRef         = useRef<number[]>(new Array(13).fill(0))
   const maxBinRef       = useRef(0)
   const totalLandedRef  = useRef(0)
@@ -283,6 +289,19 @@ export function GaltonBoard() {
 
     let anyLanded = false
 
+    pendingLandingsRef.current = pendingLandingsRef.current.filter(p => {
+      if (p.landAt <= clockRef.current) {
+        binsRef.current[p.finalBin]++
+        totalLandedRef.current++
+        if (binsRef.current[p.finalBin] > maxBinRef.current) {
+          maxBinRef.current = binsRef.current[p.finalBin]
+        }
+        anyLanded = true
+        return false
+      }
+      return true
+    })
+
     if (dt > 0) {
       const dprogress = SPEED_SEG[speedRef.current] * dt
       const alive: BallAnim[] = []
@@ -324,7 +343,10 @@ export function GaltonBoard() {
 
     if (anyLanded) flushState()
 
-    const hasWork = ballsRef.current.length > 0 || pendingRef.current.length > 0
+    const hasWork =
+      ballsRef.current.length > 0 ||
+      pendingRef.current.length > 0 ||
+      pendingLandingsRef.current.length > 0
     if (hasWork) {
       rafRef.current = requestAnimationFrame(animate)
     } else {
@@ -341,6 +363,8 @@ export function GaltonBoard() {
     const n   = rowsRef.current
     const now = clockRef.current
     let visualCount = 0
+    const flightMs = ((n + 1) / SPEED_SEG[speedRef.current]) * 1000
+    const hiddenStaggerMs = Math.max(4, Math.min(18, 1200 / Math.max(count, 1)))
 
     for (let i = 0; i < count; i++) {
       const choices: number[] = Array.from({ length: n }, () => (Math.random() < 0.5 ? 0 : 1))
@@ -362,12 +386,10 @@ export function GaltonBoard() {
         })
         visualCount++
       } else {
-        // Instant: skip animation, land immediately
-        binsRef.current[finalBin]++
-        totalLandedRef.current++
-        if (binsRef.current[finalBin] > maxBinRef.current) {
-          maxBinRef.current = binsRef.current[finalBin]
-        }
+        pendingLandingsRef.current.push({
+          finalBin,
+          landAt: now + flightMs + (i - visualCount) * hiddenStaggerMs,
+        })
       }
     }
 
@@ -387,6 +409,7 @@ export function GaltonBoard() {
     isRunningRef.current    = false
     ballsRef.current        = []
     pendingRef.current      = []
+    pendingLandingsRef.current = []
     const n                 = rowsRef.current
     binsRef.current         = new Array(n + 1).fill(0)
     maxBinRef.current       = 0
@@ -409,6 +432,7 @@ export function GaltonBoard() {
     totalLandedRef.current  = 0
     totalDroppedRef.current = 0
     clockRef.current        = 0
+    pendingLandingsRef.current = []
     requestAnimationFrame(() => {
       setBins(nextBins)
       setTotalDropped(0)

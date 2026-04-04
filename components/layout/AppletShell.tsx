@@ -16,8 +16,8 @@ const LIBRARY_LINKS = [
 
 const APPLET_LINKS = [
   { href: '/applets/dice-roller', label: 'Dice Roller' },
-  { href: '/applets/galton-board', label: 'Galton Board' },
   { href: '/applets/spinner', label: 'Spinner' },
+  { href: '/applets/galton-board', label: 'Galton Board' },
 ]
 
 export function AppletShell({

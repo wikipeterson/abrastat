@@ -109,6 +109,9 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   const [tuning] = useState<DiceTuning>(DEFAULT_DICE_TUNING)
   const [fastRollCount, setFastRollCount] = useState('100')
   const canvasRef = useRef<D6CanvasHandle>(null)
+  const rollAudioRef = useRef<HTMLAudioElement | null>(null)
+  const thudPoolRef = useRef<HTMLAudioElement[]>([])
+  const thudIndexRef = useRef(0)
 
   // ── Store connections for linked results ──────────────────────────────────
   const exploreCards      = useStore(s => s.exploreCards)
@@ -128,6 +131,48 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
 
   const rollInProgressRef = useRef(false)
 
+  useEffect(() => {
+    rollAudioRef.current = new Audio('/sounds/dieroll.mp3')
+    rollAudioRef.current.preload = 'auto'
+    rollAudioRef.current.volume = 0.45
+
+    thudPoolRef.current = Array.from({ length: 8 }, () => {
+      const audio = new Audio('/sounds/thud.mp3')
+      audio.preload = 'auto'
+      audio.volume = 0.45
+      return audio
+    })
+
+    return () => {
+      rollAudioRef.current?.pause()
+      if (rollAudioRef.current) rollAudioRef.current.src = ''
+      thudPoolRef.current.forEach(audio => {
+        audio.pause()
+        audio.src = ''
+      })
+      thudPoolRef.current = []
+    }
+  }, [])
+
+  function playRollSound() {
+    const audio = rollAudioRef.current
+    if (!audio) return
+    audio.pause()
+    audio.currentTime = 0
+    void audio.play().catch(() => {})
+  }
+
+  function playThudSound(volume = 0.45) {
+    const pool = thudPoolRef.current
+    if (pool.length === 0) return
+    const audio = pool[thudIndexRef.current % pool.length]
+    thudIndexRef.current += 1
+    audio.pause()
+    audio.currentTime = 0
+    audio.volume = volume
+    void audio.play().catch(() => {})
+  }
+
   // Count of each die type currently in tray
   const dieCounts = DICE_TYPES.reduce((acc, s) => {
     acc[s] = tray.filter(d => d.sides === s).length
@@ -143,6 +188,7 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   function rollAll() {
     setFinalResults({})
     rollInProgressRef.current = true
+    playRollSound()
     canvasRef.current?.rollAll()
   }
 
@@ -248,7 +294,12 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   }
 
   function handleDieSettled(id: string, value: number) {
+    playThudSound(0.35)
     setFinalResults(prev => ({ ...prev, [id]: value }))
+  }
+
+  function handleLineupComplete() {
+    playThudSound(0.5)
   }
 
   const inner = (
@@ -327,9 +378,16 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
         </div>
       </div>
 
-      {/* ── Physics tray — fills remaining space ── */}
-      <div className="flex-1 min-h-[200px]">
-        <D6Canvas ref={canvasRef} onDieSettled={handleDieSettled} tuning={tuning} />
+      {/* ── Physics tray — left anchored to leave room for results on the right ── */}
+      <div className="flex-1 min-h-[200px] px-3 py-3">
+        <div className="h-full max-w-[860px] mr-auto">
+          <D6Canvas
+            ref={canvasRef}
+            onDieSettled={handleDieSettled}
+            onLineupComplete={handleLineupComplete}
+            tuning={tuning}
+          />
+        </div>
       </div>
 
     </div>

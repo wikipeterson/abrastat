@@ -112,6 +112,7 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   const rollAudioRef = useRef<HTMLAudioElement | null>(null)
   const thudPoolRef = useRef<HTMLAudioElement[]>([])
   const thudIndexRef = useRef(0)
+  const audioPrimedRef = useRef(false)
 
   // ── Store connections for linked results ──────────────────────────────────
   const exploreCards      = useStore(s => s.exploreCards)
@@ -134,12 +135,14 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   useEffect(() => {
     rollAudioRef.current = new Audio('/sounds/dieroll.mp3')
     rollAudioRef.current.preload = 'auto'
-    rollAudioRef.current.volume = 0.45
+    rollAudioRef.current.volume = 0.8
+    rollAudioRef.current.load()
 
     thudPoolRef.current = Array.from({ length: 8 }, () => {
       const audio = new Audio('/sounds/thud.mp3')
       audio.preload = 'auto'
-      audio.volume = 0.45
+      audio.volume = 0.75
+      audio.load()
       return audio
     })
 
@@ -154,12 +157,38 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
     }
   }, [])
 
+  async function primeAudio() {
+    if (audioPrimedRef.current) return
+    audioPrimedRef.current = true
+
+    const audios = [rollAudioRef.current, ...thudPoolRef.current].filter((audio): audio is HTMLAudioElement => !!audio)
+    await Promise.allSettled(
+      audios.map(async audio => {
+        const originalMuted = audio.muted
+        const originalVolume = audio.volume
+        try {
+          audio.muted = true
+          audio.volume = 0
+          audio.currentTime = 0
+          await audio.play()
+          audio.pause()
+          audio.currentTime = 0
+        } finally {
+          audio.muted = originalMuted
+          audio.volume = originalVolume
+        }
+      }),
+    )
+  }
+
   function playRollSound() {
     const audio = rollAudioRef.current
     if (!audio) return
     audio.pause()
     audio.currentTime = 0
-    void audio.play().catch(() => {})
+    void audio.play().catch(() => {
+      audioPrimedRef.current = false
+    })
   }
 
   function playThudSound(volume = 0.45) {
@@ -170,7 +199,9 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
     audio.pause()
     audio.currentTime = 0
     audio.volume = volume
-    void audio.play().catch(() => {})
+    void audio.play().catch(() => {
+      audioPrimedRef.current = false
+    })
   }
 
   // Count of each die type currently in tray
@@ -185,9 +216,10 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
     canvasRef.current?.addDie(id, sides)
   }
 
-  function rollAll() {
+  async function rollAll() {
     setFinalResults({})
     rollInProgressRef.current = true
+    await primeAudio()
     playRollSound()
     canvasRef.current?.rollAll()
   }

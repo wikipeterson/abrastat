@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 // ── Physics / timing constants ────────────────────────────────────────────────
 
-const MAX_VISUAL  = 20    // max simultaneously animated balls
+const MAX_VISUAL  = 100   // max animated balls per batch before using deferred landings
 const STAGGER_MS  = 110   // ms between visual ball launches
 
 // Segments (peg-to-peg transitions) per second per speed mode

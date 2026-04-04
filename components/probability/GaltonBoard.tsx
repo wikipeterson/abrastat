@@ -280,12 +280,14 @@ export function GaltonBoard() {
   const totalDroppedRef = useRef(0)
   const rowsRef         = useRef(12)
   const speedRef        = useRef<Speed>('medium')
+  const showNormalCurveRef = useRef(false)
   const isRunningRef    = useRef(false)
   const ballIdRef       = useRef(0)
   const colorIdxRef     = useRef(0)
 
   useEffect(() => { rowsRef.current  = rows  }, [rows])
   useEffect(() => { speedRef.current = speed }, [speed])
+  useEffect(() => { showNormalCurveRef.current = showNormalCurve }, [showNormalCurve])
 
   const flushState = useCallback(() => {
     setTotalLanded(totalLandedRef.current)
@@ -308,9 +310,9 @@ export function GaltonBoard() {
       binsRef.current,
       maxBinRef.current,
       totalLandedRef.current,
-      showNormalCurve,
+      showNormalCurveRef.current,
     )
-  }, [showNormalCurve])
+  }, [])
 
   // ── Animation loop ────────────────────────────────────────────────────────
   function animate(time: DOMHighResTimeStamp) {
@@ -473,13 +475,13 @@ export function GaltonBoard() {
     requestAnimationFrame(redrawStatic)
   }
 
-  // Reset bins when rows slider changes (slider disabled while running)
+  // Reset bins only when the board shape changes.
   useEffect(() => {
-    binsRef.current         = new Array(rows + 1).fill(0)
-    maxBinRef.current       = 0
-    totalLandedRef.current  = 0
-    totalDroppedRef.current = 0
-    clockRef.current        = 0
+    binsRef.current            = new Array(rows + 1).fill(0)
+    maxBinRef.current          = 0
+    totalLandedRef.current     = 0
+    totalDroppedRef.current    = 0
+    clockRef.current           = 0
     pendingLandingsRef.current = []
     requestAnimationFrame(() => {
       setTotalDropped(0)

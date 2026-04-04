@@ -179,6 +179,8 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
   const scrollRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef(1)
+  const prevCardIdsRef = useRef<string[]>([])
+  const hasMountedRef = useRef(false)
   // Stable ref so the column-change effect can read latest cards without
   // cards being in its dependency array (which would cause an update loop).
   const cardsRef = useRef(cards)
@@ -204,9 +206,51 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
     zoomRef.current = zoom
   }, [zoom])
 
+  const centerCardInView = useCallback((card: ExploreCard, behavior: ScrollBehavior = 'smooth') => {
+    const scroller = scrollRef.current
+    if (!scroller) return
+
+    const cardHeight = card.minimized ? MINIMIZED_HEIGHT : (card.height ?? 520)
+    const targetLeft = Math.max(
+      0,
+      card.x * zoomRef.current + (card.width * zoomRef.current) / 2 - scroller.clientWidth / 2,
+    )
+    const targetTop = Math.max(
+      0,
+      card.y * zoomRef.current + (cardHeight * zoomRef.current) / 2 - scroller.clientHeight / 2,
+    )
+
+    scroller.scrollTo({
+      left: targetLeft,
+      top: targetTop,
+      behavior,
+    })
+  }, [])
+
   useEffect(() => {
     ensureDataGridCard()
   }, [ensureDataGridCard])
+
+  useEffect(() => {
+    const currentIds = cards.map(card => card.id)
+
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true
+      prevCardIdsRef.current = currentIds
+      return
+    }
+
+    const previousIds = new Set(prevCardIdsRef.current)
+    const addedCard = cards.find(card => !previousIds.has(card.id))
+
+    prevCardIdsRef.current = currentIds
+
+    if (!addedCard) return
+
+    requestAnimationFrame(() => {
+      centerCardInView(addedCard)
+    })
+  }, [cards, centerCardInView])
 
   useEffect(() => {
     const dataGridCard = cards.find(card => card.config.type === 'data-grid')

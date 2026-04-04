@@ -38,6 +38,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
   const xCol = !manualTable && config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
   const yCol = !manualTable && config.yColId ? (grid.columns.find(c => c.id === config.yColId) ?? null) : null
   const groupCol = !manualTable && config.groupColId ? (grid.columns.find(c => c.id === config.groupColId) ?? null) : null
+  const hasCategoricalGrouping = groupCol?.type === 'categorical'
 
   const { primary, alternatives, orientation } = inferCharts(
     xCol?.type ?? null,
@@ -112,10 +113,11 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
 
     // Y-only: render vertically (values on y-axis)
     if (config.yColId && !config.xColId) {
+      const groupedDistributionOrientation = hasCategoricalGrouping ? 'h' : 'v'
       switch (currentChart) {
-        case 'histogram':  return <Histogram colId={config.yColId} groupColId={config.groupColId} orientation="v" />
-        case 'dot':        return <DotPlot colId={config.yColId} groupByColId={config.groupColId} orientation="v" />
-        case 'box':        return <BoxPlot colId={config.yColId} groupColId={config.groupColId} orientation="v" />
+        case 'histogram':  return <Histogram colId={config.yColId} groupColId={config.groupColId} orientation={groupedDistributionOrientation} />
+        case 'dot':        return <DotPlot colId={config.yColId} groupByColId={config.groupColId} orientation={groupedDistributionOrientation} />
+        case 'box':        return <BoxPlot colId={config.yColId} groupColId={config.groupColId} orientation={groupedDistributionOrientation} />
         case 'bar':        return <BarChart colId={config.yColId} orientation="v" />
         case 'pie':        return <PieChart colId={config.yColId} groupColId={config.groupColId} />
         case 'normalprob': return <NormalProbPlot colId={config.yColId} />

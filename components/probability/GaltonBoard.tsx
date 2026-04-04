@@ -280,7 +280,17 @@ export function GaltonBoard() {
     if (!ctx) return
     const n = rowsRef.current
     const { pegSpacing, rowHeight } = getLayout(n)
-    drawBoard(ctx, n, pegSpacing, rowHeight, [], binsRef.current, maxBinRef.current, totalLandedRef.current, showNormalCurve)
+    drawBoard(
+      ctx,
+      n,
+      pegSpacing,
+      rowHeight,
+      ballsRef.current,
+      binsRef.current,
+      maxBinRef.current,
+      totalLandedRef.current,
+      showNormalCurve,
+    )
   }, [showNormalCurve])
 
   // ── Animation loop ────────────────────────────────────────────────────────
@@ -317,8 +327,8 @@ export function GaltonBoard() {
       const dprogress = SPEED_SEG[speedRef.current] * dt
       const alive: BallAnim[] = []
 
-      for (const ball of ballsRef.current) {
-        ball.progress += dprogress
+      for (const sourceBall of ballsRef.current) {
+        const ball = { ...sourceBall, progress: sourceBall.progress + dprogress }
 
         // Advance through segments (handles multi-segment skip at fast speed)
         while (ball.progress >= 1 && ball.segment <= ball.rows) {

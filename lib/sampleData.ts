@@ -167,3 +167,11 @@ export const SAMPLE_DATASETS: SampleDataset[] = [
   { name: 'NBA Season', emoji: '🏀', description: 'Scoring and performance stats for NBA players.', grid: parsedRowsToGrid(nbaHeaders, nbaRows) },
   { name: 'Car Data', emoji: '🚗', description: 'Classic car data with fuel economy, cylinders, horsepower, and weight.', grid: parsedRowsToGrid(carHeaders, carRows) },
 ]
+
+export function getSampleDatasetId(sample: SampleDataset) {
+  return sample.id ?? `sample:${sample.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+}
+
+export function getSampleDatasetById(id: string) {
+  return SAMPLE_DATASETS.find(sample => getSampleDatasetId(sample) === id)
+}

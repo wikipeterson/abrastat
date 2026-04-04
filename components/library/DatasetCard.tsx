@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Trash2, Link2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Trash2, Link2, Download } from 'lucide-react'
 import { DatasetMeta } from '@/types'
 import { DatasetCoverThumb } from './DatasetCoverThumb'
 
@@ -22,6 +22,7 @@ interface DatasetCardProps {
   currentUserId?: string
   onOpen: (id: string) => void
   onDelete?: (id: string) => void
+  onExport?: (dataset: DatasetMeta, format: 'csv' | 'xlsx') => void | Promise<void>
   view?: 'list' | 'card'
 }
 
@@ -50,7 +51,67 @@ function CopyLinkButton({ datasetId }: { datasetId: string }) {
   )
 }
 
-export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, view = 'list' }: DatasetCardProps) {
+function ExportButton({
+  dataset,
+  onExport,
+}: {
+  dataset: DatasetMeta
+  onExport: (dataset: DatasetMeta, format: 'csv' | 'xlsx') => void | Promise<void>
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (!ref.current?.contains(event.target as Node)) setOpen(false)
+    }
+    if (!open) return
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => document.removeEventListener('mousedown', handlePointerDown)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={e => {
+          e.stopPropagation()
+          setOpen(v => !v)
+        }}
+        title="Export dataset"
+        className="p-1 rounded hover:bg-[var(--color-accent-light)] text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-all"
+      >
+        <Download size={14} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-20 min-w-[124px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+          <button
+            onClick={e => {
+              e.stopPropagation()
+              setOpen(false)
+              void onExport(dataset, 'csv')
+            }}
+            className="block w-full px-3 py-2 text-left text-sm text-[var(--color-text)] hover:bg-slate-50"
+          >
+            Export CSV
+          </button>
+          <button
+            onClick={e => {
+              e.stopPropagation()
+              setOpen(false)
+              void onExport(dataset, 'xlsx')
+            }}
+            className="block w-full px-3 py-2 text-left text-sm text-[var(--color-text)] hover:bg-slate-50"
+          >
+            Export XLSX
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, onExport, view = 'list' }: DatasetCardProps) {
   const isOwner = dataset.ownerId === currentUserId
   const canDelete = isOwner && onDelete
   const canCopyLink = !dataset.id.startsWith('sample:')
@@ -62,6 +123,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, view = '
         <div className="flex items-start justify-between">
           <DatasetCoverThumb cover={dataset.emoji} size="md" />
           <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all">
+            {onExport && <ExportButton dataset={dataset} onExport={onExport} />}
             {canCopyLink && <CopyLinkButton datasetId={dataset.id} />}
             {canDelete && (
               <button
@@ -108,6 +170,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, view = '
         <span className="w-16 text-right">{dataset.rowCount} rows</span>
       </div>
       <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all">
+        {onExport && <ExportButton dataset={dataset} onExport={onExport} />}
         {canCopyLink && <CopyLinkButton datasetId={dataset.id} />}
         {canDelete && (
           <button

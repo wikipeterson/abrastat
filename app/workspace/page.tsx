@@ -14,10 +14,11 @@ import { DatasetListSkeleton } from '@/components/ui/Skeleton'
 import { GameHub } from '@/components/games/GameHub'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { subscribeToMyDatasets, subscribeToPublicDatasets, deleteDataset, loadDataset } from '@/lib/firestore'
-import { SAMPLE_DATASETS } from '@/lib/sampleData'
+import { SAMPLE_DATASETS, getSampleDatasetById, getSampleDatasetId } from '@/lib/sampleData'
 import { useStore } from '@/lib/store'
 import { CardConfig } from '@/lib/exploreTypes'
 import { DatasetMeta } from '@/types'
+import { exportGridAsCsv, exportGridAsXlsx } from '@/lib/datasetExport'
 
 interface CardOption {
   type: CardConfig['type']
@@ -61,7 +62,7 @@ const LIBRARY_ITEMS: { id: LibrarySection; label: string; soon?: boolean }[] = [
 function sampleDatasetToMeta(sample: (typeof SAMPLE_DATASETS)[number]): DatasetMeta {
   const now = new Date('2024-01-01T00:00:00Z')
   return {
-    id: sample.id ?? `sample:${sample.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    id: getSampleDatasetId(sample),
     ownerId: 'abrastat',
     ownerName: 'Demo',
     ownerPhotoURL: '',
@@ -285,9 +286,11 @@ function LibrarySidebar({
 function DatasetsBrowser({
   scope,
   onOpenDataset,
+  onExportDataset,
 }: {
   scope: 'all' | 'mine'
   onOpenDataset: (id: string) => Promise<void>
+  onExportDataset: (dataset: DatasetMeta, format: 'csv' | 'xlsx') => Promise<void>
 }) {
   const { user } = useAuth()
   const [publicDatasets, setPublicDatasets] = useState<DatasetMeta[]>([])
@@ -366,6 +369,7 @@ function DatasetsBrowser({
                 dataset={dataset}
                 currentUserId={user?.uid}
                 onOpen={onOpenDataset}
+                onExport={onExportDataset}
                 onDelete={id => setConfirmDelete(id)}
                 view="list"
               />
@@ -563,7 +567,7 @@ function WorkspaceContent() {
 
   async function handleOpenDataset(id: string) {
     if (id.startsWith('sample:')) {
-      const sample = SAMPLE_DATASETS.find(entry => (entry.id ?? `sample:${entry.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`) === id)
+      const sample = getSampleDatasetById(id)
       if (!sample) return
       setGrid(sample.grid)
       setActiveDatasetId(null)
@@ -585,12 +589,31 @@ function WorkspaceContent() {
     }
   }
 
+  async function handleExportDataset(dataset: DatasetMeta, format: 'csv' | 'xlsx') {
+    try {
+      if (dataset.id.startsWith('sample:')) {
+        const sample = getSampleDatasetById(dataset.id)
+        if (!sample) throw new Error('Sample dataset not found.')
+        if (format === 'csv') exportGridAsCsv(sample.grid, sample.name)
+        else await exportGridAsXlsx(sample.grid, sample.name)
+        return
+      }
+
+      const { grid, meta } = await loadDataset(dataset.id)
+      if (format === 'csv') exportGridAsCsv(grid, meta.name)
+      else await exportGridAsXlsx(grid, meta.name)
+    } catch {
+      alert('Could not export this dataset.')
+    }
+  }
+
   function renderLibraryContent() {
     if (librarySection === 'all' || librarySection === 'mine') {
       return (
         <DatasetsBrowser
           scope={librarySection}
           onOpenDataset={handleOpenDataset}
+          onExportDataset={handleExportDataset}
         />
       )
     }

@@ -10,6 +10,16 @@ type DistType = 'normal' | 't' | 'chi2' | 'binomial' | 'geometric'
 type CalcDirection = 'le' | 'ge' | 'between'
 
 const isContinuous = (d: DistType) => d !== 'binomial' && d !== 'geometric'
+const getDistSymbol = (d: DistType) => {
+  switch (d) {
+    case 't':
+      return 'T'
+    case 'chi2':
+      return 'χ²'
+    default:
+      return 'X'
+  }
+}
 
 const jS = jStat as unknown as {
   normal: { pdf: (x: number, m: number, s: number) => number; cdf: (x: number, m: number, s: number) => number; inv: (p: number, m: number, s: number) => number }
@@ -128,6 +138,7 @@ interface DistributionCardProps {
 
 export function DistributionCard({ preFill }: DistributionCardProps) {
   const [dist, setDist] = useState<DistType>(preFill?.dist ?? 'normal')
+  const distSymbol = getDistSymbol(dist)
 
   const [mean, setMean] = useState(String(preFill?.mean ?? 0))
   const [sd, setSd] = useState(String(preFill?.sd ?? 1))
@@ -381,7 +392,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
                   step="any"
                   className="w-24 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
                 />
-                <span>≤ X ≤</span>
+                <span>≤ {distSymbol} ≤</span>
                 <input
                   type="number"
                   value={upper}
@@ -395,7 +406,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
               </>
             ) : (
               <>
-                <span>X</span>
+                <span>{distSymbol}</span>
                 <span>{direction === 'le' ? '≤' : '≥'}</span>
                 <input
                   type="number"
@@ -467,10 +478,10 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
       <div className="flex-shrink-0 text-center py-2 px-4 bg-slate-50 rounded-xl border border-[var(--color-border)]">
         <span className="text-sm font-mono font-semibold text-[var(--color-text)]">
           {direction === 'between'
-            ? `P(${lower} ≤ X ≤ ${upper}) = ${probabilityDisplay || '—'}`
+            ? `P(${lower} ≤ ${distSymbol} ≤ ${upper}) = ${probabilityDisplay || '—'}`
             : direction === 'le'
-              ? `P(X ≤ ${lastEdited === 'probability' ? boundDisplay || bound : bound}) = ${lastEdited === 'probability' ? probability : probabilityDisplay || '—'}`
-              : `P(X ≥ ${lastEdited === 'probability' ? boundDisplay || bound : bound}) = ${lastEdited === 'probability' ? probability : probabilityDisplay || '—'}`}
+              ? `P(${distSymbol} ≤ ${lastEdited === 'probability' ? boundDisplay || bound : bound}) = ${lastEdited === 'probability' ? probability : probabilityDisplay || '—'}`
+              : `P(${distSymbol} ≥ ${lastEdited === 'probability' ? boundDisplay || bound : bound}) = ${lastEdited === 'probability' ? probability : probabilityDisplay || '—'}`}
         </span>
       </div>
     </div>

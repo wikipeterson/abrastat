@@ -603,7 +603,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       case 'summary':      return { minWidth: 700, minHeight: 620 }
       case 'table':        return { minWidth: 920, minHeight: 700 }
       case 'regression':   return { minWidth: 400, minHeight: 340 }
-      case 'distribution': return { minWidth: 460, minHeight: 480 }
+      case 'distribution': return { minWidth: 720, minHeight: 480 }
       case 'generator':    return { minWidth: 460, minHeight: 440 }
       case 'dice-roller':  return { minWidth: 760, minHeight: 700 }
       case 'sim-results':  return { minWidth: 360, minHeight: 360 }

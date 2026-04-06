@@ -313,6 +313,7 @@ export const useStore = create<AbraStatStore>((set) => ({
     const { width, height } =
       type === 'summary'     ? { width: 700, height: 620 } :
       type === 'means'       ? { width: 760, height: 500 } :
+      type === 'distribution' ? { width: 780, height: 540 } :
       type === 'proportions' ? { width: 860, height: 620 } :
       type === 'two-prop-randomization' ? { width: 980, height: 760 } :
       type === 'dice-roller' ? { width: 760, height: 700 } :

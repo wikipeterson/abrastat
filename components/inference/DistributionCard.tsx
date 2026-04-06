@@ -343,9 +343,9 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
         )}
       </div>
 
-      <div className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-slate-50 px-3 py-3 overflow-x-auto">
-        <div className="flex min-w-max items-center gap-2 text-base sm:text-lg font-serif text-[var(--color-text)] whitespace-nowrap">
-          <span>P(</span>
+      <div className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-slate-50 px-3 py-3">
+        <div className="mb-2 flex items-center gap-2 text-sm font-sans text-[var(--color-text)]">
+          <span className="text-[var(--color-muted)]">Region</span>
           <select
             value={direction}
             onChange={e => {
@@ -365,83 +365,89 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
             <option value="ge">≥</option>
             <option value="between">between</option>
           </select>
-          {direction === 'between' ? (
-            <>
-              <input
-                type="number"
-                value={lower}
-                onChange={e => {
-                  setLower(e.target.value)
-                  setLastEdited('between')
-                }}
-                step="any"
-                className="w-24 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
-              />
-              <span>≤ X ≤</span>
-              <input
-                type="number"
-                value={upper}
-                onChange={e => {
-                  setUpper(e.target.value)
-                  setLastEdited('between')
-                }}
-                step="any"
-                className="w-24 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
-              />
-            </>
-          ) : (
-            <>
-              <span>X</span>
-              <input
-                type="number"
-                value={lastEdited === 'probability' && computed.bound !== null ? boundDisplay : bound}
-                onChange={e => {
-                  setBound(e.target.value)
-                  setLastEdited('bound')
-                }}
-                step="any"
-                className="w-28 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
-              />
-            </>
-          )}
-          <span>) =</span>
-          <input
-            type="number"
-            value={
-              direction === 'between'
-                ? probabilityDisplay
-                : lastEdited === 'bound'
+        </div>
+        <div className="overflow-x-auto">
+          <div className="flex min-w-max items-center gap-1.5 text-sm sm:text-base font-serif text-[var(--color-text)] whitespace-nowrap">
+            <span>P(</span>
+            {direction === 'between' ? (
+              <>
+                <input
+                  type="number"
+                  value={lower}
+                  onChange={e => {
+                    setLower(e.target.value)
+                    setLastEdited('between')
+                  }}
+                  step="any"
+                  className="w-24 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
+                />
+                <span>≤ X ≤</span>
+                <input
+                  type="number"
+                  value={upper}
+                  onChange={e => {
+                    setUpper(e.target.value)
+                    setLastEdited('between')
+                  }}
+                  step="any"
+                  className="w-24 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
+                />
+              </>
+            ) : (
+              <>
+                <span>X</span>
+                <span>{direction === 'le' ? '≤' : '≥'}</span>
+                <input
+                  type="number"
+                  value={lastEdited === 'probability' && computed.bound !== null ? boundDisplay : bound}
+                  onChange={e => {
+                    setBound(e.target.value)
+                    setLastEdited('bound')
+                  }}
+                  step="any"
+                  className="w-28 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
+                />
+              </>
+            )}
+            <span>) =</span>
+            <input
+              type="number"
+              value={
+                direction === 'between'
                   ? probabilityDisplay
-                  : probability
-            }
-            onChange={e => {
-              if (!canInverse) return
-              setProbability(e.target.value)
-              setLastEdited('probability')
-            }}
-            readOnly={!canInverse}
-            step="any"
-            className={`w-32 rounded border border-[var(--color-border)] px-2 py-1 text-sm font-sans ${
-              !canInverse ? 'bg-slate-100 text-[var(--color-muted)]' : 'bg-white'
-            }`}
-          />
-          <button
-            type="button"
-            onClick={() => {
-              if (direction === 'between') {
-                setProbability(probabilityDisplay)
-                return
+                  : lastEdited === 'bound'
+                    ? probabilityDisplay
+                    : probability
               }
-              if (lastEdited === 'probability' && computed.bound !== null) {
-                setBound(boundDisplay)
-              } else {
-                setProbability(probabilityDisplay)
-              }
-            }}
-            className="ml-1 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90"
-          >
-            Compute
-          </button>
+              onChange={e => {
+                if (!canInverse) return
+                setProbability(e.target.value)
+                setLastEdited('probability')
+              }}
+              readOnly={!canInverse}
+              step="any"
+              className={`w-28 rounded border border-[var(--color-border)] px-2 py-1 text-sm font-sans ${
+                !canInverse ? 'bg-slate-100 text-[var(--color-muted)]' : 'bg-white'
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (direction === 'between') {
+                  setProbability(probabilityDisplay)
+                  return
+                }
+                if (lastEdited === 'probability' && computed.bound !== null) {
+                  setBound(boundDisplay)
+                } else {
+                  setProbability(probabilityDisplay)
+                }
+              }}
+              className="ml-1 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90"
+            >
+              Compute
+            </button>
+          </div>
         </div>
       </div>
 

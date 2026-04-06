@@ -367,7 +367,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
               }
               setDirection(next)
             }}
-            className="w-20 rounded border border-[var(--color-border)] bg-white px-1.5 py-1 text-sm font-sans"
+            className="w-24 rounded border border-[var(--color-border)] bg-white px-1.5 py-1 text-sm font-sans"
           >
             <option value="le">≤</option>
             <option value="ge">≥</option>

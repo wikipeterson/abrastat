@@ -421,30 +421,40 @@ export const useStore = create<AbraStatStore>((set) => ({
   },
   addLinkedGraphCard: (config, position) => {
     const id = uuid()
-    set(state => ({
-      exploreCards: [...state.exploreCards, {
-        id,
-        config,
-        x: position.x,
-        y: position.y,
-        width: 620,
-        height: 520,
-      }],
-    }))
+    set(state => {
+      const width = 620
+      const height = 520
+      const { x, y } = findOpenCardPosition(state.exploreCards, position.x, position.y, width, height)
+      return {
+        exploreCards: [...state.exploreCards, {
+          id,
+          config,
+          x,
+          y,
+          width,
+          height,
+        }],
+      }
+    })
     return id
   },
   addLinkedTableCard: (config, position) => {
     const id = uuid()
-    set(state => ({
-      exploreCards: [...state.exploreCards, {
-        id,
-        config,
-        x: position.x,
-        y: position.y,
-        width: 620,
-        height: 520,
-      }],
-    }))
+    set(state => {
+      const width = 620
+      const height = 520
+      const { x, y } = findOpenCardPosition(state.exploreCards, position.x, position.y, width, height)
+      return {
+        exploreCards: [...state.exploreCards, {
+          id,
+          config,
+          x,
+          y,
+          width,
+          height,
+        }],
+      }
+    })
     return id
   },
   pushSimResult: (cardId, roll) => set(state => ({

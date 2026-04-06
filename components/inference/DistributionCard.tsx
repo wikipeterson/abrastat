@@ -439,23 +439,6 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
               !canInverse ? 'bg-slate-100 text-[var(--color-muted)]' : 'bg-white'
             }`}
           />
-          <button
-            type="button"
-            onClick={() => {
-              if (direction === 'between') {
-                setProbability(probabilityDisplay)
-                return
-              }
-              if (lastEdited === 'probability' && computed.bound !== null) {
-                setBound(boundDisplay)
-              } else {
-                setProbability(probabilityDisplay)
-              }
-            }}
-            className="ml-1 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90"
-          >
-            Compute
-          </button>
         </div>
       </div>
 

@@ -21,6 +21,49 @@ function createDataGridCard(): ExploreCard {
   }
 }
 
+function cardsOverlap(
+  ax: number,
+  ay: number,
+  aw: number,
+  ah: number,
+  bx: number,
+  by: number,
+  bw: number,
+  bh: number,
+  padding = 28,
+) {
+  return (
+    ax < bx + bw + padding &&
+    ax + aw + padding > bx &&
+    ay < by + bh + padding &&
+    ay + ah + padding > by
+  )
+}
+
+function findOpenCardPosition(
+  cards: ExploreCard[],
+  startX: number,
+  startY: number,
+  width: number,
+  height: number,
+) {
+  const stepX = 72
+  const stepY = 72
+
+  for (let row = 0; row < 24; row++) {
+    for (let col = 0; col < 8; col++) {
+      const x = startX + col * stepX
+      const y = startY + row * stepY
+      const blocked = cards.some(card =>
+        cardsOverlap(x, y, width, height, card.x, card.y, card.width, card.height ?? 520),
+      )
+      if (!blocked) return { x, y }
+    }
+  }
+
+  return { x: startX, y: startY }
+}
+
 function deriveSimValue(
   roll: number[],
   trackedMode: 'sum' | 'difference',
@@ -294,8 +337,8 @@ export const useStore = create<AbraStatStore>((set) => ({
   addExploreCard: (type, position) => set(state => {
     const analysisCards = state.exploreCards.filter(card => card.config.type !== 'data-grid')
     const idx = analysisCards.length
-    const x = position?.x ?? 1040 + (idx % 2) * 500
-    const y = position?.y ?? 24 + Math.floor(idx / 2) * 520
+    const startX = position?.x ?? 1040 + (idx % 2) * 500
+    const startY = position?.y ?? 24 + Math.floor(idx / 2) * 520
     const config: CardConfig =
       type === 'data-grid'    ? { type: 'data-grid' } :
       type === 'graph'        ? { type: 'graph',       xColId: null, yColId: null, groupColId: null } :
@@ -318,6 +361,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'two-prop-randomization' ? { width: 980, height: 760 } :
       type === 'dice-roller' ? { width: 760, height: 700 } :
                            { width: 620, height: 520 }
+    const { x, y } = findOpenCardPosition(analysisCards, startX, startY, width, height)
     return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width, height }] }
   }),
   ensureDataGridCard: () => set(state => {

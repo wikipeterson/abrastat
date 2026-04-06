@@ -40,7 +40,7 @@ const EXPLORE_CARD_OPTIONS: CardOption[] = [
 ]
 
 const PROBABILITY_CARD_OPTIONS: CardOption[] = [
-  { type: 'distribution', icon: '🔔', label: 'Distributions' },
+  { type: 'distribution', icon: '🔔', label: 'Distribution Calculators' },
 ]
 
 const INFERENCE_CARD_OPTIONS: CardOption[] = [

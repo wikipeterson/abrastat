@@ -125,7 +125,7 @@ function NumInput({
         max={max}
         step={step}
         onChange={e => onChange(e.target.value)}
-        className="w-16 px-2 py-0.5 rounded border border-[var(--color-border)] text-sm text-[var(--color-text)]
+        className="w-14 px-1.5 py-0.5 rounded border border-[var(--color-border)] text-sm text-[var(--color-text)]
           focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent-light)]"
       />
     </label>
@@ -370,7 +370,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
               }
               setDirection(next)
             }}
-            className="rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
+            className="w-24 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
           >
             <option value="le">≤</option>
             <option value="ge">≥</option>
@@ -390,7 +390,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
                     setLastEdited('between')
                   }}
                   step="any"
-                  className="w-24 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
+                  className="w-20 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
                 />
                 <span>≤ {distSymbol} ≤</span>
                 <input
@@ -401,7 +401,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
                     setLastEdited('between')
                   }}
                   step="any"
-                  className="w-24 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
+                  className="w-20 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
                 />
               </>
             ) : (
@@ -416,7 +416,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
                     setLastEdited('bound')
                   }}
                   step="any"
-                  className="w-28 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
+                  className="w-24 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
                 />
               </>
             )}
@@ -437,7 +437,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
               }}
               readOnly={!canInverse}
               step="any"
-              className={`w-28 rounded border border-[var(--color-border)] px-2 py-1 text-sm font-sans ${
+              className={`w-24 rounded border border-[var(--color-border)] px-2 py-1 text-sm font-sans ${
                 !canInverse ? 'bg-slate-100 text-[var(--color-muted)]' : 'bg-white'
               }`}
             />

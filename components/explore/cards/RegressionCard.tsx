@@ -1,13 +1,11 @@
 'use client'
 
 import { useMemo } from 'react'
-import type { Data } from 'plotly.js'
 import { useStore } from '@/lib/store'
 import { linearRegression } from '@/lib/statistics'
 import { getNumericPairs } from '@/lib/gridHelpers'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { DropZone } from '../DropZone'
-import { PlotlyChart } from '@/components/charts/PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 interface RegressionCardProps {
@@ -38,7 +36,7 @@ type RegressionSummary = {
 }
 
 export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHeader }: RegressionCardProps) {
-  const { grid } = useStore()
+  const { grid, exploreCards, addLinkedGraphCard } = useStore()
 
   function handleNativeDrop(zone: 'x' | 'y' | 'group') {
     return (e: React.DragEvent) => {
@@ -70,6 +68,7 @@ export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHead
   const xCol = config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
   const yCol = config.yColId ? (grid.columns.find(c => c.id === config.yColId) ?? null) : null
   const groupCol = config.groupColId ? (grid.columns.find(c => c.id === config.groupColId) ?? null) : null
+  const currentCard = exploreCards.find(card => card.id === cardId) ?? null
 
   const paired = useMemo(() => {
     if (!config.xColId || !config.yColId) return { xs: [] as number[], ys: [] as number[] }
@@ -147,19 +146,6 @@ export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHead
 
   const primary = regressions[0] ?? null
 
-  const residualTrace = useMemo<Data[]>(() => {
-    if (!regressions.length) return []
-    return regressions.map(regression => ({
-      type: 'scatter',
-      mode: 'markers',
-      name: groupCol ? regression.label : 'Residuals',
-      x: regression.xs,
-      y: regression.residuals,
-      marker: { color: regression.color, size: 7, opacity: 0.9, line: { width: 0 } },
-      hovertemplate: `${xCol?.name}: %{x}<br>Residual: %{y}${groupCol ? `<extra>${regression.label}</extra>` : '<extra></extra>'}`,
-    }))
-  }, [groupCol, regressions, xCol?.name])
-
   const content = (() => {
     if (!xCol || !yCol) {
       return <EmptyState icon="📉" title="Drop two numeric variables" description="Choose an Explanatory Variable and a Response Variable to fit a linear model." />
@@ -176,6 +162,59 @@ export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHead
 
     return (
       <div className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (!xCol || !yCol) return
+              addLinkedGraphCard(
+                {
+                  type: 'graph',
+                  xColId: xCol.id,
+                  yColId: yCol.id,
+                  groupColId: groupCol?.id ?? null,
+                  chartType: 'scatter',
+                },
+                { x: (currentCard?.x ?? 40) + (currentCard?.width ?? 400) + 40, y: currentCard?.y ?? 40 },
+              )
+            }}
+            className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
+          >
+            Graph Card
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!xCol || !regressions.length) return
+              addLinkedGraphCard(
+                {
+                  type: 'graph',
+                  xColId: null,
+                  yColId: null,
+                  groupColId: null,
+                  chartType: 'scatter',
+                  manualScatter: {
+                    xName: xCol.name,
+                    yName: 'Residual',
+                    points: regressions.flatMap(regression =>
+                      regression.xs.map((x, index) => ({
+                        x,
+                        y: regression.residuals[index],
+                        group: groupCol ? regression.label : undefined,
+                        color: regression.color,
+                      })),
+                    ),
+                  },
+                },
+                { x: (currentCard?.x ?? 40) + (currentCard?.width ?? 400) + 40, y: (currentCard?.y ?? 40) + 80 },
+              )
+            }}
+            className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
+          >
+            Residual Plot
+          </button>
+        </div>
+
         <div className="bg-[var(--color-accent-light)] rounded-xl px-4 py-3">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-1">
             {groupCol ? 'Separate Regression Equations' : 'Regression Equation'}
@@ -231,29 +270,6 @@ export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHead
           ))}
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-100 p-3">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-2">Residual Plot</div>
-          <PlotlyChart
-            data={residualTrace}
-            height={210}
-            mode="fixed"
-            layout={{
-              xaxis: { title: { text: xCol.name } },
-              yaxis: { title: { text: 'Residual' }, zeroline: true, zerolinecolor: '#94A3B8', zerolinewidth: 1.5 },
-              shapes: [{
-                type: 'line',
-                xref: 'paper',
-                yref: 'y',
-                x0: 0,
-                x1: 1,
-                y0: 0,
-                y1: 0,
-                line: { color: '#94A3B8', width: 1.5, dash: 'dot' },
-              }],
-              margin: { t: 8, r: 16, b: 44, l: 52 },
-            }}
-          />
-        </div>
       </div>
     )
   })()

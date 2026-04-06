@@ -235,13 +235,13 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
         <PlotlyChart
           data={traces as import("plotly.js").Data[]}
           layout={{
-            xaxis: { title: hideAxisTitles ? undefined : { text: xCol.name } },
-            yaxis: { title: hideAxisTitles ? undefined : { text: yCol.name }, ...(yAxisRange ? { range: yAxisRange } : {}) },
+            xaxis: { title: hideAxisTitles ? { text: '' } : { text: xCol.name } },
+            yaxis: { title: hideAxisTitles ? { text: '' } : { text: yCol.name }, ...(yAxisRange ? { range: yAxisRange } : {}) },
             showlegend: !!useColorGroups,
             annotations,
             ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
           }}
-          title={hideAxisTitles ? undefined : `${yCol.name} vs ${xCol.name}`}
+          title={hideAxisTitles ? '' : `${yCol.name} vs ${xCol.name}`}
         />
       </div>
     </div>

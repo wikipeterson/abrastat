@@ -8,6 +8,17 @@ export interface ManualTwoWayTableSnapshot {
   cells: number[][]
 }
 
+export interface ManualScatterSnapshot {
+  xName: string
+  yName: string
+  points: Array<{
+    x: number
+    y: number
+    group?: string
+    color?: string
+  }>
+}
+
 export interface DataGridCardConfig {
   type: 'data-grid'
 }
@@ -19,6 +30,7 @@ export interface GraphCardConfig {
   groupColId: string | null
   chartType?: ChartType | null
   manualTable?: ManualTwoWayTableSnapshot
+  manualScatter?: ManualScatterSnapshot
 }
 
 export interface SummaryCardConfig {

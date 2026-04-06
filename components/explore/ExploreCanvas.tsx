@@ -265,6 +265,9 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
   }, [cards, grid.columns, updateCard])
 
   const normalizeGraphConfig = useCallback((cfg: GraphCardConfig): GraphCardConfig => {
+    if (cfg.manualScatter) {
+      return { ...cfg, chartType: 'scatter' }
+    }
     const xType = cfg.xColId ? (grid.columns.find(c => c.id === cfg.xColId)?.type ?? null) : null
     const yType = cfg.yColId ? (grid.columns.find(c => c.id === cfg.yColId)?.type ?? null) : null
     const usesAxisGrouping =

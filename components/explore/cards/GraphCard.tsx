@@ -1,6 +1,7 @@
 'use client'
 
 import { useDroppable } from '@dnd-kit/core'
+import type { Data } from 'plotly.js'
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '@/lib/store'
 import { ChartType, CHART_META, inferCharts } from '@/lib/chartHelpers'
@@ -17,6 +18,8 @@ import { SegmentedBar } from '@/components/charts/SegmentedBar'
 import { NormalProbPlot } from '@/components/charts/NormalProbPlot'
 import { MosaicPlot } from '@/components/charts/MosaicPlot'
 import { AnimatedCaseLayer, deriveGraphMorphSpec, MorphSpec } from '@/components/charts/AnimatedCaseLayer'
+import { PlotlyChart } from '@/components/charts/PlotlyChart'
+import { ABRA_COLORS } from '@/lib/plotlyTheme'
 
 interface GraphCardProps {
   cardId: string
@@ -34,10 +37,11 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
   const [manualTableGraphType, setManualTableGraphType] = useState<'segmented' | 'sidebyside' | 'mosaic'>('segmented')
   const [manualTableValueMode, setManualTableValueMode] = useState<'count' | 'row'>('count')
   const manualTable = config.manualTable ?? null
+  const manualScatter = config.manualScatter ?? null
 
-  const xCol = !manualTable && config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
-  const yCol = !manualTable && config.yColId ? (grid.columns.find(c => c.id === config.yColId) ?? null) : null
-  const groupCol = !manualTable && config.groupColId ? (grid.columns.find(c => c.id === config.groupColId) ?? null) : null
+  const xCol = !manualTable && !manualScatter && config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
+  const yCol = !manualTable && !manualScatter && config.yColId ? (grid.columns.find(c => c.id === config.yColId) ?? null) : null
+  const groupCol = !manualTable && !manualScatter && config.groupColId ? (grid.columns.find(c => c.id === config.groupColId) ?? null) : null
   const hasCategoricalGrouping = groupCol?.type === 'categorical'
 
   const { primary, alternatives, orientation } = inferCharts(
@@ -99,6 +103,60 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
   }
 
   function renderChart() {
+    if (manualScatter) {
+      const groups = [...new Set(manualScatter.points.map(point => point.group).filter((value): value is string => !!value))]
+      const traces = groups.length > 0
+        ? groups.map((group, index) => {
+            const points = manualScatter.points.filter(point => point.group === group)
+            return {
+              type: 'scatter' as const,
+              mode: 'markers' as const,
+              name: group,
+              x: points.map(point => point.x),
+              y: points.map(point => point.y),
+              marker: {
+                color: points[0]?.color ?? ABRA_COLORS[index % ABRA_COLORS.length],
+                size: 7,
+                opacity: 0.9,
+                line: { width: 0 },
+              },
+              hovertemplate: `${manualScatter.xName}: %{x}<br>${manualScatter.yName}: %{y}<extra>${group}</extra>`,
+            }
+          })
+        : [{
+            type: 'scatter' as const,
+            mode: 'markers' as const,
+            x: manualScatter.points.map(point => point.x),
+            y: manualScatter.points.map(point => point.y),
+            marker: { color: ABRA_COLORS[0], size: 7, opacity: 0.9, line: { width: 0 } },
+            hovertemplate: `${manualScatter.xName}: %{x}<br>${manualScatter.yName}: %{y}<extra></extra>`,
+          }]
+
+      return (
+        <PlotlyChart
+          data={traces as Data[]}
+          layout={{
+            xaxis: { title: { text: manualScatter.xName } },
+            yaxis: { title: { text: manualScatter.yName }, zeroline: manualScatter.yName === 'Residual', zerolinecolor: '#94A3B8', zerolinewidth: 1.5 },
+            margin: { t: 12, r: 16, b: 44, l: 52 },
+            showlegend: groups.length > 0,
+            shapes: manualScatter.yName === 'Residual'
+              ? [{
+                  type: 'line',
+                  xref: 'paper',
+                  yref: 'y',
+                  x0: 0,
+                  x1: 1,
+                  y0: 0,
+                  y1: 0,
+                  line: { color: '#94A3B8', width: 1.5, dash: 'dot' },
+                }]
+              : [],
+          }}
+        />
+      )
+    }
+
     if (manualTable && manualTableGraphType === 'mosaic') {
       return (
         <MosaicPlot
@@ -178,6 +236,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
   const isBlank = !currentChart
   const hasRows = grid.rows.some(r => Object.values(r).some(v => String(v ?? '').trim() !== ''))
   const isManualSegmented = !!manualTable
+  const isManualScatter = !!manualScatter
 
   useEffect(() => {
     const prev = prevMorphSpecRef.current
@@ -249,7 +308,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
               </div>
             </div>
           )}
-          {!manualTable && chartButtons.length > 0 && (
+          {!manualTable && !manualScatter && chartButtons.length > 0 && (
             <>
               <span className="text-xs font-medium text-[var(--color-muted)]">Chart type:</span>
               {chartButtons.map(ct => (
@@ -285,7 +344,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
         </div>
 
         {/* Group — compact square upper right */}
-        {!usesAxisGrouping && !isManualSegmented && (
+        {!usesAxisGrouping && !isManualSegmented && !isManualScatter && (
           <div className="flex-shrink-0 w-24">
             <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('group')}>
               <DropZone
@@ -306,7 +365,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
           col 2 (1fr):  chart rectangle          — fills remaining space
           row 2 col 2:  Explanatory Variable     — same width as chart rectangle
       */}
-      {isManualSegmented ? (
+      {isManualSegmented || isManualScatter ? (
         <div className="flex-1 min-h-0 rounded-xl overflow-hidden">
           <GraphCardContext.Provider value={{ hideAxisTitles: true }}>
             {renderChart()}

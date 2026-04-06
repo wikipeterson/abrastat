@@ -337,8 +337,6 @@ export const useStore = create<AbraStatStore>((set) => ({
   addExploreCard: (type, position) => set(state => {
     const analysisCards = state.exploreCards.filter(card => card.config.type !== 'data-grid')
     const idx = analysisCards.length
-    const startX = position?.x ?? 1040 + (idx % 2) * 500
-    const startY = position?.y ?? 24 + Math.floor(idx / 2) * 520
     const config: CardConfig =
       type === 'data-grid'    ? { type: 'data-grid' } :
       type === 'graph'        ? { type: 'graph',       xColId: null, yColId: null, groupColId: null } :
@@ -361,7 +359,10 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'two-prop-randomization' ? { width: 980, height: 760 } :
       type === 'dice-roller' ? { width: 760, height: 700 } :
                            { width: 620, height: 520 }
-    const { x, y } = findOpenCardPosition(analysisCards, startX, startY, width, height)
+    const rightmostX = state.exploreCards.reduce((max, card) => Math.max(max, card.x + card.width), 20)
+    const startX = position?.x ?? Math.max(1040 + (idx % 2) * 500, rightmostX + 40)
+    const startY = position?.y ?? 24 + Math.floor(idx / 2) * 520
+    const { x, y } = findOpenCardPosition(state.exploreCards, startX, startY, width, height)
     return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width, height }] }
   }),
   ensureDataGridCard: () => set(state => {

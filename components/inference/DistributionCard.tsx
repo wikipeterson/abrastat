@@ -343,9 +343,28 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
         )}
       </div>
 
-      <div className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-slate-50 px-3 py-3">
-        <div className="flex flex-wrap items-center gap-2 text-lg sm:text-2xl font-serif text-[var(--color-text)]">
+      <div className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-slate-50 px-3 py-3 overflow-x-auto">
+        <div className="flex min-w-max items-center gap-2 text-base sm:text-lg font-serif text-[var(--color-text)] whitespace-nowrap">
           <span>P(</span>
+          <select
+            value={direction}
+            onChange={e => {
+              const next = e.target.value as CalcDirection
+              if (direction === 'between') {
+                if (next === 'le') setBound(upper)
+                if (next === 'ge') setBound(lower)
+              } else {
+                if (next === 'ge') setLower(bound)
+                if (next === 'le') setUpper(bound)
+              }
+              setDirection(next)
+            }}
+            className="rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
+          >
+            <option value="le">≤</option>
+            <option value="ge">≥</option>
+            <option value="between">between</option>
+          </select>
           {direction === 'between' ? (
             <>
               <input
@@ -356,7 +375,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
                   setLastEdited('between')
                 }}
                 step="any"
-                className="w-24 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-base font-sans"
+                className="w-24 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
               />
               <span>≤ X ≤</span>
               <input
@@ -367,26 +386,12 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
                   setLastEdited('between')
                 }}
                 step="any"
-                className="w-24 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-base font-sans"
+                className="w-24 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
               />
             </>
           ) : (
             <>
               <span>X</span>
-              <select
-                value={direction}
-                onChange={e => {
-                  const next = e.target.value as CalcDirection
-                  if (next === 'ge') setBound(lower)
-                  if (next === 'le') setBound(upper)
-                  setDirection(next)
-                }}
-                className="rounded border border-[var(--color-border)] bg-white px-2 py-1 text-base font-sans"
-              >
-                <option value="le">≤</option>
-                <option value="ge">≥</option>
-                <option value="between">between</option>
-              </select>
               <input
                 type="number"
                 value={lastEdited === 'probability' && computed.bound !== null ? boundDisplay : bound}
@@ -395,7 +400,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
                   setLastEdited('bound')
                 }}
                 step="any"
-                className="w-28 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-base font-sans"
+                className="w-28 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm font-sans"
               />
             </>
           )}
@@ -416,7 +421,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
             }}
             readOnly={!canInverse}
             step="any"
-            className={`w-32 rounded border border-[var(--color-border)] px-2 py-1 text-base font-sans ${
+            className={`w-32 rounded border border-[var(--color-border)] px-2 py-1 text-sm font-sans ${
               !canInverse ? 'bg-slate-100 text-[var(--color-muted)]' : 'bg-white'
             }`}
           />
@@ -433,7 +438,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
                 setProbability(probabilityDisplay)
               }
             }}
-            className="ml-0 sm:ml-3 rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+            className="ml-1 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90"
           >
             Compute
           </button>

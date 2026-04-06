@@ -352,11 +352,8 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
         {dist === 'geometric' && (
           <NumInput label="p =" value={geoP} onChange={setGeoP} min={0.001} max={1} step={0.01} />
         )}
-      </div>
-
-      <div className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-slate-50 px-3 py-3 overflow-x-auto">
-        <div className="flex min-w-max items-center gap-1.5 text-sm sm:text-base font-serif text-[var(--color-text)] whitespace-nowrap">
-          <span className="mr-1 text-sm font-sans text-[var(--color-muted)]">Region</span>
+        <label className="flex items-center gap-1.5 text-sm select-none">
+          <span className="text-[var(--color-muted)] font-medium whitespace-nowrap">Region</span>
           <select
             value={direction}
             onChange={e => {
@@ -376,7 +373,11 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
             <option value="ge">≥</option>
             <option value="between">between</option>
           </select>
-          <span className="mx-1">:</span>
+        </label>
+      </div>
+
+      <div className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-slate-50 px-3 py-3 overflow-x-auto">
+        <div className="flex min-w-max items-center gap-1.5 text-sm sm:text-base font-serif text-[var(--color-text)] whitespace-nowrap">
           <span>P(</span>
           {direction === 'between' ? (
             <>

@@ -42,6 +42,7 @@ export const basePlotlyLayout = {
 
 export const plotlyConfig = {
   displaylogo: false,
+  displayModeBar: false,
   modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'],
   toImageButtonOptions: {
     format: 'png',

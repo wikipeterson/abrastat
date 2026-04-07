@@ -7,6 +7,7 @@ import { useStore } from '@/lib/store'
 import { ChartType, CHART_META, inferCharts } from '@/lib/chartHelpers'
 import { GraphCardConfig } from '@/lib/exploreTypes'
 import { GraphCardContext } from '@/lib/graphCardContext'
+import { exportDomAsPng } from '@/lib/exportDomAsPng'
 import { DropZone } from '../DropZone'
 import { Histogram } from '@/components/charts/Histogram'
 import { BoxPlot } from '@/components/charts/BoxPlot'
@@ -26,18 +27,21 @@ interface GraphCardProps {
   config: GraphCardConfig
   onClearZone: (zone: string) => void
   onSetChartType: (ct: ChartType) => void
+  onSetTitle: (title: string) => void
   onAssignZone: (zone: 'x' | 'y' | 'group', colId: string) => void
   onRemove: () => void
   hideHeader?: boolean
 }
 
-export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
+export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTitle, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
   const { grid } = useStore()
   const [bestFitMode, setBestFitMode] = useState<'none' | 'overall' | 'group'>('none')
   const [manualTableGraphType, setManualTableGraphType] = useState<'segmented' | 'sidebyside' | 'mosaic'>('segmented')
   const [manualTableValueMode, setManualTableValueMode] = useState<'count' | 'row'>('count')
+  const [isExporting, setIsExporting] = useState(false)
   const manualTable = config.manualTable ?? null
   const manualScatter = config.manualScatter ?? null
+  const graphExportRef = useRef<HTMLDivElement | null>(null)
 
   const xCol = !manualTable && !manualScatter && config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
   const yCol = !manualTable && !manualScatter && config.yColId ? (grid.columns.find(c => c.id === config.yColId) ?? null) : null
@@ -102,6 +106,17 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
     }
   }
 
+  async function handleExportPng() {
+    if (!graphExportRef.current || !currentChart || isBlank) return
+    const safeTitle = (config.title || 'graph').trim().replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '')
+    setIsExporting(true)
+    try {
+      await exportDomAsPng(graphExportRef.current, `${safeTitle || 'graph-card'}.png`)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   function renderChart() {
     if (manualScatter) {
       const groups = [...new Set(manualScatter.points.map(point => point.group).filter((value): value is string => !!value))]
@@ -136,8 +151,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
         <PlotlyChart
           data={traces as Data[]}
           layout={{
-            xaxis: { title: { text: manualScatter.xName } },
-            yaxis: { title: { text: manualScatter.yName }, zeroline: manualScatter.yName === 'Residual', zerolinecolor: '#94A3B8', zerolinewidth: 1.5 },
+            xaxis: { title: { text: '' } },
+            yaxis: { title: { text: '' }, zeroline: manualScatter.yName === 'Residual', zerolinecolor: '#94A3B8', zerolinewidth: 1.5 },
             margin: { t: 12, r: 16, b: 44, l: 52 },
             showlegend: groups.length > 0,
             shapes: manualScatter.yName === 'Residual'
@@ -343,20 +358,38 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
           )}
         </div>
 
-        {/* Group — compact square upper right */}
-        {!usesAxisGrouping && !isManualSegmented && !isManualScatter && (
-          <div className="flex-shrink-0 w-24">
-            <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('group')}>
-              <DropZone
-                id={`${cardId}:group`}
-                label="Group"
-                hint="optional"
-                assignedCol={groupCol}
-                onClear={() => onClearZone('group')}
-              />
+        <div className="flex items-start gap-3 flex-wrap justify-end">
+          <label className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
+            <span className="whitespace-nowrap">Title</span>
+            <input
+              type="text"
+              value={config.title ?? ''}
+              onChange={e => onSetTitle(e.target.value)}
+              placeholder="optional"
+              className="w-40 rounded-lg border border-[var(--color-border)] bg-white px-2 py-1 text-xs text-[var(--color-text)]"
+            />
+          </label>
+          <button
+            onClick={handleExportPng}
+            disabled={isBlank || isExporting}
+            className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] transition-colors hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isExporting ? 'Exporting…' : 'Export PNG'}
+          </button>
+          {!usesAxisGrouping && !isManualSegmented && !isManualScatter && (
+            <div className="flex-shrink-0 w-24">
+              <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('group')}>
+                <DropZone
+                  id={`${cardId}:group`}
+                  label="Group"
+                  hint="optional"
+                  assignedCol={groupCol}
+                  onClear={() => onClearZone('group')}
+                />
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/*
@@ -366,10 +399,17 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
           row 2 col 2:  Explanatory Variable     — same width as chart rectangle
       */}
       {isManualSegmented || isManualScatter ? (
-        <div className="flex-1 min-h-0 rounded-xl overflow-hidden">
-          <GraphCardContext.Provider value={{ hideAxisTitles: true }}>
-            {renderChart()}
-          </GraphCardContext.Provider>
+        <div ref={graphExportRef} className="flex-1 min-h-0 rounded-xl overflow-hidden bg-white">
+          {!!config.title?.trim() && (
+            <div className="px-4 pt-2 text-center text-sm font-semibold text-[var(--color-muted)]">
+              {config.title.trim()}
+            </div>
+          )}
+          <div className="h-full min-h-0">
+            <GraphCardContext.Provider value={{ hideAxisTitles: true }}>
+              {renderChart()}
+            </GraphCardContext.Provider>
+          </div>
         </div>
       ) : (
       <div
@@ -409,31 +449,40 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onAssig
               : ''
           }`}
         >
-          {showAnimatedBlank ? (
-            <AnimatedCaseLayer key="stable" spec={morphSpec!} showHint />
-          ) : showAnimatedTransition ? (
-            <AnimatedCaseLayer
-              key={activeTransition!.nonce}
-              spec={activeTransition!.to}
-              fromSpec={activeTransition!.from}
-              showBestFitLine={activeTransition!.to.kind === 'scatter' ? bestFitMode === 'overall' : false}
-              onRest={() => setActiveTransition(null)}
-            />
-          ) : showSettledCustom ? (
-            <AnimatedCaseLayer key="stable" spec={morphSpec!} showBestFitLine={morphSpec!.kind === 'scatter' ? bestFitMode === 'overall' : false} />
-          ) : isBlank ? (
-            <div className="h-full flex flex-col items-center justify-center gap-2 text-center p-6">
-              <span className="text-4xl opacity-25 select-none">📈</span>
-              <p className="text-sm font-medium text-[var(--color-muted)]">Drop a variable to get started</p>
-              <p className="text-xs text-[var(--color-muted)] opacity-70">
-                Drag and drop a variable from the sidebar to begin.
-              </p>
+          <div ref={graphExportRef} className="h-full min-h-[180px] bg-white">
+            {!!config.title?.trim() && !isBlank && (
+              <div className="px-4 pt-2 text-center text-sm font-semibold text-[var(--color-muted)]">
+                {config.title.trim()}
+              </div>
+            )}
+            <div className="h-full min-h-[180px]">
+              {showAnimatedBlank ? (
+                <AnimatedCaseLayer key="stable" spec={morphSpec!} showHint />
+              ) : showAnimatedTransition ? (
+                <AnimatedCaseLayer
+                  key={activeTransition!.nonce}
+                  spec={activeTransition!.to}
+                  fromSpec={activeTransition!.from}
+                  showBestFitLine={activeTransition!.to.kind === 'scatter' ? bestFitMode === 'overall' : false}
+                  onRest={() => setActiveTransition(null)}
+                />
+              ) : showSettledCustom ? (
+                <AnimatedCaseLayer key="stable" spec={morphSpec!} showBestFitLine={morphSpec!.kind === 'scatter' ? bestFitMode === 'overall' : false} />
+              ) : isBlank ? (
+                <div className="h-full flex flex-col items-center justify-center gap-2 text-center p-6">
+                  <span className="text-4xl opacity-25 select-none">📈</span>
+                  <p className="text-sm font-medium text-[var(--color-muted)]">Drop a variable to get started</p>
+                  <p className="text-xs text-[var(--color-muted)] opacity-70">
+                    Drag and drop a variable from the sidebar to begin.
+                  </p>
+                </div>
+              ) : showDirectChart ? (
+                <GraphCardContext.Provider value={{ hideAxisTitles: true }}>
+                  {renderChart()}
+                </GraphCardContext.Provider>
+              ) : null}
             </div>
-          ) : showDirectChart ? (
-            <GraphCardContext.Provider value={{ hideAxisTitles: true }}>
-              {renderChart()}
-            </GraphCardContext.Provider>
-          ) : null}
+          </div>
         </div>
 
         {/* Row 2, Col 1 — empty (below response zone) */}

@@ -28,6 +28,7 @@ export interface GraphCardConfig {
   xColId: string | null
   yColId: string | null
   groupColId: string | null
+  title?: string
   chartType?: ChartType | null
   manualTable?: ManualTwoWayTableSnapshot
   manualScatter?: ManualScatterSnapshot

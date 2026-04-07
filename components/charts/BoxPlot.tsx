@@ -46,7 +46,7 @@ export function BoxPlot({ colId, groupColId, orientation = 'v' }: BoxPlotProps) 
 
     return [{
       type: 'box',
-      name: col.name,
+      name: hideAxisTitles ? '' : col.name,
       orientation,
       ...(isH ? { x: numericValues } : { y: numericValues }),
       marker: { color: ABRA_COLORS[0], outliercolor: '#EF4444', size: 5, line: { width: 0 } },
@@ -58,7 +58,7 @@ export function BoxPlot({ colId, groupColId, orientation = 'v' }: BoxPlotProps) 
       hovertemplate:
         'Max: %{upperfence}<br>Q3: %{q3}<br>Median: %{median}<br>Q1: %{q1}<br>Min: %{lowerfence}<extra></extra>',
     }]
-  }, [grid, colId, col, groupColId, groupCol, orientation, isH])
+  }, [grid, colId, col, groupColId, groupCol, orientation, isH, hideAxisTitles])
 
   if (!col) {
     return <EmptyState icon="📦" title="Drop a numeric variable" description="Drag a numeric variable to build a box plot." />

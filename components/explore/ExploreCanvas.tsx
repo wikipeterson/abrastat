@@ -940,6 +940,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                               config={card.config}
                               onClearZone={z => clearZone(card.id, z)}
                               onSetChartType={(ct: ChartType) => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), chartType: ct } })}
+                              onSetTitle={title => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), title } })}
                               onAssignZone={(zone, colId) => assignGraphZone(card.id, zone, colId)}
                               onRemove={() => removeCard(card.id)}
                               hideHeader

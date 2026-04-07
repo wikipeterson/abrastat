@@ -20,13 +20,20 @@ const nextContents =
   `export const BUILD_STAMP_ISO = ${JSON.stringify(stamp)}\n` +
   `export const BUILD_COMMIT = ${JSON.stringify(commit)}\n`
 
-// Avoid dirtying the local repo on every verification build.
-// Vercel deploys still write a fresh stamp in their ephemeral build env.
-if (!process.env.VERCEL && existsSync(outputPath)) {
-  process.exit(0)
+function getExistingCommit(contents) {
+  const match = contents.match(/BUILD_COMMIT = "([^"]+)"/)
+  return match?.[1] ?? null
 }
 
 mkdirSync(dirname(outputPath), { recursive: true })
-if (!existsSync(outputPath) || readFileSync(outputPath, 'utf8') !== nextContents) {
+const existingContents = existsSync(outputPath) ? readFileSync(outputPath, 'utf8') : null
+
+// Locally, only refresh when the commit changed. That keeps the footer honest
+// without dirtying the repo on every single verification build.
+if (!process.env.VERCEL && existingContents && getExistingCommit(existingContents) === commit) {
+  process.exit(0)
+}
+
+if (!existingContents || existingContents !== nextContents) {
   writeFileSync(outputPath, nextContents, 'utf8')
 }

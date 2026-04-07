@@ -269,7 +269,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
 
   const normalizeGraphConfig = useCallback((cfg: GraphCardConfig): GraphCardConfig => {
     if (cfg.manualScatter) {
-      return { ...cfg, chartType: 'scatter' }
+      return { ...cfg, chartType: 'scatter', barValueMode: cfg.barValueMode ?? 'count' }
     }
     const xType = cfg.xColId ? (grid.columns.find(c => c.id === cfg.xColId)?.type ?? null) : null
     const yType = cfg.yColId ? (grid.columns.find(c => c.id === cfg.yColId)?.type ?? null) : null
@@ -285,15 +285,15 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       : cfg
 
     if (!baseCfg.chartType) {
-      return { ...baseCfg, chartType: primary }
+      return { ...baseCfg, chartType: primary, barValueMode: baseCfg.barValueMode ?? 'count' }
     }
     if (valid.length > 0 && !valid.includes(baseCfg.chartType)) {
-      return { ...baseCfg, chartType: primary }
+      return { ...baseCfg, chartType: primary, barValueMode: baseCfg.barValueMode ?? 'count' }
     }
     if (valid.length === 0 && baseCfg.chartType) {
-      return { ...baseCfg, chartType: null }
+      return { ...baseCfg, chartType: null, barValueMode: baseCfg.barValueMode ?? 'count' }
     }
-    return baseCfg
+    return { ...baseCfg, barValueMode: baseCfg.barValueMode ?? 'count' }
   }, [grid.columns])
 
   const sensors = useSensors(
@@ -941,6 +941,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                               onClearZone={z => clearZone(card.id, z)}
                               onSetChartType={(ct: ChartType) => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), chartType: ct } })}
                               onSetTitle={title => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), title } })}
+                              onSetBarValueMode={mode => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), barValueMode: mode } })}
                               onAssignZone={(zone, colId) => assignGraphZone(card.id, zone, colId)}
                               onRemove={() => removeCard(card.id)}
                               hideHeader

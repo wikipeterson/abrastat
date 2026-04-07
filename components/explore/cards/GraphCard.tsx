@@ -28,12 +28,13 @@ interface GraphCardProps {
   onClearZone: (zone: string) => void
   onSetChartType: (ct: ChartType) => void
   onSetTitle: (title: string) => void
+  onSetBarValueMode: (mode: 'count' | 'percent') => void
   onAssignZone: (zone: 'x' | 'y' | 'group', colId: string) => void
   onRemove: () => void
   hideHeader?: boolean
 }
 
-export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTitle, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
+export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTitle, onSetBarValueMode, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
   const { grid } = useStore()
   const [bestFitMode, setBestFitMode] = useState<'none' | 'overall' | 'group'>('none')
   const [manualTableGraphType, setManualTableGraphType] = useState<'segmented' | 'sidebyside' | 'mosaic'>('segmented')
@@ -142,13 +143,16 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
 
     const plotEl = graphExportRef.current.querySelector('.js-plotly-plot') as HTMLElement | null
     if (plotEl) {
-      const plotWrapper = plotEl.parentElement as HTMLElement | null
-      if (plotWrapper) {
-        return renderDomToPngBlobWithLabels(plotWrapper, { title: config.title, xLabel, yLabel })
-      }
       const plotSvg = plotEl.querySelector('svg.main-svg') as SVGElement | null
       if (plotSvg) {
-        return renderSvgToPngBlob(plotSvg, { title: config.title, xLabel, yLabel })
+        const rect = plotEl.getBoundingClientRect()
+        return renderSvgToPngBlob(plotSvg, {
+          title: config.title,
+          xLabel,
+          yLabel,
+          width: Math.max(1, Math.ceil(rect.width)),
+          height: Math.max(1, Math.ceil(rect.height)),
+        })
       }
     }
 
@@ -273,7 +277,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
         case 'histogram':  return <Histogram colId={config.yColId} groupColId={config.groupColId} orientation={groupedDistributionOrientation} />
         case 'dot':        return <DotPlot colId={config.yColId} groupByColId={config.groupColId} orientation={groupedDistributionOrientation} />
         case 'box':        return <BoxPlot colId={config.yColId} groupColId={config.groupColId} orientation={groupedDistributionOrientation} />
-        case 'bar':        return <BarChart colId={config.yColId} orientation="v" />
+        case 'bar':        return <BarChart colId={config.yColId} valueMode={config.barValueMode ?? 'count'} orientation="v" />
         case 'pie':        return <PieChart colId={config.yColId} groupColId={config.groupColId} />
         case 'normalprob': return <NormalProbPlot colId={config.yColId} />
         default: break
@@ -304,7 +308,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
             ? <BoxPlot colId={config.xColId} groupColId={config.yColId} orientation="h" />
             : <BoxPlot colId={mainColId} groupColId={config.groupColId} orientation={orientation} />
       case 'scatter':    return <ScatterPlot xColId={config.xColId} yColId={config.yColId} colorByColId={config.groupColId} bestFitMode={bestFitMode} />
-      case 'bar':        return <BarChart colId={mainColId} orientation={orientation} />
+      case 'bar':        return <BarChart colId={mainColId} valueMode={config.barValueMode ?? 'count'} orientation={orientation} />
       case 'pie':        return <PieChart colId={mainColId} groupColId={effectiveGroupColId} />
       case 'segmented':  return (
         <SegmentedBar
@@ -436,6 +440,27 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                 <option value="overall">Overall</option>
                 {groupCol?.type === 'categorical' && <option value="group">By group</option>}
               </select>
+            </div>
+          )}
+          {currentChart === 'bar' && !manualTable && !manualScatter && (
+            <div className="flex items-center gap-2 flex-wrap ml-1">
+              <span className="text-xs font-medium text-[var(--color-muted)] whitespace-nowrap">Values:</span>
+              {([
+                ['count', 'Counts'],
+                ['percent', 'Percents'],
+              ] as const).map(([mode, label]) => (
+                <button
+                  key={mode}
+                  onClick={() => onSetBarValueMode(mode)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                    (config.barValueMode ?? 'count') === mode
+                      ? 'bg-[var(--color-accent)] text-white'
+                      : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           )}
         </div>

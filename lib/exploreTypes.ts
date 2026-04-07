@@ -30,6 +30,7 @@ export interface GraphCardConfig {
   groupColId: string | null
   title?: string
   chartType?: ChartType | null
+  barValueMode?: 'count' | 'percent'
   manualTable?: ManualTwoWayTableSnapshot
   manualScatter?: ManualScatterSnapshot
 }

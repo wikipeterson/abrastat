@@ -121,7 +121,11 @@ export async function deleteDataset(datasetId: string): Promise<void> {
   await deleteDoc(doc(db, 'datasets', datasetId))
 }
 
-export function subscribeToMyDatasets(userId: string, callback: (datasets: DatasetMeta[]) => void): Unsubscribe {
+export function subscribeToMyDatasets(
+  userId: string,
+  callback: (datasets: DatasetMeta[]) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe {
   const q = query(
     collection(db, 'datasets'),
     where('ownerId', '==', userId),
@@ -137,10 +141,15 @@ export function subscribeToMyDatasets(userId: string, callback: (datasets: Datas
       } as DatasetMeta
     })
     callback(datasets)
+  }, error => {
+    onError?.(error)
   })
 }
 
-export function subscribeToPublicDatasets(callback: (datasets: DatasetMeta[]) => void): Unsubscribe {
+export function subscribeToPublicDatasets(
+  callback: (datasets: DatasetMeta[]) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe {
   const q = query(
     collection(db, 'datasets'),
     where('isPublic', '==', true),
@@ -157,6 +166,8 @@ export function subscribeToPublicDatasets(callback: (datasets: DatasetMeta[]) =>
       } as DatasetMeta
     })
     callback(datasets)
+  }, error => {
+    onError?.(error)
   })
 }
 

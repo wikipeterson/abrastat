@@ -304,11 +304,16 @@ function DatasetsBrowser({
     const unsubPublic = subscribeToPublicDatasets(data => {
       setPublicDatasets(data)
       setLoading(false)
+    }, () => {
+      setPublicDatasets([])
+      setLoading(false)
     })
 
     let unsubMine = () => {}
     if (user && !isGuest) {
-      unsubMine = subscribeToMyDatasets(user.uid, setMyDatasets)
+      unsubMine = subscribeToMyDatasets(user.uid, setMyDatasets, () => {
+        setMyDatasets([])
+      })
     } else {
       setMyDatasets([])
     }

@@ -25,6 +25,14 @@ const DEV_USER = {
   photoURL: null,
 } as unknown as User
 
+const GUEST_USER = {
+  uid: 'guest',
+  displayName: 'Guest',
+  email: null,
+  photoURL: null,
+  isAnonymous: true,
+} as unknown as User
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setLocalUser] = useState<User | null>(DEV_BYPASS ? DEV_USER : null)
   const [loading, setLoading] = useState(!DEV_BYPASS)
@@ -53,6 +61,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await signInAsGuest()
     } catch {
+      setLocalUser(GUEST_USER)
+      setUser(GUEST_USER)
+      setIsGuest(true)
       setLoading(false)
     }
   }

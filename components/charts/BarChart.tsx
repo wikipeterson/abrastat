@@ -12,10 +12,11 @@ import { useGraphCardContext } from '@/lib/graphCardContext'
 
 interface BarChartProps {
   colId: string | null
+  valueMode?: 'count' | 'percent'
   orientation?: 'h' | 'v'   // 'h' = variable on horizontal axis (vertical bars); 'v' = variable on vertical axis (horizontal bars)
 }
 
-export function BarChart({ colId, orientation = 'h' }: BarChartProps) {
+export function BarChart({ colId, valueMode = 'count', orientation = 'h' }: BarChartProps) {
   const { grid } = useStore()
   const { hideAxisTitles } = useGraphCardContext()
   const col = grid.columns.find(c => c.id === colId)
@@ -31,6 +32,13 @@ export function BarChart({ colId, orientation = 'h' }: BarChartProps) {
   }
 
   const colors = freqTable.map((_, i) => ABRA_COLORS[i % ABRA_COLORS.length])
+  const totalCount = freqTable.reduce((sum, row) => sum + row.count, 0)
+  const displayValues = valueMode === 'percent'
+    ? freqTable.map(row => (totalCount ? (row.count / totalCount) * 100 : 0))
+    : freqTable.map(row => row.count)
+  const displayLabels = valueMode === 'percent'
+    ? displayValues.map(value => `${value.toFixed(1)}%`)
+    : freqTable.map(r => String(r.count))
 
   // orientation='h': variable on x-axis → standard vertical bars (column chart)
   // orientation='v': variable on y-axis → horizontal bars
@@ -38,32 +46,44 @@ export function BarChart({ colId, orientation = 'h' }: BarChartProps) {
     ? [{
         type: 'bar',
         x: freqTable.map(r => r.value || '(blank)'),
-        y: freqTable.map(r => r.count),
-        text: freqTable.map(r => String(r.count)),
+        y: displayValues,
+        text: displayLabels,
         textposition: 'outside',
         marker: { color: colors, opacity: 0.9 },
-        hovertemplate: '%{x}: %{y}<extra></extra>',
+        hovertemplate: valueMode === 'percent'
+          ? '%{x}: %{y:.1f}%<extra></extra>'
+          : '%{x}: %{y}<extra></extra>',
       }]
     : [{
         type: 'bar',
         orientation: 'h',
-        x: freqTable.map(r => r.count),
+        x: displayValues,
         y: freqTable.map(r => r.value || '(blank)'),
-        text: freqTable.map(r => String(r.count)),
+        text: displayLabels,
         textposition: 'outside',
         marker: { color: colors, opacity: 0.9 },
-        hovertemplate: '%{y}: %{x}<extra></extra>',
+        hovertemplate: valueMode === 'percent'
+          ? '%{y}: %{x:.1f}%<extra></extra>'
+          : '%{y}: %{x}<extra></extra>',
       }]
 
   const layout = orientation === 'h'
     ? {
         xaxis: { title: hideAxisTitles ? undefined : { text: col.name } },
-        yaxis: { title: hideAxisTitles ? undefined : { text: 'Count' } },
+        yaxis: {
+          title: hideAxisTitles ? undefined : { text: valueMode === 'percent' ? 'Percent' : 'Count' },
+          ticksuffix: valueMode === 'percent' ? '%' : '',
+          range: valueMode === 'percent' ? [0, 100] : undefined,
+        },
         // t: 36 gives room for 'outside' text labels above the tallest bar
         margin: hideAxisTitles ? { t: 36, r: 16, b: 44, l: 52 } : { l: 60, r: 40, t: 36, b: 80 },
       }
     : {
-        xaxis: { title: hideAxisTitles ? undefined : { text: 'Count' } },
+        xaxis: {
+          title: hideAxisTitles ? undefined : { text: valueMode === 'percent' ? 'Percent' : 'Count' },
+          ticksuffix: valueMode === 'percent' ? '%' : '',
+          range: valueMode === 'percent' ? [0, 100] : undefined,
+        },
         yaxis: { autorange: 'reversed' as const },
         // r: 48 gives room for 'outside' text labels to the right of the longest bar
         margin: hideAxisTitles ? { t: 8, r: 48, b: 44, l: 52 } : { l: 130, r: 80, t: 36, b: 60 },
@@ -75,7 +95,7 @@ export function BarChart({ colId, orientation = 'h' }: BarChartProps) {
         <PlotlyChart
           data={traces as import("plotly.js").Data[]}
           layout={layout}
-          title={hideAxisTitles ? undefined : `${col.name} — Frequency`}
+          title={hideAxisTitles ? undefined : `${col.name} — ${valueMode === 'percent' ? 'Percent' : 'Frequency'}`}
         />
       </div>
     </div>

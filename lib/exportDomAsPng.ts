@@ -56,6 +56,36 @@ export async function renderSvgMarkupToPngBlob(
   }
 }
 
+export async function renderSvgMarkupWithLabelsToPngBlob(
+  svgMarkup: string,
+  plotWidth: number,
+  plotHeight: number,
+  options?: { title?: string; xLabel?: string; yLabel?: string },
+): Promise<Blob> {
+  const xLabel = options?.xLabel?.trim() ?? ''
+  const yLabel = options?.yLabel?.trim() ?? ''
+  const leftPad = yLabel ? 42 : 0
+  const bottomPad = xLabel ? 28 : 0
+  const title = options?.title?.trim() ?? ''
+  const titleHeight = title ? 34 : 0
+  const totalWidth = plotWidth + leftPad
+  const totalHeight = plotHeight + titleHeight + bottomPad
+
+  const wrapper = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}">
+      <rect x="0" y="0" width="${totalWidth}" height="${totalHeight}" fill="#ffffff" />
+      ${title ? `<text x="${totalWidth / 2}" y="22" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="16" font-weight="600" fill="#0D4F49">${escapeSvgText(title)}</text>` : ''}
+      <g transform="translate(${leftPad}, ${titleHeight})">
+        ${svgMarkup}
+      </g>
+      ${xLabel ? `<text x="${leftPad + plotWidth / 2}" y="${titleHeight + plotHeight + 22}" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="13" fill="#64748B">${escapeSvgText(xLabel)}</text>` : ''}
+      ${yLabel ? `<text x="16" y="${titleHeight + plotHeight / 2}" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="13" fill="#64748B" transform="rotate(-90 16 ${titleHeight + plotHeight / 2})">${escapeSvgText(yLabel)}</text>` : ''}
+    </svg>
+  `
+
+  return renderSvgMarkupToPngBlob(wrapper, totalWidth, totalHeight)
+}
+
 function cloneNodeWithInlineStyles(node: Node): Node {
   if (node.nodeType === Node.TEXT_NODE) {
     return node.cloneNode(true)

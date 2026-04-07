@@ -10,7 +10,7 @@ type Status = 'loading' | 'error' | 'done'
 
 export default function ShareLinkPage() {
   const { datasetId } = useParams<{ datasetId: string }>()
-  const { user, loading: authLoading, isGuest } = useAuth()
+  const { loading: authLoading } = useAuth()
   const router = useRouter()
   const setGrid = useStore(s => s.setGrid)
   const setActiveDatasetId = useStore(s => s.setActiveDatasetId)
@@ -20,12 +20,6 @@ export default function ShareLinkPage() {
 
   useEffect(() => {
     if (authLoading) return
-
-    // Guests cannot use share links
-    if (!user || isGuest) {
-      router.replace(`/?next=/d/${datasetId}`)
-      return
-    }
 
     loadDataset(datasetId)
       .then(({ meta, grid }) => {
@@ -42,7 +36,7 @@ export default function ShareLinkPage() {
         setErrorMsg(msg)
         setStatus('error')
       })
-  }, [authLoading, user, isGuest, datasetId, router, setGrid, setActiveDatasetId, setActiveDatasetName])
+  }, [authLoading, datasetId, router, setGrid, setActiveDatasetId, setActiveDatasetName])
 
   if (status === 'error') {
     return (

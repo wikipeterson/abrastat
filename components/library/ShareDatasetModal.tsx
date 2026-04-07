@@ -11,9 +11,10 @@ interface ShareDatasetModalProps {
   onClose: () => void
   datasetId: string
   initialIsPublic: boolean
+  onVisibilityChange?: (datasetId: string, isPublic: boolean) => void
 }
 
-export function ShareDatasetModal({ open, onClose, datasetId, initialIsPublic }: ShareDatasetModalProps) {
+export function ShareDatasetModal({ open, onClose, datasetId, initialIsPublic, onVisibilityChange }: ShareDatasetModalProps) {
   const [isPublic, setIsPublic] = useState(initialIsPublic)
   const [toggling, setToggling] = useState(false)
   const { toast, show: showToast, hide: hideToast } = useToast()
@@ -31,6 +32,7 @@ export function ShareDatasetModal({ open, onClose, datasetId, initialIsPublic }:
     try {
       await updateDatasetMeta(datasetId, { isPublic: newValue })
       setIsPublic(newValue)
+      onVisibilityChange?.(datasetId, newValue)
     } catch {
       showToast('Could not update visibility. Please try again.', 'error')
     } finally {

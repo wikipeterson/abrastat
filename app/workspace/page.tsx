@@ -58,6 +58,76 @@ const LIBRARY_ITEMS: { id: LibrarySection; label: string; soon?: boolean }[] = [
   { id: 'polls', label: 'Polls', soon: true },
 ]
 
+const PUBLIC_DATASET_CACHE_KEY = 'abrastat.publicDatasets.v1'
+
+function serializeDatasetMeta(dataset: DatasetMeta) {
+  return {
+    ...dataset,
+    createdAt: dataset.createdAt.toISOString(),
+    updatedAt: dataset.updatedAt.toISOString(),
+  }
+}
+
+function deserializeDatasetMeta(value: unknown): DatasetMeta | null {
+  if (!value || typeof value !== 'object') return null
+  const data = value as Record<string, unknown>
+  if (typeof data.id !== 'string' || typeof data.name !== 'string') return null
+  return {
+    id: data.id,
+    ownerId: String(data.ownerId ?? ''),
+    ownerName: String(data.ownerName ?? ''),
+    ownerPhotoURL: typeof data.ownerPhotoURL === 'string' ? data.ownerPhotoURL : '',
+    name: data.name,
+    description: String(data.description ?? ''),
+    emoji: String(data.emoji ?? ''),
+    isPublic: Boolean(data.isPublic),
+    rowCount: Number(data.rowCount ?? 0),
+    columnCount: Number(data.columnCount ?? 0),
+    columns: Array.isArray(data.columns) ? data.columns as DatasetMeta['columns'] : [],
+    tags: Array.isArray(data.tags) ? data.tags.filter((tag): tag is string => typeof tag === 'string') : [],
+    source: String(data.source ?? ''),
+    sourceUrl: String(data.sourceUrl ?? ''),
+    citation: String(data.citation ?? ''),
+    notes: String(data.notes ?? ''),
+    variableInfo: Array.isArray(data.variableInfo) ? data.variableInfo as DatasetMeta['variableInfo'] : [],
+    createdAt: new Date(String(data.createdAt ?? '')),
+    updatedAt: new Date(String(data.updatedAt ?? '')),
+  }
+}
+
+function readCachedPublicDatasets(): DatasetMeta[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(PUBLIC_DATASET_CACHE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .map(deserializeDatasetMeta)
+      .filter((dataset): dataset is DatasetMeta => !!dataset && !Number.isNaN(dataset.updatedAt.getTime()))
+  } catch {
+    return []
+  }
+}
+
+function writeCachedPublicDatasets(datasets: DatasetMeta[]) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(
+      PUBLIC_DATASET_CACHE_KEY,
+      JSON.stringify(datasets.map(serializeDatasetMeta)),
+    )
+  } catch {
+    // Ignore cache write failures.
+  }
+}
+
+function upsertCachedPublicDataset(dataset: DatasetMeta) {
+  if (!dataset.isPublic) return
+  const next = [dataset, ...readCachedPublicDatasets().filter(existing => existing.id !== dataset.id)]
+  writeCachedPublicDatasets(next.slice(0, 100))
+}
+
 function sampleDatasetToMeta(sample: (typeof SAMPLE_DATASETS)[number]): DatasetMeta {
   const now = new Date('2024-01-01T00:00:00Z')
   return {
@@ -292,7 +362,7 @@ function DatasetsBrowser({
   onExportDataset: (dataset: DatasetMeta, format: 'csv' | 'xlsx') => Promise<void>
 }) {
   const { user, isGuest } = useAuth()
-  const [publicDatasets, setPublicDatasets] = useState<DatasetMeta[]>([])
+  const [publicDatasets, setPublicDatasets] = useState<DatasetMeta[]>(() => readCachedPublicDatasets())
   const [myDatasets, setMyDatasets] = useState<DatasetMeta[]>([])
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<SortKey>('newest')
@@ -303,9 +373,10 @@ function DatasetsBrowser({
     if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') return
     const unsubPublic = subscribeToPublicDatasets(data => {
       setPublicDatasets(data)
+      writeCachedPublicDatasets(data)
       setLoading(false)
     }, () => {
-      setPublicDatasets([])
+      setPublicDatasets(readCachedPublicDatasets())
       setLoading(false)
     })
 
@@ -615,6 +686,13 @@ function WorkspaceContent() {
     setShareDatasetId(id)
     setShareIsPublic(isPublic)
     setShowShare(true)
+    if (isPublic) {
+      void loadDataset(id).then(({ meta }) => {
+        upsertCachedPublicDataset(meta)
+      }).catch(() => {
+        // Ignore cache warm failures.
+      })
+    }
   }
 
   async function handleOpenDataset(id: string) {
@@ -757,6 +835,15 @@ function WorkspaceContent() {
           onClose={() => setShowShare(false)}
           datasetId={shareDatasetId}
           initialIsPublic={shareIsPublic}
+          onVisibilityChange={(datasetId, isPublic) => {
+            setShareIsPublic(isPublic)
+            if (!isPublic) return
+            void loadDataset(datasetId).then(({ meta }) => {
+              upsertCachedPublicDataset(meta)
+            }).catch(() => {
+              // Ignore cache warm failures.
+            })
+          }}
         />
       )}
     </div>

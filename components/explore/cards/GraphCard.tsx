@@ -142,6 +142,10 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
 
     const plotEl = graphExportRef.current.querySelector('.js-plotly-plot') as HTMLElement | null
     if (plotEl) {
+      const plotWrapper = plotEl.parentElement as HTMLElement | null
+      if (plotWrapper) {
+        return renderDomToPngBlobWithLabels(plotWrapper, { title: config.title, xLabel, yLabel })
+      }
       const plotSvg = plotEl.querySelector('svg.main-svg') as SVGElement | null
       if (plotSvg) {
         return renderSvgToPngBlob(plotSvg, { title: config.title, xLabel, yLabel })

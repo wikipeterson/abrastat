@@ -112,6 +112,9 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
     setIsExporting(true)
     try {
       await exportDomAsPng(graphExportRef.current, `${safeTitle || 'graph-card'}.png`)
+    } catch (error) {
+      console.error(error)
+      window.alert('Graph export failed. Please try again.')
     } finally {
       setIsExporting(false)
     }

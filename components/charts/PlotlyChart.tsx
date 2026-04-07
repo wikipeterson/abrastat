@@ -62,7 +62,20 @@ export function PlotlyChart({ data, layout, title, height = 360, mode = 'fill' }
       : plotSize.height > 0
         ? plotSize.height
         : height
-  const revision = (resolvedWidth ?? 0) * 10000 + resolvedHeight
+  const layoutSignature = JSON.stringify({
+    title,
+    xaxis: layout?.xaxis,
+    yaxis: layout?.yaxis,
+    margin: layout?.margin,
+    showlegend: layout?.showlegend,
+    annotations: layout?.annotations,
+    shapes: layout?.shapes,
+  })
+  let layoutHash = 0
+  for (let i = 0; i < layoutSignature.length; i++) {
+    layoutHash = (layoutHash * 31 + layoutSignature.charCodeAt(i)) >>> 0
+  }
+  const revision = (((resolvedWidth ?? 0) * 10007) ^ ((resolvedHeight ?? 0) * 101) ^ layoutHash) >>> 0
 
   const wrapStyle =
     mode === 'fixed'

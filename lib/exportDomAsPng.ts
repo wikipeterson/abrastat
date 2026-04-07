@@ -65,7 +65,9 @@ export async function exportDomAsPng(node: HTMLElement, filename: string) {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
       <foreignObject width="100%" height="100%">
-        ${serialized}
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;background:#ffffff;">
+          ${serialized}
+        </div>
       </foreignObject>
     </svg>
   `
@@ -77,15 +79,20 @@ export async function exportDomAsPng(node: HTMLElement, filename: string) {
     await new Promise<void>((resolve, reject) => {
       const img = new Image()
       const canvas = document.createElement('canvas')
+      const timeout = window.setTimeout(() => {
+        reject(new Error('Graph export timed out'))
+      }, 8000)
       canvas.width = width * 2
       canvas.height = height * 2
       const ctx = canvas.getContext('2d')
       if (!ctx) {
+        window.clearTimeout(timeout)
         reject(new Error('Could not create export canvas'))
         return
       }
 
       img.onload = () => {
+        window.clearTimeout(timeout)
         ctx.scale(2, 2)
         ctx.fillStyle = '#ffffff'
         ctx.fillRect(0, 0, width, height)
@@ -107,7 +114,10 @@ export async function exportDomAsPng(node: HTMLElement, filename: string) {
         }, 'image/png')
       }
 
-      img.onerror = () => reject(new Error('Could not render export image'))
+      img.onerror = () => {
+        window.clearTimeout(timeout)
+        reject(new Error('Could not render export image'))
+      }
       img.src = url
     })
   } finally {

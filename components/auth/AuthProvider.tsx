@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { onAuthStateChanged, User } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
+import { signInAsGuest } from '@/lib/auth'
 import { upsertUser } from '@/lib/firestore'
 import { useStore } from '@/lib/store'
 
@@ -24,13 +25,6 @@ const DEV_USER = {
   photoURL: null,
 } as unknown as User
 
-const GUEST_USER = {
-  uid: 'guest',
-  displayName: 'Guest',
-  email: null,
-  photoURL: null,
-} as unknown as User
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setLocalUser] = useState<User | null>(DEV_BYPASS ? DEV_USER : null)
   const [loading, setLoading] = useState(!DEV_BYPASS)
@@ -45,7 +39,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       setLocalUser(firebaseUser)
       setUser(firebaseUser)
-      if (firebaseUser) {
+      setIsGuest(!!firebaseUser?.isAnonymous)
+      if (firebaseUser && !firebaseUser.isAnonymous) {
         await upsertUser(firebaseUser).catch(() => {/* ignore Firestore errors */})
       }
       setLoading(false)
@@ -53,11 +48,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsub
   }, [setUser])
 
-  function continueAsGuest() {
-    setLocalUser(GUEST_USER)
-    setUser(GUEST_USER)
-    setIsGuest(true)
-    setLoading(false)
+  async function continueAsGuest() {
+    setLoading(true)
+    try {
+      await signInAsGuest()
+    } catch {
+      setLoading(false)
+    }
   }
 
   return <AuthContext.Provider value={{ user, loading, isGuest, continueAsGuest }}>{children}</AuthContext.Provider>

@@ -291,7 +291,7 @@ function DatasetsBrowser({
   onOpenDataset: (id: string) => Promise<void>
   onExportDataset: (dataset: DatasetMeta, format: 'csv' | 'xlsx') => Promise<void>
 }) {
-  const { user } = useAuth()
+  const { user, isGuest } = useAuth()
   const [publicDatasets, setPublicDatasets] = useState<DatasetMeta[]>([])
   const [myDatasets, setMyDatasets] = useState<DatasetMeta[]>([])
   const [search, setSearch] = useState('')
@@ -300,12 +300,24 @@ function DatasetsBrowser({
   const [loading, setLoading] = useState(process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH !== 'true')
 
   useEffect(() => {
-    if (!user) return
     if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') return
-    const unsub1 = subscribeToPublicDatasets(data => { setPublicDatasets(data); setLoading(false) })
-    const unsub2 = subscribeToMyDatasets(user.uid, setMyDatasets)
-    return () => { unsub1(); unsub2() }
-  }, [user])
+    const unsubPublic = subscribeToPublicDatasets(data => {
+      setPublicDatasets(data)
+      setLoading(false)
+    })
+
+    let unsubMine = () => {}
+    if (user && !isGuest) {
+      unsubMine = subscribeToMyDatasets(user.uid, setMyDatasets)
+    } else {
+      setMyDatasets([])
+    }
+
+    return () => {
+      unsubPublic()
+      unsubMine()
+    }
+  }, [user, isGuest])
 
   async function handleDelete(id: string) {
     await deleteDataset(id)

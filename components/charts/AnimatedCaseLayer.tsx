@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { renderSvgMarkupToPngBlob } from '@/lib/exportDomAsPng'
 import { useStore } from '@/lib/store'
 import { linearRegression } from '@/lib/statistics'
 
@@ -140,6 +141,13 @@ function niceAxisTicks(
     ticks.push({ px: pxOf(rv), label })
   }
   return ticks
+}
+
+function escapeSvgText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
 }
 
 // ── Layout ────────────────────────────────────────────────────────────────────
@@ -339,6 +347,123 @@ function buildLayout(
   }
 }
 
+function computeScatterBestFitLine(
+  spec: MorphSpec,
+  rows: Record<string, string | number>[],
+  width: number,
+  height: number,
+) {
+  if (spec.kind !== 'scatter' || width <= 0 || height <= 0) return null
+
+  const plotted = rows.flatMap(row => {
+    const x = parseNumber(row[spec.xColId])
+    const y = parseNumber(row[spec.yColId])
+    if (x === null || y === null) return [] as { x: number; y: number }[]
+    return [{ x, y }]
+  })
+  if (plotted.length < 2) return null
+
+  const xs = plotted.map(p => p.x)
+  const ys = plotted.map(p => p.y)
+  const { slope, intercept } = linearRegression(xs, ys)
+  if (!Number.isFinite(slope) || !Number.isFinite(intercept)) return null
+
+  const xDom = dataDomain(xs)
+  const yDom = dataDomain(ys)
+  const iL = MG_L
+  const iR = width - MG_R
+  const iT = MG_T
+  const iB = height - MG_B
+  const pL = iL + AXIS_CLEARANCE
+  const pR = iR - POINT_R
+  const pT = iT + POINT_R
+  const pB = iB - AXIS_CLEARANCE
+  const pW = Math.max(1, pR - pL)
+  const pH = Math.max(1, pB - pT)
+  const toPixX = (v: number) => pL + ((v - xDom.min) / (xDom.max - xDom.min)) * pW
+  const toPixY = (v: number) => pB - ((v - yDom.min) / (yDom.max - yDom.min)) * pH
+
+  const x1 = xDom.min
+  const x2 = xDom.max
+  return {
+    x1: toPixX(x1),
+    y1: toPixY(slope * x1 + intercept),
+    x2: toPixX(x2),
+    y2: toPixY(slope * x2 + intercept),
+  }
+}
+
+export async function renderAnimatedGraphToPngBlob(options: {
+  spec: MorphSpec
+  rows: Record<string, string | number>[]
+  width: number
+  height: number
+  title?: string
+  xLabel?: string
+  yLabel?: string
+  showBestFitLine?: boolean
+}) {
+  const rows = options.rows.filter(hasAnyData)
+  const plotWidth = Math.max(1, Math.ceil(options.width))
+  const plotHeight = Math.max(1, Math.ceil(options.height))
+  const title = options.title?.trim() ?? ''
+  const xLabel = options.xLabel?.trim() ?? ''
+  const yLabel = options.yLabel?.trim() ?? ''
+  const leftPad = yLabel ? 42 : 0
+  const bottomPad = xLabel ? 28 : 0
+  const titleHeight = title ? 34 : 0
+  const totalWidth = plotWidth + leftPad
+  const totalHeight = plotHeight + titleHeight + bottomPad
+  const layout = buildLayout(options.spec, rows, plotWidth, plotHeight)
+  const bestFitLine = options.showBestFitLine
+    ? computeScatterBestFitLine(options.spec, rows, plotWidth, plotHeight)
+    : null
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}">
+      <rect x="0" y="0" width="${totalWidth}" height="${totalHeight}" fill="#ffffff" />
+      ${title ? `<text x="${totalWidth / 2}" y="22" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="16" font-weight="600" fill="#0D4F49">${escapeSvgText(title)}</text>` : ''}
+      <g transform="translate(${leftPad}, ${titleHeight})">
+        ${bestFitLine ? `<line x1="${bestFitLine.x1}" y1="${bestFitLine.y1}" x2="${bestFitLine.x2}" y2="${bestFitLine.y2}" stroke="#EF4444" stroke-width="2" stroke-dasharray="6 5" stroke-linecap="round" />` : ''}
+        ${layout.xAxis ? `
+          <line x1="${MG_L}" y1="${plotHeight - MG_B}" x2="${plotWidth - MG_R}" y2="${plotHeight - MG_B}" stroke="#E2E8F0" stroke-width="1.5" />
+          ${layout.xAxis.ticks.map(t => `
+            <g transform="translate(${t.px},${plotHeight - MG_B})">
+              <line y2="4" stroke="#CBD5E1" stroke-width="1" />
+              <text y="14" text-anchor="middle" font-size="10" fill="#64748B" font-family="DM Sans, sans-serif">${escapeSvgText(t.label)}</text>
+            </g>
+          `).join('')}
+        ` : ''}
+        ${layout.yAxis ? `
+          <line x1="${MG_L}" y1="${MG_T}" x2="${MG_L}" y2="${plotHeight - MG_B}" stroke="#E2E8F0" stroke-width="1.5" />
+          ${layout.yAxis.ticks.map(t => `
+            <g transform="translate(${MG_L},${t.px})">
+              <line x2="-4" stroke="#CBD5E1" stroke-width="1" />
+              <text x="-8" text-anchor="end" dominant-baseline="middle" font-size="10" fill="#64748B" font-family="DM Sans, sans-serif">${escapeSvgText(t.label)}</text>
+            </g>
+          `).join('')}
+        ` : ''}
+        ${layout.labels.map(label => `
+          <text x="${plotWidth - 24}" y="${label.y}" text-anchor="end" dominant-baseline="middle" font-size="12" font-weight="600" fill="${label.color}" opacity="0.9" font-family="DM Sans, sans-serif">${escapeSvgText(label.label)}</text>
+        `).join('')}
+        ${layout.legend?.map((item, index) => `
+          <g transform="translate(${plotWidth - MG_R + 4},${MG_T + 10 + index * 14})">
+            <circle cx="4" cy="0" r="4" fill="${item.color}" />
+            <text x="12" y="0" dominant-baseline="middle" font-size="10" font-weight="500" fill="${item.color}" font-family="DM Sans, sans-serif">${escapeSvgText(item.label)}</text>
+          </g>
+        `).join('') ?? ''}
+        ${layout.points.map(point => `
+          <circle cx="${point.x}" cy="${point.y}" r="5" fill="${point.color}" fill-opacity="${point.opacity}" />
+        `).join('')}
+      </g>
+      ${xLabel ? `<text x="${leftPad + plotWidth / 2}" y="${titleHeight + plotHeight + 22}" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="13" fill="#64748B">${escapeSvgText(xLabel)}</text>` : ''}
+      ${yLabel ? `<text x="16" y="${titleHeight + plotHeight / 2}" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="13" fill="#64748B" transform="rotate(-90 16 ${titleHeight + plotHeight / 2})">${escapeSvgText(yLabel)}</text>` : ''}
+    </svg>
+  `
+
+  return renderSvgMarkupToPngBlob(svg, totalWidth, totalHeight)
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function AnimatedCaseLayer({
@@ -423,46 +548,10 @@ export function AnimatedCaseLayer({
 
   const showAxes = spec.kind !== 'blank'
   const { xAxis, yAxis, legend } = toLayout
-  const bestFitLine = useMemo(() => {
-    if (!showBestFitLine || spec.kind !== 'scatter' || size.width <= 0 || size.height <= 0) return null
-
-    const plotted = rows.flatMap(row => {
-      const x = parseNumber(row[spec.xColId])
-      const y = parseNumber(row[spec.yColId])
-      if (x === null || y === null) return [] as { x: number; y: number }[]
-      return [{ x, y }]
-    })
-    if (plotted.length < 2) return null
-
-    const xs = plotted.map(p => p.x)
-    const ys = plotted.map(p => p.y)
-    const { slope, intercept } = linearRegression(xs, ys)
-    if (!Number.isFinite(slope) || !Number.isFinite(intercept)) return null
-
-    const xDom = dataDomain(xs)
-    const yDom = dataDomain(ys)
-    const iL = MG_L
-    const iR = size.width - MG_R
-    const iT = MG_T
-    const iB = size.height - MG_B
-    const pL = iL + AXIS_CLEARANCE
-    const pR = iR - POINT_R
-    const pT = iT + POINT_R
-    const pB = iB - AXIS_CLEARANCE
-    const pW = Math.max(1, pR - pL)
-    const pH = Math.max(1, pB - pT)
-    const toPixX = (v: number) => pL + ((v - xDom.min) / (xDom.max - xDom.min)) * pW
-    const toPixY = (v: number) => pB - ((v - yDom.min) / (yDom.max - yDom.min)) * pH
-
-    const x1 = xDom.min
-    const x2 = xDom.max
-    return {
-      x1: toPixX(x1),
-      y1: toPixY(slope * x1 + intercept),
-      x2: toPixX(x2),
-      y2: toPixY(slope * x2 + intercept),
-    }
-  }, [rows, showBestFitLine, size.height, size.width, spec])
+  const bestFitLine = useMemo(
+    () => (showBestFitLine ? computeScatterBestFitLine(spec, rows, size.width, size.height) : null),
+    [rows, showBestFitLine, size.height, size.width, spec],
+  )
 
   if (rows.length === 0) {
     return (

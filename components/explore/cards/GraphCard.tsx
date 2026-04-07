@@ -7,7 +7,7 @@ import { useStore } from '@/lib/store'
 import { ChartType, CHART_META, inferCharts } from '@/lib/chartHelpers'
 import { GraphCardConfig } from '@/lib/exploreTypes'
 import { GraphCardContext } from '@/lib/graphCardContext'
-import { exportDomAsPng, renderDomToPngBlob, renderSvgToPngBlob } from '@/lib/exportDomAsPng'
+import { exportDomAsPng, renderDomToPngBlobWithLabels, renderSvgToPngBlob } from '@/lib/exportDomAsPng'
 import { DropZone } from '../DropZone'
 import { Histogram } from '@/components/charts/Histogram'
 import { BoxPlot } from '@/components/charts/BoxPlot'
@@ -18,7 +18,7 @@ import { DotPlot } from '@/components/charts/DotPlot'
 import { SegmentedBar } from '@/components/charts/SegmentedBar'
 import { NormalProbPlot } from '@/components/charts/NormalProbPlot'
 import { MosaicPlot } from '@/components/charts/MosaicPlot'
-import { AnimatedCaseLayer, deriveGraphMorphSpec, MorphSpec } from '@/components/charts/AnimatedCaseLayer'
+import { AnimatedCaseLayer, deriveGraphMorphSpec, MorphSpec, renderAnimatedGraphToPngBlob } from '@/components/charts/AnimatedCaseLayer'
 import { PlotlyChart } from '@/components/charts/PlotlyChart'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
 
@@ -106,20 +106,66 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
     }
   }
 
+  function getExportAxisLabels() {
+    if (manualScatter) {
+      return { xLabel: manualScatter.xName, yLabel: manualScatter.yName }
+    }
+
+    const xLabel = xCol?.name ?? ''
+    const yLabel = yCol?.name ?? ''
+
+    if (currentChart === 'scatter') return { xLabel, yLabel }
+
+    if (!config.xColId && config.yColId && yCol) {
+      if (currentChart === 'bar' || currentChart === 'pie') {
+        return { xLabel: 'Count', yLabel: yCol.name }
+      }
+      return { xLabel: yCol.name, yLabel: '' }
+    }
+
+    if (currentChart === 'histogram') {
+      return { xLabel: xLabel || yLabel, yLabel: 'Frequency' }
+    }
+
+    if (currentChart === 'dot' || currentChart === 'box') {
+      return { xLabel: xLabel || yLabel, yLabel: '' }
+    }
+
+    return { xLabel, yLabel }
+  }
+
   async function renderGraphBlob(): Promise<Blob> {
     if (!graphExportRef.current) {
       throw new Error('Graph not ready')
     }
+    const { xLabel, yLabel } = getExportAxisLabels()
 
     const plotEl = graphExportRef.current.querySelector('.js-plotly-plot') as HTMLElement | null
     if (plotEl) {
       const plotSvg = plotEl.querySelector('svg.main-svg') as SVGElement | null
       if (plotSvg) {
-        return renderSvgToPngBlob(plotSvg, { title: config.title })
+        return renderSvgToPngBlob(plotSvg, { title: config.title, xLabel, yLabel })
       }
     }
 
-    return renderDomToPngBlob(graphExportRef.current)
+    if (isCustomRendered && morphSpec) {
+      const plotArea = graphExportRef.current.querySelector('[data-graph-plot-area="true"]') as HTMLElement | null
+      const rect = plotArea?.getBoundingClientRect()
+      if (rect && rect.width > 0 && rect.height > 0) {
+        return renderAnimatedGraphToPngBlob({
+          spec: morphSpec,
+          rows: grid.rows,
+          width: rect.width,
+          height: rect.height,
+          title: config.title,
+          xLabel,
+          yLabel,
+          showBestFitLine: useAnimatedScatter && bestFitMode === 'overall',
+        })
+      }
+    }
+
+    return renderDomToPngBlobWithLabels(graphExportRef.current, { title: config.title, xLabel, yLabel })
   }
 
   async function handleCopyGraph() {
@@ -437,7 +483,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
               {config.title.trim()}
             </div>
           )}
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0" data-graph-plot-area="true">
             <GraphCardContext.Provider value={{ hideAxisTitles: true }}>
               {renderChart()}
             </GraphCardContext.Provider>
@@ -487,7 +533,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                 {config.title.trim()}
               </div>
             )}
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0" data-graph-plot-area="true">
           {showAnimatedBlank ? (
             <AnimatedCaseLayer key="stable" spec={morphSpec!} showHint hideAxisTitles />
           ) : showAnimatedTransition ? (

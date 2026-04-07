@@ -354,6 +354,7 @@ export const useStore = create<AbraStatStore>((set) => ({
                                  { type: 'simulation', linkedResultsCardId: null }
     const { width, height } =
       type === 'summary'     ? { width: 700, height: 620 } :
+      type === 'table'       ? { width: 960, height: 740 } :
       type === 'means'       ? { width: 760, height: 500 } :
       type === 'distribution'    ? { width: 700, height: 540 } :
       type === 'compare-normals' ? { width: 760, height: 560 } :
@@ -443,8 +444,8 @@ export const useStore = create<AbraStatStore>((set) => ({
   addLinkedTableCard: (config, position) => {
     const id = uuid()
     set(state => {
-      const width = 620
-      const height = 520
+      const width = 960
+      const height = 740
       const { x, y } = findOpenCardPosition(state.exploreCards, position.x, position.y, width, height)
       return {
         exploreCards: [...state.exploreCards, {

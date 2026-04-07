@@ -28,21 +28,24 @@ interface GraphCardProps {
   onClearZone: (zone: string) => void
   onSetChartType: (ct: ChartType) => void
   onSetTitle: (title: string) => void
+  onSetBestFitMode: (mode: 'none' | 'overall' | 'group') => void
   onSetBarValueMode: (mode: 'count' | 'percent') => void
   onAssignZone: (zone: 'x' | 'y' | 'group', colId: string) => void
   onRemove: () => void
   hideHeader?: boolean
 }
 
-export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTitle, onSetBarValueMode, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
+export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTitle, onSetBestFitMode, onSetBarValueMode, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
   const { grid } = useStore()
-  const [bestFitMode, setBestFitMode] = useState<'none' | 'overall' | 'group'>('none')
   const [manualTableGraphType, setManualTableGraphType] = useState<'segmented' | 'sidebyside' | 'mosaic'>('segmented')
   const [manualTableValueMode, setManualTableValueMode] = useState<'count' | 'row'>('count')
   const [isCopying, setIsCopying] = useState(false)
+  const [showCustomize, setShowCustomize] = useState(false)
   const manualTable = config.manualTable ?? null
   const manualScatter = config.manualScatter ?? null
   const graphExportRef = useRef<HTMLDivElement | null>(null)
+  const customizeRef = useRef<HTMLDivElement | null>(null)
+  const bestFitMode = config.bestFitMode ?? 'none'
 
   const xCol = !manualTable && !manualScatter && config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
   const yCol = !manualTable && !manualScatter && config.yColId ? (grid.columns.find(c => c.id === config.yColId) ?? null) : null
@@ -360,6 +363,17 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
   const showSettledCustom     = !isBlank && !activeTransition && isCustomRendered
   const showDirectChart       = !isBlank && !activeTransition && !isCustomRendered
 
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (!customizeRef.current?.contains(event.target as Node)) {
+        setShowCustomize(false)
+      }
+    }
+    if (!showCustomize) return
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => document.removeEventListener('mousedown', handlePointerDown)
+  }, [showCustomize])
+
   const inner = (
     <div className="flex flex-col h-full">
 
@@ -429,18 +443,15 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
             </>
           )}
           {currentChart === 'scatter' && xCol?.type === 'numeric' && yCol?.type === 'numeric' && (
-            <div className="flex items-center gap-2 text-xs text-[var(--color-muted)] whitespace-nowrap ml-1">
-              <span>Best-fit line:</span>
-              <select
-                value={bestFitMode}
-                onChange={e => setBestFitMode(e.target.value as 'none' | 'overall' | 'group')}
-                className="rounded-lg border border-[var(--color-border)] bg-white px-2 py-1 text-xs text-[var(--color-text)]"
-              >
-                <option value="none">None</option>
-                <option value="overall">Overall</option>
-                {groupCol?.type === 'categorical' && <option value="group">By group</option>}
-              </select>
-            </div>
+            <label className="flex items-center gap-2 text-xs text-[var(--color-muted)] whitespace-nowrap ml-1 select-none">
+              <input
+                type="checkbox"
+                checked={bestFitMode !== 'none'}
+                onChange={e => onSetBestFitMode(e.target.checked ? (groupCol?.type === 'categorical' ? 'group' : 'overall') : 'none')}
+                className="h-3.5 w-3.5 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+              />
+              <span>Show best-fit line</span>
+            </label>
           )}
           {currentChart === 'bar' && !manualTable && !manualScatter && (
             <div className="flex items-center gap-2 flex-wrap ml-1">
@@ -466,16 +477,58 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
         </div>
 
         <div className="flex items-start gap-3 flex-wrap justify-end">
-          <label className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
-            <span className="whitespace-nowrap">Title</span>
-            <input
-              type="text"
-              value={config.title ?? ''}
-              onChange={e => onSetTitle(e.target.value)}
-              placeholder="optional"
-              className="w-40 rounded-lg border border-[var(--color-border)] bg-white px-2 py-1 text-xs text-[var(--color-text)]"
-            />
-          </label>
+          <div ref={customizeRef} className="relative">
+            <button
+              onClick={() => setShowCustomize(v => !v)}
+              className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] transition-colors hover:border-slate-300"
+            >
+              Customize
+            </button>
+            {showCustomize && (
+              <div className="absolute right-0 top-full z-20 mt-2 w-72 rounded-xl border border-[var(--color-border)] bg-white p-3 shadow-lg">
+                <div className="space-y-3">
+                  <label className="block text-xs text-[var(--color-muted)]">
+                    <span className="mb-1 block font-medium">Title</span>
+                    <input
+                      type="text"
+                      value={config.title ?? ''}
+                      onChange={e => onSetTitle(e.target.value)}
+                      placeholder="optional"
+                      className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-2 text-sm text-[var(--color-text)]"
+                    />
+                  </label>
+
+                  {currentChart === 'scatter' && xCol?.type === 'numeric' && yCol?.type === 'numeric' && (
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm text-[var(--color-text)] select-none">
+                        <input
+                          type="checkbox"
+                          checked={bestFitMode !== 'none'}
+                          onChange={e => onSetBestFitMode(e.target.checked ? (groupCol?.type === 'categorical' ? 'group' : 'overall') : 'none')}
+                          className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                        />
+                        <span>Show best-fit line</span>
+                      </label>
+
+                      {bestFitMode !== 'none' && groupCol?.type === 'categorical' && (
+                        <label className="block text-xs text-[var(--color-muted)]">
+                          <span className="mb-1 block font-medium">Fit scope</span>
+                          <select
+                            value={bestFitMode === 'group' ? 'group' : 'overall'}
+                            onChange={e => onSetBestFitMode(e.target.value as 'overall' | 'group')}
+                            className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-2 text-sm text-[var(--color-text)]"
+                          >
+                            <option value="overall">Overall</option>
+                            <option value="group">By group</option>
+                          </select>
+                        </label>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           <button
             onClick={handleCopyGraph}
             disabled={isBlank || isCopying}

@@ -84,6 +84,7 @@ const MG_T = 16
 const MG_B = 48
 const POINT_R = 5
 const AXIS_CLEARANCE = 10
+const LEGEND_GUTTER_W = 112
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -158,8 +159,9 @@ function buildLayout(
   width: number,
   height: number,
 ): LayoutResult {
+  const legendReserve = spec.kind === 'scatter' && spec.colorByColId ? LEGEND_GUTTER_W : 0
   const iL = MG_L
-  const iR = width - MG_R
+  const iR = width - MG_R - legendReserve
   const iT = MG_T
   const iB = height - MG_B
   const cW = Math.max(1, iR - iL)
@@ -700,7 +702,11 @@ export function AnimatedCaseLayer({
       {legend && legend.length > 0 && (
         <div
           className="absolute pointer-events-none flex flex-col gap-0.5"
-          style={{ top: MG_T + 4, right: MG_R + 4 }}
+          style={{
+            top: MG_T + 4,
+            left: size.width - MG_R - LEGEND_GUTTER_W + 8,
+            width: LEGEND_GUTTER_W - 12,
+          }}
         >
           {legend.map(item => (
             <div key={item.key} className="flex items-center gap-1">

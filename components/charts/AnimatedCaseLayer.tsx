@@ -31,6 +31,7 @@ export interface AnimatedCaseLayerProps {
   onRest?: () => void
   showHint?: boolean
   showBestFitLine?: boolean
+  hideAxisTitles?: boolean
 }
 
 interface LayoutPoint {
@@ -346,6 +347,7 @@ export function AnimatedCaseLayer({
   onRest,
   showHint = false,
   showBestFitLine = false,
+  hideAxisTitles = false,
 }: AnimatedCaseLayerProps) {
   const { grid } = useStore()
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -532,7 +534,7 @@ export function AnimatedCaseLayer({
                   </text>
                 </g>
               ))}
-              {xAxis.title && (
+              {!hideAxisTitles && xAxis.title && (
                 <text
                   x={(MG_L + size.width - MG_R) / 2}
                   y={size.height - 6}
@@ -572,7 +574,7 @@ export function AnimatedCaseLayer({
                   </text>
                 </g>
               ))}
-              {yAxis.title && (
+              {!hideAxisTitles && yAxis.title && (
                 <text
                   transform={`translate(13,${(MG_T + size.height - MG_B) / 2}) rotate(-90)`}
                   textAnchor="middle"

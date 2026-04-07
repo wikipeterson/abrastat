@@ -7,7 +7,7 @@ import { useStore } from '@/lib/store'
 import { ChartType, CHART_META, inferCharts } from '@/lib/chartHelpers'
 import { GraphCardConfig } from '@/lib/exploreTypes'
 import { GraphCardContext } from '@/lib/graphCardContext'
-import { exportDomAsPng } from '@/lib/exportDomAsPng'
+import { exportDomAsPng, renderDomToPngBlob } from '@/lib/exportDomAsPng'
 import { DropZone } from '../DropZone'
 import { Histogram } from '@/components/charts/Histogram'
 import { BoxPlot } from '@/components/charts/BoxPlot'
@@ -39,6 +39,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
   const [manualTableGraphType, setManualTableGraphType] = useState<'segmented' | 'sidebyside' | 'mosaic'>('segmented')
   const [manualTableValueMode, setManualTableValueMode] = useState<'count' | 'row'>('count')
   const [isExporting, setIsExporting] = useState(false)
+  const [isCopying, setIsCopying] = useState(false)
   const manualTable = config.manualTable ?? null
   const manualScatter = config.manualScatter ?? null
   const graphExportRef = useRef<HTMLDivElement | null>(null)
@@ -117,6 +118,30 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
       window.alert('Graph export failed. Please try again.')
     } finally {
       setIsExporting(false)
+    }
+  }
+
+  async function handleCopyGraph() {
+    if (!graphExportRef.current || !currentChart || isBlank) return
+    setIsCopying(true)
+    try {
+      const pngBlob = await renderDomToPngBlob(graphExportRef.current)
+      if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
+        await exportDomAsPng(graphExportRef.current, `${(config.title || 'graph-card').trim().replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || 'graph-card'}.png`)
+        window.alert('Copy is not supported in this browser. Downloaded PNG instead.')
+        return
+      }
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'image/png': pngBlob,
+        }),
+      ])
+      window.alert('Graph copied. Paste it into Google Docs.')
+    } catch (error) {
+      console.error(error)
+      window.alert('Graph copy failed. Please try again.')
+    } finally {
+      setIsCopying(false)
     }
   }
 
@@ -373,8 +398,15 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
             />
           </label>
           <button
+            onClick={handleCopyGraph}
+            disabled={isBlank || isCopying || isExporting}
+            className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] transition-colors hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isCopying ? 'Copying…' : 'Copy Graph'}
+          </button>
+          <button
             onClick={handleExportPng}
-            disabled={isBlank || isExporting}
+            disabled={isBlank || isExporting || isCopying}
             className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] transition-colors hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isExporting ? 'Exporting…' : 'Export PNG'}
@@ -402,13 +434,13 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
           row 2 col 2:  Explanatory Variable     — same width as chart rectangle
       */}
       {isManualSegmented || isManualScatter ? (
-        <div ref={graphExportRef} className="flex-1 min-h-0 rounded-xl overflow-hidden bg-white">
+        <div ref={graphExportRef} className="flex-1 min-h-0 rounded-xl overflow-hidden bg-white flex flex-col">
           {!!config.title?.trim() && (
-            <div className="px-4 pt-2 text-center text-sm font-semibold text-[var(--color-muted)]">
+            <div className="flex-shrink-0 px-4 pt-2 text-center text-sm font-semibold text-[var(--color-muted)]">
               {config.title.trim()}
             </div>
           )}
-          <div className="h-full min-h-0">
+          <div className="flex-1 min-h-0">
             <GraphCardContext.Provider value={{ hideAxisTitles: true }}>
               {renderChart()}
             </GraphCardContext.Provider>
@@ -452,26 +484,27 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
               : ''
           }`}
         >
-          <div ref={graphExportRef} className="h-full min-h-[180px] bg-white">
+          <div ref={graphExportRef} className="h-full min-h-[180px] bg-white flex flex-col">
             {!!config.title?.trim() && !isBlank && (
-              <div className="px-4 pt-2 text-center text-sm font-semibold text-[var(--color-muted)]">
+              <div className="flex-shrink-0 px-4 pt-2 text-center text-sm font-semibold text-[var(--color-muted)]">
                 {config.title.trim()}
               </div>
             )}
-            <div className="h-full min-h-[180px]">
-              {showAnimatedBlank ? (
-                <AnimatedCaseLayer key="stable" spec={morphSpec!} showHint />
-              ) : showAnimatedTransition ? (
-                <AnimatedCaseLayer
-                  key={activeTransition!.nonce}
-                  spec={activeTransition!.to}
-                  fromSpec={activeTransition!.from}
-                  showBestFitLine={activeTransition!.to.kind === 'scatter' ? bestFitMode === 'overall' : false}
-                  onRest={() => setActiveTransition(null)}
-                />
-              ) : showSettledCustom ? (
-                <AnimatedCaseLayer key="stable" spec={morphSpec!} showBestFitLine={morphSpec!.kind === 'scatter' ? bestFitMode === 'overall' : false} />
-              ) : isBlank ? (
+            <div className="flex-1 min-h-0">
+          {showAnimatedBlank ? (
+            <AnimatedCaseLayer key="stable" spec={morphSpec!} showHint hideAxisTitles />
+          ) : showAnimatedTransition ? (
+            <AnimatedCaseLayer
+              key={activeTransition!.nonce}
+              spec={activeTransition!.to}
+              fromSpec={activeTransition!.from}
+              showBestFitLine={activeTransition!.to.kind === 'scatter' ? bestFitMode === 'overall' : false}
+              hideAxisTitles
+              onRest={() => setActiveTransition(null)}
+            />
+          ) : showSettledCustom ? (
+            <AnimatedCaseLayer key="stable" spec={morphSpec!} showBestFitLine={morphSpec!.kind === 'scatter' ? bestFitMode === 'overall' : false} hideAxisTitles />
+          ) : isBlank ? (
                 <div className="h-full flex flex-col items-center justify-center gap-2 text-center p-6">
                   <span className="text-4xl opacity-25 select-none">📈</span>
                   <p className="text-sm font-medium text-[var(--color-muted)]">Drop a variable to get started</p>

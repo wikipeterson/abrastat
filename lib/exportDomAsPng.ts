@@ -50,7 +50,7 @@ function cloneNodeWithInlineStyles(node: Node): Node {
   return clone
 }
 
-export async function exportDomAsPng(node: HTMLElement, filename: string) {
+export async function renderDomToPngBlob(node: HTMLElement): Promise<Blob> {
   const rect = node.getBoundingClientRect()
   const width = Math.max(1, Math.ceil(rect.width))
   const height = Math.max(1, Math.ceil(rect.height))
@@ -76,7 +76,7 @@ export async function exportDomAsPng(node: HTMLElement, filename: string) {
   const url = URL.createObjectURL(blob)
 
   try {
-    await new Promise<void>((resolve, reject) => {
+    return await new Promise<Blob>((resolve, reject) => {
       const img = new Image()
       const canvas = document.createElement('canvas')
       const timeout = window.setTimeout(() => {
@@ -97,20 +97,12 @@ export async function exportDomAsPng(node: HTMLElement, filename: string) {
         ctx.fillStyle = '#ffffff'
         ctx.fillRect(0, 0, width, height)
         ctx.drawImage(img, 0, 0, width, height)
-        canvas.toBlob(blob => {
-          if (!blob) {
+        canvas.toBlob(pngBlob => {
+          if (!pngBlob) {
             reject(new Error('Could not encode PNG'))
             return
           }
-          const pngUrl = URL.createObjectURL(blob)
-          const link = document.createElement('a')
-          link.href = pngUrl
-          link.download = filename
-          document.body.appendChild(link)
-          link.click()
-          link.remove()
-          URL.revokeObjectURL(pngUrl)
-          resolve()
+          resolve(pngBlob)
         }, 'image/png')
       }
 
@@ -122,5 +114,20 @@ export async function exportDomAsPng(node: HTMLElement, filename: string) {
     })
   } finally {
     URL.revokeObjectURL(url)
+  }
+}
+
+export async function exportDomAsPng(node: HTMLElement, filename: string) {
+  const pngBlob = await renderDomToPngBlob(node)
+  const pngUrl = URL.createObjectURL(pngBlob)
+  try {
+    const link = document.createElement('a')
+    link.href = pngUrl
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } finally {
+    URL.revokeObjectURL(pngUrl)
   }
 }

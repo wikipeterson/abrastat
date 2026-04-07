@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 import { Header } from '@/components/layout/Header'
 
 const SIDEBAR_WIDTH_CLASS = 'md:w-48'
@@ -31,16 +31,26 @@ export function AppletShell({
   activeApplet: string
   children: ReactNode
 }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
-      <Header centerTitle={title} />
+      <Header centerTitle={title} onToggleSidebar={() => setSidebarOpen(v => !v)} />
 
       <div className="flex flex-1 min-h-0">
-        <aside
-          className={`flex-shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col ${SIDEBAR_WIDTH_CLASS}`}
-        >
-          <div className="px-3 py-2 border-b border-[var(--color-border)]">
+        {sidebarOpen && (
+          <div className="fixed inset-0 bg-black/30 z-20 md:hidden" onClick={() => setSidebarOpen(false)} />
+        )}
+
+        <aside className={`
+          flex-shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col
+          md:relative ${SIDEBAR_WIDTH_CLASS} md:translate-x-0 md:z-auto
+          fixed inset-y-0 left-0 z-30 w-56 transition-transform duration-200
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}>
+          <div className="px-3 py-2 border-b border-[var(--color-border)] flex items-center justify-between">
             <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Library</div>
+            <button onClick={() => setSidebarOpen(false)} className="md:hidden text-[var(--color-muted)] text-lg leading-none">×</button>
           </div>
 
           <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1">

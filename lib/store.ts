@@ -343,8 +343,9 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'summary'      ? { type: 'summary',     variableColIds: [], groupColId: null } :
       type === 'table'        ? { type: 'table',       rowsColId: null, colsColId: null } :
       type === 'regression'   ? { type: 'regression',  xColId: null, yColId: null, groupColId: null } :
-      type === 'distribution' ? { type: 'distribution', preFill: scanChiSquareContext(state.exploreCards, state.grid) } :
-      type === 'generator'    ? { type: 'generator' } :
+      type === 'distribution'    ? { type: 'distribution', preFill: scanChiSquareContext(state.exploreCards, state.grid) } :
+      type === 'compare-normals' ? { type: 'compare-normals' } :
+      type === 'generator'       ? { type: 'generator' } :
       type === 'proportions'  ? { type: 'proportions', var1ColId: null, var2ColId: null } :
       type === 'two-prop-randomization' ? { type: 'two-prop-randomization', var1ColId: null, var2ColId: null } :
       type === 'means'        ? { type: 'means', var1ColId: null, var2ColId: null } :
@@ -354,8 +355,9 @@ export const useStore = create<AbraStatStore>((set) => ({
     const { width, height } =
       type === 'summary'     ? { width: 700, height: 620 } :
       type === 'means'       ? { width: 760, height: 500 } :
-      type === 'distribution' ? { width: 700, height: 540 } :
-      type === 'proportions' ? { width: 860, height: 620 } :
+      type === 'distribution'    ? { width: 700, height: 540 } :
+      type === 'compare-normals' ? { width: 760, height: 560 } :
+      type === 'proportions'     ? { width: 860, height: 620 } :
       type === 'two-prop-randomization' ? { width: 980, height: 760 } :
       type === 'dice-roller' ? { width: 760, height: 700 } :
                            { width: 620, height: 520 }

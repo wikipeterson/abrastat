@@ -88,12 +88,12 @@ export function Header({
           )}
           <div className="flex-shrink-0 select-none" aria-label="AbraStat logo">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="AbraStat" style={{ width: 300, height: 'auto' }} />
+            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(110px, 20vw, 220px)', height: 'auto' }} />
           </div>
 
           {(leadingNav || modeTabs?.length) && (
-            <div className="hidden md:flex items-center gap-2">
-              {leadingNav}
+            <div className="flex items-center gap-2">
+              {leadingNav && <div className="hidden md:flex">{leadingNav}</div>}
               {modeTabs && modeTabs.length > 0 && (
                 <div className="flex items-center rounded-xl border border-[var(--color-border)] bg-white p-1">
                   {modeTabs.map(tab => {
@@ -102,7 +102,7 @@ export function Header({
                       <button
                         key={tab.id}
                         onClick={() => onModeChange?.(tab.id)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                        className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                           active
                             ? 'bg-[var(--color-accent)] text-white'
                             : 'text-[var(--color-muted)] hover:bg-slate-100'

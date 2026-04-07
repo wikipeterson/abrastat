@@ -115,6 +115,10 @@ export interface DiceRollerCardConfig {
   trackedMode: 'sum' | 'difference'
 }
 
+export interface CompareNormalsCardConfig {
+  type: 'compare-normals'
+}
+
 export interface SimResultsCardConfig {
   type: 'sim-results'
   sourceCardId: string
@@ -139,6 +143,7 @@ export type CardConfig =
   | TableOutputCardConfig
   | RegressionCardConfig
   | DistributionCardConfig
+  | CompareNormalsCardConfig
   | RandomGeneratorCardConfig
   | ProportionsCardConfig
   | TwoPropRandomizationCardConfig

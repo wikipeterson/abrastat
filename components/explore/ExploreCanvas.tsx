@@ -27,6 +27,7 @@ import { MeansCard } from '@/components/inference/MeansCard'
 import { ProportionsCard } from '@/components/inference/ProportionsCard'
 import { TwoPropRandomizationTest } from '@/components/inference/TwoPropRandomizationTest'
 import { RandomGeneratorCard } from '@/components/probability/RandomGeneratorCard'
+import { CompareNormalsCard } from '@/components/probability/CompareNormalsCard'
 import { DiceRollerCard } from '@/components/probability/DiceRollerCard'
 import { SimResultsCard } from '@/components/probability/SimResultsCard'
 import { SimulationCard } from '@/components/probability/SimulationCard'
@@ -47,9 +48,10 @@ const EXPLORE_CARD_OPTIONS: CardOption[] = [
 ]
 
 const PROBABILITY_CARD_OPTIONS: CardOption[] = [
-  { type: 'distribution', icon: '🔔', label: 'Distribution Calculators' },
-  { type: 'generator', icon: '🎛️', label: 'Random Number Generator' },
-  { type: 'dice-roller', icon: '🎲', label: 'Dice Roller' },
+  { type: 'distribution',    icon: '🔔', label: 'Distribution Calculators' },
+  { type: 'compare-normals', icon: '⚖️', label: 'Compare Normals' },
+  { type: 'generator',       icon: '🎛️', label: 'Random Number Generator' },
+  { type: 'dice-roller',     icon: '🎲', label: 'Dice Roller' },
   { type: 'simulation', icon: '🔀', label: 'Coin Flipper' },
 ]
 
@@ -84,8 +86,9 @@ function cardLabel(type: CardConfig['type']): string {
     case 'table':        return 'Two-Way Table'
     case 'table-output': return 'Two-Way Table'
     case 'regression':   return 'Regression'
-    case 'distribution': return 'Distribution Calculators'
-    case 'generator':    return 'Random Number Generator'
+    case 'distribution':    return 'Distribution Calculators'
+    case 'compare-normals': return 'Compare Normals'
+    case 'generator':       return 'Random Number Generator'
     case 'dice-roller':  return 'Dice Roller'
     case 'sim-results':   return 'Roll Results'
     case 'proportions': return 'Proportions'
@@ -606,8 +609,9 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       case 'summary':      return { minWidth: 700, minHeight: 620 }
       case 'table':        return { minWidth: 920, minHeight: 700 }
       case 'regression':   return { minWidth: 400, minHeight: 340 }
-      case 'distribution': return { minWidth: 660, minHeight: 480 }
-      case 'generator':    return { minWidth: 460, minHeight: 440 }
+      case 'distribution':    return { minWidth: 660, minHeight: 480 }
+      case 'compare-normals': return { minWidth: 620, minHeight: 480 }
+      case 'generator':       return { minWidth: 460, minHeight: 440 }
       case 'dice-roller':  return { minWidth: 760, minHeight: 700 }
       case 'sim-results':  return { minWidth: 360, minHeight: 360 }
       case 'means':        return { minWidth: 700, minHeight: 460 }
@@ -981,6 +985,9 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                           )}
                           {card.config.type === 'distribution' && (
                             <DistributionCard preFill={card.config.preFill} />
+                          )}
+                          {card.config.type === 'compare-normals' && (
+                            <CompareNormalsCard />
                           )}
                           {card.config.type === 'generator' && (
                             <RandomGeneratorCard />

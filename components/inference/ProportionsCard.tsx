@@ -336,7 +336,7 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-3 flex-1 min-h-0">
+        <div className="flex flex-col md:grid md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-3 flex-1 min-h-0">
           <div className="min-h-0 flex flex-col gap-3">
             {!useManual && responseLevels.length > 1 && (
               <div className="flex items-center gap-2 flex-shrink-0">

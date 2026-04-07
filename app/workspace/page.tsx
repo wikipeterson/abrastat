@@ -40,7 +40,8 @@ const EXPLORE_CARD_OPTIONS: CardOption[] = [
 ]
 
 const PROBABILITY_CARD_OPTIONS: CardOption[] = [
-  { type: 'distribution', icon: '🔔', label: 'Distribution Calculators' },
+  { type: 'distribution',    icon: '🔔', label: 'Distribution Calculators' },
+  { type: 'compare-normals', icon: '⚖️', label: 'Compare Normals' },
 ]
 
 const INFERENCE_CARD_OPTIONS: CardOption[] = [
@@ -343,7 +344,7 @@ function DatasetsBrowser({
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search datasets…"
-            className="flex-1 min-w-[240px] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] bg-white"
+            className="flex-1 min-w-0 w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] bg-white"
           />
           <select value={sort} onChange={e => setSort(e.target.value as SortKey)} className="border border-[var(--color-border)] rounded-lg px-2 py-2 text-sm bg-white">
             <option value="newest">Newest</option>
@@ -420,7 +421,7 @@ function AppletsBrowser() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Link
             href="/applets/dice-roller"
-            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow"
+            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start gap-4">
               <div className="text-3xl leading-none">🎲</div>
@@ -431,14 +432,14 @@ function AppletsBrowser() {
                 </p>
               </div>
             </div>
-            <span className="px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white whitespace-nowrap">
+            <span className="self-start sm:self-auto px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white whitespace-nowrap">
               Open
             </span>
           </Link>
 
           <Link
             href="/applets/coin-flipper"
-            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow"
+            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start gap-4">
               <div className="text-3xl leading-none">🔀</div>
@@ -449,14 +450,14 @@ function AppletsBrowser() {
                 </p>
               </div>
             </div>
-            <span className="px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white whitespace-nowrap">
+            <span className="self-start sm:self-auto px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white whitespace-nowrap">
               Open
             </span>
           </Link>
 
           <Link
             href="/applets/random-number-generator"
-            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow"
+            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start gap-4">
               <div className="text-3xl leading-none">🎛️</div>
@@ -467,14 +468,14 @@ function AppletsBrowser() {
                 </p>
               </div>
             </div>
-            <span className="px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white whitespace-nowrap">
+            <span className="self-start sm:self-auto px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white whitespace-nowrap">
               Open
             </span>
           </Link>
 
           <Link
             href="/applets/spinner"
-            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow"
+            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start gap-4">
               <div className="text-3xl leading-none">🎡</div>
@@ -485,14 +486,14 @@ function AppletsBrowser() {
                 </p>
               </div>
             </div>
-            <span className="px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white whitespace-nowrap">
+            <span className="self-start sm:self-auto px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white whitespace-nowrap">
               Open
             </span>
           </Link>
 
           <Link
             href="/applets/galton-board"
-            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow"
+            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start gap-4">
               <div className="text-3xl leading-none">🟢</div>
@@ -503,7 +504,7 @@ function AppletsBrowser() {
                 </p>
               </div>
             </div>
-            <span className="px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white whitespace-nowrap">
+            <span className="self-start sm:self-auto px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white whitespace-nowrap">
               Open
             </span>
           </Link>

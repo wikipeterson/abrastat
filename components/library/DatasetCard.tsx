@@ -169,7 +169,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, onExport
         <span className="w-20">{isSample ? 'Built-in' : timeAgo(dataset.updatedAt)}</span>
         <span className="w-16 text-right">{dataset.rowCount} rows</span>
       </div>
-      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all">
+      <div className="flex sm:opacity-0 sm:group-hover:opacity-100 items-center gap-1 transition-all">
         {onExport && <ExportButton dataset={dataset} onExport={onExport} />}
         {canCopyLink && <CopyLinkButton datasetId={dataset.id} />}
         {canDelete && (

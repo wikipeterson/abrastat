@@ -26,7 +26,7 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="flex-1 flex flex-col items-center justify-center text-center px-4 py-20">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.svg" alt="AbraStat" style={{ width: 360, height: 'auto' }} className="mb-4" />
+        <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(200px, 60vw, 360px)', height: 'auto' }} className="mb-4" />
         <p className="text-2xl sm:text-3xl font-semibold text-[var(--color-text)] mb-3">
           Statistics made for students.
         </p>

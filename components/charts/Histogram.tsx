@@ -142,6 +142,7 @@ function BinWidthControl({ stats, binWidth, binWidthInput, setBinWidthInput, app
 }
 
 function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideAxisTitles }: HistogramInnerProps) {
+  const { colors } = useGraphCardContext()
   const [showNormal, setShowNormal] = useState(false)
   const [showMean, setShowMean] = useState(false)
   const [showMedian, setShowMedian] = useState(false)
@@ -212,7 +213,7 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
         yanchor: 'top',
         text: `<b>${group}</b>`,
         showarrow: false,
-        font: { size: 12, color: ABRA_COLORS[i % ABRA_COLORS.length] },
+        font: { size: 12, color: colors[i % colors.length] },
         bgcolor: 'rgba(255,255,255,0.85)',
         borderpad: 3,
       })
@@ -224,7 +225,7 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
         xbins: binSpec,
         xaxis: xRef,
         yaxis: yRef,
-        marker: { color: ABRA_COLORS[i % ABRA_COLORS.length], opacity: 0.85, line: { color: 'white', width: 0.5 } },
+        marker: { color: colors[i % colors.length], opacity: 0.85, line: { color: 'white', width: 0.5 } },
         hovertemplate: `${group} — Range: %{x}<br>Count: %{y}<extra></extra>`,
         showlegend: false,
       } as Data
@@ -276,7 +277,7 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
       name: group,
       [binKey]: allData.filter(d => d.group === group).map(d => d.value),
       [binSpecKey]: binSpec,
-      marker: { color: ABRA_COLORS[i % ABRA_COLORS.length], opacity: 0.85, line: { color: 'white', width: 0.5 } },
+      marker: { color: colors[i % colors.length], opacity: 0.85, line: { color: 'white', width: 0.5 } },
       hovertemplate: vert
         ? `${group} — Range: %{y}<br>Count: %{x}<extra></extra>`
         : `${group} — Range: %{x}<br>Count: %{y}<extra></extra>`,
@@ -287,7 +288,7 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
       name: col.name,
       [binKey]: values,
       [binSpecKey]: binSpec,
-      marker: { color: ABRA_COLORS[0], opacity: 0.85, line: { color: 'white', width: 0.5 } },
+      marker: { color: colors[0], opacity: 0.85, line: { color: 'white', width: 0.5 } },
       hovertemplate: vert ? 'Range: %{y}<br>Count: %{x}<extra></extra>' : 'Range: %{x}<br>Count: %{y}<extra></extra>',
     }]
 

@@ -941,6 +941,9 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                               onClearZone={z => clearZone(card.id, z)}
                               onSetChartType={(ct: ChartType) => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), chartType: ct } })}
                               onSetTitle={title => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), title } })}
+                              onSetXLabel={xLabel => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), xLabel } })}
+                              onSetYLabel={yLabel => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), yLabel } })}
+                              onSetColorPalette={colorPalette => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), colorPalette } })}
                               onSetBestFitMode={bestFitMode => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), bestFitMode } })}
                               onSetBarValueMode={mode => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), barValueMode: mode } })}
                               onAssignZone={(zone, colId) => assignGraphZone(card.id, zone, colId)}

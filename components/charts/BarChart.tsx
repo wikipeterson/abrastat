@@ -18,7 +18,7 @@ interface BarChartProps {
 
 export function BarChart({ colId, valueMode = 'count', orientation = 'h' }: BarChartProps) {
   const { grid } = useStore()
-  const { hideAxisTitles } = useGraphCardContext()
+  const { hideAxisTitles, colors } = useGraphCardContext()
   const col = grid.columns.find(c => c.id === colId)
 
   const freqTable = useMemo(() => {
@@ -31,7 +31,7 @@ export function BarChart({ colId, valueMode = 'count', orientation = 'h' }: BarC
     return <EmptyState icon="🔢" title="Drop a categorical variable" description="Drag a categorical variable to see a bar chart of frequencies." />
   }
 
-  const colors = freqTable.map((_, i) => ABRA_COLORS[i % ABRA_COLORS.length])
+  const barColors = freqTable.map((_, i) => colors[i % colors.length])
   const totalCount = freqTable.reduce((sum, row) => sum + row.count, 0)
   const displayValues = valueMode === 'percent'
     ? freqTable.map(row => (totalCount ? (row.count / totalCount) * 100 : 0))
@@ -49,7 +49,7 @@ export function BarChart({ colId, valueMode = 'count', orientation = 'h' }: BarC
         y: displayValues,
         text: displayLabels,
         textposition: 'outside',
-        marker: { color: colors, opacity: 0.9 },
+        marker: { color: barColors, opacity: 0.9 },
         hovertemplate: valueMode === 'percent'
           ? '%{x}: %{y:.1f}%<extra></extra>'
           : '%{x}: %{y}<extra></extra>',
@@ -61,7 +61,7 @@ export function BarChart({ colId, valueMode = 'count', orientation = 'h' }: BarC
         y: freqTable.map(r => r.value || '(blank)'),
         text: displayLabels,
         textposition: 'outside',
-        marker: { color: colors, opacity: 0.9 },
+        marker: { color: barColors, opacity: 0.9 },
         hovertemplate: valueMode === 'percent'
           ? '%{y}: %{x:.1f}%<extra></extra>'
           : '%{y}: %{x}<extra></extra>',

@@ -16,7 +16,7 @@ interface BoxPlotProps {
 
 export function BoxPlot({ colId, groupColId, orientation = 'v' }: BoxPlotProps) {
   const { grid } = useStore()
-  const { hideAxisTitles } = useGraphCardContext()
+  const { hideAxisTitles, colors } = useGraphCardContext()
   const col = grid.columns.find(c => c.id === colId) ?? null
   const groupCol = groupColId ? (grid.columns.find(c => c.id === groupColId) ?? null) : null
   const isH = orientation === 'h'
@@ -35,9 +35,9 @@ export function BoxPlot({ colId, groupColId, orientation = 'v' }: BoxPlotProps) 
         ...(isH
           ? { x: allData.filter(d => d.group === group).map(d => d.value) }
           : { y: allData.filter(d => d.group === group).map(d => d.value) }),
-        marker: { color: ABRA_COLORS[i % ABRA_COLORS.length], outliercolor: '#EF4444', size: 5, line: { width: 0 } },
-        line: { color: ABRA_COLORS[i % ABRA_COLORS.length], width: 1.5 },
-        fillcolor: ABRA_COLORS[i % ABRA_COLORS.length] + '28',
+        marker: { color: colors[i % colors.length], outliercolor: '#EF4444', size: 5, line: { width: 0 } },
+        line: { color: colors[i % colors.length], width: 1.5 },
+        fillcolor: colors[i % colors.length] + '28',
         boxpoints: 'outliers',
         whiskerwidth: 0.6,
         boxmean: false,
@@ -49,9 +49,9 @@ export function BoxPlot({ colId, groupColId, orientation = 'v' }: BoxPlotProps) 
       name: hideAxisTitles ? '' : col.name,
       orientation,
       ...(isH ? { x: numericValues } : { y: numericValues }),
-      marker: { color: ABRA_COLORS[0], outliercolor: '#EF4444', size: 5, line: { width: 0 } },
-      line: { color: ABRA_COLORS[0], width: 1.5 },
-      fillcolor: ABRA_COLORS[0] + '28',
+      marker: { color: colors[0], outliercolor: '#EF4444', size: 5, line: { width: 0 } },
+      line: { color: colors[0], width: 1.5 },
+      fillcolor: colors[0] + '28',
       boxpoints: 'outliers',
       whiskerwidth: 0.6,
       boxmean: false,

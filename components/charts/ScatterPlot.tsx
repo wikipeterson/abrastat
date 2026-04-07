@@ -61,7 +61,7 @@ function useAnimatedY(targetY: number[], animate: boolean): number[] {
 
 export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none' }: ScatterPlotProps) {
   const { grid } = useStore()
-  const { hideAxisTitles } = useGraphCardContext()
+  const { hideAxisTitles, colors } = useGraphCardContext()
   const prevYColIdRef = useRef<string | null>(null)
   const [shouldAnimate, setShouldAnimate] = useState(false)
 
@@ -139,7 +139,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
       name: group,
       x: allPoints.filter(p => p.group === group).map(p => p.x),
       y: allPoints.filter(p => p.group === group).map(p => p.y),
-      marker: { color: ABRA_COLORS[i % ABRA_COLORS.length], size: 7, opacity: 0.85, line: { width: 0 } },
+      marker: { color: colors[i % colors.length], size: 7, opacity: 0.85, line: { width: 0 } },
       hovertemplate: `${xCol.name}: %{x}<br>${yCol.name}: %{y}<extra>${group}</extra>`,
     }))
   } else if (useBubbleSize && groupCol) {
@@ -157,7 +157,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
       x: xValues,
       y: yValues,
       marker: {
-        color: ABRA_COLORS[0],
+        color: colors[0],
         size: scaledSizes,
         sizemode: 'diameter',
         opacity: 0.45,
@@ -173,7 +173,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
       name: `${xCol.name} vs ${yCol.name}`,
       x: xValues,
       y: yValues,
-      marker: { color: ABRA_COLORS[0], size: 7, opacity: 0.85, line: { width: 0 } },
+      marker: { color: colors[0], size: 7, opacity: 0.85, line: { width: 0 } },
       hovertemplate: `${xCol.name}: %{x}<br>${yCol.name}: %{y}<extra></extra>`,
     }]
   }
@@ -223,7 +223,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
         name: `${group} best fit`,
         x: [xMin, xMax],
         y: [slope * xMin + intercept, slope * xMax + intercept],
-        line: { color: ABRA_COLORS[i % ABRA_COLORS.length], width: 2 },
+        line: { color: colors[i % colors.length], width: 2 },
         hovertemplate: `${group}<br>ŷ = ${slope.toFixed(3)}x + ${intercept.toFixed(3)}<extra></extra>`,
       })
     })

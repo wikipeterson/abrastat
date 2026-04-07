@@ -6,6 +6,7 @@ import { getStringValues } from '@/lib/gridHelpers'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ManualTwoWayTableSnapshot } from '@/lib/exploreTypes'
+import { useGraphCardContext } from '@/lib/graphCardContext'
 
 interface MosaicPlotProps {
   xColId: string | null
@@ -40,6 +41,7 @@ export function MosaicPlot({
   showControls = true,
 }: MosaicPlotProps) {
   const { grid } = useStore()
+  const { colors } = useGraphCardContext()
   const [mode, setMode] = useState<'count' | 'row'>('count')
   const effectiveMode = modeOverride ?? mode
 
@@ -62,7 +64,7 @@ export function MosaicPlot({
               count,
               columnPercent: total ? count / total : 0,
               overallPercent: grandTotal ? count / grandTotal : 0,
-              color: ABRA_COLORS[ri % ABRA_COLORS.length],
+              color: colors[ri % colors.length],
             }
           }),
         }
@@ -106,7 +108,7 @@ export function MosaicPlot({
             count,
             columnPercent: total ? count / total : 0,
             overallPercent: grandTotal ? count / grandTotal : 0,
-            color: ABRA_COLORS[gi % ABRA_COLORS.length],
+            color: colors[gi % colors.length],
           }
         }),
       }
@@ -283,7 +285,7 @@ export function MosaicPlot({
 
           {fillLabels.map((label, index) => (
             <g key={label} transform={`translate(${legendX}, ${margin.top + 28 + index * 24})`}>
-              <rect width="14" height="14" rx="3" fill={ABRA_COLORS[index % ABRA_COLORS.length]} />
+              <rect width="14" height="14" rx="3" fill={colors[index % colors.length]} />
               <text x="22" y="11" fill="rgb(51 65 85)" fontSize="12" fontWeight="500">
                 {label}
               </text>

@@ -7,6 +7,7 @@ import { useStore } from '@/lib/store'
 import { ChartType, CHART_META, inferCharts } from '@/lib/chartHelpers'
 import { GraphCardConfig } from '@/lib/exploreTypes'
 import { GraphCardContext } from '@/lib/graphCardContext'
+import { COLOR_PALETTES, PaletteName } from '@/lib/plotlyTheme'
 import { exportDomAsPng, renderDomToPngBlobWithLabels, renderSvgToPngBlob } from '@/lib/exportDomAsPng'
 import { DropZone } from '../DropZone'
 import { Histogram } from '@/components/charts/Histogram'
@@ -28,6 +29,9 @@ interface GraphCardProps {
   onClearZone: (zone: string) => void
   onSetChartType: (ct: ChartType) => void
   onSetTitle: (title: string) => void
+  onSetXLabel: (label: string) => void
+  onSetYLabel: (label: string) => void
+  onSetColorPalette: (palette: string) => void
   onSetBestFitMode: (mode: 'none' | 'overall' | 'group') => void
   onSetBarValueMode: (mode: 'count' | 'percent') => void
   onAssignZone: (zone: 'x' | 'y' | 'group', colId: string) => void
@@ -35,7 +39,7 @@ interface GraphCardProps {
   hideHeader?: boolean
 }
 
-export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTitle, onSetBestFitMode, onSetBarValueMode, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
+export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTitle, onSetXLabel, onSetYLabel, onSetColorPalette, onSetBestFitMode, onSetBarValueMode, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
   const { grid } = useStore()
   const [manualTableGraphType, setManualTableGraphType] = useState<'segmented' | 'sidebyside' | 'mosaic'>('segmented')
   const [manualTableValueMode, setManualTableValueMode] = useState<'count' | 'row'>('count')
@@ -46,6 +50,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
   const graphExportRef = useRef<HTMLDivElement | null>(null)
   const customizeRef = useRef<HTMLDivElement | null>(null)
   const bestFitMode = config.bestFitMode ?? 'none'
+  const activeColors = COLOR_PALETTES[(config.colorPalette as PaletteName) ?? 'default'] ?? COLOR_PALETTES.default
 
   const xCol = !manualTable && !manualScatter && config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
   const yCol = !manualTable && !manualScatter && config.yColId ? (grid.columns.find(c => c.id === config.yColId) ?? null) : null
@@ -110,7 +115,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
     }
   }
 
-  function getExportAxisLabels() {
+  function getDefaultAxisLabels() {
     if (manualScatter) {
       return { xLabel: manualScatter.xName, yLabel: manualScatter.yName }
     }
@@ -136,6 +141,14 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
     }
 
     return { xLabel, yLabel }
+  }
+
+  function getExportAxisLabels() {
+    const defaults = getDefaultAxisLabels()
+    return {
+      xLabel: config.xLabel?.trim() || defaults.xLabel,
+      yLabel: config.yLabel?.trim() || defaults.yLabel,
+    }
   }
 
   async function renderGraphBlob(): Promise<Blob> {
@@ -172,6 +185,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
           xLabel,
           yLabel,
           showBestFitLine: useAnimatedScatter && bestFitMode === 'overall',
+          colors: [...activeColors],
         })
       }
     }
@@ -498,6 +512,60 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                     />
                   </label>
 
+                  <div className="space-y-2">
+                    <span className="block text-xs font-medium text-[var(--color-muted)]">Colors</span>
+                    <div className="flex flex-wrap gap-2">
+                      {(Object.entries(COLOR_PALETTES) as [PaletteName, readonly string[]][]).map(([name, pal]) => {
+                        const active = (config.colorPalette ?? 'default') === name
+                        return (
+                          <button
+                            key={name}
+                            onClick={() => onSetColorPalette(name)}
+                            title={name.charAt(0).toUpperCase() + name.slice(1)}
+                            className={`flex items-center gap-0.5 p-1 rounded-lg border-2 transition-colors ${
+                              active ? 'border-[var(--color-accent)]' : 'border-transparent hover:border-slate-200'
+                            }`}
+                          >
+                            {pal.slice(0, 5).map((c, i) => (
+                              <span key={i} className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ backgroundColor: c }} />
+                            ))}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {currentChart && (
+                    <div className="space-y-2">
+                      <span className="block text-xs font-medium text-[var(--color-muted)]">Axis labels</span>
+                      {(() => {
+                        const defaults = getDefaultAxisLabels()
+                        return (
+                          <div className="space-y-1.5">
+                            {defaults.xLabel !== '' && (
+                              <input
+                                type="text"
+                                value={config.xLabel ?? ''}
+                                onChange={e => onSetXLabel(e.target.value)}
+                                placeholder={defaults.xLabel}
+                                className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]"
+                              />
+                            )}
+                            {defaults.yLabel !== '' && (
+                              <input
+                                type="text"
+                                value={config.yLabel ?? ''}
+                                onChange={e => onSetYLabel(e.target.value)}
+                                placeholder={defaults.yLabel}
+                                className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]"
+                              />
+                            )}
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  )}
+
                   {currentChart === 'scatter' && xCol?.type === 'numeric' && yCol?.type === 'numeric' && (
                     <div className="space-y-2">
                       <label className="flex items-center gap-2 text-sm text-[var(--color-text)] select-none">
@@ -566,7 +634,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
             </div>
           )}
           <div className="flex-1 min-h-0" data-graph-plot-area="true">
-            <GraphCardContext.Provider value={{ hideAxisTitles: true }}>
+            <GraphCardContext.Provider value={{ hideAxisTitles: true, colors: [...activeColors] }}>
               {renderChart()}
             </GraphCardContext.Provider>
           </div>
@@ -617,7 +685,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
             )}
             <div className="flex-1 min-h-0" data-graph-plot-area="true">
           {showAnimatedBlank ? (
-            <AnimatedCaseLayer key="stable" spec={morphSpec!} showHint hideAxisTitles />
+            <AnimatedCaseLayer key="stable" spec={morphSpec!} showHint hideAxisTitles colors={[...activeColors]} />
           ) : showAnimatedTransition ? (
             <AnimatedCaseLayer
               key={activeTransition!.nonce}
@@ -625,10 +693,11 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
               fromSpec={activeTransition!.from}
               showBestFitLine={activeTransition!.to.kind === 'scatter' ? bestFitMode === 'overall' : false}
               hideAxisTitles
+              colors={[...activeColors]}
               onRest={() => setActiveTransition(null)}
             />
           ) : showSettledCustom ? (
-            <AnimatedCaseLayer key="stable" spec={morphSpec!} showBestFitLine={morphSpec!.kind === 'scatter' ? bestFitMode === 'overall' : false} hideAxisTitles />
+            <AnimatedCaseLayer key="stable" spec={morphSpec!} showBestFitLine={morphSpec!.kind === 'scatter' ? bestFitMode === 'overall' : false} hideAxisTitles colors={[...activeColors]} />
           ) : isBlank ? (
                 <div className="h-full flex flex-col items-center justify-center gap-2 text-center p-6">
                   <span className="text-4xl opacity-25 select-none">📈</span>
@@ -638,7 +707,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                   </p>
                 </div>
               ) : showDirectChart ? (
-                <GraphCardContext.Provider value={{ hideAxisTitles: true }}>
+                <GraphCardContext.Provider value={{ hideAxisTitles: true, colors: [...activeColors] }}>
                   {renderChart()}
                 </GraphCardContext.Provider>
               ) : null}

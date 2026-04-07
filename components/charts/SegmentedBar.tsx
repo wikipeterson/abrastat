@@ -27,7 +27,7 @@ export function SegmentedBar({
   showControls = true,
 }: SegmentedBarProps) {
   const { grid } = useStore()
-  const { hideAxisTitles } = useGraphCardContext()
+  const { hideAxisTitles, colors } = useGraphCardContext()
   const [mode, setMode] = useState<'count' | 'percent'>('count')
   const effectiveMode = modeOverride ?? mode
 
@@ -50,7 +50,7 @@ export function SegmentedBar({
           name: rowLabel,
           x: manualTable.colLabels,
           y: values,
-          marker: { color: ABRA_COLORS[gi % ABRA_COLORS.length], opacity: 0.9 },
+          marker: { color: colors[gi % colors.length], opacity: 0.9 },
           hovertemplate: effectiveMode === 'count'
             ? `${rowLabel}: %{y}<extra></extra>`
             : `${rowLabel}: %{y:.1f}%<extra></extra>`,
@@ -82,7 +82,7 @@ export function SegmentedBar({
         name: fillGroup,
         x: xGroups,
         y: values,
-        marker: { color: ABRA_COLORS[gi % ABRA_COLORS.length], opacity: 0.9 },
+        marker: { color: colors[gi % colors.length], opacity: 0.9 },
         hovertemplate: effectiveMode === 'count'
           ? `${fillGroup}: %{y}<extra></extra>`
           : `${fillGroup}: %{y:.1f}%<extra></extra>`,

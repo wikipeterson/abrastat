@@ -78,7 +78,7 @@ type DotResult = NormalResult | FacetedResult
 
 export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps) {
   const { grid } = useStore()
-  const { hideAxisTitles } = useGraphCardContext()
+  const { hideAxisTitles, colors } = useGraphCardContext()
   const [showMean, setShowMean] = useState(false)
   const [showMedian, setShowMedian] = useState(false)
   const col = grid.columns.find(c => c.id === colId) ?? null
@@ -150,7 +150,7 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
           yanchor: 'top',
           text: `<b>${group}</b>`,
           showarrow: false,
-          font: { size: 12, color: ABRA_COLORS[i % ABRA_COLORS.length] },
+          font: { size: 12, color: colors[i % colors.length] },
           bgcolor: 'rgba(255,255,255,0.85)',
           borderpad: 3,
         })
@@ -163,7 +163,7 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
           y,
           xaxis: xRef,
           yaxis: yRef,
-          marker: { color: ABRA_COLORS[i % ABRA_COLORS.length], size: 9, opacity: 0.9, line: { width: 0 } },
+          marker: { color: colors[i % colors.length], size: 9, opacity: 0.9, line: { width: 0 } },
           hovertemplate: `${group}: %{x}<extra></extra>`,
         } as Data
       })
@@ -207,7 +207,7 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
         name: col.name,
         x: vert ? y : x,
         y: vert ? x : y,
-        marker: { color: ABRA_COLORS[0], size: 9, opacity: 0.9, line: { width: 0 } },
+        marker: { color: colors[0], size: 9, opacity: 0.9, line: { width: 0 } },
         hovertemplate: `${col.name}: %{${vert ? 'y' : 'x'}}<extra></extra>`,
       }],
       maxStack,

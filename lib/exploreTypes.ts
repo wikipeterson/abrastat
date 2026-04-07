@@ -29,6 +29,9 @@ export interface GraphCardConfig {
   yColId: string | null
   groupColId: string | null
   title?: string
+  xLabel?: string
+  yLabel?: string
+  colorPalette?: string
   chartType?: ChartType | null
   bestFitMode?: 'none' | 'overall' | 'group'
   barValueMode?: 'count' | 'percent'

@@ -15,7 +15,7 @@ interface PieChartProps {
 
 export function PieChart({ colId, groupColId }: PieChartProps) {
   const { grid } = useStore()
-  const { hideAxisTitles } = useGraphCardContext()
+  const { hideAxisTitles, colors } = useGraphCardContext()
   const col      = grid.columns.find(c => c.id === colId)
   const groupCol = groupColId ? (grid.columns.find(c => c.id === groupColId) ?? null) : null
 
@@ -37,8 +37,8 @@ export function PieChart({ colId, groupColId }: PieChartProps) {
   // Build a stable color map so the same category always gets the same color
   const categoryColors = useMemo(() => {
     const cats = [...new Set(allValues.map(r => r.value))].sort()
-    return Object.fromEntries(cats.map((cat, i) => [cat, ABRA_COLORS[i % ABRA_COLORS.length]]))
-  }, [allValues])
+    return Object.fromEntries(cats.map((cat, i) => [cat, colors[i % colors.length]]))
+  }, [allValues, colors])
 
   if (!colId || !col) {
     return <EmptyState icon="🥧" title="Drop a categorical variable" description="Drag a categorical variable to see a pie chart of frequencies." />
@@ -61,7 +61,7 @@ export function PieChart({ colId, groupColId }: PieChartProps) {
     const freq = getFrequencyTable(subset).slice(0, 20)
     const labels = freq.map(r => r.value)
     const values = freq.map(r => r.count)
-    const colors = labels.map(l => categoryColors[l] ?? ABRA_COLORS[0])
+    const sliceColors = labels.map(l => categoryColors[l] ?? colors[0])
 
     // Domain: lay groups out in a row (up to 3 per row, then wrap)
     const perRow = Math.min(groups.length, 3)
@@ -84,7 +84,7 @@ export function PieChart({ colId, groupColId }: PieChartProps) {
       name: group || col.name,
       title: hasGroups ? { text: group, font: { size: 12 } } : undefined,
       domain,
-      marker: { colors },
+      marker: { colors: sliceColors },
       textinfo: (showPercent ? 'percent' : 'value') as 'percent' | 'value',
       hovertemplate: showPercent
         ? '%{label}: %{percent}<extra></extra>'

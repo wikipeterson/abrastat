@@ -15,7 +15,7 @@ interface NormalProbPlotProps {
 
 export function NormalProbPlot({ colId }: NormalProbPlotProps) {
   const { grid } = useStore()
-  const { hideAxisTitles } = useGraphCardContext()
+  const { hideAxisTitles, colors } = useGraphCardContext()
   const col = grid.columns.find(c => c.id === colId)
 
   const { theoretical, actual } = useMemo(() => {
@@ -51,7 +51,7 @@ export function NormalProbPlot({ colId }: NormalProbPlotProps) {
               name: col.name,
               x: theoretical,
               y: actual,
-              marker: { color: ABRA_COLORS[0], size: 7, opacity: 0.85, line: { width: 0 } },
+              marker: { color: colors[0], size: 7, opacity: 0.85, line: { width: 0 } },
               hovertemplate: 'Theoretical: %{x:.3f}<br>Actual: %{y}<extra></extra>',
             },
             {

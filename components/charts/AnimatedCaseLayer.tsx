@@ -33,6 +33,7 @@ export interface AnimatedCaseLayerProps {
   showHint?: boolean
   showBestFitLine?: boolean
   hideAxisTitles?: boolean
+  colors?: string[]
 }
 
 interface LayoutPoint {
@@ -158,6 +159,7 @@ function buildLayout(
   rows: Record<string, string | number>[],
   width: number,
   height: number,
+  colors: string[] = COLORS,
 ): LayoutResult {
   const legendReserve = spec.kind === 'scatter' && spec.colorByColId ? LEGEND_GUTTER_W : 0
   const iL = MG_L
@@ -205,7 +207,7 @@ function buildLayout(
     if (plotted.length === 0) return { points: [], labels: [] }
 
     const uniqueGroups = [...new Set(plotted.map(p => p.group))].sort()
-    const colorMap = new Map(uniqueGroups.map((g, i) => [g, COLORS[i % COLORS.length]]))
+    const colorMap = new Map(uniqueGroups.map((g, i) => [g, colors[i % colors.length]]))
     const xDom = dataDomain(plotted.map(p => p.x))
     const yDom = dataDomain(plotted.map(p => p.y))
     const toPixX = (v: number) => pL + ((v - xDom.min) / (xDom.max - xDom.min)) * pW
@@ -217,11 +219,11 @@ function buildLayout(
         x: toPixX(p.x),
         y: toPixY(p.y),
         opacity: 0.85,
-        color: colorMap.get(p.group) ?? COLORS[0],
+        color: colorMap.get(p.group) ?? colors[0],
       })),
       labels: [],
       legend: spec.colorByColId
-        ? uniqueGroups.map((g, i) => ({ key: g, label: g, color: COLORS[i % COLORS.length] }))
+        ? uniqueGroups.map((g, i) => ({ key: g, label: g, color: colors[i % colors.length] }))
         : undefined,
       xAxis: {
         ticks: niceAxisTicks(xDom.min, xDom.max, toPixX),
@@ -290,7 +292,7 @@ function buildLayout(
   const dotGap = Math.min(DOT_GAP_MAX, Math.max(2, bandStackSpace / (globalMaxStack + 1)))
 
   groupKeys.forEach((groupKey, gi) => {
-    const color = COLORS[gi % COLORS.length]
+    const color = colors[gi % colors.length]
     const items = grouped.get(groupKey) ?? []
     const bins = new Map<number, number>()
     const bandBottom = iT + bandSize * (gi + 1) - (10 + POINT_R)
@@ -404,6 +406,7 @@ export async function renderAnimatedGraphToPngBlob(options: {
   xLabel?: string
   yLabel?: string
   showBestFitLine?: boolean
+  colors?: string[]
 }) {
   const rows = options.rows.filter(hasAnyData)
   const plotWidth = Math.max(1, Math.ceil(options.width))
@@ -416,7 +419,7 @@ export async function renderAnimatedGraphToPngBlob(options: {
   const titleHeight = title ? 34 : 0
   const totalWidth = plotWidth + leftPad
   const totalHeight = plotHeight + titleHeight + bottomPad
-  const layout = buildLayout(options.spec, rows, plotWidth, plotHeight)
+  const layout = buildLayout(options.spec, rows, plotWidth, plotHeight, options.colors)
   const bestFitLine = options.showBestFitLine
     ? computeScatterBestFitLine(options.spec, rows, plotWidth, plotHeight)
     : null
@@ -475,6 +478,7 @@ export function AnimatedCaseLayer({
   showHint = false,
   showBestFitLine = false,
   hideAxisTitles = false,
+  colors = COLORS,
 }: AnimatedCaseLayerProps) {
   const { grid } = useStore()
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -499,18 +503,18 @@ export function AnimatedCaseLayer({
   const fromLayout = useMemo(
     () =>
       size.width > 0 && size.height > 0
-        ? buildLayout(fromSpec ?? spec, rows, size.width, size.height)
+        ? buildLayout(fromSpec ?? spec, rows, size.width, size.height, colors)
         : { points: [], labels: [] },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [fromSpec, spec, rows, size.width, size.height],
+    [fromSpec, spec, rows, size.width, size.height, colors],
   )
 
   const toLayout = useMemo(
     () =>
       size.width > 0 && size.height > 0
-        ? buildLayout(spec, rows, size.width, size.height)
+        ? buildLayout(spec, rows, size.width, size.height, colors)
         : { points: [], labels: [] },
-    [spec, rows, size.width, size.height],
+    [spec, rows, size.width, size.height, colors],
   )
 
   const displayPoints = useMemo(() => {

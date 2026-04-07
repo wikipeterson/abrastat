@@ -50,6 +50,78 @@ function cloneNodeWithInlineStyles(node: Node): Node {
   return clone
 }
 
+export async function renderSvgToPngBlob(
+  svgNode: SVGElement,
+  options?: { title?: string; width?: number; height?: number }
+): Promise<Blob> {
+  const rect = svgNode.getBoundingClientRect()
+  const plotWidth = Math.max(1, Math.ceil(options?.width ?? rect.width))
+  const plotHeight = Math.max(1, Math.ceil(options?.height ?? rect.height))
+  const title = options?.title?.trim() ?? ''
+  const titleHeight = title ? 34 : 0
+  const totalHeight = plotHeight + titleHeight
+
+  const svgClone = svgNode.cloneNode(true) as SVGElement
+  svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+  svgClone.setAttribute('width', String(plotWidth))
+  svgClone.setAttribute('height', String(plotHeight))
+  svgClone.setAttribute('viewBox', `0 0 ${plotWidth} ${plotHeight}`)
+
+  const serializedSvg = new XMLSerializer().serializeToString(svgClone)
+  const wrapper = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${plotWidth}" height="${totalHeight}" viewBox="0 0 ${plotWidth} ${totalHeight}">
+      <rect x="0" y="0" width="${plotWidth}" height="${totalHeight}" fill="#ffffff" />
+      ${title ? `<text x="${plotWidth / 2}" y="22" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="16" font-weight="600" fill="#0D4F49">${title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>` : ''}
+      <g transform="translate(0, ${titleHeight})">
+        ${serializedSvg}
+      </g>
+    </svg>
+  `
+
+  const blob = new Blob([wrapper], { type: 'image/svg+xml;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+
+  try {
+    return await new Promise<Blob>((resolve, reject) => {
+      const img = new Image()
+      const canvas = document.createElement('canvas')
+      const timeout = window.setTimeout(() => reject(new Error('SVG export timed out')), 8000)
+      canvas.width = plotWidth * 2
+      canvas.height = totalHeight * 2
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        window.clearTimeout(timeout)
+        reject(new Error('Could not create export canvas'))
+        return
+      }
+
+      img.onload = () => {
+        window.clearTimeout(timeout)
+        ctx.scale(2, 2)
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, plotWidth, totalHeight)
+        ctx.drawImage(img, 0, 0, plotWidth, totalHeight)
+        canvas.toBlob(pngBlob => {
+          if (!pngBlob) {
+            reject(new Error('Could not encode PNG'))
+            return
+          }
+          resolve(pngBlob)
+        }, 'image/png')
+      }
+
+      img.onerror = () => {
+        window.clearTimeout(timeout)
+        reject(new Error('Could not render SVG image'))
+      }
+
+      img.src = url
+    })
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
 export async function renderDomToPngBlob(node: HTMLElement): Promise<Blob> {
   const rect = node.getBoundingClientRect()
   const width = Math.max(1, Math.ceil(rect.width))

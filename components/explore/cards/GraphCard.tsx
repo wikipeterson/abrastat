@@ -7,7 +7,7 @@ import { useStore } from '@/lib/store'
 import { ChartType, CHART_META, inferCharts } from '@/lib/chartHelpers'
 import { GraphCardConfig } from '@/lib/exploreTypes'
 import { GraphCardContext } from '@/lib/graphCardContext'
-import { exportDomAsPng, renderDomToPngBlob } from '@/lib/exportDomAsPng'
+import { exportDomAsPng, renderDomToPngBlob, renderSvgToPngBlob } from '@/lib/exportDomAsPng'
 import { DropZone } from '../DropZone'
 import { Histogram } from '@/components/charts/Histogram'
 import { BoxPlot } from '@/components/charts/BoxPlot'
@@ -38,7 +38,6 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
   const [bestFitMode, setBestFitMode] = useState<'none' | 'overall' | 'group'>('none')
   const [manualTableGraphType, setManualTableGraphType] = useState<'segmented' | 'sidebyside' | 'mosaic'>('segmented')
   const [manualTableValueMode, setManualTableValueMode] = useState<'count' | 'row'>('count')
-  const [isExporting, setIsExporting] = useState(false)
   const [isCopying, setIsCopying] = useState(false)
   const manualTable = config.manualTable ?? null
   const manualScatter = config.manualScatter ?? null
@@ -107,27 +106,32 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
     }
   }
 
-  async function handleExportPng() {
-    if (!graphExportRef.current || !currentChart || isBlank) return
-    const safeTitle = (config.title || 'graph').trim().replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '')
-    setIsExporting(true)
-    try {
-      await exportDomAsPng(graphExportRef.current, `${safeTitle || 'graph-card'}.png`)
-    } catch (error) {
-      console.error(error)
-      window.alert('Graph export failed. Please try again.')
-    } finally {
-      setIsExporting(false)
+  async function renderGraphBlob(): Promise<Blob> {
+    if (!graphExportRef.current) {
+      throw new Error('Graph not ready')
     }
+
+    const plotEl = graphExportRef.current.querySelector('.js-plotly-plot') as HTMLElement | null
+    if (plotEl) {
+      const plotSvg = plotEl.querySelector('svg.main-svg') as SVGElement | null
+      if (plotSvg) {
+        return renderSvgToPngBlob(plotSvg, { title: config.title })
+      }
+    }
+
+    return renderDomToPngBlob(graphExportRef.current)
   }
 
   async function handleCopyGraph() {
     if (!graphExportRef.current || !currentChart || isBlank) return
     setIsCopying(true)
     try {
-      const pngBlob = await renderDomToPngBlob(graphExportRef.current)
+      const pngBlob = await renderGraphBlob()
       if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
-        await exportDomAsPng(graphExportRef.current, `${(config.title || 'graph-card').trim().replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || 'graph-card'}.png`)
+        await exportDomAsPng(
+          graphExportRef.current,
+          `${(config.title || 'graph-card').trim().replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || 'graph-card'}.png`
+        )
         window.alert('Copy is not supported in this browser. Downloaded PNG instead.')
         return
       }
@@ -399,17 +403,10 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
           </label>
           <button
             onClick={handleCopyGraph}
-            disabled={isBlank || isCopying || isExporting}
+            disabled={isBlank || isCopying}
             className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] transition-colors hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isCopying ? 'Copying…' : 'Copy Graph'}
-          </button>
-          <button
-            onClick={handleExportPng}
-            disabled={isBlank || isExporting || isCopying}
-            className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] transition-colors hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isExporting ? 'Exporting…' : 'Export PNG'}
           </button>
           {!usesAxisGrouping && !isManualSegmented && !isManualScatter && (
             <div className="flex-shrink-0 w-24">

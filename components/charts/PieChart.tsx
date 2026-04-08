@@ -7,6 +7,7 @@ import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
+import { sortCategoryValues } from '@/lib/categoryOrder'
 
 interface PieChartProps {
   colId: string | null
@@ -29,14 +30,14 @@ export function PieChart({ colId, groupColId }: PieChartProps) {
       group: groupColId ? String(r[groupColId] ?? '').trim() : '',
     })).filter(r => r.value && (!groupColId || r.group))
     const allGroups = groupColId
-      ? [...new Set(raw.map(r => r.group))].filter(g => g).sort()
+      ? sortCategoryValues([...new Set(raw.map(r => r.group))].filter(g => g))
       : []
     return { allValues: raw, allGroups }
   }, [grid, colId, groupColId])
 
   // Build a stable color map so the same category always gets the same color
   const categoryColors = useMemo(() => {
-    const cats = [...new Set(allValues.map(r => r.value))].sort()
+    const cats = sortCategoryValues([...new Set(allValues.map(r => r.value))])
     return Object.fromEntries(cats.map((cat, i) => [cat, colors[i % colors.length]]))
   }, [allValues, colors])
 

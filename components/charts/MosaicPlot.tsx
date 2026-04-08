@@ -7,6 +7,7 @@ import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ManualTwoWayTableSnapshot } from '@/lib/exploreTypes'
 import { useGraphCardContext } from '@/lib/graphCardContext'
+import { sortCategoryValues } from '@/lib/categoryOrder'
 
 interface MosaicPlotProps {
   xColId: string | null
@@ -89,8 +90,8 @@ export function MosaicPlot({
 
     const xVals = getStringValues(grid, xCol.id)
     const fillVals = getStringValues(grid, fillCol.id)
-    const xGroups = [...new Set(xVals)].filter(Boolean).sort()
-    const fillGroups = [...new Set(fillVals)].filter(Boolean).sort()
+    const xGroups = sortCategoryValues([...new Set(xVals)].filter(Boolean))
+    const fillGroups = sortCategoryValues([...new Set(fillVals)].filter(Boolean))
     const grandTotal = xGroups.reduce(
       (sum, xGroup) => sum + xVals.filter(value => value === xGroup).length,
       0,

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { renderSvgMarkupToPngBlob } from '@/lib/exportDomAsPng'
 import { useStore } from '@/lib/store'
 import { linearRegression } from '@/lib/statistics'
+import { sortCategoryValues } from '@/lib/categoryOrder'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -211,7 +212,7 @@ function buildLayout(
     }
     if (plotted.length === 0) return { points: [], labels: [] }
 
-    const uniqueGroups = [...new Set(plotted.map(p => p.group))].sort()
+    const uniqueGroups = sortCategoryValues([...new Set(plotted.map(p => p.group))])
     const colorMap = new Map(uniqueGroups.map((g, i) => [g, colors[i % colors.length]]))
     const xDom = dataDomain(plotted.map(p => p.x))
     const yDom = dataDomain(plotted.map(p => p.y))

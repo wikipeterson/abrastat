@@ -7,6 +7,7 @@ import { getNumericValues, getNumericGroup } from '@/lib/gridHelpers'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
+import { sortCategoryValues } from '@/lib/categoryOrder'
 
 interface DotPlotProps {
   colId: string | null
@@ -99,7 +100,7 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
         ? stackDots(allValues)
         : { binWidth: 1 }
 
-      const uniqueGroups = [...new Set(allData.map(d => d.group))].sort()
+      const uniqueGroups = sortCategoryValues([...new Set(allData.map(d => d.group))])
       const n = uniqueGroups.length
       const GAP = n > 1 ? 0.04 : 0
       const panelH = n > 1 ? (1 - GAP * (n - 1)) / n : 1
@@ -176,7 +177,7 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
     if (groupCol && groupByColId) {
       // vert=true: keep overlay behavior
       const allData = getNumericGroup(grid, colId, groupByColId)
-      const uniqueGroups = [...new Set(allData.map(d => d.group))].sort()
+      const uniqueGroups = sortCategoryValues([...new Set(allData.map(d => d.group))])
       let globalMax = 1
 
       const traces = uniqueGroups.map((group, gi) => {

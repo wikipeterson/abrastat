@@ -8,6 +8,7 @@ import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
+import { sortCategoryValues } from '@/lib/categoryOrder'
 
 interface HistogramProps {
   colId: string | null
@@ -170,7 +171,7 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
   // ── Faceted layout: grouped + horizontal orientation ─────────────────
   if (groupCol && !vert) {
     const allData = getNumericGroup(grid, col.id, groupCol.id)
-    const uniqueGroups = [...new Set(allData.map(d => d.group))].sort()
+    const uniqueGroups = sortCategoryValues([...new Set(allData.map(d => d.group))])
     const n = uniqueGroups.length
     const GAP = n > 1 ? 0.06 : 0
     const panelH = n > 1 ? (1 - GAP * (n - 1)) / n : 1
@@ -271,7 +272,7 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
   if (groupCol) {
     // vert=true: keep overlay behavior
     const allData = getNumericGroup(grid, col.id, groupCol.id)
-    const uniqueGroups = [...new Set(allData.map(d => d.group))].sort()
+    const uniqueGroups = sortCategoryValues([...new Set(allData.map(d => d.group))])
     traces = uniqueGroups.map((group, i) => ({
       type: 'histogram',
       name: group,

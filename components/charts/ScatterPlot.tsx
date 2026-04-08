@@ -7,6 +7,7 @@ import { linearRegression } from '@/lib/statistics'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
+import { sortCategoryValues } from '@/lib/categoryOrder'
 
 interface ScatterPlotProps {
   xColId: string | null
@@ -132,7 +133,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
   let traces: Data[]
 
   if (useColorGroups && colorByColId) {
-    const uniqueGroups = [...new Set(allPoints.map(p => p.group))].sort()
+    const uniqueGroups = sortCategoryValues([...new Set(allPoints.map(p => p.group))])
     traces = uniqueGroups.map((group, i) => ({
       type: 'scatter',
       mode: 'markers',
@@ -208,7 +209,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
   }
 
   if (bestFitMode === 'group' && useColorGroups && colorByColId) {
-    const uniqueGroups = [...new Set(allPoints.map(p => p.group))].sort()
+    const uniqueGroups = sortCategoryValues([...new Set(allPoints.map(p => p.group))])
     uniqueGroups.forEach((group, i) => {
       const pts = allPoints.filter(p => p.group === group)
       if (pts.length < 2) return

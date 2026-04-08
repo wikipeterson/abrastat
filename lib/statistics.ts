@@ -1,5 +1,6 @@
 import jStat from 'jstat'
 import { FrequencyRow, SummaryResult } from '@/types'
+import { sortCategoryValues } from './categoryOrder'
 
 export function computeSummary(values: number[], columnName: string): SummaryResult | null {
   const clean = values.filter(v => v != null && isFinite(v))
@@ -39,8 +40,8 @@ export function twoWayTable(
   rowValues: string[],
   colValues: string[]
 ): { rowLabels: string[]; colLabels: string[]; counts: number[][] } {
-  const rowLabels = [...new Set(rowValues)].filter(Boolean).sort()
-  const colLabels = [...new Set(colValues)].filter(Boolean).sort()
+  const rowLabels = sortCategoryValues([...new Set(rowValues)].filter(Boolean))
+  const colLabels = sortCategoryValues([...new Set(colValues)].filter(Boolean))
   const counts = rowLabels.map(r =>
     colLabels.map(c => rowValues.filter((v, i) => v === r && colValues[i] === c).length)
   )

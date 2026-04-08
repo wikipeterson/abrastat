@@ -6,6 +6,7 @@ import { getNumericValues, getNumericGroup } from '@/lib/gridHelpers'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
+import { sortCategoryValues } from '@/lib/categoryOrder'
 
 interface BoxPlotProps {
   colId: string | null
@@ -49,7 +50,7 @@ export function BoxPlot({ colId, groupColId, orientation = 'v' }: BoxPlotProps) 
 
     if (groupCol && groupColId) {
       const allData = getNumericGroup(grid, colId, groupColId)
-      const uniqueGroups = [...new Set(allData.map(d => d.group))].sort()
+      const uniqueGroups = sortCategoryValues([...new Set(allData.map(d => d.group))])
       const traces = uniqueGroups.map((group, i) => ({
         values: allData.filter(d => d.group === group).map(d => d.value),
         type: 'box',

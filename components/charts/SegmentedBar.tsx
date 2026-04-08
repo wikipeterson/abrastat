@@ -7,6 +7,7 @@ import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
+import { sortCategoryValues } from '@/lib/categoryOrder'
 import { ManualTwoWayTableSnapshot } from '@/lib/exploreTypes'
 
 interface SegmentedBarProps {
@@ -63,8 +64,8 @@ export function SegmentedBar({
     const xVals = getStringValues(grid, xCol.id)
     const fillVals = getStringValues(grid, fillCol.id)
 
-    const xGroups = [...new Set(xVals)].filter(Boolean).sort()
-    const fillGroups = [...new Set(fillVals)].filter(Boolean).sort()
+    const xGroups = sortCategoryValues([...new Set(xVals)].filter(Boolean))
+    const fillGroups = sortCategoryValues([...new Set(fillVals)].filter(Boolean))
 
     return fillGroups.map((fillGroup, gi) => {
       const counts = xGroups.map(xGroup =>

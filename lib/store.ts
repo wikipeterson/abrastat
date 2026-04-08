@@ -5,6 +5,7 @@ import { ColumnType, GridState } from '@/types'
 import { ExploreCard, CardConfig, DistributionPreFill, GraphCardConfig, SimResultsCardConfig, TableOutputCardConfig, TwoPropSimCardConfig } from './exploreTypes'
 import { createEmptyGrid } from './gridHelpers'
 import { computeColumnValues } from './formulaEval'
+import { sortCategoryValues } from './categoryOrder'
 
 function getDataGridCardWidth(columnCount: number) {
   return Math.max(620, 48 + columnCount * 140 + 32)
@@ -105,8 +106,8 @@ function scanChiSquareContext(
   if (rowVals.length < 2 || colVals.length < 2) return undefined
 
   // Build observed counts
-  const rowLabels = [...new Set(rowVals)].sort()
-  const colLabels = [...new Set(colVals)].sort()
+  const rowLabels = sortCategoryValues([...new Set(rowVals)])
+  const colLabels = sortCategoryValues([...new Set(colVals)])
   const O: number[][] = rowLabels.map(r =>
     colLabels.map(c => rowVals.filter((rv, i) => rv === r && colVals[i] === c).length)
   )

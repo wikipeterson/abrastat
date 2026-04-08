@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import { User as FirebaseUser } from 'firebase/auth'
 import { ColumnType, GridState } from '@/types'
-import { ExploreCard, CardConfig, DistributionPreFill, GraphCardConfig, SimResultsCardConfig, TableOutputCardConfig } from './exploreTypes'
+import { ExploreCard, CardConfig, DistributionPreFill, GraphCardConfig, SimResultsCardConfig, TableOutputCardConfig, TwoPropSimCardConfig } from './exploreTypes'
 import { createEmptyGrid } from './gridHelpers'
 import { computeColumnValues } from './formulaEval'
 
@@ -203,6 +203,10 @@ interface AbraStatStore {
     config: TableOutputCardConfig,
     position: { x: number; y: number },
   ) => string
+  addTwoPropSimCard: (
+    config: Omit<TwoPropSimCardConfig, 'type' | 'nullDist' | 'simCount' | 'extremeCount'>,
+    sourceCard: ExploreCard,
+  ) => string
   pushSimResult: (cardId: string, roll: number[]) => void
   pushSimResultsBatch: (cardId: string, rolls: number[][]) => void
   clearSimResults: (cardId: string) => void
@@ -392,6 +396,19 @@ export const useStore = create<AbraStatStore>((set) => ({
       return card
     }),
   })),
+  addTwoPropSimCard: (config, sourceCard) => {
+    const id = uuid()
+    set(state => {
+      // Place the sim card to the right of the source card
+      const x = sourceCard.x + sourceCard.width + 40
+      const y = sourceCard.y
+      const width = 960, height = 680
+      const { x: fx, y: fy } = findOpenCardPosition(state.exploreCards, x, y, width, height)
+      const simConfig: TwoPropSimCardConfig = { type: 'two-prop-sim', ...config, nullDist: [], simCount: 0, extremeCount: 0 }
+      return { exploreCards: [...state.exploreCards, { id, config: simConfig, x: fx, y: fy, width, height }] }
+    })
+    return id
+  },
   addSimResultsCard: (sourceCardId, trackedMode, position, sourceLabel, range, valueLabel) => {
     const id = uuid()
     set(state => ({

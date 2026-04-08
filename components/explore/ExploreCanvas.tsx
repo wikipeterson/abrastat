@@ -25,7 +25,7 @@ import { TwoWayTable } from '@/components/applets/TwoWayTable'
 import { DistributionCard } from '@/components/inference/DistributionCard'
 import { MeansCard } from '@/components/inference/MeansCard'
 import { ProportionsCard } from '@/components/inference/ProportionsCard'
-import { TwoPropRandomizationTest } from '@/components/inference/TwoPropRandomizationTest'
+import { TwoPropRandomizationTest, TwoPropSimCard } from '@/components/inference/TwoPropRandomizationTest'
 import { RandomGeneratorCard } from '@/components/probability/RandomGeneratorCard'
 import { CompareNormalsCard } from '@/components/probability/CompareNormalsCard'
 import { DiceRollerCard } from '@/components/probability/DiceRollerCard'
@@ -93,6 +93,7 @@ function cardLabel(type: CardConfig['type']): string {
     case 'sim-results':   return 'Roll Results'
     case 'proportions': return 'Proportions'
     case 'two-prop-randomization': return 'Two-Prop Randomization Test'
+    case 'two-prop-sim':           return 'Randomization Simulation'
     case 'simulation':   return 'Coin Flipper'
     case 'means':        return 'Means'
     default:             return 'Card'
@@ -617,6 +618,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       case 'means':        return { minWidth: 700, minHeight: 460 }
       case 'proportions':  return { minWidth: 820, minHeight: 580 }
       case 'two-prop-randomization': return { minWidth: 900, minHeight: 700 }
+      case 'two-prop-sim':           return { minWidth: 700, minHeight: 500 }
       default:             return { minWidth: 360, minHeight: 280 }
     }
   }
@@ -1026,6 +1028,9 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                               config={card.config}
                               onClearZone={z => clearZone(card.id, z)}
                             />
+                          )}
+                          {card.config.type === 'two-prop-sim' && (
+                            <TwoPropSimCard cardId={card.id} config={card.config} />
                           )}
                           {card.config.type === 'simulation' && (
                             <SimulationCard cardId={card.id} config={card.config} />

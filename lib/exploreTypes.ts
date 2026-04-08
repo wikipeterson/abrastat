@@ -1,4 +1,5 @@
 import type { ChartType } from './chartHelpers'
+import type { Alternative } from './randomizationTest'
 
 export interface ManualTwoWayTableSnapshot {
   explName: string
@@ -106,6 +107,26 @@ export interface TwoPropRandomizationCardConfig {
   var2ColId: string | null
 }
 
+export interface TwoPropSimCardConfig {
+  type: 'two-prop-sim'
+  // snapshot of the input data
+  n1: number
+  s1: number
+  n2: number
+  s2: number
+  label1: string
+  label2: string
+  successLabel: string
+  failureLabel: string
+  // hypothesis settings
+  alternative: Alternative
+  nullDiff: string
+  // accumulated results (persisted so simulations survive card moves)
+  nullDist: number[]
+  simCount: number
+  extremeCount: number
+}
+
 export interface SimulationCardConfig {
   type: 'simulation'
   linkedResultsCardId?: string | null
@@ -155,6 +176,7 @@ export type CardConfig =
   | RandomGeneratorCardConfig
   | ProportionsCardConfig
   | TwoPropRandomizationCardConfig
+  | TwoPropSimCardConfig
   | SimulationCardConfig
   | MeansCardConfig
   | DiceRollerCardConfig

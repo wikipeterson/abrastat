@@ -29,17 +29,17 @@ interface CardPos    { x:number; y:number; rotation:number; delay:number; faceDo
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const CANVAS_W        = 640
-const HEADER_H        = 42
-const COL_W           = 180
+const HEADER_H        = 30
+const COL_W           = 200
 const POOL_DUR        = 480   // ms: pooling animation
 const SHUFFLE_DUR     = 180   // ms: each shuffle spread/return phase
 const DEAL_DUR        = 260   // ms: each card's travel time when dealing
 const NUM_SH_PHASES   = 6     // 3 spread + 3 return cycles
 
 const COL_CX = {
-  left: CANVAS_W * 0.25,
+  left: CANVAS_W * 0.31,
   center: CANVAS_W * 0.5,
-  right: CANVAS_W * 0.75,
+  right: CANVAS_W * 0.69,
 }
 
 // Compute canvas height to fit actual card layout with no wasted space
@@ -49,7 +49,7 @@ function getCanvasHeight(n1: number, n2: number): number {
   const maxN = Math.max(n1, n2)
   const cols = Math.min(layout.perRow, maxN)
   const rows = Math.ceil(maxN / cols)
-  return Math.max(140, Math.min(HEADER_H + rows * layout.stepY + 6, 250))
+  return Math.max(132, Math.min(HEADER_H + rows * layout.stepY + 4, 242))
 }
 
 function getCardLayout(n: number): CardLayout {
@@ -246,8 +246,8 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
   })()
 
   const maxCurveCount = normalStats ? Math.max(...normalStats.samples.map(sample => sample.expectedCount)) : 0
-  const topPad = 14
-  const yMaxCount = Math.max(maxStack, maxCurveCount) * 1.3
+  const topPad = 10
+  const yMaxCount = Math.max(maxStack, maxCurveCount) * 1.12
   const yScale = (PH - topPad) / Math.max(1, yMaxCount)
 
   const seenC2 = new Map<number,number>()
@@ -312,6 +312,17 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
 
 function getNullDistributionPanelHeight(values: number[]) {
   return values.length === 0 ? 140 : 180
+}
+
+function getNullDistributionSummary(data: TwoProportionData) {
+  const N = data.n1 + data.n2
+  if (N <= 1) return { mean: 0, sd: 0 }
+  const pPool = (data.s1 + data.s2) / N
+  const variance = pPool * (1 - pPool) * (1 / data.n1 + 1 / data.n2) * ((N - data.n1) / (N - 1))
+  return {
+    mean: 0,
+    sd: Math.sqrt(Math.max(0, variance)),
+  }
 }
 
 // ── Step definitions ──────────────────────────────────────────────────────────
@@ -629,6 +640,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
   const visibleNullPanelHeight = simCount === 0 ? 180 : nullPanelHeight
   const cardTransDur    = stage==='shuffling' ? SHUFFLE_DUR : stage==='reassigning' ? DEAL_DUR : POOL_DUR
   const showNormalCurve = config.showNormalCurve ?? false
+  const nullSummary = useMemo(() => getNullDistributionSummary(data), [data])
 
   const dataRef   = useRef(data)
   const altRef    = useRef(alternative)
@@ -731,9 +743,9 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
             <div className="overflow-x-auto flex justify-center">
               <div className="w-fit">
                 <div className="relative bg-slate-50 border-b border-[var(--color-border)] flex-shrink-0" style={{width:CANVAS_W,height:HEADER_H}}>
-                  <span style={{position:'absolute',left:COL_CX.left,top:showColStats?28:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label1}</span>
+                  <span style={{position:'absolute',left:COL_CX.left,top:showColStats?20:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label1}</span>
                   {showCenter&&<span style={{position:'absolute',left:COL_CX.center,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,color:'var(--color-muted)'}}>Pooled</span>}
-                  <span style={{position:'absolute',left:COL_CX.right,top:showColStats?28:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label2}</span>
+                  <span style={{position:'absolute',left:COL_CX.right,top:showColStats?20:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label2}</span>
                   {showColStats&&(
                     <>
                       <ColStatLabel cx={COL_CX.left} n={leftStats.n} s={leftStats.s} p={leftStats.p} highlight={highlightSim} layout={layout}/>
@@ -844,17 +856,23 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
 
         {/* Null distribution */}
         <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 flex flex-col gap-1.5">
-          <div className="flex items-center justify-between gap-3 flex-shrink-0">
+          <div className="flex items-start justify-between gap-3 flex-shrink-0">
             <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
-            <label className="flex items-center gap-2 text-xs text-[var(--color-muted)] select-none">
-              <input
-                type="checkbox"
-                checked={showNormalCurve}
-                onChange={e => updateExploreCard(cardId, { config: { ...config, showNormalCurve: e.target.checked } })}
-                className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
-              />
-              <span>Overlay normal curve</span>
-            </label>
+            <div className="flex flex-col items-end gap-1">
+              <label className="flex items-center gap-2 text-xs text-[var(--color-muted)] select-none">
+                <input
+                  type="checkbox"
+                  checked={showNormalCurve}
+                  onChange={e => updateExploreCard(cardId, { config: { ...config, showNormalCurve: e.target.checked } })}
+                  className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                />
+                <span>Overlay normal curve</span>
+              </label>
+              <div className="text-[11px] text-[var(--color-muted)] text-right leading-tight">
+                <div>Mean = {nullSummary.mean.toFixed(3)}</div>
+                <div>SD = {nullSummary.sd.toFixed(3)}</div>
+              </div>
+            </div>
           </div>
           <div className="min-h-0" style={{height: visibleNullPanelHeight}}>
             {simCount===0

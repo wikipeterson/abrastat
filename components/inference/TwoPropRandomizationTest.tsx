@@ -251,8 +251,8 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
   const yScale = (PH - topPad) / Math.max(1, yMaxCount)
 
   const seenC2 = new Map<number,number>()
-  const dotStep = Math.max(1.25, Math.min(6, yScale))
-  const dotR    = Math.max(1, dotStep/2 - 0.3)
+  const dotStep = Math.min(6, yScale)
+  const dotR    = Math.max(0.55, Math.min(2.6, dotStep / 2 - 0.15))
   const circles = values.map(v => {
       const b  = v
       const si = seenC2.get(b) ?? 0

@@ -403,7 +403,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       // Place the sim card to the right of the source card
       const x = sourceCard.x + sourceCard.width + 40
       const y = sourceCard.y
-      const width = 960, height = 920
+      const width = 1120, height = 860
       const { x: fx, y: fy } = findOpenCardPosition(state.exploreCards, x, y, width, height)
       const simConfig: TwoPropSimCardConfig = { type: 'two-prop-sim', ...config, nullDist: [], simCount: 0, extremeCount: 0 }
       return { exploreCards: [...state.exploreCards, { id, config: simConfig, x: fx, y: fy, width, height }] }

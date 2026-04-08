@@ -28,15 +28,19 @@ interface CardPos    { x:number; y:number; rotation:number; delay:number; faceDo
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CANVAS_W        = 480
+const CANVAS_W        = 640
 const HEADER_H        = 42
-const COL_W           = 116
+const COL_W           = 180
 const POOL_DUR        = 480   // ms: pooling animation
 const SHUFFLE_DUR     = 180   // ms: each shuffle spread/return phase
 const DEAL_DUR        = 260   // ms: each card's travel time when dealing
 const NUM_SH_PHASES   = 6     // 3 spread + 3 return cycles
 
-const COL_CX = { left: 72, center: 240, right: 408 }
+const COL_CX = {
+  left: CANVAS_W * 0.25,
+  center: CANVAS_W * 0.5,
+  right: CANVAS_W * 0.75,
+}
 
 // Compute canvas height to fit actual card layout with no wasted space
 function getCanvasHeight(n1: number, n2: number): number {

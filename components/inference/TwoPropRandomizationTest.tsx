@@ -325,10 +325,10 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
   const [successLevel, setSuccessLevel] = useState('')
   const [groupA, setGroupA]             = useState('')
   const [groupB, setGroupB]             = useState('')
-  const [manualS1, setManualS1]         = useState('50')
-  const [manualN1, setManualN1]         = useState('100')
-  const [manualS2, setManualS2]         = useState('50')
-  const [manualN2, setManualN2]         = useState('100')
+  const [manualS1, setManualS1]         = useState('')
+  const [manualN1, setManualN1]         = useState('')
+  const [manualS2, setManualS2]         = useState('')
+  const [manualN2, setManualN2]         = useState('')
   const [manualLabel1, setManualLabel1] = useState('Group 1')
   const [manualLabel2, setManualLabel2] = useState('Group 2')
 
@@ -528,9 +528,11 @@ function FractionInput({ label, numLabel, denLabel, numValue, denValue, onChange
         </div>
         <div className="flex flex-col items-center">
           <input type="number" min={0} step={1} value={numValue} onChange={e=>onChangeNum(e.target.value)}
+            placeholder=" "
             className="w-16 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-white text-[var(--color-text)] [appearance:textfield]"/>
           <div className="my-0.5 w-[4.5rem] border-t-2 border-[var(--color-text)]"/>
           <input type="number" min={1} step={1} value={denValue} onChange={e=>onChangeDen(e.target.value)}
+            placeholder=" "
             className="w-16 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-white text-[var(--color-text)] [appearance:textfield]"/>
         </div>
       </div>

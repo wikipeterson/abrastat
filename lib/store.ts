@@ -363,7 +363,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'distribution'    ? { width: 700, height: 540 } :
       type === 'compare-normals' ? { width: 760, height: 560 } :
       type === 'proportions'     ? { width: 860, height: 620 } :
-      type === 'two-prop-randomization' ? { width: 980, height: 760 } :
+      type === 'two-prop-randomization' ? { width: 980, height: 560 } :
       type === 'dice-roller' ? { width: 760, height: 700 } :
                            { width: 620, height: 520 }
     const rightmostX = state.exploreCards.reduce((max, card) => Math.max(max, card.x + card.width), 20)

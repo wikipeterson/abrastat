@@ -677,75 +677,73 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
 
   return (
     <div className="flex flex-col h-full">
-
-      {/* ── Top half: animation canvas (left) + stats/hypotheses (right) ── */}
-      <div className="flex flex-shrink-0 border-b border-[var(--color-border)]">
-
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
         {/* Animation canvas */}
-        <div className="flex-shrink-0 flex flex-col border-r border-[var(--color-border)]">
-          {/* Column headers */}
-          <div className="relative bg-slate-50 border-b border-[var(--color-border)] flex-shrink-0" style={{width:CANVAS_W,height:HEADER_H}}>
-            <span style={{position:'absolute',left:COL_CX.left,  top:'50%',transform:'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label1}</span>
-            {showCenter&&<span style={{position:'absolute',left:COL_CX.center,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,color:'var(--color-muted)'}}>Pooled</span>}
-            <span style={{position:'absolute',left:COL_CX.right, top:'50%',transform:'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label2}</span>
-          </div>
+        <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
+          <div className="overflow-x-auto">
+            <div className="w-fit min-w-full mx-auto">
+              <div className="relative bg-slate-50 border-b border-[var(--color-border)] flex-shrink-0" style={{width:CANVAS_W,height:HEADER_H}}>
+                <span style={{position:'absolute',left:COL_CX.left,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label1}</span>
+                {showCenter&&<span style={{position:'absolute',left:COL_CX.center,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,color:'var(--color-muted)'}}>Pooled</span>}
+                <span style={{position:'absolute',left:COL_CX.right,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label2}</span>
+              </div>
 
-          {/* Cards — overflow hidden clips shuffling cards that fly out */}
-          <div className="relative bg-white flex-shrink-0 overflow-hidden" style={{width:CANVAS_W,height:canvasH,transition:'height 400ms ease'}}>
-            <div className="absolute inset-y-0 transition-all duration-500" style={{
-              left:COL_CX.left-COL_W/2-4,width:COL_W+8,
-              background:showSplit?'rgba(14,165,160,0.04)':'transparent',
-              borderRight:showSplit?'1px dashed rgba(14,165,160,0.2)':'none',
-            }}/>
-            <div className="absolute inset-y-0 transition-all duration-500" style={{
-              left:COL_CX.right-COL_W/2-4,width:COL_W+8,
-              background:showSplit?'rgba(14,165,160,0.04)':'transparent',
-              borderLeft:showSplit?'1px dashed rgba(14,165,160,0.2)':'none',
-            }}/>
-            {cases.map(c => {
-              const p  = positions.get(c.id) ?? {x:-50,y:-50,rotation:0,delay:0,faceDown:false}
-              const fd = p.faceDown; const isSuccess = c.response===1
-              const bg  = fd?'#1A8C80':isSuccess?'#2EC4B6':'#E2E8F0'
-              const bdr = fd?'#0D6B63':isSuccess?'#1A8C80':'#CBD5E1'
-              return (
-                <div key={c.id} style={{
-                  position:'absolute',left:p.x,top:p.y,width:layout.w,height:layout.h,
-                  transition:`left ${cardTransDur}ms ease-in-out,top ${cardTransDur}ms ease-in-out,transform ${cardTransDur}ms ease-in-out,background-color 160ms,border-color 160ms`,
-                  transitionDelay:`${p.delay}ms`,transform:`rotate(${p.rotation}deg)`,
-                  borderRadius:Math.max(2,Math.floor(layout.w/7)),
-                  backgroundColor:bg,border:`${Math.max(1,Math.floor(layout.w/14))}px solid ${bdr}`,
-                  boxShadow:fd?'0 2px 5px rgba(0,0,0,0.20)':'0 1px 2px rgba(0,0,0,0.10)',boxSizing:'border-box',
+              <div className="relative bg-white flex-shrink-0 overflow-hidden" style={{width:CANVAS_W,height:canvasH,transition:'height 400ms ease'}}>
+                <div className="absolute inset-y-0 transition-all duration-500" style={{
+                  left:COL_CX.left-COL_W/2-4,width:COL_W+8,
+                  background:showSplit?'rgba(14,165,160,0.04)':'transparent',
+                  borderRight:showSplit?'1px dashed rgba(14,165,160,0.2)':'none',
                 }}/>
-              )
-            })}
-            {showColStats&&(
-              <>
-                <ColStatLabel cx={COL_CX.left}  n={leftStats.n}  s={leftStats.s}  p={leftStats.p}  highlight={highlightSim} layout={layout}/>
-                <ColStatLabel cx={COL_CX.right} n={rightStats.n} s={rightStats.s} p={rightStats.p} highlight={highlightSim} layout={layout}/>
-              </>
-            )}
-          </div>
+                <div className="absolute inset-y-0 transition-all duration-500" style={{
+                  left:COL_CX.right-COL_W/2-4,width:COL_W+8,
+                  background:showSplit?'rgba(14,165,160,0.04)':'transparent',
+                  borderLeft:showSplit?'1px dashed rgba(14,165,160,0.2)':'none',
+                }}/>
+                {cases.map(c => {
+                  const p  = positions.get(c.id) ?? {x:-50,y:-50,rotation:0,delay:0,faceDown:false}
+                  const fd = p.faceDown
+                  const isSuccess = c.response===1
+                  const bg  = fd?'#1A8C80':isSuccess?'#2EC4B6':'#E2E8F0'
+                  const bdr = fd?'#0D6B63':isSuccess?'#1A8C80':'#CBD5E1'
+                  return (
+                    <div key={c.id} style={{
+                      position:'absolute',left:p.x,top:p.y,width:layout.w,height:layout.h,
+                      transition:`left ${cardTransDur}ms ease-in-out,top ${cardTransDur}ms ease-in-out,transform ${cardTransDur}ms ease-in-out,background-color 160ms,border-color 160ms`,
+                      transitionDelay:`${p.delay}ms`,transform:`rotate(${p.rotation}deg)`,
+                      borderRadius:Math.max(2,Math.floor(layout.w/7)),
+                      backgroundColor:bg,border:`${Math.max(1,Math.floor(layout.w/14))}px solid ${bdr}`,
+                      boxShadow:fd?'0 2px 5px rgba(0,0,0,0.20)':'0 1px 2px rgba(0,0,0,0.10)',boxSizing:'border-box',
+                    }}/>
+                  )
+                })}
+                {showColStats&&(
+                  <>
+                    <ColStatLabel cx={COL_CX.left} n={leftStats.n} s={leftStats.s} p={leftStats.p} highlight={highlightSim} layout={layout}/>
+                    <ColStatLabel cx={COL_CX.right} n={rightStats.n} s={rightStats.s} p={rightStats.p} highlight={highlightSim} layout={layout}/>
+                  </>
+                )}
+              </div>
 
-          {/* Legend + caption */}
-          <div className="flex-shrink-0 border-t border-[var(--color-border)] bg-slate-50 px-3 py-2" style={{width:CANVAS_W}}>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
-                <span className="inline-block rounded-sm bg-[#2EC4B6] flex-shrink-0" style={{width:8,height:13,boxShadow:'0 1px 2px rgba(0,0,0,0.15)'}}/>
-                {config.successLabel}
+              <div className="flex-shrink-0 border-t border-[var(--color-border)] bg-slate-50 px-3 py-2" style={{width:CANVAS_W}}>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
+                    <span className="inline-block rounded-sm bg-[#2EC4B6] flex-shrink-0" style={{width:8,height:13,boxShadow:'0 1px 2px rgba(0,0,0,0.15)'}}/>
+                    {config.successLabel}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
+                    <span className="inline-block rounded-sm bg-[#E2E8F0] border border-[#CBD5E1] flex-shrink-0" style={{width:8,height:13}}/>
+                    {config.failureLabel}
+                  </div>
+                  <span className="ml-auto text-[10px] italic text-[var(--color-muted)]">{CAPTIONS[stage]}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
-                <span className="inline-block rounded-sm bg-[#E2E8F0] border border-[#CBD5E1] flex-shrink-0" style={{width:8,height:13}}/>
-                {config.failureLabel}
-              </div>
-              <span className="ml-auto text-[10px] italic text-[var(--color-muted)]">{CAPTIONS[stage]}</span>
             </div>
           </div>
         </div>
 
-        {/* Hypotheses + obs/sim table */}
-        <div className="flex-1 flex flex-col gap-3 p-4 overflow-y-auto">
-          {/* Obs/sim table */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden flex-shrink-0">
+        {/* Stats + hypotheses */}
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(240px,0.65fr)]">
+          <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
             <div className="grid text-xs" style={{gridTemplateColumns:'auto 1fr 1fr 1fr'}}>
               <div className="px-2 py-1.5 bg-slate-50 border-b border-[var(--color-border)]"/>
               {[config.label1, config.label2, 'p̂₁ − p̂₂'].map(h=>(
@@ -785,28 +783,34 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
             </div>
           </div>
 
-          {/* H₀ / H₁ */}
-          <div className="flex-shrink-0 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2 text-xs text-[var(--color-muted)] space-y-0.5">
-            <div><span className="font-semibold">H₀:</span> p₁ − p₂ = {nullDiff}</div>
-            <div><span className="font-semibold">H₁:</span> {altStatement}</div>
+          <div className="space-y-3">
+            <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-3 text-xs text-[var(--color-muted)] space-y-1">
+              <div><span className="font-semibold">H₀:</span> p₁ − p₂ = {nullDiff}</div>
+              <div><span className="font-semibold">H₁:</span> {altStatement}</div>
+            </div>
+            <div className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-3 text-xs text-[var(--color-muted)] grid grid-cols-3 gap-2">
+              <span>n₁={data.n1}</span>
+              <span>n₂={data.n2}</span>
+              <span>N={cases.length}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Bottom half: null distribution full width ── */}
-      <div className="flex-1 min-h-0 flex flex-col p-4 gap-2">
-        <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)] flex-shrink-0">Null Distribution</span>
-        <div className="flex-1 min-h-0" style={{minHeight: nullPanelHeight}}>
-          {simCount===0
-            ?<div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">Run simulations to build the null distribution</div>
-            :<NullDistPlot values={nullDist} diffObs={data.diffObs} alternative={alternative}/>
-          }
-        </div>
-        <div className="flex items-center gap-3 pt-2 border-t border-[var(--color-border)] flex-shrink-0">
-          <span className="text-xs text-[var(--color-muted)]">Extreme: <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}</span>
-          <span className="ml-auto text-sm font-bold text-[var(--color-accent)]">
-            {pValue!==null?`p ≈ ${pValue<0.001?'< 0.001':pValue.toFixed(4)}`:'p = —'}
-          </span>
+        {/* Null distribution */}
+        <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 flex flex-col gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)] flex-shrink-0">Null Distribution</span>
+          <div className="min-h-0" style={{minHeight: nullPanelHeight}}>
+            {simCount===0
+              ?<div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">Run simulations to build the null distribution</div>
+              :<NullDistPlot values={nullDist} diffObs={data.diffObs} alternative={alternative}/>
+            }
+          </div>
+          <div className="flex items-center gap-3 pt-2 border-t border-[var(--color-border)] flex-shrink-0">
+            <span className="text-xs text-[var(--color-muted)]">Extreme: <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}</span>
+            <span className="ml-auto text-sm font-bold text-[var(--color-accent)]">
+              {pValue!==null?`p ≈ ${pValue<0.001?'< 0.001':pValue.toFixed(4)}`:'p = —'}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -838,9 +842,6 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
           className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
           Reset
         </button>
-        <div className="ml-auto text-[10px] text-[var(--color-muted)] space-x-2">
-          <span>n₁={data.n1}</span><span>n₂={data.n2}</span><span>N={cases.length}</span>
-        </div>
       </div>
     </div>
   )

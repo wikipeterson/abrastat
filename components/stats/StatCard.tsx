@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { SummaryResult, FrequencyRow } from '@/types'
 import { linearRegression, twoWayTable } from '@/lib/statistics'
 import { ManualTwoWayTableSnapshot } from '@/lib/exploreTypes'
+import { writeClipboardTable } from '@/lib/clipboardTable'
 
 const STAT_TOOLTIPS: Record<string, string> = {
   n: 'The number of non-missing values in this column.',
@@ -71,8 +72,8 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 export function NumericStatCard({ result }: { result: SummaryResult }) {
-  function copyAsTable() {
-    const rows = [
+  async function copyAsTable() {
+    const rows: Array<Array<string | number>> = [
       ['Statistic', 'Value'],
       ['n', result.n],
       ['Mean', result.mean],
@@ -84,14 +85,14 @@ export function NumericStatCard({ result }: { result: SummaryResult }) {
       ['Q3', result.q3],
       ['Max', result.max],
     ]
-    navigator.clipboard.writeText(rows.map(r => r.join('\t')).join('\n'))
+    await writeClipboardTable(rows)
   }
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-semibold text-[var(--color-text)] truncate">{result.column}</h3>
-        <button onClick={copyAsTable} className="text-xs text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors ml-2 flex-shrink-0">
+        <button onClick={() => void copyAsTable()} className="text-xs text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors ml-2 flex-shrink-0">
           Copy as Table
         </button>
       </div>
@@ -143,16 +144,16 @@ export function LinearRegressionCard({ xName, yName, xs, ys }: { xName: string; 
   const strength = absR >= 0.8 ? 'strong' : absR >= 0.5 ? 'moderate' : absR >= 0.3 ? 'weak' : 'very weak'
   const interceptSign = intercept >= 0 ? '+' : '−'
 
-  function copyRegression() {
-    const text = [
-      `Linear Regression: ${yName} vs ${xName}`,
-      `Equation\tŷ = ${fmt(slope)}x ${interceptSign} ${fmt(Math.abs(intercept))}`,
-      `r\t${r.toFixed(4)}`,
-      `r²\t${r2.toFixed(4)}`,
-      `Slope\t${fmt(slope)}`,
-      `Intercept\t${fmt(intercept)}`,
-    ].join('\n')
-    navigator.clipboard.writeText(text)
+  async function copyRegression() {
+    const rows: Array<Array<string | number>> = [
+      ['Linear Regression', `${yName} vs ${xName}`],
+      ['Equation', `ŷ = ${fmt(slope)}x ${interceptSign} ${fmt(Math.abs(intercept))}`],
+      ['r', r.toFixed(4)],
+      ['r²', r2.toFixed(4)],
+      ['Slope', fmt(slope)],
+      ['Intercept', fmt(intercept)],
+    ]
+    await writeClipboardTable(rows)
   }
 
   return (
@@ -161,7 +162,7 @@ export function LinearRegressionCard({ xName, yName, xs, ys }: { xName: string; 
         <h3 className="font-semibold text-[var(--color-text)]">
           Linear Regression — <span className="text-[var(--color-accent)]">{yName}</span> vs <span className="text-[var(--color-accent)]">{xName}</span>
         </h3>
-        <button onClick={copyRegression} className="text-xs text-[var(--color-muted)] hover:text-[var(--color-accent)] flex-shrink-0 ml-2">
+        <button onClick={() => void copyRegression()} className="text-xs text-[var(--color-muted)] hover:text-[var(--color-accent)] flex-shrink-0 ml-2">
           Copy as Table
         </button>
       </div>
@@ -223,6 +224,40 @@ function buildTwoWayCopiedTableText(
   return [header, ...body, totals].map(row => row.join('\t')).join('\n')
 }
 
+function buildTwoWayCopiedTableRows(
+  rowLabels: string[],
+  colLabels: string[],
+  counts: number[][],
+  displayAName: string,
+  displayBName: string,
+  mode: TableMode,
+) {
+  const rowTotals = counts.map(row => row.reduce((s, v) => s + v, 0))
+  const colTotals = colLabels.map((_, ci) => counts.reduce((s, row) => s + row[ci], 0))
+  const grandTotal = rowTotals.reduce((s, v) => s + v, 0)
+
+  function cellDisplay(count: number, ri: number, ci: number): string {
+    if (mode === 'count') return String(count)
+    if (mode === 'row') return rowTotals[ri] ? (count / rowTotals[ri] * 100).toFixed(1) + '%' : '—'
+    if (mode === 'col') return colTotals[ci] ? (count / colTotals[ci] * 100).toFixed(1) + '%' : '—'
+    return grandTotal ? (count / grandTotal * 100).toFixed(1) + '%' : '—'
+  }
+
+  function totalDisplay(val: number, base: number): string {
+    if (mode === 'count') return String(val)
+    return base ? (val / base * 100).toFixed(1) + '%' : '—'
+  }
+
+  const header = [`${displayAName} \\ ${displayBName}`, ...colLabels, 'Total']
+  const body = rowLabels.map((rowLabel, ri) => [
+    rowLabel,
+    ...colLabels.map((_, ci) => cellDisplay(counts[ri][ci], ri, ci)),
+    totalDisplay(rowTotals[ri], grandTotal),
+  ])
+  const totals = ['Total', ...colLabels.map((_, ci) => totalDisplay(colTotals[ci], grandTotal)), mode === 'count' ? String(grandTotal) : '100%']
+  return [header, ...body, totals]
+}
+
 export function TwoWayTableCard({
   colAName,
   colBName,
@@ -271,8 +306,8 @@ export function TwoWayTableCard({
   async function copyTable() {
     try {
       setIsCopying(true)
-      await navigator.clipboard.writeText(
-        buildTwoWayCopiedTableText(rowLabels, colLabels, counts, displayAName, displayBName, mode)
+      await writeClipboardTable(
+        buildTwoWayCopiedTableRows(rowLabels, colLabels, counts, displayAName, displayBName, mode)
       )
     } finally {
       window.setTimeout(() => setIsCopying(false), 400)
@@ -382,12 +417,12 @@ export function NumericStatsTable({
   const showLabel = !!labelHeader
 
   function copyTable() {
-    const header = [...(showLabel ? [labelHeader!] : []), ...STAT_COLS.map(c => c.label)]
-    const dataRows = rows.filter(r => r.summary).map(r => [
+    const header: Array<string | number> = [...(showLabel ? [labelHeader!] : []), ...STAT_COLS.map(c => c.label)]
+    const dataRows: Array<Array<string | number>> = rows.filter(r => r.summary).map(r => [
       ...(showLabel ? [r.label ?? '—'] : []),
       ...STAT_COLS.map(c => fmt(c.get(r.summary!))),
     ])
-    navigator.clipboard.writeText([header, ...dataRows].map(r => r.join('\t')).join('\n'))
+    void writeClipboardTable([header, ...dataRows])
   }
 
   return (

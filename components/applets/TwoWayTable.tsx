@@ -5,6 +5,7 @@ import { useStore } from '@/lib/store'
 import { getStringValues } from '@/lib/gridHelpers'
 import { DropZone } from '@/components/explore/DropZone'
 import { ManualTwoWayTableSnapshot } from '@/lib/exploreTypes'
+import { writeClipboardTable } from '@/lib/clipboardTable'
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type InputMode = 'raw' | 'manual'
@@ -295,6 +296,44 @@ function buildCopiedTableText(data: TwoWayData, view: TableView) {
   return [header, ...body, totals].map(row => row.join('\t')).join('\n')
 }
 
+function buildCopiedTableRows(data: TwoWayData, view: TableView) {
+  const rTotals = getRowTotals(data.cells)
+  const cTotals = getColTotals(data.cells, data.colLabels.length)
+  const grand = getGrandTotal(data.cells)
+
+  function fmt(n: number, isPercent: boolean) {
+    return isPercent ? `${n.toFixed(1)}%` : String(n)
+  }
+
+  function cellDisplay(ri: number, ci: number): string {
+    const raw = data.cells[ri][ci]
+    if (view === 'counts') return String(raw)
+    if (view === 'row') return rTotals[ri] ? fmt((raw / rTotals[ri]) * 100, true) : '—'
+    return cTotals[ci] ? fmt((raw / cTotals[ci]) * 100, true) : '—'
+  }
+
+  function rowTotalDisplay(ri: number): string {
+    if (view === 'counts') return String(rTotals[ri])
+    if (view === 'row') return '100%'
+    return grand ? fmt((rTotals[ri] / grand) * 100, true) : '—'
+  }
+
+  function colTotalDisplay(ci: number): string {
+    if (view === 'counts') return String(cTotals[ci])
+    if (view === 'col') return '100%'
+    return grand ? fmt((cTotals[ci] / grand) * 100, true) : '—'
+  }
+
+  const header = [data.explName, ...data.colLabels, 'Total']
+  const body = data.rowLabels.map((rowLabel, ri) => [
+    rowLabel,
+    ...data.colLabels.map((_, ci) => cellDisplay(ri, ci)),
+    rowTotalDisplay(ri),
+  ])
+  const totals = ['Total', ...data.colLabels.map((_, ci) => colTotalDisplay(ci)), view === 'counts' ? String(grand) : '100%']
+  return [header, ...body, totals]
+}
+
 // ─── Applet ───────────────────────────────────────────────────────────────────
 
 interface TwoWayTableProps {
@@ -489,7 +528,7 @@ export function TwoWayTable({
           onClick={async () => {
             try {
               setIsCopying(true)
-              await navigator.clipboard.writeText(buildCopiedTableText(data, tableView))
+              await writeClipboardTable(buildCopiedTableRows(data, tableView))
             } finally {
               window.setTimeout(() => setIsCopying(false), 400)
             }

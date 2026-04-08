@@ -111,17 +111,20 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
         )}
 
         <button
+          type="button"
           onClick={e => {
             e.stopPropagation()
             if (menuMode === 'closed') {
               const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
-              setMenuPos({ x: rect.left, y: rect.bottom + 4 })
+              setMenuPos({ x: rect.right - 188, y: rect.bottom + 4 })
               setMenuMode('main')
             } else {
               setMenuMode('closed')
             }
           }}
-          className="opacity-60 hover:opacity-100"
+          className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+          title="Variable menu"
+          aria-label={`Open menu for ${column.name}`}
         >
           <ChevronDown size={12} />
         </button>

@@ -47,6 +47,7 @@ const PROBABILITY_CARD_OPTIONS: CardOption[] = [
 const INFERENCE_CARD_OPTIONS: CardOption[] = [
   { type: 'means',                  icon: '📐', label: 'Means' },
   { type: 'proportions',            icon: '⚖️', label: 'Proportions' },
+  { type: 'two-mean-randomization', icon: '📏', label: 'Two-Mean Randomization Test' },
   { type: 'two-prop-randomization', icon: '🎲', label: 'Two-Prop Randomization Test' },
 ]
 

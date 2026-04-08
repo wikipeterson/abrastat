@@ -36,11 +36,11 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
 
   useEffect(() => {
     if (menuMode === 'closed') return
-    function handleClick(e: MouseEvent) {
+    function handleClick(e: PointerEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuMode('closed')
     }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    window.addEventListener('pointerdown', handleClick, true)
+    return () => window.removeEventListener('pointerdown', handleClick, true)
   }, [menuMode])
 
   function commitRename() {

@@ -256,6 +256,45 @@ function OutputTable({ data, view }: { data: TwoWayData; view: TableView }) {
   )
 }
 
+function buildCopiedTableText(data: TwoWayData, view: TableView) {
+  const rTotals = getRowTotals(data.cells)
+  const cTotals = getColTotals(data.cells, data.colLabels.length)
+  const grand = getGrandTotal(data.cells)
+
+  function fmt(n: number, isPercent: boolean) {
+    return isPercent ? `${n.toFixed(1)}%` : String(n)
+  }
+
+  function cellDisplay(ri: number, ci: number): string {
+    const raw = data.cells[ri][ci]
+    if (view === 'counts') return String(raw)
+    if (view === 'row') return rTotals[ri] ? fmt((raw / rTotals[ri]) * 100, true) : '—'
+    return cTotals[ci] ? fmt((raw / cTotals[ci]) * 100, true) : '—'
+  }
+
+  function rowTotalDisplay(ri: number): string {
+    if (view === 'counts') return String(rTotals[ri])
+    if (view === 'row') return '100%'
+    return grand ? fmt((rTotals[ri] / grand) * 100, true) : '—'
+  }
+
+  function colTotalDisplay(ci: number): string {
+    if (view === 'counts') return String(cTotals[ci])
+    if (view === 'col') return '100%'
+    return grand ? fmt((cTotals[ci] / grand) * 100, true) : '—'
+  }
+
+  const header = [data.explName, ...data.colLabels, 'Total']
+  const body = data.rowLabels.map((rowLabel, ri) => [
+    rowLabel,
+    ...data.colLabels.map((_, ci) => cellDisplay(ri, ci)),
+    rowTotalDisplay(ri),
+  ])
+  const totals = ['Total', ...data.colLabels.map((_, ci) => colTotalDisplay(ci)), view === 'counts' ? String(grand) : '100%']
+
+  return [header, ...body, totals].map(row => row.join('\t')).join('\n')
+}
+
 // ─── Applet ───────────────────────────────────────────────────────────────────
 
 interface TwoWayTableProps {
@@ -316,6 +355,7 @@ export function TwoWayTable({
   const explColId = isCardMode ? (colsColId ?? '') : explColIdLocal
   const respColId = isCardMode ? (rowsColId ?? '') : respColIdLocal
   const [tableView, setTableView] = useState<TableView>('counts')
+  const [isCopying, setIsCopying] = useState(false)
 
   // Manual table state
   const [mExplName, setMExplName] = useState('Group')
@@ -445,6 +485,19 @@ export function TwoWayTable({
             </button>
           )
         )}
+        <button
+          onClick={async () => {
+            try {
+              setIsCopying(true)
+              await navigator.clipboard.writeText(buildCopiedTableText(data, tableView))
+            } finally {
+              window.setTimeout(() => setIsCopying(false), 400)
+            }
+          }}
+          className="ml-auto rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
+        >
+          {isCopying ? 'Copied' : 'Copy Table'}
+        </button>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 overflow-x-auto">

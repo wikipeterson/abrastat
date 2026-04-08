@@ -84,15 +84,14 @@ function pilePos(id: number, layout: CardLayout, pileCY: number) {
 function shufflePhasePos(id: number, phase: number, layout: CardLayout, pileCY: number) {
   const s = phase * 13  // unique salt per phase
   if (phase % 2 === 1) {
-    // Spread: fly outward in a deterministic random direction
-    // Two independent components give a peaked (triangular-ish) distribution
-    // so most cards go medium distance, some go very far, some stay close
-    const angle = cardHash(id, s + 3) * Math.PI * 2
-    const dist  = 18 + cardHash(id, s + 4) * 70 + cardHash(id, s + 11) * 90  // 18–178 px
+    // Spread: use independent x/y offsets so the cards scatter chaotically
+    // instead of reading as a circular burst or spiral.
+    const spreadX = (cardHash(id, s + 3) - 0.5) * 220 + (cardHash(id, s + 4) - 0.5) * 120
+    const spreadY = (cardHash(id, s + 11) - 0.5) * 150 + (cardHash(id, s + 12) - 0.5) * 90
     return {
-      x: COL_CX.center - layout.w/2 + Math.cos(angle) * dist,
-      y: pileCY         - layout.h/2 + Math.sin(angle) * dist,
-      rotation: (cardHash(id, s + 5) - 0.5) * 90,
+      x: COL_CX.center - layout.w/2 + spreadX,
+      y: pileCY         - layout.h/2 + spreadY,
+      rotation: (cardHash(id, s + 5) - 0.5) * 110,
     }
   } else {
     // Return: back to pile with a fresh arrangement

@@ -49,7 +49,7 @@ function getCanvasHeight(n1: number, n2: number): number {
   const maxN = Math.max(n1, n2)
   const cols = Math.min(layout.perRow, maxN)
   const rows = Math.ceil(maxN / cols)
-  return Math.max(160, Math.min(HEADER_H + rows * layout.stepY + 28, 420))
+  return Math.max(140, Math.min(HEADER_H + rows * layout.stepY + 6, 250))
 }
 
 function getCardLayout(n: number): CardLayout {
@@ -573,10 +573,8 @@ function FractionInput({ label, numLabel, denLabel, numValue, denValue, onChange
 function ColStatLabel({ cx, n, s, p, highlight, layout }: {
   cx:number; n:number; s:number; p:number; highlight:boolean; layout:CardLayout
 }) {
-  const rows = Math.ceil(n/Math.max(1,layout.perRow))
-  const top  = HEADER_H + rows*layout.stepY + 6
   return (
-    <div style={{position:'absolute',left:cx,top,transform:'translateX(-50%)',textAlign:'center',pointerEvents:'none'}}>
+    <div style={{position:'absolute',left:cx,top:8,transform:'translateX(-50%)',textAlign:'center',pointerEvents:'none'}}>
       <div className={`rounded-lg px-2 py-0.5 text-[10px] font-semibold transition-colors ${highlight?'bg-[var(--color-accent)] text-white':'bg-slate-100 text-[var(--color-muted)]'}`}>
         {s}/{n} = {p.toFixed(3)}
       </div>
@@ -710,16 +708,22 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-4 space-y-4">
         <div className="grid gap-4 xl:grid-cols-[680px_minmax(320px,1fr)]">
           {/* Animation canvas */}
           <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
             <div className="overflow-x-auto flex justify-center">
               <div className="w-fit">
                 <div className="relative bg-slate-50 border-b border-[var(--color-border)] flex-shrink-0" style={{width:CANVAS_W,height:HEADER_H}}>
-                  <span style={{position:'absolute',left:COL_CX.left,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label1}</span>
+                  <span style={{position:'absolute',left:COL_CX.left,top:showColStats?28:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label1}</span>
                   {showCenter&&<span style={{position:'absolute',left:COL_CX.center,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,color:'var(--color-muted)'}}>Pooled</span>}
-                  <span style={{position:'absolute',left:COL_CX.right,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label2}</span>
+                  <span style={{position:'absolute',left:COL_CX.right,top:showColStats?28:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label2}</span>
+                  {showColStats&&(
+                    <>
+                      <ColStatLabel cx={COL_CX.left} n={leftStats.n} s={leftStats.s} p={leftStats.p} highlight={highlightSim} layout={layout}/>
+                      <ColStatLabel cx={COL_CX.right} n={rightStats.n} s={rightStats.s} p={rightStats.p} highlight={highlightSim} layout={layout}/>
+                    </>
+                  )}
                 </div>
 
                 <div className="relative bg-white flex-shrink-0 overflow-hidden" style={{width:CANVAS_W,height:canvasH,transition:'height 400ms ease'}}>
@@ -750,15 +754,9 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
                       }}/>
                     )
                   })}
-                  {showColStats&&(
-                    <>
-                      <ColStatLabel cx={COL_CX.left} n={leftStats.n} s={leftStats.s} p={leftStats.p} highlight={highlightSim} layout={layout}/>
-                      <ColStatLabel cx={COL_CX.right} n={rightStats.n} s={rightStats.s} p={rightStats.p} highlight={highlightSim} layout={layout}/>
-                    </>
-                  )}
                 </div>
 
-                <div className="flex-shrink-0 border-t border-[var(--color-border)] bg-slate-50 px-3 py-2" style={{width:CANVAS_W}}>
+                <div className="flex-shrink-0 border-t border-[var(--color-border)] bg-slate-50 px-3 py-1.5" style={{width:CANVAS_W}}>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
                       <span className="inline-block rounded-sm bg-[#2EC4B6] flex-shrink-0" style={{width:8,height:13,boxShadow:'0 1px 2px rgba(0,0,0,0.15)'}}/>

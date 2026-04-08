@@ -420,7 +420,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                 <span className="text-xs font-medium text-[var(--color-muted)] whitespace-nowrap">Values:</span>
                 {([
                   ['count', 'Counts'],
-                  ['row', 'Row %'],
+                  ['row', '%'],
                 ] as const).map(([mode, label]) => (
                   <button
                     key={mode}

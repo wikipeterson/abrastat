@@ -159,7 +159,7 @@ export function MosaicPlot({
         <div className="flex-shrink-0 flex gap-2 px-4 pt-2">
           {([
             ['count', 'Counts'],
-            ['row', 'Row %'],
+            ['row', '%'],
           ] as const).map(([nextMode, label]) => (
             <button
               key={nextMode}

@@ -301,7 +301,7 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
 }
 
 function getNullDistributionPanelHeight(values: number[]) {
-  return values.length === 0 ? 170 : 228
+  return values.length === 0 ? 140 : 180
 }
 
 // ── Step definitions ──────────────────────────────────────────────────────────
@@ -827,7 +827,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
         </div>
 
         {/* Null distribution */}
-        <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 flex flex-col gap-2">
+        <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 flex flex-col gap-1.5">
           <div className="flex items-center justify-between gap-3 flex-shrink-0">
             <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
             <label className="flex items-center gap-2 text-xs text-[var(--color-muted)] select-none">
@@ -840,13 +840,13 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
               <span>Overlay normal curve</span>
             </label>
           </div>
-          <div className="min-h-0" style={{minHeight: visibleNullPanelHeight}}>
+          <div className="min-h-0" style={{height: visibleNullPanelHeight}}>
             {simCount===0
               ?<div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">Run simulations to build the null distribution</div>
               :<NullDistPlot values={nullDist} diffObs={data.diffObs} alternative={alternative} showNormalCurve={showNormalCurve}/>
             }
           </div>
-          <div className="flex items-center gap-3 pt-2 border-t border-[var(--color-border)] flex-shrink-0">
+          <div className="flex items-center gap-3 pt-1.5 border-t border-[var(--color-border)] flex-shrink-0">
             <span className="text-xs text-[var(--color-muted)]">Extreme: <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}</span>
             <span className="ml-auto text-sm font-bold text-[var(--color-accent)]">
               {pValue!==null?`p ≈ ${pValue<0.001?'< 0.001':pValue.toFixed(4)}`:'p = —'}

@@ -234,38 +234,34 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
     const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length
     const sd = Math.sqrt(variance)
     if (!Number.isFinite(sd) || sd <= 0) return null
-    const peakPdf = 1 / (sd * Math.sqrt(2 * Math.PI))
-    return {
-      mean,
-      sd,
-      peakCount: values.length * peakPdf * bucket,
-    }
+    const samples = Array.from({ length: 81 }, (_, i) => {
+      const x = -1 + (2 * i) / 80
+      const z = (x - mean) / sd
+      const pdf = Math.exp(-0.5 * z * z) / (sd * Math.sqrt(2 * Math.PI))
+      return { x, expectedCount: values.length * pdf * bucket }
+    })
+    return { mean, sd, samples }
   })()
 
-  const yMaxCount = Math.max(maxStack, normalStats?.peakCount ?? 0) * 1.08
+  const maxCurveCount = normalStats ? Math.max(...normalStats.samples.map(sample => sample.expectedCount)) : 0
+  const yMaxCount = Math.max(maxStack, maxCurveCount) * 1.08
+  const topPad = 10
 
   const seenC2 = new Map<number,number>()
-  const dotStep = Math.max(1.25, Math.min(6, (PH - 8) / Math.max(1, yMaxCount)))
+  const dotStep = Math.max(1.25, Math.min(6, (PH - topPad) / Math.max(1, yMaxCount)))
   const dotR    = Math.max(1, dotStep/2 - 0.3)
   const circles = values.map(v => {
     const b  = Math.round(v / bucket) * bucket
     const si = seenC2.get(b) ?? 0
     seenC2.set(b, si+1)
-    return { cx:xOf(b), cy:PH - si*dotStep - dotR, extreme:isExtremeResult(v, diffObs, alternative) }
+    return { cx:xOf(b), cy:PH - (si + 1) * dotStep + dotStep / 2, extreme:isExtremeResult(v, diffObs, alternative) }
   })
 
   const normalPath = (() => {
     if (!normalStats) return ''
-    const points: string[] = []
-    for (let i = 0; i <= 80; i++) {
-      const x = -1 + (2 * i) / 80
-      const z = (x - normalStats.mean) / normalStats.sd
-      const pdf = Math.exp(-0.5 * z * z) / (normalStats.sd * Math.sqrt(2 * Math.PI))
-      const expectedCount = values.length * pdf * bucket
-      const y = PH - expectedCount * dotStep
-      points.push(`${xOf(x)},${Math.max(4, Math.min(PH, y))}`)
-    }
-    return points.join(' ')
+    return normalStats.samples
+      .map(sample => `${xOf(sample.x)},${Math.max(topPad, Math.min(PH, PH - sample.expectedCount * dotStep))}`)
+      .join(' ')
   })()
 
   const obsX = xOf(diffObs)

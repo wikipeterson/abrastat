@@ -319,7 +319,7 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
   const { grid, updateExploreCard, addTwoPropSimCard, exploreCards } = useStore()
 
   // Config
-  const [sourceMode, setSourceMode]     = useState<SourceMode>('data')
+  const [sourceMode, setSourceMode]     = useState<SourceMode>('manual')
   const [alternative, setAlternative]   = useState<Alternative>('less')
   const [nullDiff, setNullDiff]         = useState('0')
   const [successLevel, setSuccessLevel] = useState('')

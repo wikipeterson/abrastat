@@ -68,3 +68,24 @@ export interface FrequencyRow {
   count: number
   percent: number
 }
+
+export type FilterOp = '=' | '≠' | '<' | '≤' | '>' | '≥' | 'between' | 'is' | 'is not' | 'contains' | 'one of'
+
+export interface RowFilter {
+  id: string
+  colId: string
+  colName: string
+  colType: 'numeric' | 'categorical'
+  op: FilterOp
+  value: string
+  value2?: string
+}
+
+export interface RecodeRule {
+  id: string
+  minVal: string
+  minOp: '>=' | '>'
+  maxVal: string
+  maxOp: '<=' | '<'
+  label: string
+}

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import { User as FirebaseUser } from 'firebase/auth'
-import { ColumnType, GridState } from '@/types'
+import { ColumnType, GridState, RowFilter, RecodeRule } from '@/types'
 import { ExploreCard, CardConfig, DistributionPreFill, GraphCardConfig, SimResultsCardConfig, TableOutputCardConfig, TwoPropSimCardConfig, TwoMeanSimCardConfig } from './exploreTypes'
 import { createEmptyGrid } from './gridHelpers'
 import { computeColumnValues } from './formulaEval'
@@ -84,10 +84,6 @@ function deriveSimValue(
   return null
 }
 
-// ─── Chi-square context scanner ───────────────────────────────────────────────
-// Scans the most recent Two-Way Table card for a chi² test statistic so the
-// Distribution card can be pre-populated as a one-time snapshot.
-
 function scanChiSquareContext(
   cards: ExploreCard[],
   grid: GridState,
@@ -97,7 +93,6 @@ function scanChiSquareContext(
   const { rowsColId, colsColId } = tableCard.config
   if (!rowsColId || !colsColId) return undefined
 
-  // Use complete cases: only rows where BOTH values are non-blank
   const pairs = grid.rows
     .map(r => [String(r[rowsColId] ?? '').trim(), String(r[colsColId] ?? '').trim()] as [string, string])
     .filter(([a, b]) => a !== '' && b !== '')
@@ -105,7 +100,6 @@ function scanChiSquareContext(
   const colVals = pairs.map(p => p[1])
   if (rowVals.length < 2 || colVals.length < 2) return undefined
 
-  // Build observed counts
   const rowLabels = sortCategoryValues([...new Set(rowVals)])
   const colLabels = sortCategoryValues([...new Set(colVals)])
   const O: number[][] = rowLabels.map(r =>
@@ -181,6 +175,19 @@ interface AbraStatStore {
   toggleColumnSelection: (colId: string) => void
   setSelectedColumnIds: (ids: string[]) => void
 
+  // Row filters (non-destructive)
+  activeFilters: RowFilter[]
+  setRowFilters: (filters: RowFilter[]) => void
+
+  // Data operations
+  sortRows: (colId: string, direction: 'asc' | 'desc', scope: 'table' | 'column' | 'selected', selectedColIds: string[]) => void
+  addZScoreColumn: (colId: string) => { error: string | null }
+  addSequentialColumn: (name: string, start: number, increment: number, count: number) => void
+  stackColumns: (valueColIds: string[], keepColIds: string[], valueName: string, groupName: string) => { error: string | null }
+  unstackColumns: (valueColId: string, groupColId: string, idColId: string | null) => { error: string | null }
+  recodeColumn: (sourceColId: string, newName: string, rules: RecodeRule[]) => void
+  addRandomColumn: (name: string, dist: 'normal' | 'uniform' | 'binomial' | 'geometric', params: Record<string, number>, rowCount: number) => void
+
   // Explore canvas
   exploreCards: ExploreCard[]
   addExploreCard: (type: CardConfig['type'], position?: { x: number; y: number }) => void
@@ -216,7 +223,7 @@ interface AbraStatStore {
   pushSimResultsBatch: (cardId: string, rolls: number[][]) => void
   clearSimResults: (cardId: string) => void
 
-  // Inference canvas (separate state, same canvas model)
+  // Inference canvas
   inferenceCards: ExploreCard[]
   addInferenceCard: (type: CardConfig['type'], position?: { x: number; y: number }) => void
   removeInferenceCard: (id: string) => void
@@ -234,7 +241,7 @@ export const useStore = create<AbraStatStore>((set) => ({
   isDirty: false,
   undoStack: [],
 
-  setGrid: (grid) => set({ grid, isDirty: true, undoStack: [], selectedColumnIds: [] }),
+  setGrid: (grid) => set({ grid, isDirty: true, undoStack: [], selectedColumnIds: [], activeFilters: [] }),
 
   updateCell: (rowIndex, colId, value) => set(state => {
     const stack = [...state.undoStack, snapshot(state.grid)].slice(-MAX_UNDO)
@@ -276,7 +283,6 @@ export const useStore = create<AbraStatStore>((set) => ({
     const columns = [...state.grid.columns]
     const [moved] = columns.splice(fromIndex, 1)
     columns.splice(toIndex, 0, moved)
-    // rows are keyed by column ID so no row data changes
     return { grid: { ...state.grid, columns }, isDirty: true, undoStack: stack }
   }),
 
@@ -287,13 +293,18 @@ export const useStore = create<AbraStatStore>((set) => ({
       Object.fromEntries(Object.entries(r).filter(([k]) => k !== colId)) as Record<string, string | number>
     )
     const selectedColumnIds = state.selectedColumnIds.filter(id => id !== colId)
-    return { grid: { columns, rows }, isDirty: true, undoStack: stack, selectedColumnIds }
+    const activeFilters = state.activeFilters.filter(f => f.colId !== colId)
+    return { grid: { columns, rows }, isDirty: true, undoStack: stack, selectedColumnIds, activeFilters }
   }),
 
   renameColumn: (colId, newName) => set(state => {
     const stack = [...state.undoStack, snapshot(state.grid)].slice(-MAX_UNDO)
     const columns = state.grid.columns.map(c => c.id === colId ? { ...c, name: newName } : c)
-    return { grid: { ...state.grid, columns }, isDirty: true, undoStack: stack }
+    // Update filter colNames too
+    const activeFilters = state.activeFilters.map(f =>
+      f.colId === colId ? { ...f, colName: newName } : f
+    )
+    return { grid: { ...state.grid, columns }, isDirty: true, undoStack: stack, activeFilters }
   }),
 
   setColumnType: (colId, type) => set(state => {
@@ -338,7 +349,262 @@ export const useStore = create<AbraStatStore>((set) => ({
     isDirty: false,
     undoStack: [],
     selectedColumnIds: [],
+    activeFilters: [],
     exploreCards: [createDataGridCard()],
+  }),
+
+  selectedColumnIds: [],
+  toggleColumnSelection: (colId) => set(state => {
+    const ids = state.selectedColumnIds.includes(colId)
+      ? state.selectedColumnIds.filter(id => id !== colId)
+      : [...state.selectedColumnIds, colId]
+    return { selectedColumnIds: ids }
+  }),
+  setSelectedColumnIds: (ids) => set({ selectedColumnIds: ids }),
+
+  // ─── Row filters ─────────────────────────────────────────────────────────────
+  activeFilters: [],
+  setRowFilters: (filters) => set({ activeFilters: filters }),
+
+  // ─── Data operations ─────────────────────────────────────────────────────────
+
+  sortRows: (colId, direction, scope, selectedColIds) => set(state => {
+    const stack = [...state.undoStack, snapshot(state.grid)].slice(-MAX_UNDO)
+    const { rows } = state.grid
+
+    const cmp = (a: string | number, b: string | number) => {
+      const as = String(a), bs = String(b)
+      if (as === '' && bs === '') return 0
+      if (as === '') return 1
+      if (bs === '') return -1
+      const an = Number(a), bn = Number(b)
+      if (isFinite(an) && isFinite(bn)) return direction === 'asc' ? an - bn : bn - an
+      return direction === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as)
+    }
+
+    if (scope === 'table') {
+      const sorted = [...rows].sort((a, b) => cmp(a[colId] ?? '', b[colId] ?? ''))
+      return { grid: { ...state.grid, rows: sorted }, isDirty: true, undoStack: stack }
+    }
+
+    if (scope === 'column') {
+      const vals = rows.map(r => r[colId] ?? '')
+      const sorted = [...vals].sort(cmp)
+      const newRows = rows.map((r, i) => ({ ...r, [colId]: sorted[i] }))
+      return { grid: { ...state.grid, rows: newRows }, isDirty: true, undoStack: stack }
+    }
+
+    // scope === 'selected': sort key col + all selected cols together
+    const colIds = [...new Set([colId, ...selectedColIds])]
+    const indices = rows.map((_, i) => i)
+    indices.sort((a, b) => cmp(rows[a][colId] ?? '', rows[b][colId] ?? ''))
+    const newRows = rows.map((row, i) => {
+      const src = indices[i]
+      const updates: Record<string, string | number> = {}
+      colIds.forEach(id => { updates[id] = rows[src][id] ?? '' })
+      return { ...row, ...updates }
+    })
+    return { grid: { ...state.grid, rows: newRows }, isDirty: true, undoStack: stack }
+  }),
+
+  addZScoreColumn: (colId) => {
+    let result: { error: string | null } = { error: null }
+    set(state => {
+      const col = state.grid.columns.find(c => c.id === colId)
+      if (!col) { result = { error: 'Column not found' }; return state }
+      const nums = state.grid.rows
+        .map(r => r[colId])
+        .filter(v => v !== '' && v !== undefined && isFinite(Number(v)))
+        .map(Number)
+      if (nums.length < 2) { result = { error: 'Need at least 2 numeric values' }; return state }
+      const mean = nums.reduce((s, v) => s + v, 0) / nums.length
+      const sd = Math.sqrt(nums.reduce((s, v) => s + (v - mean) ** 2, 0) / (nums.length - 1))
+      if (sd === 0) { result = { error: 'Standard deviation is 0 — all values are identical' }; return state }
+      const id = uuid()
+      const newCol = { id, name: `z_${col.name}`, type: 'numeric' as ColumnType, width: 140 }
+      const columns = [...state.grid.columns, newCol]
+      const rows = state.grid.rows.map(r => {
+        const v = r[colId]
+        const z = v !== '' && v !== undefined && isFinite(Number(v))
+          ? parseFloat(((Number(v) - mean) / sd).toFixed(4))
+          : ''
+        return { ...r, [id]: z }
+      })
+      const stack = [...state.undoStack, snapshot(state.grid)].slice(-MAX_UNDO)
+      return { grid: { columns, rows }, isDirty: true, undoStack: stack }
+    })
+    return result
+  },
+
+  addSequentialColumn: (name, start, increment, count) => set(state => {
+    const stack = [...state.undoStack, snapshot(state.grid)].slice(-MAX_UNDO)
+    const id = uuid()
+    const newCol = { id, name, type: 'numeric' as ColumnType, width: 140 }
+    const columns = [...state.grid.columns, newCol]
+    const rows = state.grid.rows.map((r, i) => ({
+      ...r,
+      [id]: i < count ? parseFloat((start + i * increment).toPrecision(12)) : '',
+    }))
+    return { grid: { columns, rows }, isDirty: true, undoStack: stack }
+  }),
+
+  stackColumns: (valueColIds, keepColIds, valueName, groupName) => {
+    let result: { error: string | null } = { error: null }
+    set(state => {
+      if (valueColIds.length === 0) { result = { error: 'Select at least one column to stack' }; return state }
+      const keepCols = keepColIds.map(id => state.grid.columns.find(c => c.id === id)).filter(Boolean) as typeof state.grid.columns
+      const valueCols = valueColIds.map(id => state.grid.columns.find(c => c.id === id)).filter(Boolean) as typeof state.grid.columns
+      if (valueCols.length === 0) { result = { error: 'No valid value columns found' }; return state }
+
+      const groupId = uuid()
+      const valueId = uuid()
+      const newColumns = [
+        ...keepCols,
+        { id: groupId, name: groupName, type: 'categorical' as ColumnType, width: 140 },
+        { id: valueId, name: valueName, type: 'numeric' as ColumnType, width: 140 },
+      ]
+
+      const dataRows = state.grid.rows.filter(r =>
+        Object.values(r).some(v => String(v).trim() !== '')
+      )
+
+      const newRows: Record<string, string | number>[] = []
+      for (const row of dataRows) {
+        for (const col of valueCols) {
+          const newRow: Record<string, string | number> = {}
+          for (const kc of keepCols) newRow[kc.id] = row[kc.id] ?? ''
+          newRow[groupId] = col.name
+          newRow[valueId] = row[col.id] ?? ''
+          newRows.push(newRow)
+        }
+      }
+
+      const stack = [...state.undoStack, snapshot(state.grid)].slice(-MAX_UNDO)
+      return { grid: { columns: newColumns, rows: newRows }, isDirty: true, undoStack: stack }
+    })
+    return result
+  },
+
+  unstackColumns: (valueColId, groupColId, idColId) => {
+    let result: { error: string | null } = { error: null }
+    set(state => {
+      const groupCol = state.grid.columns.find(c => c.id === groupColId)
+      const valueCol = state.grid.columns.find(c => c.id === valueColId)
+      if (!groupCol || !valueCol) { result = { error: 'Invalid column selection' }; return state }
+
+      const dataRows = state.grid.rows.filter(r => String(r[groupColId] ?? '').trim() !== '')
+      const groups = [...new Set(dataRows.map(r => String(r[groupColId])))]
+      if (groups.length === 0) { result = { error: 'No data to unstack' }; return state }
+      if (groups.length > 50) { result = { error: 'Too many groups to unstack (max 50)' }; return state }
+
+      const otherCols = state.grid.columns.filter(c => c.id !== groupColId && c.id !== valueColId)
+      const newValueCols = groups.map(g => ({
+        id: uuid(),
+        name: g,
+        type: 'numeric' as ColumnType,
+        width: 140,
+      }))
+      const newColumns = [...otherCols, ...newValueCols]
+
+      const stack = [...state.undoStack, snapshot(state.grid)].slice(-MAX_UNDO)
+
+      if (idColId) {
+        const idMap = new Map<string, Record<string, string | number>>()
+        for (const row of dataRows) {
+          const idVal = String(row[idColId] ?? '')
+          if (!idMap.has(idVal)) {
+            const newRow: Record<string, string | number> = {}
+            otherCols.forEach(c => { newRow[c.id] = row[c.id] ?? '' })
+            newValueCols.forEach(nc => { newRow[nc.id] = '' })
+            idMap.set(idVal, newRow)
+          }
+          const r = idMap.get(idVal)!
+          const gi = groups.indexOf(String(row[groupColId]))
+          if (gi >= 0) r[newValueCols[gi].id] = row[valueColId] ?? ''
+        }
+        return { grid: { columns: newColumns, rows: [...idMap.values()] }, isDirty: true, undoStack: stack }
+      } else {
+        const groupCounters = new Map<string, number>()
+        const outputMap = new Map<number, Record<string, string | number>>()
+        for (const row of dataRows) {
+          const groupVal = String(row[groupColId])
+          const cnt = groupCounters.get(groupVal) ?? 0
+          groupCounters.set(groupVal, cnt + 1)
+          if (!outputMap.has(cnt)) {
+            const newRow: Record<string, string | number> = {}
+            otherCols.forEach(c => { newRow[c.id] = row[c.id] ?? '' })
+            newValueCols.forEach(nc => { newRow[nc.id] = '' })
+            outputMap.set(cnt, newRow)
+          }
+          const r = outputMap.get(cnt)!
+          const gi = groups.indexOf(groupVal)
+          if (gi >= 0) r[newValueCols[gi].id] = row[valueColId] ?? ''
+        }
+        const newRows = [...outputMap.entries()].sort((a, b) => a[0] - b[0]).map(e => e[1])
+        return { grid: { columns: newColumns, rows: newRows }, isDirty: true, undoStack: stack }
+      }
+    })
+    return result
+  },
+
+  recodeColumn: (sourceColId, newName, rules) => set(state => {
+    const stack = [...state.undoStack, snapshot(state.grid)].slice(-MAX_UNDO)
+    const id = uuid()
+    const newCol = { id, name: newName, type: 'categorical' as ColumnType, width: 140 }
+    const columns = [...state.grid.columns, newCol]
+    const rows = state.grid.rows.map(r => {
+      const v = r[sourceColId]
+      const n = Number(v)
+      let label = ''
+      if (v !== '' && v !== undefined && isFinite(n)) {
+        for (const rule of rules) {
+          const minOk = rule.minVal === '' || (rule.minOp === '>=' ? n >= Number(rule.minVal) : n > Number(rule.minVal))
+          const maxOk = rule.maxVal === '' || (rule.maxOp === '<=' ? n <= Number(rule.maxVal) : n < Number(rule.maxVal))
+          if (minOk && maxOk) { label = rule.label; break }
+        }
+      }
+      return { ...r, [id]: label }
+    })
+    return { grid: { columns, rows }, isDirty: true, undoStack: stack }
+  }),
+
+  addRandomColumn: (name, dist, params, rowCount) => set(state => {
+    const stack = [...state.undoStack, snapshot(state.grid)].slice(-MAX_UNDO)
+    const id = uuid()
+    const newCol = { id, name, type: 'numeric' as ColumnType, width: 140 }
+    const columns = [...state.grid.columns, newCol]
+
+    function sample(): number {
+      if (dist === 'normal') {
+        const u = Math.max(1e-10, Math.random()), v = Math.random()
+        const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)
+        return params.mean + params.sd * z
+      }
+      if (dist === 'uniform') {
+        return Math.floor(Math.random() * (params.max - params.min + 1)) + params.min
+      }
+      if (dist === 'binomial') {
+        let k = 0
+        for (let i = 0; i < params.n; i++) if (Math.random() < params.p) k++
+        return k
+      }
+      // geometric
+      let k = 0
+      while (Math.random() >= params.p) k++
+      return k + 1
+    }
+
+    const emptyRowTemplate = Object.fromEntries(state.grid.columns.map(c => [c.id, '']))
+    const baseRows = state.grid.rows.length < rowCount
+      ? [...state.grid.rows, ...Array.from({ length: rowCount - state.grid.rows.length }, () => ({ ...emptyRowTemplate }))]
+      : state.grid.rows
+
+    const rows = baseRows.map((r, i) => ({
+      ...r,
+      [id]: i < rowCount ? parseFloat(sample().toFixed(dist === 'normal' ? 4 : 0)) : '',
+    }))
+
+    return { grid: { columns, rows }, isDirty: true, undoStack: stack }
   }),
 
   // ─── Explore canvas ──────────────────────────────────────────────────────────
@@ -407,7 +673,6 @@ export const useStore = create<AbraStatStore>((set) => ({
   addTwoPropSimCard: (config, sourceCard) => {
     const id = uuid()
     set(state => {
-      // Place the sim card to the right of the source card
       const x = sourceCard.x + sourceCard.width + 40
       const y = sourceCard.y
       const width = 1120, height = 860
@@ -465,16 +730,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       const width = 620
       const height = 520
       const { x, y } = findOpenCardPosition(state.exploreCards, position.x, position.y, width, height)
-      return {
-        exploreCards: [...state.exploreCards, {
-          id,
-          config,
-          x,
-          y,
-          width,
-          height,
-        }],
-      }
+      return { exploreCards: [...state.exploreCards, { id, config, x, y, width, height }] }
     })
     return id
   },
@@ -484,16 +740,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       const width = 960
       const height = 740
       const { x, y } = findOpenCardPosition(state.exploreCards, position.x, position.y, width, height)
-      return {
-        exploreCards: [...state.exploreCards, {
-          id,
-          config,
-          x,
-          y,
-          width,
-          height,
-        }],
-      }
+      return { exploreCards: [...state.exploreCards, { id, config, x, y, width, height }] }
     })
     return id
   },
@@ -504,14 +751,7 @@ export const useStore = create<AbraStatStore>((set) => ({
             const cfg = c.config as SimResultsCardConfig
             const derived = deriveSimValue(roll, cfg.trackedMode, cfg.valueMode)
             if (derived == null) return c
-            return {
-              ...c,
-              config: {
-                ...cfg,
-                rolls: [...cfg.rolls, roll],
-                values: [...cfg.values, derived],
-              },
-            }
+            return { ...c, config: { ...cfg, rolls: [...cfg.rolls, roll], values: [...cfg.values, derived] } }
           })()
         : c,
     ),
@@ -526,14 +766,7 @@ export const useStore = create<AbraStatStore>((set) => ({
               .map(roll => deriveSimValue(roll, cfg.trackedMode, cfg.valueMode))
               .filter((value): value is number => value != null)
             if (derived.length === 0) return c
-            return {
-              ...c,
-              config: {
-                ...cfg,
-                rolls: [...cfg.rolls, ...rolls],
-                values: [...cfg.values, ...derived],
-              },
-            }
+            return { ...c, config: { ...cfg, rolls: [...cfg.rolls, ...rolls], values: [...cfg.values, ...derived] } }
           })()
         : c,
     ),
@@ -546,7 +779,7 @@ export const useStore = create<AbraStatStore>((set) => ({
     ),
   })),
 
-  // ─── Inference canvas (legacy, currently unused) ────────────────────────────
+  // ─── Inference canvas ────────────────────────────────────────────────────────
   inferenceCards: [],
   addInferenceCard: (type, position) => set(state => {
     const idx = state.inferenceCards.length
@@ -565,17 +798,6 @@ export const useStore = create<AbraStatStore>((set) => ({
     inferenceCards: state.inferenceCards.map(c => c.id === id ? { ...c, ...updates } : c),
   })),
   purgeInferenceStaleIds: () => set(state => ({
-    // Inference cards in their current scaffolded form don't hold column references,
-    // so purging is a no-op. Implement when inference cards gain column bindings.
     inferenceCards: state.inferenceCards,
   })),
-
-  selectedColumnIds: [],
-  toggleColumnSelection: (colId) => set(state => {
-    const ids = state.selectedColumnIds.includes(colId)
-      ? state.selectedColumnIds.filter(id => id !== colId)
-      : [...state.selectedColumnIds, colId]
-    return { selectedColumnIds: ids }
-  }),
-  setSelectedColumnIds: (ids) => set({ selectedColumnIds: ids }),
 }))

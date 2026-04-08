@@ -1,9 +1,47 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '@/lib/store'
+import { RowFilter, FilterOp } from '@/types'
 import { EditableCell } from './EditableCell'
 import { ColumnHeader } from './ColumnHeader'
+
+function isFilterComplete(f: RowFilter): boolean {
+  if (!f.colId || !f.op) return false
+  if (f.op === 'between') return f.value.trim() !== '' && (f.value2 ?? '').trim() !== ''
+  return f.value.trim() !== ''
+}
+
+function rowPassesFilter(row: Record<string, string | number>, filter: RowFilter): boolean {
+  const val = row[filter.colId]
+  const strVal = String(val ?? '').toLowerCase().trim()
+  const filterVal = filter.value.toLowerCase().trim()
+
+  if (filter.colType === 'categorical') {
+    switch (filter.op as FilterOp) {
+      case 'is':       return strVal === filterVal
+      case 'is not':   return strVal !== filterVal
+      case 'contains': return strVal.includes(filterVal)
+      case 'one of':   return filter.value.split(',').map(s => s.trim().toLowerCase()).includes(strVal)
+      default:         return true
+    }
+  } else {
+    const n = Number(val)
+    if (!isFinite(n)) return false
+    const fv = Number(filter.value)
+    const fv2 = Number(filter.value2 ?? 0)
+    switch (filter.op as FilterOp) {
+      case '=':       return n === fv
+      case '≠':       return n !== fv
+      case '<':       return n < fv
+      case '≤':       return n <= fv
+      case '>':       return n > fv
+      case '≥':       return n >= fv
+      case 'between': return n >= fv && n <= fv2
+      default:        return true
+    }
+  }
+}
 
 const MIN_EMPTY_ROWS = 5
 const COL_WIDTH = 140
@@ -59,7 +97,7 @@ function createColumnDragPreview(columnName: string, values: Array<string | numb
 }
 
 export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
-  const { grid, updateCell, addRow, deleteRows, undo, reorderColumns, setColumnWidth } = useStore()
+  const { grid, updateCell, addRow, deleteRows, undo, reorderColumns, setColumnWidth, activeFilters } = useStore()
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null)
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; rowIndex: number } | null>(null)
@@ -76,13 +114,29 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
   }, -1)
   const targetRows = Math.max(rows.length, lastDataRow + 1 + MIN_EMPTY_ROWS)
 
+  // Compute visible rows based on active filters
+  const completeFilters = useMemo(() => activeFilters.filter(isFilterComplete), [activeFilters])
+  const displayRows = useMemo(() => {
+    if (completeFilters.length === 0) {
+      return Array.from({ length: targetRows }, (_, i) => ({
+        originalIdx: i,
+        row: rows[i] ?? {} as Record<string, string | number>,
+      }))
+    }
+    return rows.reduce((acc, row, i) => {
+      if (completeFilters.every(f => rowPassesFilter(row, f))) acc.push({ originalIdx: i, row })
+      return acc
+    }, [] as Array<{ originalIdx: number; row: Record<string, string | number> }>)
+  }, [rows, completeFilters, targetRows])
+
   // Keyboard navigation
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (!activeCell) return
       const { row, col } = activeCell
-      const numRows = targetRows
       const numCols = columns.length
+      const viewIdx = displayRows.findIndex(d => d.originalIdx === row)
+      const numRows = displayRows.length
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault()
@@ -90,15 +144,20 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
         return
       }
 
+      const nextRow = (delta: number) => {
+        const ni = viewIdx + delta
+        return ni >= 0 && ni < numRows ? displayRows[ni].originalIdx : row
+      }
+
       const nav: Record<string, () => void> = {
-        Tab: () => setActiveCell(col + 1 < numCols ? { row, col: col + 1 } : row + 1 < numRows ? { row: row + 1, col: 0 } : activeCell),
-        'Shift+Tab': () => setActiveCell(col > 0 ? { row, col: col - 1 } : row > 0 ? { row: row - 1, col: numCols - 1 } : activeCell),
-        Enter: () => setActiveCell(row + 1 < numRows ? { row: row + 1, col } : activeCell),
-        'Shift+Enter': () => setActiveCell(row > 0 ? { row: row - 1, col } : activeCell),
-        ArrowRight: () => setActiveCell(col + 1 < numCols ? { row, col: col + 1 } : activeCell),
-        ArrowLeft: () => setActiveCell(col > 0 ? { row, col: col - 1 } : activeCell),
-        ArrowDown: () => setActiveCell(row + 1 < numRows ? { row: row + 1, col } : activeCell),
-        ArrowUp: () => setActiveCell(row > 0 ? { row: row - 1, col } : activeCell),
+        Tab:         () => setActiveCell(col + 1 < numCols ? { row, col: col + 1 } : viewIdx + 1 < numRows ? { row: nextRow(1), col: 0 } : activeCell),
+        'Shift+Tab': () => setActiveCell(col > 0 ? { row, col: col - 1 } : viewIdx > 0 ? { row: nextRow(-1), col: numCols - 1 } : activeCell),
+        Enter:       () => setActiveCell({ row: nextRow(1), col }),
+        'Shift+Enter': () => setActiveCell({ row: nextRow(-1), col }),
+        ArrowRight:  () => setActiveCell(col + 1 < numCols ? { row, col: col + 1 } : activeCell),
+        ArrowLeft:   () => setActiveCell(col > 0 ? { row, col: col - 1 } : activeCell),
+        ArrowDown:   () => setActiveCell({ row: nextRow(1), col }),
+        ArrowUp:     () => setActiveCell({ row: nextRow(-1), col }),
       }
 
       const key = (e.shiftKey && e.key !== 'Tab' ? 'Shift+' : '') + (e.shiftKey && e.key === 'Tab' ? 'Shift+Tab' : e.key)
@@ -109,7 +168,7 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [activeCell, columns.length, targetRows, undo])
+  }, [activeCell, columns.length, displayRows, undo])
 
   function handleRowContextMenu(e: React.MouseEvent, rowIndex: number) {
     e.preventDefault()
@@ -262,45 +321,42 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
         </div>
 
         {/* Data rows */}
-        {Array.from({ length: targetRows }, (_, rowIndex) => {
-          const row = rows[rowIndex] ?? {}
-          return (
-            <div key={rowIndex} className="flex group">
-              {/* Row number */}
-              <div
-                style={{ width: ROW_NUM_WIDTH, minWidth: ROW_NUM_WIDTH }}
-                className={`flex-shrink-0 flex items-center justify-center text-xs border-r border-b border-[var(--color-border)] cursor-pointer select-none ${selectedRows.has(rowIndex) ? 'bg-[var(--color-accent)] text-white' : 'bg-slate-50 text-[var(--color-muted)]'}`}
-                onClick={() => handleRowClick(rowIndex)}
-                onContextMenu={e => handleRowContextMenu(e, rowIndex)}
-              >
-                {rowIndex + 1}
-              </div>
-              {/* Cells */}
-              {columns.map((col, colIndex) => (
-                <div
-                  key={col.id}
-                  style={{
-                    width: col.width ?? COL_WIDTH,
-                    minWidth: col.width ?? COL_WIDTH,
-                    transform: `translateX(${getColumnShift(colIndex)}px)`,
-                    opacity: dragColIdx === colIndex ? 0.18 : 1,
-                  }}
-                  className="transition-[transform,opacity] duration-200 ease-out"
-                >
-                  <EditableCell
-                    value={row[col.id] ?? ''}
-                    rowIndex={rowIndex}
-                    colId={col.id}
-                    isActive={activeCell?.row === rowIndex && activeCell?.col === colIndex}
-                    isSelected={selectedRows.has(rowIndex)}
-                    onActivate={() => { setActiveCell({ row: rowIndex, col: colIndex }); setSelectedRows(new Set()) }}
-                    onChange={handleCellChange}
-                  />
-                </div>
-              ))}
+        {displayRows.map(({ originalIdx, row }) => (
+          <div key={originalIdx} className="flex group">
+            {/* Row number */}
+            <div
+              style={{ width: ROW_NUM_WIDTH, minWidth: ROW_NUM_WIDTH }}
+              className={`flex-shrink-0 flex items-center justify-center text-xs border-r border-b border-[var(--color-border)] cursor-pointer select-none ${selectedRows.has(originalIdx) ? 'bg-[var(--color-accent)] text-white' : 'bg-slate-50 text-[var(--color-muted)]'}`}
+              onClick={() => handleRowClick(originalIdx)}
+              onContextMenu={e => handleRowContextMenu(e, originalIdx)}
+            >
+              {originalIdx + 1}
             </div>
-          )
-        })}
+            {/* Cells */}
+            {columns.map((col, colIndex) => (
+              <div
+                key={col.id}
+                style={{
+                  width: col.width ?? COL_WIDTH,
+                  minWidth: col.width ?? COL_WIDTH,
+                  transform: `translateX(${getColumnShift(colIndex)}px)`,
+                  opacity: dragColIdx === colIndex ? 0.18 : 1,
+                }}
+                className="transition-[transform,opacity] duration-200 ease-out"
+              >
+                <EditableCell
+                  value={row[col.id] ?? ''}
+                  rowIndex={originalIdx}
+                  colId={col.id}
+                  isActive={activeCell?.row === originalIdx && activeCell?.col === colIndex}
+                  isSelected={selectedRows.has(originalIdx)}
+                  onActivate={() => { setActiveCell({ row: originalIdx, col: colIndex }); setSelectedRows(new Set()) }}
+                  onChange={handleCellChange}
+                />
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
 
       {/* Context menu */}

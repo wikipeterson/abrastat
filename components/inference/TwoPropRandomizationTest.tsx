@@ -29,17 +29,18 @@ interface CardPos    { x:number; y:number; rotation:number; delay:number; faceDo
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const CANVAS_W        = 640
-const HEADER_H        = 30
-const COL_W           = 200
+const HEADER_H        = 24
+const CARD_TOP_Y      = 8
+const COL_W           = 240
 const POOL_DUR        = 480   // ms: pooling animation
 const SHUFFLE_DUR     = 180   // ms: each shuffle spread/return phase
 const DEAL_DUR        = 260   // ms: each card's travel time when dealing
 const NUM_SH_PHASES   = 6     // 3 spread + 3 return cycles
 
 const COL_CX = {
-  left: CANVAS_W * 0.31,
+  left: CANVAS_W * 0.28,
   center: CANVAS_W * 0.5,
-  right: CANVAS_W * 0.69,
+  right: CANVAS_W * 0.72,
 }
 
 // Compute canvas height to fit actual card layout with no wasted space
@@ -49,7 +50,7 @@ function getCanvasHeight(n1: number, n2: number): number {
   const maxN = Math.max(n1, n2)
   const cols = Math.min(layout.perRow, maxN)
   const rows = Math.ceil(maxN / cols)
-  return Math.max(132, Math.min(HEADER_H + rows * layout.stepY + 4, 242))
+  return Math.max(118, Math.min(CARD_TOP_Y + rows * layout.stepY + 34, 210))
 }
 
 function getCardLayout(n: number): CardLayout {
@@ -67,7 +68,7 @@ function getSlotXY(idx: number, colCx: number, layout: CardLayout, groupSize: nu
   const cols = Math.min(layout.perRow, groupSize)
   return {
     x: colCx - (cols * layout.stepX) / 2 + (idx % cols) * layout.stepX,
-    y: HEADER_H + Math.floor(idx / cols) * layout.stepY,
+    y: CARD_TOP_Y + Math.floor(idx / cols) * layout.stepY,
   }
 }
 
@@ -595,7 +596,7 @@ function ColStatLabel({ cx, n, s, p, highlight, layout }: {
   cx:number; n:number; s:number; p:number; highlight:boolean; layout:CardLayout
 }) {
   return (
-    <div style={{position:'absolute',left:cx,top:8,transform:'translateX(-50%)',textAlign:'center',pointerEvents:'none'}}>
+    <div style={{position:'absolute',left:cx,top:5,transform:'translateX(-50%)',textAlign:'center',pointerEvents:'none'}}>
       <div className={`rounded-lg px-2 py-0.5 text-[10px] font-semibold transition-colors ${highlight?'bg-[var(--color-accent)] text-white':'bg-slate-100 text-[var(--color-muted)]'}`}>
         {s}/{n} = {p.toFixed(3)}
       </div>
@@ -743,9 +744,9 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
             <div className="overflow-x-auto flex justify-center">
               <div className="w-fit">
                 <div className="relative bg-slate-50 border-b border-[var(--color-border)] flex-shrink-0" style={{width:CANVAS_W,height:HEADER_H}}>
-                  <span style={{position:'absolute',left:COL_CX.left,top:showColStats?20:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label1}</span>
+                  <span style={{position:'absolute',left:COL_CX.left,top:showColStats?15:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label1}</span>
                   {showCenter&&<span style={{position:'absolute',left:COL_CX.center,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,color:'var(--color-muted)'}}>Pooled</span>}
-                  <span style={{position:'absolute',left:COL_CX.right,top:showColStats?20:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label2}</span>
+                  <span style={{position:'absolute',left:COL_CX.right,top:showColStats?15:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label2}</span>
                   {showColStats&&(
                     <>
                       <ColStatLabel cx={COL_CX.left} n={leftStats.n} s={leftStats.s} p={leftStats.p} highlight={highlightSim} layout={layout}/>

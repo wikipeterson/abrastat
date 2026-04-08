@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { GridColumn } from '@/types'
 import { useStore } from '@/lib/store'
@@ -136,12 +137,12 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
           <ChevronDown size={12} />
         </button>
 
-        {/* Dropdown menu */}
-        {menuMode !== 'closed' && (
+        {/* Dropdown menu — rendered via portal to escape CSS transform stacking context */}
+        {menuMode !== 'closed' && menuPos && createPortal(
           <div
             ref={menuRef}
             className="fixed z-[100] bg-white rounded-lg shadow-lg border border-[var(--color-border)] py-1 text-[var(--color-text)] text-xs"
-            style={{ minWidth: 188, left: menuPos?.x ?? 0, top: menuPos?.y ?? 0 }}
+            style={{ minWidth: 188, left: menuPos.x, top: menuPos.y }}
           >
 
             {/* Main menu */}
@@ -241,7 +242,8 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
                 </div>
               </div>
             )}
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* Z-score error toast */}

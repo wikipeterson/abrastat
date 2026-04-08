@@ -69,7 +69,7 @@ function ManualInput({
       <div className="flex flex-wrap gap-4">
         <div>
           <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
-            Explanatory Variable Name
+            Column Variable Name
           </div>
           <input
             value={explName}
@@ -80,7 +80,7 @@ function ManualInput({
         </div>
         <div>
           <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
-            Response Variable Name
+            Row Variable Name
           </div>
           <input
             value={respName}
@@ -457,7 +457,7 @@ export function TwoWayTable({
       <div className="text-4xl opacity-25">📋</div>
       <p className="text-sm font-medium">
         {inputMode === 'raw'
-          ? 'Drag in an Explanatory Variable and a Response Variable to begin.'
+          ? 'Drag in a Column Variable and a Row Variable to begin.'
           : 'Enter counts in the table above to get started.'}
       </p>
       {isCardMode && inputMode === 'raw' && (
@@ -502,7 +502,7 @@ export function TwoWayTable({
           <>
             <div>
               <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
-                Explanatory Variable
+                Column Variable
               </div>
               <select
                 value={explColIdLocal}
@@ -517,7 +517,7 @@ export function TwoWayTable({
             </div>
             <div>
               <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
-                Response Variable
+                Row Variable
               </div>
               <select
                 value={respColIdLocal}
@@ -562,7 +562,7 @@ export function TwoWayTable({
             >
               <DropZone
                 id={`${cardId}:rows`}
-                label="Response Variable (rows)"
+                label="Row Variable"
                 assignedCol={grid.columns.find(c => c.id === respColId) ?? null}
                 onClear={() => onClearZone?.('rows')}
                 variant="vertical"
@@ -574,7 +574,7 @@ export function TwoWayTable({
             <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('cols')}>
               <DropZone
                 id={`${cardId}:cols`}
-                label="Explanatory Variable (columns)"
+                label="Column Variable"
                 assignedCol={grid.columns.find(c => c.id === explColId) ?? null}
                 onClear={() => onClearZone?.('cols')}
               />
@@ -609,7 +609,7 @@ export function TwoWayTable({
           <div className="text-4xl mb-3 opacity-25">📋</div>
           <p className="text-sm">
             {inputMode === 'raw'
-              ? 'Select an Explanatory Variable and a Response Variable above.'
+              ? 'Select a Column Variable and a Row Variable above.'
               : 'Enter counts in the table above to get started.'}
           </p>
         </div>

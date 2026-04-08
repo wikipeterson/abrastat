@@ -30,7 +30,6 @@ interface CardPos    { x:number; y:number; rotation:number; delay:number; faceDo
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const CANVAS_W        = 480
-const CANVAS_H        = 300
 const HEADER_H        = 42
 const COL_W           = 116
 const POOL_DUR        = 480   // ms: pooling animation
@@ -39,7 +38,16 @@ const DEAL_DUR        = 260   // ms: each card's travel time when dealing
 const NUM_SH_PHASES   = 6     // 3 spread + 3 return cycles
 
 const COL_CX = { left: 72, center: 240, right: 408 }
-const PILE_CY = HEADER_H + (CANVAS_H - HEADER_H) / 2
+
+// Compute canvas height to fit actual card layout with no wasted space
+function getCanvasHeight(n1: number, n2: number): number {
+  const n = n1 + n2
+  const layout = getCardLayout(n)
+  const maxN = Math.max(n1, n2)
+  const cols = Math.min(layout.perRow, maxN)
+  const rows = Math.ceil(maxN / cols)
+  return Math.max(160, Math.min(HEADER_H + rows * layout.stepY + 28, 320))
+}
 
 function getCardLayout(n: number): CardLayout {
   const w = n <= 20 ? 22 : n <= 40 ? 16 : n <= 80 ? 12 : n <= 160 ? 9 : 7
@@ -61,16 +69,16 @@ function getSlotXY(idx: number, colCx: number, layout: CardLayout, groupSize: nu
 }
 
 // Pile resting position for a card (original pool arrangement)
-function pilePos(id: number, layout: CardLayout) {
+function pilePos(id: number, layout: CardLayout, pileCY: number) {
   return {
     x: COL_CX.center - layout.w/2 + (cardHash(id, 0) - 0.5) * 12,
-    y: PILE_CY        - layout.h/2 + (cardHash(id, 1) - 0.5) * 8,
+    y: pileCY         - layout.h/2 + (cardHash(id, 1) - 0.5) * 8,
     rotation: (cardHash(id, 2) - 0.5) * 40,
   }
 }
 
 // Position for a given shuffle phase (1-indexed; odd=spread, even=return-to-pile)
-function shufflePhasePos(id: number, phase: number, layout: CardLayout) {
+function shufflePhasePos(id: number, phase: number, layout: CardLayout, pileCY: number) {
   const s = phase * 13  // unique salt per phase
   if (phase % 2 === 1) {
     // Spread: fly outward in a deterministic random direction
@@ -78,14 +86,14 @@ function shufflePhasePos(id: number, phase: number, layout: CardLayout) {
     const dist  = 28 + cardHash(id, s + 4) * 44  // 28–72 px from pile center
     return {
       x: COL_CX.center - layout.w/2 + Math.cos(angle) * dist,
-      y: PILE_CY        - layout.h/2 + Math.sin(angle) * dist,
+      y: pileCY         - layout.h/2 + Math.sin(angle) * dist,
       rotation: (cardHash(id, s + 5) - 0.5) * 72,
     }
   } else {
     // Return: back to pile with a fresh arrangement
     return {
       x: COL_CX.center - layout.w/2 + (cardHash(id, s + 6) - 0.5) * 14,
-      y: PILE_CY        - layout.h/2 + (cardHash(id, s + 7) - 0.5) * 10,
+      y: pileCY         - layout.h/2 + (cardHash(id, s + 7) - 0.5) * 10,
       rotation: (cardHash(id, s + 8) - 0.5) * 44,
     }
   }
@@ -107,6 +115,7 @@ function computePositions(
   stage: Stage,
   assignment: number[],
   shufflePhase: number,
+  pileCY: number,
 ): Map<number, CardPos> {
   const { cases, n1 } = data
   const n      = cases.length
@@ -125,7 +134,7 @@ function computePositions(
   // Original pool pile
   if (stage === 'pooling' || stage === 'pooled') {
     cases.forEach(c => {
-      const {x,y,rotation} = pilePos(c.id, layout)
+      const {x,y,rotation} = pilePos(c.id, layout, pileCY)
       pos.set(c.id, {x,y,rotation,delay:0,faceDown:true})
     })
     return pos
@@ -134,8 +143,8 @@ function computePositions(
   // Shuffle phases — each phase uses its own position calculation
   if (stage === 'shuffling') {
     const ph = shufflePhase < 1 ? 1 : shufflePhase
-    cases.forEach((c, i) => {
-      const {x,y,rotation} = shufflePhasePos(c.id, ph, layout)
+    cases.forEach((c) => {
+      const {x,y,rotation} = shufflePhasePos(c.id, ph, layout, pileCY)
       // Spread phases (odd): stagger outward. Return phases (even): all together.
       const delay = ph % 2 === 1 ? cardHash(c.id, ph * 7 + 99) * 55 : 0
       pos.set(c.id, {x,y,rotation,delay,faceDown:true})
@@ -146,7 +155,7 @@ function computePositions(
   // Shuffled (final return phase positions — no movement from last shuffle phase)
   if (stage === 'shuffled') {
     cases.forEach(c => {
-      const {x,y,rotation} = shufflePhasePos(c.id, NUM_SH_PHASES, layout)
+      const {x,y,rotation} = shufflePhasePos(c.id, NUM_SH_PHASES, layout, pileCY)
       pos.set(c.id, {x,y,rotation,delay:0,faceDown:true})
     })
     return pos
@@ -194,18 +203,22 @@ function NullDistPlot({ values, diffObs, alternative }: {
   values: number[]; diffObs: number; alternative: Alternative
 }) {
   const clipId = useId()
-  const SVG_W = 320, SVG_H = 160
+  const SVG_W = 320
   const MG = { t:14, r:8, b:30, l:8 }
+  const BUCKET = values.length >= 2000 ? 0.01 : values.length >= 1000 ? 0.015 : values.length >= 400 ? 0.025 : 0.05
+  const stackCounts = new Map<number,number>()
+  values.forEach(v => {
+    const b = Math.round(v / BUCKET) * BUCKET
+    stackCounts.set(b, (stackCounts.get(b) ?? 0) + 1)
+  })
+  const maxStack = Math.max(1, ...Array.from(stackCounts.values()))
+  const preferredDotStep = values.length >= 1000 ? 4.5 : values.length >= 400 ? 5.25 : 6
+  const plotHeight = Math.max(116, Math.min(240, 18 + maxStack * preferredDotStep))
+  const SVG_H = plotHeight + MG.t + MG.b
   const PW = SVG_W - MG.l - MG.r, PH = SVG_H - MG.t - MG.b
-  const BUCKET = 0.05
   const xOf = (v: number) => ((v + 1) / 2) * PW
 
   const seenC2 = new Map<number,number>()
-  const maxStack = (() => {
-    const m = new Map<number,number>()
-    values.forEach(v => { const b = Math.round(v/BUCKET)*BUCKET; m.set(b,(m.get(b)??0)+1) })
-    return Math.max(1, ...Array.from(m.values()))
-  })()
   const dotStep = Math.max(1.5, Math.min(7, PH / maxStack))
   const dotR    = Math.max(1, dotStep/2 - 0.3)
   const circles = values.map(v => {
@@ -246,6 +259,19 @@ function NullDistPlot({ values, diffObs, alternative }: {
       </g>
     </svg>
   )
+}
+
+function getNullDistributionPanelHeight(values: number[]) {
+  const bucket = values.length >= 2000 ? 0.01 : values.length >= 1000 ? 0.015 : values.length >= 400 ? 0.025 : 0.05
+  const stackCounts = new Map<number,number>()
+  values.forEach(v => {
+    const b = Math.round(v / bucket) * bucket
+    stackCounts.set(b, (stackCounts.get(b) ?? 0) + 1)
+  })
+  const maxStack = Math.max(1, ...Array.from(stackCounts.values()))
+  const preferredDotStep = values.length >= 1000 ? 4.5 : values.length >= 400 ? 5.25 : 6
+  const plotHeight = Math.max(116, Math.min(240, 18 + maxStack * preferredDotStep))
+  return Math.max(160, plotHeight + 74)
 }
 
 // ── Step definitions ──────────────────────────────────────────────────────────
@@ -374,9 +400,12 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
 
   const cases     = data?.cases ?? []
   const layout    = getCardLayout(Math.max(1, cases.length))
+  const canvasH   = data ? getCanvasHeight(data.n1, data.n2) : 200
+  const pileCY    = HEADER_H + (canvasH - HEADER_H) / 2
   const isAnimating = ['pooling','shuffling','reassigning','plotting'].includes(stage)
   const pValue    = simCount>0 ? extremeCount/simCount : null
-  const positions = data ? computePositions(data, stage, assignment, shufflePhase) : new Map<number,CardPos>()
+  const positions = data ? computePositions(data, stage, assignment, shufflePhase, pileCY) : new Map<number,CardPos>()
+  const nullPanelHeight = getNullDistributionPanelHeight(nullDist)
 
   // Transition duration per stage
   const cardTransDur = stage==='shuffling' ? SHUFFLE_DUR : stage==='reassigning' ? DEAL_DUR : POOL_DUR
@@ -525,7 +554,7 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
             </div>
 
             {/* Cards */}
-            <div className="relative bg-white flex-shrink-0" style={{width:CANVAS_W,height:CANVAS_H}}>
+            <div className="relative bg-white flex-shrink-0" style={{width:CANVAS_W,height:canvasH,transition:'height 400ms ease'}}>
               {/* Column zone backgrounds */}
               <div className="absolute inset-y-0 transition-all duration-500" style={{
                 left:COL_CX.left-COL_W/2-4,width:COL_W+8,
@@ -641,7 +670,7 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
             </div>
 
             {/* Null distribution */}
-            <div className="flex-1 min-h-0 rounded-xl border border-[var(--color-border)] bg-white p-3 flex flex-col" style={{minHeight:160}}>
+            <div className="flex-1 min-h-0 rounded-xl border border-[var(--color-border)] bg-white p-3 flex flex-col" style={{minHeight:nullPanelHeight}}>
               <div className="flex items-center justify-between mb-1 flex-shrink-0">
                 <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
               </div>

@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react'
 import type { Data, Annotations, Layout } from 'plotly.js'
 import { useStore } from '@/lib/store'
 import { getNumericValues, getNumericGroup } from '@/lib/gridHelpers'
-import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
@@ -78,12 +77,13 @@ type DotResult = NormalResult | FacetedResult
 
 export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps) {
   const { grid } = useStore()
-  const { hideAxisTitles, colors } = useGraphCardContext()
+  const { hideAxisTitles, colors, dotSize } = useGraphCardContext()
   const [showMean, setShowMean] = useState(false)
   const [showMedian, setShowMedian] = useState(false)
   const col = grid.columns.find(c => c.id === colId) ?? null
   const groupCol = groupByColId ? (grid.columns.find(c => c.id === groupByColId) ?? null) : null
   const values = useMemo(() => colId ? getNumericValues(grid, colId) : [], [grid, colId])
+  const markerSize = dotSize === 'small' ? 6 : dotSize === 'large' ? 12 : 9
 
   const result = useMemo((): DotResult => {
     if (!col || !colId) return { type: 'normal', traces: [], maxStack: 1 }
@@ -163,7 +163,7 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
           y,
           xaxis: xRef,
           yaxis: yRef,
-          marker: { color: colors[i % colors.length], size: 9, opacity: 0.9, line: { width: 0 } },
+          marker: { color: colors[i % colors.length], size: markerSize, opacity: 0.9, line: { width: 0 } },
           hovertemplate: `${group}: %{x}<extra></extra>`,
         } as Data
       })
@@ -189,7 +189,7 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
           name: group,
           x: orientation === 'v' ? y : x,
           y: orientation === 'v' ? x : y,
-          marker: { color: ABRA_COLORS[gi % ABRA_COLORS.length], size: 9, opacity: 0.9, line: { width: 0 } },
+          marker: { color: colors[gi % colors.length], size: markerSize, opacity: 0.9, line: { width: 0 } },
           hovertemplate: `${group}: %{${orientation === 'v' ? 'y' : 'x'}}<extra></extra>`,
         } as Data
       })
@@ -207,12 +207,12 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
         name: col.name,
         x: vert ? y : x,
         y: vert ? x : y,
-        marker: { color: colors[0], size: 9, opacity: 0.9, line: { width: 0 } },
+        marker: { color: colors[0], size: markerSize, opacity: 0.9, line: { width: 0 } },
         hovertemplate: `${col.name}: %{${vert ? 'y' : 'x'}}<extra></extra>`,
       }],
       maxStack,
     }
-  }, [grid, values, colId, col, groupByColId, groupCol, orientation])
+  }, [grid, values, colId, col, groupByColId, groupCol, orientation, colors, markerSize])
 
   if (!col) {
     return <EmptyState icon="⚫" title="Drop a numeric variable" description="Drag a numeric variable to an axis to build a dot plot." />

@@ -34,6 +34,7 @@ export interface AnimatedCaseLayerProps {
   showBestFitLine?: boolean
   hideAxisTitles?: boolean
   colors?: string[]
+  dotSize?: 'small' | 'medium' | 'large'
 }
 
 interface LayoutPoint {
@@ -150,6 +151,10 @@ function escapeSvgText(value: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+}
+
+function pointRadiusFor(dotSize: 'small' | 'medium' | 'large') {
+  return dotSize === 'small' ? 3 : dotSize === 'large' ? 6 : 5
 }
 
 // ── Layout ────────────────────────────────────────────────────────────────────
@@ -407,6 +412,7 @@ export async function renderAnimatedGraphToPngBlob(options: {
   yLabel?: string
   showBestFitLine?: boolean
   colors?: string[]
+  dotSize?: 'small' | 'medium' | 'large'
 }) {
   const rows = options.rows.filter(hasAnyData)
   const plotWidth = Math.max(1, Math.ceil(options.width))
@@ -419,6 +425,7 @@ export async function renderAnimatedGraphToPngBlob(options: {
   const titleHeight = title ? 34 : 0
   const totalWidth = plotWidth + leftPad
   const totalHeight = plotHeight + titleHeight + bottomPad
+  const pointRadius = pointRadiusFor(options.dotSize ?? 'medium')
   const layout = buildLayout(options.spec, rows, plotWidth, plotHeight, options.colors)
   const bestFitLine = options.showBestFitLine
     ? computeScatterBestFitLine(options.spec, rows, plotWidth, plotHeight)
@@ -453,12 +460,12 @@ export async function renderAnimatedGraphToPngBlob(options: {
         `).join('')}
         ${layout.legend?.map((item, index) => `
           <g transform="translate(${plotWidth - MG_R + 4},${MG_T + 10 + index * 14})">
-            <circle cx="4" cy="0" r="4" fill="${item.color}" />
+            <circle cx="4" cy="0" r="${Math.max(3, pointRadius - 1)}" fill="${item.color}" />
             <text x="12" y="0" dominant-baseline="middle" font-size="10" font-weight="500" fill="${item.color}" font-family="DM Sans, sans-serif">${escapeSvgText(item.label)}</text>
           </g>
         `).join('') ?? ''}
         ${layout.points.map(point => `
-          <circle cx="${point.x}" cy="${point.y}" r="5" fill="${point.color}" fill-opacity="${point.opacity}" />
+          <circle cx="${point.x}" cy="${point.y}" r="${pointRadius}" fill="${point.color}" fill-opacity="${point.opacity}" />
         `).join('')}
       </g>
       ${xLabel ? `<text x="${leftPad + plotWidth / 2}" y="${titleHeight + plotHeight + 22}" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="13" fill="#64748B">${escapeSvgText(xLabel)}</text>` : ''}
@@ -479,12 +486,14 @@ export function AnimatedCaseLayer({
   showBestFitLine = false,
   hideAxisTitles = false,
   colors = COLORS,
+  dotSize = 'medium',
 }: AnimatedCaseLayerProps) {
   const { grid } = useStore()
   const wrapRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [animating, setAnimating] = useState(false)
   const [phase, setPhase] = useState<'from' | 'to'>(fromSpec ? 'from' : 'to')
+  const pointRadius = pointRadiusFor(dotSize)
 
   const rows = useMemo(() => grid.rows.filter(hasAnyData), [grid.rows])
 
@@ -735,8 +744,8 @@ export function AnimatedCaseLayer({
           key={point.id}
           className="absolute rounded-full shadow-[0_0_0_1px_rgba(255,255,255,0.15)]"
           style={{
-            width: 10,
-            height: 10,
+            width: pointRadius * 2,
+            height: pointRadius * 2,
             left: `${point.x}px`,
             top: `${point.y}px`,
             transform: 'translate(-50%, -50%)',

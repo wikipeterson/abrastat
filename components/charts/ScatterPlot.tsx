@@ -4,7 +4,6 @@ import { useMemo, useState, useEffect, useRef } from 'react'
 import type { Data, Annotations } from 'plotly.js'
 import { useStore } from '@/lib/store'
 import { linearRegression } from '@/lib/statistics'
-import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
@@ -61,7 +60,7 @@ function useAnimatedY(targetY: number[], animate: boolean): number[] {
 
 export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none' }: ScatterPlotProps) {
   const { grid } = useStore()
-  const { hideAxisTitles, colors } = useGraphCardContext()
+  const { hideAxisTitles, colors, dotSize } = useGraphCardContext()
   const prevYColIdRef = useRef<string | null>(null)
   const [shouldAnimate, setShouldAnimate] = useState(false)
 
@@ -70,6 +69,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
   const groupCol = colorByColId ? (grid.columns.find(c => c.id === colorByColId) ?? null) : null
   const useBubbleSize = groupCol?.type === 'numeric'
   const useColorGroups = groupCol?.type === 'categorical'
+  const markerSize = dotSize === 'small' ? 5 : dotSize === 'large' ? 10 : 7
 
   // Build complete-case points. When the third variable is categorical, use it
   // for color grouping. When it is numeric, use it for bubble size.
@@ -139,7 +139,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
       name: group,
       x: allPoints.filter(p => p.group === group).map(p => p.x),
       y: allPoints.filter(p => p.group === group).map(p => p.y),
-      marker: { color: colors[i % colors.length], size: 7, opacity: 0.85, line: { width: 0 } },
+      marker: { color: colors[i % colors.length], size: markerSize, opacity: 0.85, line: { width: 0 } },
       hovertemplate: `${xCol.name}: %{x}<br>${yCol.name}: %{y}<extra>${group}</extra>`,
     }))
   } else if (useBubbleSize && groupCol) {
@@ -158,7 +158,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
       y: yValues,
       marker: {
         color: colors[0],
-        size: scaledSizes,
+        size: scaledSizes.map(size => size * (markerSize / 7)),
         sizemode: 'diameter',
         opacity: 0.45,
         line: { width: 0 },
@@ -173,7 +173,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
       name: `${xCol.name} vs ${yCol.name}`,
       x: xValues,
       y: yValues,
-      marker: { color: colors[0], size: 7, opacity: 0.85, line: { width: 0 } },
+      marker: { color: colors[0], size: markerSize, opacity: 0.85, line: { width: 0 } },
       hovertemplate: `${xCol.name}: %{x}<br>${yCol.name}: %{y}<extra></extra>`,
     }]
   }

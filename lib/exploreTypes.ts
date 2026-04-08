@@ -32,6 +32,8 @@ export interface GraphCardConfig {
   xLabel?: string
   yLabel?: string
   colorPalette?: string
+  dotSize?: 'small' | 'medium' | 'large'
+  showOutlierFences?: boolean
   chartType?: ChartType | null
   bestFitMode?: 'none' | 'overall' | 'group'
   barValueMode?: 'count' | 'percent'

@@ -207,8 +207,8 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
   values: number[]; diffObs: number; alternative: Alternative; showNormalCurve?: boolean
 }) {
   const clipId = useId()
-  const SVG_W = 320
-  const MG = { t: 14, r: 8, b: 30, l: 8 }
+  const SVG_W = 760
+  const MG = { t: 14, r: 16, b: 30, l: 16 }
   const plotHeight = 150
   const SVG_H = plotHeight + MG.t + MG.b
   const PW = SVG_W - MG.l - MG.r, PH = SVG_H - MG.t - MG.b

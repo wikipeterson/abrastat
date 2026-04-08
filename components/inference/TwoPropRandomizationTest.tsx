@@ -214,19 +214,21 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
   const PW = SVG_W - MG.l - MG.r, PH = SVG_H - MG.t - MG.b
   const xOf = (v: number) => ((v + 1) / 2) * PW
 
-  let bucket = values.length >= 2000 ? 0.01 : values.length >= 1000 ? 0.015 : values.length >= 400 ? 0.025 : 0.05
-  let stackCounts = new Map<number, number>()
-  let maxStack = 1
-  while (true) {
-    stackCounts = new Map<number, number>()
-    values.forEach(v => {
-      const b = Math.round(v / bucket) * bucket
-      stackCounts.set(b, (stackCounts.get(b) ?? 0) + 1)
-    })
-    maxStack = Math.max(1, ...Array.from(stackCounts.values()))
-    if (maxStack <= 28 || bucket >= 0.2) break
-    bucket *= 2
-  }
+  const normalizedValues = values.map(v => Number(v.toFixed(6)))
+  const uniqueValues = Array.from(new Set(normalizedValues)).sort((a, b) => a - b)
+  const inferredStep = uniqueValues.length < 2
+    ? 0.05
+    : uniqueValues.slice(1).reduce((minGap, value, index) => {
+        const gap = value - uniqueValues[index]
+        return gap > 0 ? Math.min(minGap, gap) : minGap
+      }, Number.POSITIVE_INFINITY)
+  const bucket = Number.isFinite(inferredStep) && inferredStep > 0 ? inferredStep : 0.05
+
+  const stackCounts = new Map<number, number>()
+  normalizedValues.forEach(v => {
+    stackCounts.set(v, (stackCounts.get(v) ?? 0) + 1)
+  })
+  const maxStack = Math.max(1, ...Array.from(stackCounts.values()))
 
   const normalStats = (() => {
     if (!showNormalCurve || values.length < 2) return null
@@ -252,10 +254,10 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
   const dotStep = Math.max(1.25, Math.min(6, yScale))
   const dotR    = Math.max(1, dotStep/2 - 0.3)
   const circles = values.map(v => {
-    const b  = Math.round(v / bucket) * bucket
-    const si = seenC2.get(b) ?? 0
-    seenC2.set(b, si+1)
-    return { cx:xOf(b), cy:PH - (si + 1) * dotStep + dotStep / 2, extreme:isExtremeResult(v, diffObs, alternative) }
+      const b  = v
+      const si = seenC2.get(b) ?? 0
+      seenC2.set(b, si+1)
+      return { cx:xOf(b), cy:PH - (si + 1) * dotStep + dotStep / 2, extreme:isExtremeResult(v, diffObs, alternative) }
   })
 
   const normalPath = (() => {

@@ -114,11 +114,9 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
           type="button"
           draggable={false}
           onMouseDown={e => {
-            e.preventDefault()
             e.stopPropagation()
           }}
           onPointerDown={e => {
-            e.preventDefault()
             e.stopPropagation()
           }}
           onClick={e => {

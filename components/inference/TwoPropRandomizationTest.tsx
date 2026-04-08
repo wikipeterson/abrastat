@@ -682,14 +682,20 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
   }
 
   function runBatch(count: number) {
-    const diffs: number[] = []; let newExtreme = 0
+    const diffs: number[] = []
+    let newExtreme = 0
+    let last: TwoProportionResult | null = null
     for (let i=0; i<count; i++) {
       const r = runTwoProportionRandomization(data)
+      last = r
       diffs.push(r.diffSim)
       if (isExtremeResult(r.diffSim, data.diffObs, alternative)) newExtreme++
     }
-    const last = runTwoProportionRandomization(data)
-    setAssignment(last.assignment); setCurrentResult(last); setStage('done')
+    if (last) {
+      setAssignment(last.assignment)
+      setCurrentResult(last)
+    }
+    setStage('done')
     updateExploreCard(cardId, { config: {
       ...config,
       nullDist: [...nullDist, ...diffs],

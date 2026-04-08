@@ -75,6 +75,57 @@ export function isExtremeResult(
   return Math.abs(diffSim) >= Math.abs(diffObs)
 }
 
+// ── Two-mean randomization ────────────────────────────────────────────────────
+
+export interface TwoMeanCase {
+  id: number
+  group: 0 | 1
+  value: number
+}
+
+export interface TwoMeanData {
+  group1Label: string
+  group2Label: string
+  cases: TwoMeanCase[]
+  n1: number
+  n2: number
+  mean1: number
+  mean2: number
+  diffObs: number   // mean1 - mean2
+}
+
+export interface TwoMeanResult {
+  assignment: number[]  // case IDs assigned to group 1
+  mean1Sim: number
+  mean2Sim: number
+  diffSim: number
+}
+
+export function buildTwoMeanData(
+  values1: number[],
+  values2: number[],
+  group1Label: string,
+  group2Label: string,
+): TwoMeanData {
+  const cases: TwoMeanCase[] = []
+  let id = 0
+  values1.forEach(v => cases.push({ id: id++, group: 0, value: v }))
+  values2.forEach(v => cases.push({ id: id++, group: 1, value: v }))
+  const n1 = values1.length, n2 = values2.length
+  const mean1 = n1 > 0 ? values1.reduce((a, b) => a + b, 0) / n1 : 0
+  const mean2 = n2 > 0 ? values2.reduce((a, b) => a + b, 0) / n2 : 0
+  return { group1Label, group2Label, cases, n1, n2, mean1, mean2, diffObs: mean1 - mean2 }
+}
+
+export function runTwoMeanRandomization(data: TwoMeanData): TwoMeanResult {
+  const shuffled = shuffle(data.cases)
+  const g1Sim = shuffled.slice(0, data.n1)
+  const g2Sim = shuffled.slice(data.n1)
+  const mean1Sim = g1Sim.reduce((s, c) => s + c.value, 0) / data.n1
+  const mean2Sim = g2Sim.reduce((s, c) => s + c.value, 0) / data.n2
+  return { assignment: g1Sim.map(c => c.id), mean1Sim, mean2Sim, diffSim: mean1Sim - mean2Sim }
+}
+
 /**
  * Build TwoProportionData from raw counts. Generates case objects with IDs.
  * Successes come first within each group (id order), then failures.

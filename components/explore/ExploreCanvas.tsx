@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/core'
 import { useStore } from '@/lib/store'
 import { GridColumn } from '@/types'
-import { CardConfig, GraphCardConfig, MeansCardConfig, ExploreCard, ManualTwoWayTableSnapshot, TwoPropRandomizationCardConfig } from '@/lib/exploreTypes'
+import { CardConfig, GraphCardConfig, MeansCardConfig, ExploreCard, ManualTwoWayTableSnapshot, TwoPropRandomizationCardConfig, TwoMeanRandomizationCardConfig } from '@/lib/exploreTypes'
 import { ChartType, inferCharts } from '@/lib/chartHelpers'
 import { SwapAnimContext, SwapAnimState } from '@/lib/swapAnimContext'
 import { GraphCard } from './cards/GraphCard'
@@ -26,6 +26,7 @@ import { DistributionCard } from '@/components/inference/DistributionCard'
 import { MeansCard } from '@/components/inference/MeansCard'
 import { ProportionsCard } from '@/components/inference/ProportionsCard'
 import { TwoPropRandomizationTest, TwoPropSimCard } from '@/components/inference/TwoPropRandomizationTest'
+import { TwoMeanRandomizationTest, TwoMeanSimCard } from '@/components/inference/TwoMeanRandomizationTest'
 import { RandomGeneratorCard } from '@/components/probability/RandomGeneratorCard'
 import { CompareNormalsCard } from '@/components/probability/CompareNormalsCard'
 import { DiceRollerCard } from '@/components/probability/DiceRollerCard'
@@ -59,6 +60,7 @@ const INFERENCE_CARD_OPTIONS: CardOption[] = [
   { type: 'means', icon: '📐', label: 'Means' },
   { type: 'proportions', icon: '⚖️', label: 'Proportions' },
   { type: 'two-prop-randomization', icon: '🎲', label: 'Two-Prop Randomization Test' },
+  { type: 'two-mean-randomization', icon: '📏', label: 'Two-Mean Randomization Test' },
 ]
 
 const CARD_OPTION_GROUPS = [
@@ -94,6 +96,8 @@ function cardLabel(type: CardConfig['type']): string {
     case 'proportions': return 'Proportions'
     case 'two-prop-randomization': return 'Two-Prop Randomization Test'
     case 'two-prop-sim':           return 'Randomization Simulation'
+    case 'two-mean-randomization': return 'Two-Mean Randomization Test'
+    case 'two-mean-sim':           return 'Randomization Simulation'
     case 'simulation':   return 'Coin Flipper'
     case 'means':        return 'Means'
     default:             return 'Card'
@@ -562,6 +566,11 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       if (zone === 'var1') newConfig = { ...c, var1ColId: null }
       if (zone === 'var2') newConfig = { ...c, var2ColId: null }
     }
+    if ((cfg as CardConfig).type === 'two-mean-randomization') {
+      const c = cfg as unknown as TwoMeanRandomizationCardConfig
+      if (zone === 'var1') newConfig = { ...c, var1ColId: null }
+      if (zone === 'var2') newConfig = { ...c, var2ColId: null }
+    }
     if (newConfig) updateCard(cardId, { config: newConfig })
   }
 
@@ -619,6 +628,8 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       case 'proportions':  return { minWidth: 820, minHeight: 580 }
       case 'two-prop-randomization': return { minWidth: 900, minHeight: 700 }
       case 'two-prop-sim':           return { minWidth: 700, minHeight: 500 }
+      case 'two-mean-randomization': return { minWidth: 900, minHeight: 700 }
+      case 'two-mean-sim':           return { minWidth: 700, minHeight: 500 }
       default:             return { minWidth: 360, minHeight: 280 }
     }
   }
@@ -1031,6 +1042,16 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                           )}
                           {card.config.type === 'two-prop-sim' && (
                             <TwoPropSimCard cardId={card.id} config={card.config} />
+                          )}
+                          {card.config.type === 'two-mean-randomization' && (
+                            <TwoMeanRandomizationTest
+                              cardId={card.id}
+                              config={card.config}
+                              onClearZone={z => clearZone(card.id, z)}
+                            />
+                          )}
+                          {card.config.type === 'two-mean-sim' && (
+                            <TwoMeanSimCard cardId={card.id} config={card.config} />
                           )}
                           {card.config.type === 'simulation' && (
                             <SimulationCard cardId={card.id} config={card.config} />

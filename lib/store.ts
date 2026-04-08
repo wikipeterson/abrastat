@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import { User as FirebaseUser } from 'firebase/auth'
 import { ColumnType, GridState } from '@/types'
-import { ExploreCard, CardConfig, DistributionPreFill, GraphCardConfig, SimResultsCardConfig, TableOutputCardConfig, TwoPropSimCardConfig } from './exploreTypes'
+import { ExploreCard, CardConfig, DistributionPreFill, GraphCardConfig, SimResultsCardConfig, TableOutputCardConfig, TwoPropSimCardConfig, TwoMeanSimCardConfig } from './exploreTypes'
 import { createEmptyGrid } from './gridHelpers'
 import { computeColumnValues } from './formulaEval'
 import { sortCategoryValues } from './categoryOrder'
@@ -208,6 +208,10 @@ interface AbraStatStore {
     config: Omit<TwoPropSimCardConfig, 'type' | 'nullDist' | 'simCount' | 'extremeCount'>,
     sourceCard: ExploreCard,
   ) => string
+  addTwoMeanSimCard: (
+    config: Omit<TwoMeanSimCardConfig, 'type' | 'nullDist' | 'simCount' | 'extremeCount'>,
+    sourceCard: ExploreCard,
+  ) => string
   pushSimResult: (cardId: string, roll: number[]) => void
   pushSimResultsBatch: (cardId: string, rolls: number[][]) => void
   clearSimResults: (cardId: string) => void
@@ -353,6 +357,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'generator'       ? { type: 'generator' } :
       type === 'proportions'  ? { type: 'proportions', var1ColId: null, var2ColId: null } :
       type === 'two-prop-randomization' ? { type: 'two-prop-randomization', var1ColId: null, var2ColId: null } :
+      type === 'two-mean-randomization' ? { type: 'two-mean-randomization', var1ColId: null, var2ColId: null } :
       type === 'means'        ? { type: 'means', var1ColId: null, var2ColId: null } :
       type === 'dice-roller'  ? { type: 'dice-roller', linkedResultsCardId: null, trackedMode: 'sum' } :
       type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', valueMode: 'count', thresholdOp: '>=', thresholdValue: 1, supportsDifference: false, minValue: 1, maxValue: 6, rolls: [], values: [] } :
@@ -365,6 +370,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'compare-normals' ? { width: 760, height: 560 } :
       type === 'proportions'     ? { width: 860, height: 620 } :
       type === 'two-prop-randomization' ? { width: 980, height: 560 } :
+      type === 'two-mean-randomization' ? { width: 980, height: 560 } :
       type === 'dice-roller' ? { width: 760, height: 700 } :
                            { width: 620, height: 520 }
     const rightmostX = state.exploreCards.reduce((max, card) => Math.max(max, card.x + card.width), 20)
@@ -394,6 +400,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       if (cfg.type === 'means')      return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }
       if (cfg.type === 'proportions') return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }
       if (cfg.type === 'two-prop-randomization') return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }
+      if (cfg.type === 'two-mean-randomization') return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }
       return card
     }),
   })),
@@ -406,6 +413,18 @@ export const useStore = create<AbraStatStore>((set) => ({
       const width = 1120, height = 860
       const { x: fx, y: fy } = findOpenCardPosition(state.exploreCards, x, y, width, height)
       const simConfig: TwoPropSimCardConfig = { type: 'two-prop-sim', ...config, nullDist: [], simCount: 0, extremeCount: 0, showNormalCurve: false }
+      return { exploreCards: [...state.exploreCards, { id, config: simConfig, x: fx, y: fy, width, height }] }
+    })
+    return id
+  },
+  addTwoMeanSimCard: (config, sourceCard) => {
+    const id = uuid()
+    set(state => {
+      const x = sourceCard.x + sourceCard.width + 40
+      const y = sourceCard.y
+      const width = 1120, height = 860
+      const { x: fx, y: fy } = findOpenCardPosition(state.exploreCards, x, y, width, height)
+      const simConfig: TwoMeanSimCardConfig = { type: 'two-mean-sim', ...config, nullDist: [], simCount: 0, extremeCount: 0, showNormalCurve: false }
       return { exploreCards: [...state.exploreCards, { id, config: simConfig, x: fx, y: fy, width, height }] }
     })
     return id

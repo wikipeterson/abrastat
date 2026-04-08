@@ -128,6 +128,29 @@ export interface TwoPropSimCardConfig {
   showNormalCurve?: boolean
 }
 
+export interface TwoMeanRandomizationCardConfig {
+  type: 'two-mean-randomization'
+  var1ColId: string | null   // quantitative variable
+  var2ColId: string | null   // grouping variable
+}
+
+export interface TwoMeanSimCardConfig {
+  type: 'two-mean-sim'
+  // snapshot of raw values (needed to run randomization)
+  values1: number[]
+  values2: number[]
+  label1: string
+  label2: string
+  // hypothesis settings
+  alternative: Alternative
+  nullDiff: string
+  // accumulated results
+  nullDist: number[]
+  simCount: number
+  extremeCount: number
+  showNormalCurve?: boolean
+}
+
 export interface SimulationCardConfig {
   type: 'simulation'
   linkedResultsCardId?: string | null
@@ -178,6 +201,8 @@ export type CardConfig =
   | ProportionsCardConfig
   | TwoPropRandomizationCardConfig
   | TwoPropSimCardConfig
+  | TwoMeanRandomizationCardConfig
+  | TwoMeanSimCardConfig
   | SimulationCardConfig
   | MeansCardConfig
   | DiceRollerCardConfig

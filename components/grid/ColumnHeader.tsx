@@ -16,6 +16,7 @@ type MenuMode = 'closed' | 'main' | 'sort-asc' | 'sort-desc' | 'delete-confirm'
 
 export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderProps) {
   const [menuMode, setMenuMode] = useState<MenuMode>('closed')
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(column.name)
   const [zError, setZError] = useState<string | null>(null)
@@ -50,6 +51,8 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
 
   function handleRightClick(e: React.MouseEvent) {
     e.preventDefault()
+    e.stopPropagation()
+    setMenuPos({ x: e.clientX, y: e.clientY })
     setMenuMode('main')
   }
 
@@ -107,13 +110,29 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
           </span>
         )}
 
-        <button onClick={() => setMenuMode(m => m === 'closed' ? 'main' : 'closed')} className="opacity-60 hover:opacity-100">
+        <button
+          onClick={e => {
+            e.stopPropagation()
+            if (menuMode === 'closed') {
+              const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
+              setMenuPos({ x: rect.left, y: rect.bottom + 4 })
+              setMenuMode('main')
+            } else {
+              setMenuMode('closed')
+            }
+          }}
+          className="opacity-60 hover:opacity-100"
+        >
           <ChevronDown size={12} />
         </button>
 
         {/* Dropdown menu */}
         {menuMode !== 'closed' && (
-          <div ref={menuRef} className="absolute top-full left-0 z-50 mt-0.5 bg-white rounded-lg shadow-lg border border-[var(--color-border)] py-1 text-[var(--color-text)] text-xs" style={{ minWidth: 188 }}>
+          <div
+            ref={menuRef}
+            className="fixed z-[100] bg-white rounded-lg shadow-lg border border-[var(--color-border)] py-1 text-[var(--color-text)] text-xs"
+            style={{ minWidth: 188, left: menuPos?.x ?? 0, top: menuPos?.y ?? 0 }}
+          >
 
             {/* Main menu */}
             {menuMode === 'main' && (

@@ -204,34 +204,58 @@ function computePositions(
 
 // ── Null distribution plot ────────────────────────────────────────────────────
 
-function NullDistPlot({ values, diffObs, alternative }: {
-  values: number[]; diffObs: number; alternative: Alternative
+function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }: {
+  values: number[]; diffObs: number; alternative: Alternative; showNormalCurve?: boolean
 }) {
   const clipId = useId()
   const SVG_W = 320
-  const MG = { t:14, r:8, b:30, l:8 }
-  const BUCKET = values.length >= 2000 ? 0.01 : values.length >= 1000 ? 0.015 : values.length >= 400 ? 0.025 : 0.05
-  const stackCounts = new Map<number,number>()
-  values.forEach(v => {
-    const b = Math.round(v / BUCKET) * BUCKET
-    stackCounts.set(b, (stackCounts.get(b) ?? 0) + 1)
-  })
-  const maxStack = Math.max(1, ...Array.from(stackCounts.values()))
-  const preferredDotStep = values.length >= 1000 ? 4.5 : values.length >= 400 ? 5.25 : 6
-  const plotHeight = Math.max(116, Math.min(240, 18 + maxStack * preferredDotStep))
+  const MG = { t: 14, r: 8, b: 30, l: 8 }
+  const plotHeight = 150
   const SVG_H = plotHeight + MG.t + MG.b
   const PW = SVG_W - MG.l - MG.r, PH = SVG_H - MG.t - MG.b
   const xOf = (v: number) => ((v + 1) / 2) * PW
 
+  let bucket = values.length >= 2000 ? 0.01 : values.length >= 1000 ? 0.015 : values.length >= 400 ? 0.025 : 0.05
+  let stackCounts = new Map<number, number>()
+  let maxStack = 1
+  while (true) {
+    stackCounts = new Map<number, number>()
+    values.forEach(v => {
+      const b = Math.round(v / bucket) * bucket
+      stackCounts.set(b, (stackCounts.get(b) ?? 0) + 1)
+    })
+    maxStack = Math.max(1, ...Array.from(stackCounts.values()))
+    if (maxStack <= 28 || bucket >= 0.2) break
+    bucket *= 2
+  }
+
   const seenC2 = new Map<number,number>()
-  const dotStep = Math.max(1.5, Math.min(7, PH / maxStack))
+  const dotStep = Math.max(1.25, Math.min(6, (PH - 8) / maxStack))
   const dotR    = Math.max(1, dotStep/2 - 0.3)
   const circles = values.map(v => {
-    const b  = Math.round(v/BUCKET)*BUCKET
+    const b  = Math.round(v / bucket) * bucket
     const si = seenC2.get(b) ?? 0
     seenC2.set(b, si+1)
     return { cx:xOf(b), cy:PH - si*dotStep - dotR, extreme:isExtremeResult(v, diffObs, alternative) }
   })
+
+  const normalPath = (() => {
+    if (!showNormalCurve || values.length < 2) return ''
+    const mean = values.reduce((sum, value) => sum + value, 0) / values.length
+    const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length
+    const sd = Math.sqrt(variance)
+    if (!Number.isFinite(sd) || sd <= 0) return ''
+    const points: string[] = []
+    for (let i = 0; i <= 80; i++) {
+      const x = -1 + (2 * i) / 80
+      const z = (x - mean) / sd
+      const pdf = Math.exp(-0.5 * z * z) / (sd * Math.sqrt(2 * Math.PI))
+      const expectedCount = values.length * pdf * bucket
+      const y = PH - expectedCount * dotStep
+      points.push(`${xOf(x)},${Math.max(4, Math.min(PH, y))}`)
+    }
+    return points.join(' ')
+  })()
 
   const obsX = xOf(diffObs)
   let shade = ''
@@ -257,6 +281,16 @@ function NullDistPlot({ values, diffObs, alternative }: {
             <circle key={i} cx={c.cx} cy={c.cy} r={dotR} fill={c.extreme?'#0EA5A0':'#94A3B8'} opacity={0.85}
               style={i===circles.length-1&&values.length>0?{animation:'dot-drop 250ms ease-out'}:undefined}/>
           ))}
+          {normalPath && (
+            <polyline
+              points={normalPath}
+              fill="none"
+              stroke="#F59E0B"
+              strokeWidth={2}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          )}
         </g>
         <line x1={obsX} y1={0} x2={obsX} y2={PH} stroke="#EF4444" strokeWidth={1.8} strokeDasharray="4,3"/>
         <text x={obsX+(diffObs>=0?3:-3)} y={5} textAnchor={diffObs>=0?'start':'end'} fontSize={8} fill="#EF4444" fontFamily="DM Sans,sans-serif" fontWeight="600">obs</text>
@@ -267,16 +301,7 @@ function NullDistPlot({ values, diffObs, alternative }: {
 }
 
 function getNullDistributionPanelHeight(values: number[]) {
-  const bucket = values.length >= 2000 ? 0.01 : values.length >= 1000 ? 0.015 : values.length >= 400 ? 0.025 : 0.05
-  const stackCounts = new Map<number,number>()
-  values.forEach(v => {
-    const b = Math.round(v / bucket) * bucket
-    stackCounts.set(b, (stackCounts.get(b) ?? 0) + 1)
-  })
-  const maxStack = Math.max(1, ...Array.from(stackCounts.values()))
-  const preferredDotStep = values.length >= 1000 ? 4.5 : values.length >= 400 ? 5.25 : 6
-  const plotHeight = Math.max(116, Math.min(240, 18 + maxStack * preferredDotStep))
-  return Math.max(160, plotHeight + 74)
+  return values.length === 0 ? 170 : 228
 }
 
 // ── Step definitions ──────────────────────────────────────────────────────────
@@ -595,6 +620,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
   const nullPanelHeight = getNullDistributionPanelHeight(nullDist)
   const visibleNullPanelHeight = simCount === 0 ? 180 : nullPanelHeight
   const cardTransDur    = stage==='shuffling' ? SHUFFLE_DUR : stage==='reassigning' ? DEAL_DUR : POOL_DUR
+  const showNormalCurve = config.showNormalCurve ?? false
 
   const dataRef   = useRef(data)
   const altRef    = useRef(alternative)
@@ -804,11 +830,22 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
 
         {/* Null distribution */}
         <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 flex flex-col gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)] flex-shrink-0">Null Distribution</span>
+          <div className="flex items-center justify-between gap-3 flex-shrink-0">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
+            <label className="flex items-center gap-2 text-xs text-[var(--color-muted)] select-none">
+              <input
+                type="checkbox"
+                checked={showNormalCurve}
+                onChange={e => updateExploreCard(cardId, { config: { ...config, showNormalCurve: e.target.checked } })}
+                className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+              />
+              <span>Overlay normal curve</span>
+            </label>
+          </div>
           <div className="min-h-0" style={{minHeight: visibleNullPanelHeight}}>
             {simCount===0
               ?<div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">Run simulations to build the null distribution</div>
-              :<NullDistPlot values={nullDist} diffObs={data.diffObs} alternative={alternative}/>
+              :<NullDistPlot values={nullDist} diffObs={data.diffObs} alternative={alternative} showNormalCurve={showNormalCurve}/>
             }
           </div>
           <div className="flex items-center gap-3 pt-2 border-t border-[var(--color-border)] flex-shrink-0">

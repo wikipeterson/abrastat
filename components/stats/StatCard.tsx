@@ -188,6 +188,41 @@ export function LinearRegressionCard({ xName, yName, xs, ys }: { xName: string; 
 
 type TableMode = 'count' | 'row' | 'col' | 'total'
 
+function buildTwoWayCopiedTableText(
+  rowLabels: string[],
+  colLabels: string[],
+  counts: number[][],
+  displayAName: string,
+  displayBName: string,
+  mode: TableMode,
+) {
+  const rowTotals = counts.map(row => row.reduce((s, v) => s + v, 0))
+  const colTotals = colLabels.map((_, ci) => counts.reduce((s, row) => s + row[ci], 0))
+  const grandTotal = rowTotals.reduce((s, v) => s + v, 0)
+
+  function cellDisplay(count: number, ri: number, ci: number): string {
+    if (mode === 'count') return String(count)
+    if (mode === 'row') return rowTotals[ri] ? (count / rowTotals[ri] * 100).toFixed(1) + '%' : '—'
+    if (mode === 'col') return colTotals[ci] ? (count / colTotals[ci] * 100).toFixed(1) + '%' : '—'
+    return grandTotal ? (count / grandTotal * 100).toFixed(1) + '%' : '—'
+  }
+
+  function totalDisplay(val: number, base: number): string {
+    if (mode === 'count') return String(val)
+    return base ? (val / base * 100).toFixed(1) + '%' : '—'
+  }
+
+  const header = [`${displayAName} \\ ${displayBName}`, ...colLabels, 'Total']
+  const body = rowLabels.map((rowLabel, ri) => [
+    rowLabel,
+    ...colLabels.map((_, ci) => cellDisplay(counts[ri][ci], ri, ci)),
+    totalDisplay(rowTotals[ri], grandTotal),
+  ])
+  const totals = ['Total', ...colLabels.map((_, ci) => totalDisplay(colTotals[ci], grandTotal)), mode === 'count' ? String(grandTotal) : '100%']
+
+  return [header, ...body, totals].map(row => row.join('\t')).join('\n')
+}
+
 export function TwoWayTableCard({
   colAName,
   colBName,
@@ -202,6 +237,7 @@ export function TwoWayTableCard({
   manualTable?: ManualTwoWayTableSnapshot
 }) {
   const [mode, setMode] = useState<TableMode>('count')
+  const [isCopying, setIsCopying] = useState(false)
   const { rowLabels, colLabels, counts, displayAName, displayBName } = manualTable
     ? {
         rowLabels: manualTable.rowLabels,
@@ -232,13 +268,30 @@ export function TwoWayTableCard({
     return base ? (val / base * 100).toFixed(1) + '%' : '—'
   }
 
+  async function copyTable() {
+    try {
+      setIsCopying(true)
+      await navigator.clipboard.writeText(
+        buildTwoWayCopiedTableText(rowLabels, colLabels, counts, displayAName, displayBName, mode)
+      )
+    } finally {
+      window.setTimeout(() => setIsCopying(false), 400)
+    }
+  }
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:col-span-2 xl:col-span-3">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h3 className="font-semibold text-[var(--color-text)]">
           Two-Way Table — <span className="text-[var(--color-accent)]">{displayAName}</span> × <span className="text-[var(--color-accent)]">{displayBName}</span>
         </h3>
-        <div className="flex gap-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={copyTable}
+            className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
+          >
+            {isCopying ? 'Copied' : 'Copy Table'}
+          </button>
           {(['count', 'row', 'col', 'total'] as TableMode[]).map(m => (
             <button
               key={m}

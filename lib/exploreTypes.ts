@@ -125,6 +125,7 @@ export interface TwoPropSimCardConfig {
   nullDist: number[]
   simCount: number
   extremeCount: number
+  showNormalCurve?: boolean
 }
 
 export interface SimulationCardConfig {

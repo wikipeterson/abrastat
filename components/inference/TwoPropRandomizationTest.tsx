@@ -234,8 +234,8 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
     const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length
     const sd = Math.sqrt(variance)
     if (!Number.isFinite(sd) || sd <= 0) return null
-    const samples = Array.from({ length: 81 }, (_, i) => {
-      const x = -1 + (2 * i) / 80
+    const samples = Array.from({ length: 241 }, (_, i) => {
+      const x = -1 + (2 * i) / 240
       const z = (x - mean) / sd
       const pdf = Math.exp(-0.5 * z * z) / (sd * Math.sqrt(2 * Math.PI))
       return { x, expectedCount: values.length * pdf * bucket }
@@ -244,11 +244,12 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
   })()
 
   const maxCurveCount = normalStats ? Math.max(...normalStats.samples.map(sample => sample.expectedCount)) : 0
-  const yMaxCount = Math.max(maxStack, maxCurveCount) * 1.08
-  const topPad = 10
+  const topPad = 14
+  const yMaxCount = Math.max(maxStack, maxCurveCount) * 1.3
+  const yScale = (PH - topPad) / Math.max(1, yMaxCount)
 
   const seenC2 = new Map<number,number>()
-  const dotStep = Math.max(1.25, Math.min(6, (PH - topPad) / Math.max(1, yMaxCount)))
+  const dotStep = Math.max(1.25, Math.min(6, yScale))
   const dotR    = Math.max(1, dotStep/2 - 0.3)
   const circles = values.map(v => {
     const b  = Math.round(v / bucket) * bucket
@@ -260,7 +261,7 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
   const normalPath = (() => {
     if (!normalStats) return ''
     return normalStats.samples
-      .map(sample => `${xOf(sample.x)},${Math.max(topPad, Math.min(PH, PH - sample.expectedCount * dotStep))}`)
+      .map(sample => `${xOf(sample.x)},${Math.min(PH, Math.max(0, PH - sample.expectedCount * yScale))}`)
       .join(' ')
   })()
 

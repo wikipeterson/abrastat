@@ -593,6 +593,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
   const pValue     = simCount > 0 ? extremeCount / simCount : null
   const positions  = computePositions(data, stage, assignment, shufflePhase, pileCY)
   const nullPanelHeight = getNullDistributionPanelHeight(nullDist)
+  const visibleNullPanelHeight = simCount === 0 ? 180 : nullPanelHeight
   const cardTransDur    = stage==='shuffling' ? SHUFFLE_DUR : stage==='reassigning' ? DEAL_DUR : POOL_DUR
 
   const dataRef   = useRef(data)
@@ -684,72 +685,73 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-        {/* Animation canvas */}
-        <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
-          <div className="overflow-x-auto flex justify-center">
-            <div className="w-fit">
-              <div className="relative bg-slate-50 border-b border-[var(--color-border)] flex-shrink-0" style={{width:CANVAS_W,height:HEADER_H}}>
-                <span style={{position:'absolute',left:COL_CX.left,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label1}</span>
-                {showCenter&&<span style={{position:'absolute',left:COL_CX.center,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,color:'var(--color-muted)'}}>Pooled</span>}
-                <span style={{position:'absolute',left:COL_CX.right,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label2}</span>
-              </div>
+        <div className="grid gap-4 xl:grid-cols-[680px_minmax(320px,1fr)]">
+          {/* Animation canvas */}
+          <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
+            <div className="overflow-x-auto flex justify-center">
+              <div className="w-fit">
+                <div className="relative bg-slate-50 border-b border-[var(--color-border)] flex-shrink-0" style={{width:CANVAS_W,height:HEADER_H}}>
+                  <span style={{position:'absolute',left:COL_CX.left,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label1}</span>
+                  {showCenter&&<span style={{position:'absolute',left:COL_CX.center,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,color:'var(--color-muted)'}}>Pooled</span>}
+                  <span style={{position:'absolute',left:COL_CX.right,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label2}</span>
+                </div>
 
-              <div className="relative bg-white flex-shrink-0 overflow-hidden" style={{width:CANVAS_W,height:canvasH,transition:'height 400ms ease'}}>
-                <div className="absolute inset-y-0 transition-all duration-500" style={{
-                  left:COL_CX.left-COL_W/2-4,width:COL_W+8,
-                  background:showSplit?'rgba(14,165,160,0.04)':'transparent',
-                  borderRight:showSplit?'1px dashed rgba(14,165,160,0.2)':'none',
-                }}/>
-                <div className="absolute inset-y-0 transition-all duration-500" style={{
-                  left:COL_CX.right-COL_W/2-4,width:COL_W+8,
-                  background:showSplit?'rgba(14,165,160,0.04)':'transparent',
-                  borderLeft:showSplit?'1px dashed rgba(14,165,160,0.2)':'none',
-                }}/>
-                {cases.map(c => {
-                  const p  = positions.get(c.id) ?? {x:-50,y:-50,rotation:0,delay:0,faceDown:false}
-                  const fd = p.faceDown
-                  const isSuccess = c.response===1
-                  const bg  = fd?'#1A8C80':isSuccess?'#2EC4B6':'#E2E8F0'
-                  const bdr = fd?'#0D6B63':isSuccess?'#1A8C80':'#CBD5E1'
-                  return (
-                    <div key={c.id} style={{
-                      position:'absolute',left:p.x,top:p.y,width:layout.w,height:layout.h,
-                      transition:`left ${cardTransDur}ms ease-in-out,top ${cardTransDur}ms ease-in-out,transform ${cardTransDur}ms ease-in-out,background-color 160ms,border-color 160ms`,
-                      transitionDelay:`${p.delay}ms`,transform:`rotate(${p.rotation}deg)`,
-                      borderRadius:Math.max(2,Math.floor(layout.w/7)),
-                      backgroundColor:bg,border:`${Math.max(1,Math.floor(layout.w/14))}px solid ${bdr}`,
-                      boxShadow:fd?'0 2px 5px rgba(0,0,0,0.20)':'0 1px 2px rgba(0,0,0,0.10)',boxSizing:'border-box',
-                    }}/>
-                  )
-                })}
-                {showColStats&&(
-                  <>
-                    <ColStatLabel cx={COL_CX.left} n={leftStats.n} s={leftStats.s} p={leftStats.p} highlight={highlightSim} layout={layout}/>
-                    <ColStatLabel cx={COL_CX.right} n={rightStats.n} s={rightStats.s} p={rightStats.p} highlight={highlightSim} layout={layout}/>
-                  </>
-                )}
-              </div>
+                <div className="relative bg-white flex-shrink-0 overflow-hidden" style={{width:CANVAS_W,height:canvasH,transition:'height 400ms ease'}}>
+                  <div className="absolute inset-y-0 transition-all duration-500" style={{
+                    left:COL_CX.left-COL_W/2-4,width:COL_W+8,
+                    background:showSplit?'rgba(14,165,160,0.04)':'transparent',
+                    borderRight:showSplit?'1px dashed rgba(14,165,160,0.2)':'none',
+                  }}/>
+                  <div className="absolute inset-y-0 transition-all duration-500" style={{
+                    left:COL_CX.right-COL_W/2-4,width:COL_W+8,
+                    background:showSplit?'rgba(14,165,160,0.04)':'transparent',
+                    borderLeft:showSplit?'1px dashed rgba(14,165,160,0.2)':'none',
+                  }}/>
+                  {cases.map(c => {
+                    const p  = positions.get(c.id) ?? {x:-50,y:-50,rotation:0,delay:0,faceDown:false}
+                    const fd = p.faceDown
+                    const isSuccess = c.response===1
+                    const bg  = fd?'#1A8C80':isSuccess?'#2EC4B6':'#E2E8F0'
+                    const bdr = fd?'#0D6B63':isSuccess?'#1A8C80':'#CBD5E1'
+                    return (
+                      <div key={c.id} style={{
+                        position:'absolute',left:p.x,top:p.y,width:layout.w,height:layout.h,
+                        transition:`left ${cardTransDur}ms ease-in-out,top ${cardTransDur}ms ease-in-out,transform ${cardTransDur}ms ease-in-out,background-color 160ms,border-color 160ms`,
+                        transitionDelay:`${p.delay}ms`,transform:`rotate(${p.rotation}deg)`,
+                        borderRadius:Math.max(2,Math.floor(layout.w/7)),
+                        backgroundColor:bg,border:`${Math.max(1,Math.floor(layout.w/14))}px solid ${bdr}`,
+                        boxShadow:fd?'0 2px 5px rgba(0,0,0,0.20)':'0 1px 2px rgba(0,0,0,0.10)',boxSizing:'border-box',
+                      }}/>
+                    )
+                  })}
+                  {showColStats&&(
+                    <>
+                      <ColStatLabel cx={COL_CX.left} n={leftStats.n} s={leftStats.s} p={leftStats.p} highlight={highlightSim} layout={layout}/>
+                      <ColStatLabel cx={COL_CX.right} n={rightStats.n} s={rightStats.s} p={rightStats.p} highlight={highlightSim} layout={layout}/>
+                    </>
+                  )}
+                </div>
 
-              <div className="flex-shrink-0 border-t border-[var(--color-border)] bg-slate-50 px-3 py-2" style={{width:CANVAS_W}}>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
-                    <span className="inline-block rounded-sm bg-[#2EC4B6] flex-shrink-0" style={{width:8,height:13,boxShadow:'0 1px 2px rgba(0,0,0,0.15)'}}/>
-                    {config.successLabel}
+                <div className="flex-shrink-0 border-t border-[var(--color-border)] bg-slate-50 px-3 py-2" style={{width:CANVAS_W}}>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
+                      <span className="inline-block rounded-sm bg-[#2EC4B6] flex-shrink-0" style={{width:8,height:13,boxShadow:'0 1px 2px rgba(0,0,0,0.15)'}}/>
+                      {config.successLabel}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
+                      <span className="inline-block rounded-sm bg-[#E2E8F0] border border-[#CBD5E1] flex-shrink-0" style={{width:8,height:13}}/>
+                      {config.failureLabel}
+                    </div>
+                    <span className="ml-auto text-[10px] italic text-[var(--color-muted)]">{CAPTIONS[stage]}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
-                    <span className="inline-block rounded-sm bg-[#E2E8F0] border border-[#CBD5E1] flex-shrink-0" style={{width:8,height:13}}/>
-                    {config.failureLabel}
-                  </div>
-                  <span className="ml-auto text-[10px] italic text-[var(--color-muted)]">{CAPTIONS[stage]}</span>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Stats + hypotheses */}
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(240px,0.65fr)]">
-          <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
+          {/* Stats + hypotheses */}
+          <div className="space-y-4">
+            <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
             <div className="grid text-xs" style={{gridTemplateColumns:'auto 1fr 1fr 1fr'}}>
               <div className="px-2 py-1.5 bg-slate-50 border-b border-[var(--color-border)]"/>
               {[config.label1, config.label2, 'p̂₁ − p̂₂'].map(h=>(
@@ -787,9 +789,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
               <span className="text-[10px] text-[var(--color-muted)]">Simulation #{simCount>0?simCount:'—'}</span>
               <span className="text-[10px] text-[var(--color-muted)]">{simCount} total</span>
             </div>
-          </div>
-
-          <div className="space-y-3">
+            </div>
             <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-3 text-xs text-[var(--color-muted)] space-y-1">
               <div><span className="font-semibold">H₀:</span> p₁ − p₂ = {nullDiff}</div>
               <div><span className="font-semibold">H₁:</span> {altStatement}</div>
@@ -805,7 +805,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
         {/* Null distribution */}
         <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 flex flex-col gap-2">
           <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)] flex-shrink-0">Null Distribution</span>
-          <div className="min-h-0" style={{minHeight: nullPanelHeight}}>
+          <div className="min-h-0" style={{minHeight: visibleNullPanelHeight}}>
             {simCount===0
               ?<div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">Run simulations to build the null distribution</div>
               :<NullDistPlot values={nullDist} diffObs={data.diffObs} alternative={alternative}/>

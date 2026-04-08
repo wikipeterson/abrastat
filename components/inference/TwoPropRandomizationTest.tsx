@@ -682,8 +682,8 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
         {/* Animation canvas */}
         <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
-          <div className="overflow-x-auto">
-            <div className="w-fit min-w-full mx-auto">
+          <div className="overflow-x-auto flex justify-center">
+            <div className="w-fit">
               <div className="relative bg-slate-50 border-b border-[var(--color-border)] flex-shrink-0" style={{width:CANVAS_W,height:HEADER_H}}>
                 <span style={{position:'absolute',left:COL_CX.left,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label1}</span>
                 {showCenter&&<span style={{position:'absolute',left:COL_CX.center,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,color:'var(--color-muted)'}}>Pooled</span>}

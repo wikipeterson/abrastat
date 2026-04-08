@@ -571,7 +571,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                         onChange={e => onSetShowOutlierFences(e.target.checked)}
                         className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                       />
-                      <span>Show outlier fences</span>
+                      <span>Use fences to identify outliers</span>
                     </label>
                   )}
 

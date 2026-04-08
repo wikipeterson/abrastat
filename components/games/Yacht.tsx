@@ -272,7 +272,7 @@ export function Yacht({ onDone }: Props) {
   const canScore = hasRolled && !isRolling && !returningHeld
   const diceValues = dice.map(d => d.value ?? 0)
   const activeDice = dice.filter(d => !d.held)
-  const canShowRollOverlay = showRollOverlay && !isRolling && rollsLeft > 0 && activeDice.length > 0
+  const canShowRollOverlay = showRollOverlay && !isRolling && activeDice.length > 0
 
   const { upperSubtotal, lowerSubtotal, grandTotal } = computeTotals(scores)
   const upperCats = CATEGORIES.filter(c => c.section === 'upper')
@@ -310,10 +310,15 @@ export function Yacht({ onDone }: Props) {
             {canShowRollOverlay && (
               <div className="pointer-events-none absolute inset-x-0 top-0 flex h-[76%] items-center justify-center">
                 <button
-                  onClick={roll}
-                  className="pointer-events-auto rounded-2xl border-2 border-[var(--color-accent)] bg-white px-10 py-4 text-2xl font-bold text-[var(--color-accent)] shadow-lg transition-all hover:bg-[var(--color-accent)] hover:text-white"
+                  onClick={rollsLeft > 0 ? roll : undefined}
+                  className={[
+                    'pointer-events-auto rounded-2xl border-2 border-[var(--color-accent)] bg-white px-10 py-4 text-2xl font-bold text-[var(--color-accent)] shadow-lg transition-all',
+                    rollsLeft > 0
+                      ? 'hover:bg-[var(--color-accent)] hover:text-white'
+                      : 'cursor-default',
+                  ].join(' ')}
                 >
-                  {rollsLeft === 3 ? 'Roll Dice' : `Roll Again (${rollsLeft} left)`}
+                  {rollsLeft === 0 ? 'Mark It!' : rollsLeft === 3 ? 'Roll Dice' : `Roll Again (${rollsLeft} left)`}
                 </button>
               </div>
             )}

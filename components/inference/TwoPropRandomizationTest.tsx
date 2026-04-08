@@ -45,11 +45,11 @@ function getCanvasHeight(n1: number, n2: number): number {
   const maxN = Math.max(n1, n2)
   const cols = Math.min(layout.perRow, maxN)
   const rows = Math.ceil(maxN / cols)
-  return Math.max(160, Math.min(HEADER_H + rows * layout.stepY + 28, 320))
+  return Math.max(160, Math.min(HEADER_H + rows * layout.stepY + 28, 420))
 }
 
 function getCardLayout(n: number): CardLayout {
-  const w = n <= 20 ? 22 : n <= 40 ? 16 : n <= 80 ? 12 : n <= 160 ? 9 : 7
+  const w = n <= 20 ? 36 : n <= 40 ? 26 : n <= 80 ? 18 : n <= 160 ? 13 : n <= 300 ? 10 : 8
   const h = Math.ceil(w * 1.55)
   const gap = 2
   return { w, h, stepX: w + gap, stepY: h + gap, perRow: Math.max(1, Math.floor(COL_W / (w + gap))) }
@@ -81,12 +81,14 @@ function shufflePhasePos(id: number, phase: number, layout: CardLayout, pileCY: 
   const s = phase * 13  // unique salt per phase
   if (phase % 2 === 1) {
     // Spread: fly outward in a deterministic random direction
+    // Two independent components give a peaked (triangular-ish) distribution
+    // so most cards go medium distance, some go very far, some stay close
     const angle = cardHash(id, s + 3) * Math.PI * 2
-    const dist  = 28 + cardHash(id, s + 4) * 44  // 28–72 px from pile center
+    const dist  = 18 + cardHash(id, s + 4) * 70 + cardHash(id, s + 11) * 90  // 18–178 px
     return {
       x: COL_CX.center - layout.w/2 + Math.cos(angle) * dist,
       y: pileCY         - layout.h/2 + Math.sin(angle) * dist,
-      rotation: (cardHash(id, s + 5) - 0.5) * 72,
+      rotation: (cardHash(id, s + 5) - 0.5) * 90,
     }
   } else {
     // Return: back to pile with a fresh arrangement
@@ -675,18 +677,21 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
 
   return (
     <div className="flex flex-col h-full">
-      {/* Canvas + stats */}
-      <div className="flex flex-1 min-h-0">
+
+      {/* ── Top half: animation canvas (left) + stats/hypotheses (right) ── */}
+      <div className="flex flex-shrink-0 border-b border-[var(--color-border)]">
 
         {/* Animation canvas */}
         <div className="flex-shrink-0 flex flex-col border-r border-[var(--color-border)]">
+          {/* Column headers */}
           <div className="relative bg-slate-50 border-b border-[var(--color-border)] flex-shrink-0" style={{width:CANVAS_W,height:HEADER_H}}>
             <span style={{position:'absolute',left:COL_CX.left,  top:'50%',transform:'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label1}</span>
             {showCenter&&<span style={{position:'absolute',left:COL_CX.center,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,color:'var(--color-muted)'}}>Pooled</span>}
             <span style={{position:'absolute',left:COL_CX.right, top:'50%',transform:'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label2}</span>
           </div>
 
-          <div className="relative bg-white flex-shrink-0" style={{width:CANVAS_W,height:canvasH,transition:'height 400ms ease'}}>
+          {/* Cards — overflow hidden clips shuffling cards that fly out */}
+          <div className="relative bg-white flex-shrink-0 overflow-hidden" style={{width:CANVAS_W,height:canvasH,transition:'height 400ms ease'}}>
             <div className="absolute inset-y-0 transition-all duration-500" style={{
               left:COL_CX.left-COL_W/2-4,width:COL_W+8,
               background:showSplit?'rgba(14,165,160,0.04)':'transparent',
@@ -721,6 +726,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
             )}
           </div>
 
+          {/* Legend + caption */}
           <div className="flex-shrink-0 border-t border-[var(--color-border)] bg-slate-50 px-3 py-2" style={{width:CANVAS_W}}>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
@@ -736,8 +742,9 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
           </div>
         </div>
 
-        {/* Stats panel */}
-        <div className="flex-1 flex flex-col gap-3 p-4 min-h-0 overflow-y-auto">
+        {/* Hypotheses + obs/sim table */}
+        <div className="flex-1 flex flex-col gap-3 p-4 overflow-y-auto">
+          {/* Obs/sim table */}
           <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden flex-shrink-0">
             <div className="grid text-xs" style={{gridTemplateColumns:'auto 1fr 1fr 1fr'}}>
               <div className="px-2 py-1.5 bg-slate-50 border-b border-[var(--color-border)]"/>
@@ -778,30 +785,32 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
             </div>
           </div>
 
+          {/* H₀ / H₁ */}
           <div className="flex-shrink-0 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2 text-xs text-[var(--color-muted)] space-y-0.5">
             <div><span className="font-semibold">H₀:</span> p₁ − p₂ = {nullDiff}</div>
             <div><span className="font-semibold">H₁:</span> {altStatement}</div>
           </div>
-
-          <div className="flex-1 min-h-0 rounded-xl border border-[var(--color-border)] bg-white p-3 flex flex-col" style={{minHeight:nullPanelHeight}}>
-            <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)] mb-1 flex-shrink-0">Null Distribution</span>
-            <div className="flex-1 min-h-0">
-              {simCount===0
-                ?<div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">Run simulations to build distribution</div>
-                :<NullDistPlot values={nullDist} diffObs={data.diffObs} alternative={alternative}/>
-              }
-            </div>
-            <div className="flex items-center gap-3 pt-2 border-t border-[var(--color-border)] flex-shrink-0 mt-1">
-              <span className="text-xs text-[var(--color-muted)]">Extreme: <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}</span>
-              <span className="ml-auto text-sm font-bold text-[var(--color-accent)]">
-                {pValue!==null?`p ≈ ${pValue<0.001?'< 0.001':pValue.toFixed(4)}`:'p = —'}
-              </span>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Controls */}
+      {/* ── Bottom half: null distribution full width ── */}
+      <div className="flex-1 min-h-0 flex flex-col p-4 gap-2">
+        <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)] flex-shrink-0">Null Distribution</span>
+        <div className="flex-1 min-h-0" style={{minHeight: nullPanelHeight}}>
+          {simCount===0
+            ?<div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">Run simulations to build the null distribution</div>
+            :<NullDistPlot values={nullDist} diffObs={data.diffObs} alternative={alternative}/>
+          }
+        </div>
+        <div className="flex items-center gap-3 pt-2 border-t border-[var(--color-border)] flex-shrink-0">
+          <span className="text-xs text-[var(--color-muted)]">Extreme: <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}</span>
+          <span className="ml-auto text-sm font-bold text-[var(--color-accent)]">
+            {pValue!==null?`p ≈ ${pValue<0.001?'< 0.001':pValue.toFixed(4)}`:'p = —'}
+          </span>
+        </div>
+      </div>
+
+      {/* ── Controls ── */}
       <div className="flex-shrink-0 flex flex-wrap items-center gap-2 px-4 py-3 border-t border-[var(--color-border)] bg-slate-50">
         <div className="flex items-center gap-1">
           {STEPS.map(({label,stages})=>{

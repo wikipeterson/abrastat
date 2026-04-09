@@ -131,6 +131,7 @@ export function runTwoMeanRandomization(data: TwoMeanData): TwoMeanResult {
 export interface OnePropResult {
   xSim: number   // simulated count of successes
   pSim: number   // xSim / n
+  outcomes: boolean[] // independent Bernoulli outcomes for the simulated sample
 }
 
 /**
@@ -139,10 +140,13 @@ export interface OnePropResult {
  */
 export function runOnePropRandomization(n: number, p0: number): OnePropResult {
   let xSim = 0
+  const outcomes: boolean[] = []
   for (let i = 0; i < n; i++) {
-    if (Math.random() < p0) xSim++
+    const success = Math.random() < p0
+    outcomes.push(success)
+    if (success) xSim++
   }
-  return { xSim, pSim: xSim / n }
+  return { xSim, pSim: xSim / n, outcomes }
 }
 
 /**

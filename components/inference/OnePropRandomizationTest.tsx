@@ -536,10 +536,12 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
   // 'computed' | 'plotted'   → simulated faces (or observed if no sim yet)
   const showSimFaces = (phase === 'computed' || phase === 'plotted') && displayedSim !== null
   const displayFaces = useMemo<CoinFace[]>(() => {
-    const xDisplay = showSimFaces ? displayedSim!.xSim : x
+    if (showSimFaces && displayedSim) {
+      return displayedSim.outcomes.map(outcome => outcome ? 'check' as CoinFace : 'x' as CoinFace)
+    }
     return [
-      ...Array(xDisplay).fill('check' as CoinFace),
-      ...Array(Math.max(0, n - xDisplay)).fill('x' as CoinFace),
+      ...Array(x).fill('check' as CoinFace),
+      ...Array(Math.max(0, n - x)).fill('x' as CoinFace),
     ]
   }, [showSimFaces, displayedSim, x, n])
 

@@ -272,11 +272,11 @@ function OnePropNullDistPlot({
       <defs><clipPath id={clipId}><rect x={0} y={0} width={PW} height={PH} /></clipPath></defs>
       <g transform={`translate(${MG.l},${MG.t})`}>
         <path d={shade} fill="#0EA5A0" opacity={0.10} />
-        <line x1={0} y1={PH} x2={PW} y2={PH} stroke="#E2E8F0" strokeWidth={1.5} />
+        <line x1={0} y1={PH} x2={PW} y2={PH} stroke="#111111" strokeWidth={1.5} />
         {ticks.map((v, i) => (
           <g key={i} transform={`translate(${xOf(v)},${PH})`}>
-            <line y2={3} stroke="#CBD5E1" strokeWidth={1} />
-            <text y={12} textAnchor="middle" fontSize={8} fill="#94A3B8" fontFamily="DM Sans,sans-serif">
+            <line y2={3} stroke="#111111" strokeWidth={1} />
+            <text y={12} textAnchor="middle" fontSize={8} fill="#111111" fontFamily="DM Sans,sans-serif">
               {formatTick(v, xRange)}
             </text>
           </g>
@@ -284,7 +284,7 @@ function OnePropNullDistPlot({
         <g clipPath={`url(#${clipId})`}>
           {circles.map((c, i) => (
             <circle key={i} cx={c.cx} cy={c.cy} r={dotR}
-              fill={c.extreme ? '#0EA5A0' : '#94A3B8'} opacity={0.85}
+              fill="#111111" opacity={0.85}
               style={i === circles.length - 1 && values.length > 0
                 ? { animation: 'dot-drop 250ms ease-out' } : undefined}
             />
@@ -298,7 +298,7 @@ function OnePropNullDistPlot({
         <text x={obsX + (obsVal >= nullCenter ? 3 : -3)} y={5}
           textAnchor={obsVal >= nullCenter ? 'start' : 'end'}
           fontSize={8} fill="#EF4444" fontFamily="DM Sans,sans-serif" fontWeight="600">obs</text>
-        <text x={PW / 2} y={PH + 24} textAnchor="middle" fontSize={9} fill="#94A3B8" fontFamily="DM Sans,sans-serif">
+        <text x={PW / 2} y={PH + 24} textAnchor="middle" fontSize={9} fill="#111111" fontFamily="DM Sans,sans-serif">
           {view === 'counts' ? 'Simulated X (count of successes)' : 'Simulated p̂'}
         </text>
       </g>
@@ -741,14 +741,6 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
               </div>
             </div>
 
-            {/* Normal overlay stats */}
-            {showNormalCurve && (
-              <div className="rounded-xl bg-amber-50 border border-amber-100 px-2.5 py-2 text-xs text-[var(--color-muted)] space-y-0.5">
-                <div className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide mb-1">Normal Overlay</div>
-                <div>Mean = {normMean.toFixed(4)}</div>
-                <div>SD = {normSD.toFixed(4)}</div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -766,15 +758,23 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                 ))}
               </div>
             </div>
-            <label className="flex items-center gap-2 text-xs text-[var(--color-muted)] select-none">
-              <input
-                type="checkbox"
-                checked={showNormalCurve}
-                onChange={e => updateExploreCard(cardId, { config: { ...config, showNormalCurve: e.target.checked } })}
-                className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
-              />
-              Overlay normal curve
-            </label>
+            <div className="flex flex-col items-start text-xs text-[var(--color-muted)]">
+              <label className="flex items-center gap-2 select-none">
+                <input
+                  type="checkbox"
+                  checked={showNormalCurve}
+                  onChange={e => updateExploreCard(cardId, { config: { ...config, showNormalCurve: e.target.checked } })}
+                  className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                />
+                Overlay normal curve
+              </label>
+              {showNormalCurve && (
+                <div className="pl-6 pt-1 leading-tight">
+                  <div>Mean = {normMean.toFixed(4)}</div>
+                  <div>SD = {normSD.toFixed(4)}</div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="min-h-0" style={{ height: simCount === 0 ? 120 : 180 }}>

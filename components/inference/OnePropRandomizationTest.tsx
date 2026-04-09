@@ -652,7 +652,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-4 space-y-4">
 
         {/* ── Two-column layout: coin panel + stats ── */}
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'minmax(0,1fr) 260px' }}>
+        <div className="grid items-start gap-4" style={{ gridTemplateColumns: 'minmax(0,1fr) 260px' }}>
 
           {/* ── Unified coin panel ── */}
           <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden flex flex-col">
@@ -738,39 +738,6 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                 <span className="font-bold text-right">{x}</span>
                 <span className="text-[var(--color-muted)]">p̂</span>
                 <span className="font-bold text-[var(--color-accent)] text-right">{phat.toFixed(4)}</span>
-              </div>
-            </div>
-
-            {/* Latest simulation result */}
-            <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
-              <div className="px-2.5 py-1.5 bg-slate-50 border-b border-[var(--color-border)]">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Latest Simulation</span>
-              </div>
-              <div className="px-2.5 py-2 grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
-                {displayedSim ? (
-                  <>
-                    <span className="text-[var(--color-muted)]">X (null)</span>
-                    <span className={`font-bold text-right ${lastSimExtreme ? 'text-[var(--color-accent)]' : ''}`}>
-                      {displayedSim.xSim}
-                      {lastSimExtreme && <span className="ml-0.5 text-[9px]">★</span>}
-                    </span>
-                    <span className="text-[var(--color-muted)]">p̂ (null)</span>
-                    <span className={`font-bold text-right ${lastSimExtreme ? 'text-[var(--color-accent)]' : ''}`}>
-                      {displayedSim.pSim.toFixed(4)}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-[var(--color-muted)]">X (null)</span>
-                    <span className="text-[var(--color-muted)] opacity-40 text-right">—</span>
-                    <span className="text-[var(--color-muted)]">p̂ (null)</span>
-                    <span className="text-[var(--color-muted)] opacity-40 text-right">—</span>
-                  </>
-                )}
-                <span className="text-[var(--color-muted)]">p₀</span>
-                <span className="font-mono text-right">{config.nullP}</span>
-                <span className="text-[var(--color-muted)]">Simulations</span>
-                <span className="font-bold text-right">{simCount}</span>
               </div>
             </div>
 

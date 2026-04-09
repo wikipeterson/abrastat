@@ -51,6 +51,7 @@ function AbraCoin({
   const isCheck = face === 'check'
   const rimSize  = Math.max(1, Math.round(size * 0.055))
   const iconSize = Math.round(size * (isCheck ? 0.52 : 0.46))
+  const neutralBackground = 'linear-gradient(90deg, #0EA5A0 0%, #47CFC8 48%, #D7E2EE 52%, #A7B6C8 100%)'
 
   const containerStyle: React.CSSProperties = {
     width:         size,
@@ -74,13 +75,17 @@ function AbraCoin({
     overflow:    'hidden',
     boxSizing:   'border-box',
     // Check → teal, X → cool silver
-    background: isCheck
-      ? 'radial-gradient(circle at 36% 33%, #5CE0DB, #0EA5A0 52%, #097B76)'
-      : 'radial-gradient(circle at 36% 33%, #F1F5F9, #CBD5E1 52%, #94A3B8)',
-    border: `${rimSize}px solid ${isCheck ? '#0A6663' : '#7C8FA1'}`,
-    boxShadow: isCheck
-      ? `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(0,80,76,0.30), inset 0 1px 2px rgba(255,255,255,0.28)`
-      : `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(0,0,0,0.18), inset 0 1px 2px rgba(255,255,255,0.40)`,
+    background: spinning
+      ? neutralBackground
+      : isCheck
+        ? 'radial-gradient(circle at 36% 33%, #5CE0DB, #0EA5A0 52%, #097B76)'
+        : 'radial-gradient(circle at 36% 33%, #F1F5F9, #CBD5E1 52%, #94A3B8)',
+    border: `${rimSize}px solid ${spinning ? '#5E7085' : isCheck ? '#0A6663' : '#7C8FA1'}`,
+    boxShadow: spinning
+      ? `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(22,52,76,0.18), inset 0 1px 2px rgba(255,255,255,0.24)`
+      : isCheck
+        ? `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(0,80,76,0.30), inset 0 1px 2px rgba(255,255,255,0.28)`
+        : `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(0,0,0,0.18), inset 0 1px 2px rgba(255,255,255,0.40)`,
     // Smooth color transition on face change
     transition: spinning
       ? 'none'
@@ -109,7 +114,7 @@ function AbraCoin({
           opacity:   spinning ? 0.6 : 1,
           transition: spinning ? 'none' : `opacity 0.25s ease ${revealDelay}ms`,
         }}>
-          {isCheck ? (
+          {spinning ? null : isCheck ? (
             <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none">
               <polyline
                 points="3.5,12 9,18.5 20.5,6"

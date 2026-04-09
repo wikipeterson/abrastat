@@ -136,8 +136,9 @@ export interface TwoPropSimCardConfig {
 
 export interface TwoMeanRandomizationCardConfig {
   type: 'two-mean-randomization'
-  var1ColId: string | null   // quantitative variable
-  var2ColId: string | null   // grouping variable
+  var1ColId: string | null
+  var2ColId: string | null
+  dataShape?: 'grouping' | 'two-quant'
 }
 
 export interface TwoMeanSimCardConfig {

@@ -624,7 +624,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'generator'       ? { type: 'generator' } :
       type === 'proportions'  ? { type: 'proportions', var1ColId: null, var2ColId: null } :
       type === 'two-prop-randomization' ? { type: 'two-prop-randomization', var1ColId: null, var2ColId: null } :
-      type === 'two-mean-randomization' ? { type: 'two-mean-randomization', var1ColId: null, var2ColId: null } :
+      type === 'two-mean-randomization' ? { type: 'two-mean-randomization', var1ColId: null, var2ColId: null, dataShape: 'grouping' } :
       type === 'means'        ? { type: 'means', var1ColId: null, var2ColId: null } :
       type === 'dice-roller'  ? { type: 'dice-roller', linkedResultsCardId: null, trackedMode: 'sum' } :
       type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', valueMode: 'count', thresholdOp: '>=', thresholdValue: 1, supportsDifference: false, minValue: 1, maxValue: 6, rolls: [], values: [] } :

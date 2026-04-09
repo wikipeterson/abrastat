@@ -502,6 +502,26 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       }
       newConfig = c
     }
+    if ((cfg as CardConfig).type === 'two-mean-randomization') {
+      const droppedCol = grid.columns.find(c => c.id === colId)
+      if (!droppedCol) return
+      let c: TwoMeanRandomizationCardConfig = { ...(cfg as unknown as TwoMeanRandomizationCardConfig) }
+      const dataShape = c.dataShape ?? 'grouping'
+      if (targetZone === 'var1' && droppedCol.type !== 'numeric') return
+      if (targetZone === 'var2') {
+        const requiredType = dataShape === 'two-quant' ? 'numeric' : 'categorical'
+        if (droppedCol.type !== requiredType) return
+      }
+      const prevVar1 = c.var1ColId
+      const prevVar2 = c.var2ColId
+      if (targetZone === 'var1') c = { ...c, var1ColId: colId }
+      if (targetZone === 'var2') c = { ...c, var2ColId: colId }
+      if (sourceZone && sourceZone !== targetZone) {
+        if (sourceZone === 'var1') c = { ...c, var1ColId: targetZone === 'var2' ? prevVar2 : null }
+        if (sourceZone === 'var2') c = { ...c, var2ColId: targetZone === 'var1' ? prevVar1 : null }
+      }
+      newConfig = c
+    }
     if (cfg.type === 'regression-by-eye') {
       const droppedCol = grid.columns.find(c => c.id === colId)
       if (!droppedCol || droppedCol.type !== 'numeric') return
@@ -527,6 +547,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
           means:             ['var1', 'var2'],
           proportions:['var1', 'var2'],
           'two-prop-randomization': ['var1', 'var2'],
+          'two-mean-randomization': ['var1', 'var2'],
           table:      ['rows', 'cols'],
         }
         const order = ZONE_ORDER[cfg.type] ?? []

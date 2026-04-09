@@ -391,6 +391,7 @@ interface Props { cardId:string; config:TwoMeanRandomizationCardConfig; onClearZ
 
 export function TwoMeanRandomizationTest({ cardId, config, onClearZone }: Props) {
   const { grid, updateExploreCard, addTwoMeanSimCard, exploreCards } = useStore()
+  const dataShape = config.dataShape ?? 'grouping'
 
   const [sourceMode, setSourceMode]     = useState<SourceMode>('manual')
   const [alternative, setAlternative]   = useState<Alternative>('two')
@@ -403,7 +404,7 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone }: Props)
   const [manualValues2, setManualValues2] = useState('')
 
   const quantCol = config.var1ColId ? (grid.columns.find(c => c.id === config.var1ColId) ?? null) : null
-  const groupCol = config.var2ColId ? (grid.columns.find(c => c.id === config.var2ColId) ?? null) : null
+  const secondCol = config.var2ColId ? (grid.columns.find(c => c.id === config.var2ColId) ?? null) : null
 
   function handleNativeDrop(zone: 'var1' | 'var2') {
     return (e: React.DragEvent) => {
@@ -411,7 +412,7 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone }: Props)
       if (!colId) return; e.preventDefault()
       const droppedCol = useStore.getState().grid.columns.find(c => c.id === colId)
       if (!droppedCol) return
-      const requiredType = zone === 'var1' ? 'numeric' : 'categorical'
+      const requiredType = zone === 'var1' ? 'numeric' : (dataShape === 'two-quant' ? 'numeric' : 'categorical')
       if (droppedCol.type !== requiredType) return
       const current = useStore.getState().exploreCards.find(c => c.id === cardId)
       if (!current || current.config.type !== 'two-mean-randomization') return
@@ -424,8 +425,10 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone }: Props)
   }
 
   const groupLevels = useMemo(() =>
-    config.var2ColId ? [...new Set(grid.rows.map(r => String(r[config.var2ColId!] ?? '').trim()).filter(Boolean))].sort() : [],
-    [grid.rows, config.var2ColId])
+    dataShape === 'grouping' && config.var2ColId
+      ? [...new Set(grid.rows.map(r => String(r[config.var2ColId!] ?? '').trim()).filter(Boolean))].sort()
+      : [],
+    [dataShape, grid.rows, config.var2ColId])
 
   useEffect(() => {
     if (groupLevels.length >= 2) {
@@ -442,8 +445,22 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone }: Props)
       if (parsed1.error || parsed2.error || parsed1.values.length === 0 || parsed2.values.length === 0) return null
       return buildTwoMeanData(parsed1.values, parsed2.values, manualLabel1.trim() || 'Group 1', manualLabel2.trim() || 'Group 2')
     }
-    if (!config.var1ColId || !config.var2ColId || !groupA || !groupB) return null
-    const values1: number[] = [], values2: number[] = []
+    if (!config.var1ColId || !config.var2ColId) return null
+    const values1: number[] = []
+    const values2: number[] = []
+    if (dataShape === 'two-quant') {
+      const label1 = quantCol?.name ?? 'Variable 1'
+      const label2 = secondCol?.name ?? 'Variable 2'
+      for (const row of grid.rows) {
+        const v1 = Number(row[config.var1ColId])
+        const v2 = Number(row[config.var2ColId])
+        if (isFinite(v1)) values1.push(v1)
+        if (isFinite(v2)) values2.push(v2)
+      }
+      if (values1.length === 0 || values2.length === 0) return null
+      return buildTwoMeanData(values1, values2, label1, label2)
+    }
+    if (!groupA || !groupB) return null
     for (const row of grid.rows) {
       const quant = Number(row[config.var1ColId])
       const grp = String(row[config.var2ColId] ?? '').trim()
@@ -453,7 +470,7 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone }: Props)
     }
     if (values1.length === 0 || values2.length === 0) return null
     return buildTwoMeanData(values1, values2, groupA, groupB)
-  }, [config.var1ColId, config.var2ColId, grid.rows, groupA, groupB, manualValues1, manualValues2, manualLabel1, manualLabel2, sourceMode, parsed1, parsed2])
+  }, [config.var1ColId, config.var2ColId, dataShape, grid.rows, groupA, groupB, manualValues1, manualValues2, manualLabel1, manualLabel2, parsed1, parsed2, quantCol?.name, secondCol?.name, sourceMode])
 
   const altSymbol    = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
   const altStatement = `μ₁ − μ₂ ${altSymbol} ${nullDiff}`
@@ -495,15 +512,48 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone }: Props)
 
         {sourceMode === 'data' ? (
           <>
-            <div className="flex gap-2">
-              <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var1')}>
-                <DropZone id={`${cardId}:var1`} label="Quantitative Variable" hint="numeric only" assignedCol={quantCol} onClear={() => onClearZone('var1')} />
-              </div>
-              <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var2')}>
-                <DropZone id={`${cardId}:var2`} label="Group By" hint="categorical only" assignedCol={groupCol} onClear={() => onClearZone('var2')} />
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--color-muted)]">Data shape</span>
+              <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+                {([
+                  { key: 'grouping', label: 'Quant + Group' },
+                  { key: 'two-quant', label: 'Two Quant Variables' },
+                ] as const).map((option, i) => (
+                  <button
+                    key={option.key}
+                    onClick={() => {
+                      const current = useStore.getState().exploreCards.find(c => c.id === cardId)
+                      if (!current || current.config.type !== 'two-mean-randomization') return
+                      const nextVar2 =
+                        option.key === 'grouping'
+                          ? (secondCol?.type === 'categorical' ? current.config.var2ColId : null)
+                          : (secondCol?.type === 'numeric' ? current.config.var2ColId : null)
+                      updateExploreCard(cardId, {
+                        config: {
+                          ...current.config,
+                          dataShape: option.key,
+                          var2ColId: nextVar2,
+                        },
+                      })
+                      setGroupA('')
+                      setGroupB('')
+                    }}
+                    className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${dataShape === option.key ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
               </div>
             </div>
-            {groupLevels.length > 2 && (
+            <div className="flex gap-2">
+              <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var1')}>
+                <DropZone id={`${cardId}:var1`} label={dataShape === 'two-quant' ? 'Variable 1' : 'Quantitative Variable'} hint="numeric only" assignedCol={quantCol} onClear={() => onClearZone('var1')} />
+              </div>
+              <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var2')}>
+                <DropZone id={`${cardId}:var2`} label={dataShape === 'two-quant' ? 'Variable 2' : 'Group By'} hint={dataShape === 'two-quant' ? 'numeric only' : 'categorical only'} assignedCol={secondCol} onClear={() => onClearZone('var2')} />
+              </div>
+            </div>
+            {dataShape === 'grouping' && groupLevels.length > 2 && (
               <div className="flex gap-2">
                 {(['Compare', 'vs.'] as const).map((lbl, idx) => {
                   const [val, setter, other] = idx === 0 ? [groupA, setGroupA, groupB] : [groupB, setGroupB, groupA]

@@ -37,6 +37,7 @@ const EXPLORE_CARD_OPTIONS: CardOption[] = [
   { type: 'summary',    icon: '📊', label: 'Summary Statistics' },
   { type: 'table',      icon: '⊞',  label: 'Two-Way Table' },
   { type: 'regression', icon: '📉', label: 'Regression' },
+  { type: 'regression-by-eye', icon: '✏️', label: 'Regression by Eye' },
 ]
 
 const PROBABILITY_CARD_OPTIONS: CardOption[] = [

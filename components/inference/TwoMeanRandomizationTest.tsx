@@ -248,7 +248,8 @@ function MeanNullDistPlot({ values, diffObs, alternative, showNormalCurve = fals
     return { mean, sd, samples }
   })()
 
-  const maxCurveCount = normalStats ? Math.max(...normalStats.samples.map(s => s.expectedCount)) : 0
+  const maxCurveCountRaw = normalStats ? Math.max(...normalStats.samples.map(s => s.expectedCount)) : 0
+  const maxCurveCount = Math.min(maxCurveCountRaw, Math.max(maxStack * 1.35, 1))
   const topPad = 10
   const yMaxCount = Math.max(maxStack, maxCurveCount) * 1.12
   const yScale = (PH - topPad) / Math.max(1, yMaxCount)
@@ -393,7 +394,7 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone }: Props)
   const { grid, updateExploreCard, addTwoMeanSimCard, exploreCards } = useStore()
   const dataShape = config.dataShape ?? 'grouping'
 
-  const [sourceMode, setSourceMode]     = useState<SourceMode>('manual')
+  const [sourceMode, setSourceMode]     = useState<SourceMode>('data')
   const [alternative, setAlternative]   = useState<Alternative>('two')
   const [nullDiff, setNullDiff]         = useState('0')
   const [groupA, setGroupA]             = useState('')

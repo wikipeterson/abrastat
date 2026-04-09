@@ -68,6 +68,12 @@ export interface RegressionCardConfig {
   groupColId: string | null
 }
 
+export interface RegressionByEyeCardConfig {
+  type: 'regression-by-eye'
+  xColId: string | null
+  yColId: string | null
+}
+
 // ─── Distribution pre-fill context ───────────────────────────────────────────
 // A one-time snapshot of canvas context used to pre-populate the Distribution
 // card when it is first created (e.g. chi² params from a Two-Way Table card).
@@ -195,6 +201,7 @@ export type CardConfig =
   | TableCardConfig
   | TableOutputCardConfig
   | RegressionCardConfig
+  | RegressionByEyeCardConfig
   | DistributionCardConfig
   | CompareNormalsCardConfig
   | RandomGeneratorCardConfig

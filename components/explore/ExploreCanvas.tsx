@@ -20,6 +20,7 @@ import { SwapAnimContext, SwapAnimState } from '@/lib/swapAnimContext'
 import { GraphCard } from './cards/GraphCard'
 import { SummaryCard } from './cards/SummaryCard'
 import { RegressionCard } from './cards/RegressionCard'
+import { RegressionByEyeCard } from './cards/RegressionByEyeCard'
 import { TableCard } from './cards/TableCard'
 import { TwoWayTable } from '@/components/applets/TwoWayTable'
 import { DistributionCard } from '@/components/inference/DistributionCard'
@@ -46,6 +47,7 @@ const EXPLORE_CARD_OPTIONS: CardOption[] = [
   { type: 'summary', icon: '📊', label: 'Summary Statistics' },
   { type: 'table', icon: '⊞', label: 'Two-Way Table' },
   { type: 'regression', icon: '📉', label: 'Regression' },
+  { type: 'regression-by-eye', icon: '✏️', label: 'Regression by Eye' },
 ]
 
 const PROBABILITY_CARD_OPTIONS: CardOption[] = [
@@ -88,6 +90,7 @@ function cardLabel(type: CardConfig['type']): string {
     case 'table':        return 'Two-Way Table'
     case 'table-output': return 'Two-Way Table'
     case 'regression':   return 'Regression'
+    case 'regression-by-eye': return 'Regression by Eye'
     case 'distribution':    return 'Distribution Calculators'
     case 'compare-normals': return 'Compare Normals'
     case 'generator':       return 'Random Number Generator'
@@ -392,7 +395,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
     const cfg = card.config
 
     // Only these card types have drop zones
-    if (cfg.type !== 'graph' && cfg.type !== 'summary' && cfg.type !== 'regression' && cfg.type !== 'means' && cfg.type !== 'proportions' && cfg.type !== 'table') return
+    if (cfg.type !== 'graph' && cfg.type !== 'summary' && cfg.type !== 'regression' && cfg.type !== 'regression-by-eye' && cfg.type !== 'means' && cfg.type !== 'proportions' && cfg.type !== 'table') return
 
     const sourceZone = (sourceZoneId && sourceZoneId.startsWith(cardId + ':'))
       ? sourceZoneId.slice(cardId.length + 1)
@@ -499,14 +502,29 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       }
       newConfig = c
     }
+    if (cfg.type === 'regression-by-eye') {
+      const droppedCol = grid.columns.find(c => c.id === colId)
+      if (!droppedCol || droppedCol.type !== 'numeric') return
+      let c = { ...cfg }
+      const prevX = c.xColId
+      const prevY = c.yColId
+      if (targetZone === 'x') c = { ...c, xColId: colId }
+      if (targetZone === 'y') c = { ...c, yColId: colId }
+      if (sourceZone && sourceZone !== targetZone) {
+        if (sourceZone === 'x') c = { ...c, xColId: targetZone === 'y' ? prevY : null }
+        if (sourceZone === 'y') c = { ...c, yColId: targetZone === 'x' ? prevX : null }
+      }
+      newConfig = c
+    }
     if (newConfig) {
       // When two occupied zones swap, animate the displaced chip into its new zone
       if (sourceZone && sourceZone !== targetZone) {
         // Zone left-to-right order per card type; used to infer the arrival direction
         const ZONE_ORDER: Record<string, string[]> = {
-          graph:      ['x', 'y', 'group'],
-          regression: ['x', 'y', 'group'],
-          means:      ['var1', 'var2'],
+          graph:             ['x', 'y', 'group'],
+          regression:        ['x', 'y', 'group'],
+          'regression-by-eye': ['x', 'y'],
+          means:             ['var1', 'var2'],
           proportions:['var1', 'var2'],
           'two-prop-randomization': ['var1', 'var2'],
           table:      ['rows', 'cols'],
@@ -548,6 +566,10 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       if (zone === 'x') newConfig = { ...cfg, xColId: null }
       if (zone === 'y') newConfig = { ...cfg, yColId: null }
       if (zone === 'group') newConfig = { ...cfg, groupColId: null }
+    }
+    if (cfg.type === 'regression-by-eye') {
+      if (zone === 'x') newConfig = { ...cfg, xColId: null }
+      if (zone === 'y') newConfig = { ...cfg, yColId: null }
     }
     if (cfg.type === 'table') {
       if (zone === 'rows') newConfig = { ...cfg, rowsColId: null }
@@ -619,6 +641,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       case 'summary':      return { minWidth: 700, minHeight: 620 }
       case 'table':        return { minWidth: 920, minHeight: 700 }
       case 'regression':   return { minWidth: 400, minHeight: 340 }
+      case 'regression-by-eye': return { minWidth: 520, minHeight: 500 }
       case 'distribution':    return { minWidth: 660, minHeight: 480 }
       case 'compare-normals': return { minWidth: 620, minHeight: 480 }
       case 'generator':       return { minWidth: 460, minHeight: 440 }
@@ -997,6 +1020,15 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                           )}
                           {card.config.type === 'regression' && (
                             <RegressionCard
+                              cardId={card.id}
+                              config={card.config}
+                              onClearZone={z => clearZone(card.id, z)}
+                              onRemove={() => removeCard(card.id)}
+                              hideHeader
+                            />
+                          )}
+                          {card.config.type === 'regression-by-eye' && (
+                            <RegressionByEyeCard
                               cardId={card.id}
                               config={card.config}
                               onClearZone={z => clearZone(card.id, z)}

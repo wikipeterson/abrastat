@@ -618,6 +618,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'summary'      ? { type: 'summary',     variableColIds: [], groupColId: null } :
       type === 'table'        ? { type: 'table',       rowsColId: null, colsColId: null } :
       type === 'regression'   ? { type: 'regression',  xColId: null, yColId: null, groupColId: null } :
+      type === 'regression-by-eye' ? { type: 'regression-by-eye', xColId: null, yColId: null } :
       type === 'distribution'    ? { type: 'distribution', preFill: scanChiSquareContext(state.exploreCards, state.grid) } :
       type === 'compare-normals' ? { type: 'compare-normals' } :
       type === 'generator'       ? { type: 'generator' } :
@@ -631,6 +632,7 @@ export const useStore = create<AbraStatStore>((set) => ({
     const { width, height } =
       type === 'summary'     ? { width: 700, height: 620 } :
       type === 'table'       ? { width: 960, height: 740 } :
+      type === 'regression-by-eye' ? { width: 620, height: 580 } :
       type === 'means'       ? { width: 760, height: 500 } :
       type === 'distribution'    ? { width: 700, height: 540 } :
       type === 'compare-normals' ? { width: 760, height: 560 } :
@@ -663,6 +665,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       if (cfg.type === 'summary')    return { ...card, config: { ...cfg, variableColIds: cfg.variableColIds.filter(id => validIds.has(id)), groupColId: nil(cfg.groupColId) } }
       if (cfg.type === 'table')      return { ...card, config: { ...cfg, rowsColId: nil(cfg.rowsColId), colsColId: nil(cfg.colsColId) } }
       if (cfg.type === 'regression') return { ...card, config: { ...cfg, xColId: nil(cfg.xColId), yColId: nil(cfg.yColId), groupColId: nil(cfg.groupColId) } }
+      if (cfg.type === 'regression-by-eye') return { ...card, config: { ...cfg, xColId: nil(cfg.xColId), yColId: nil(cfg.yColId) } }
       if (cfg.type === 'means')      return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }
       if (cfg.type === 'proportions') return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }
       if (cfg.type === 'two-prop-randomization') return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }

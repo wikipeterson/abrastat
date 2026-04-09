@@ -32,8 +32,13 @@ export interface GraphCardConfig {
   title?: string
   xLabel?: string
   yLabel?: string
+  xAxisMin?: string
+  xAxisMax?: string
+  yAxisMin?: string
+  yAxisMax?: string
   colorPalette?: string
   dotSize?: 'small' | 'medium' | 'large'
+  showMeans?: boolean
   showOutlierFences?: boolean
   chartType?: ChartType | null
   bestFitMode?: 'none' | 'overall' | 'group'

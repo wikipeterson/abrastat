@@ -1000,8 +1000,13 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                               onSetTitle={title => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), title } })}
                               onSetXLabel={xLabel => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), xLabel } })}
                               onSetYLabel={yLabel => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), yLabel } })}
+                              onSetXAxisMin={xAxisMin => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), xAxisMin } })}
+                              onSetXAxisMax={xAxisMax => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), xAxisMax } })}
+                              onSetYAxisMin={yAxisMin => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), yAxisMin } })}
+                              onSetYAxisMax={yAxisMax => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), yAxisMax } })}
                               onSetColorPalette={colorPalette => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), colorPalette } })}
                               onSetDotSize={dotSize => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), dotSize } })}
+                              onSetShowMeans={showMeans => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), showMeans } })}
                               onSetShowOutlierFences={showOutlierFences => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), showOutlierFences } })}
                               onSetBestFitMode={bestFitMode => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), bestFitMode } })}
                               onSetBarValueMode={mode => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), barValueMode: mode } })}

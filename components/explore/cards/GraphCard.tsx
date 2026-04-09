@@ -2,6 +2,7 @@
 
 import { useDroppable } from '@dnd-kit/core'
 import type { Data } from 'plotly.js'
+import { createPortal } from 'react-dom'
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '@/lib/store'
 import { ChartType, CHART_META, inferCharts } from '@/lib/chartHelpers'
@@ -31,8 +32,13 @@ interface GraphCardProps {
   onSetTitle: (title: string) => void
   onSetXLabel: (label: string) => void
   onSetYLabel: (label: string) => void
+  onSetXAxisMin: (value: string) => void
+  onSetXAxisMax: (value: string) => void
+  onSetYAxisMin: (value: string) => void
+  onSetYAxisMax: (value: string) => void
   onSetColorPalette: (palette: string) => void
   onSetDotSize: (size: 'small' | 'medium' | 'large') => void
+  onSetShowMeans: (show: boolean) => void
   onSetShowOutlierFences: (show: boolean) => void
   onSetBestFitMode: (mode: 'none' | 'overall' | 'group') => void
   onSetBarValueMode: (mode: 'count' | 'percent') => void
@@ -41,7 +47,7 @@ interface GraphCardProps {
   hideHeader?: boolean
 }
 
-export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTitle, onSetXLabel, onSetYLabel, onSetColorPalette, onSetDotSize, onSetShowOutlierFences, onSetBestFitMode, onSetBarValueMode, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
+export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTitle, onSetXLabel, onSetYLabel, onSetXAxisMin, onSetXAxisMax, onSetYAxisMin, onSetYAxisMax, onSetColorPalette, onSetDotSize, onSetShowMeans, onSetShowOutlierFences, onSetBestFitMode, onSetBarValueMode, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
   const { grid } = useStore()
   const [manualTableGraphType, setManualTableGraphType] = useState<'segmented' | 'sidebyside' | 'mosaic'>('segmented')
   const [manualTableValueMode, setManualTableValueMode] = useState<'count' | 'row'>('count')
@@ -51,6 +57,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
   const manualScatter = config.manualScatter ?? null
   const graphExportRef = useRef<HTMLDivElement | null>(null)
   const customizeRef = useRef<HTMLDivElement | null>(null)
+  const customizeButtonRef = useRef<HTMLButtonElement | null>(null)
+  const [customizePos, setCustomizePos] = useState<{ top: number; left: number } | null>(null)
   const bestFitMode = config.bestFitMode ?? 'none'
   const activeColors = COLOR_PALETTES[(config.colorPalette as PaletteName) ?? 'default'] ?? COLOR_PALETTES.default
   const dotSize = config.dotSize ?? 'medium'
@@ -153,6 +161,17 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
       yLabel: config.yLabel?.trim() || defaults.yLabel,
     }
   }
+
+  function parseAxisRange(minText?: string, maxText?: string): [number, number] | undefined {
+    const min = Number(minText)
+    const max = Number(maxText)
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min >= max) return undefined
+    return [min, max]
+  }
+
+  const xAxisRange = parseAxisRange(config.xAxisMin, config.xAxisMax)
+  const yAxisRange = parseAxisRange(config.yAxisMin, config.yAxisMax)
+  const supportsAxisRange = currentChart === 'scatter'
 
   async function renderGraphBlob(): Promise<Blob> {
     if (!graphExportRef.current) {
@@ -257,8 +276,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
         <PlotlyChart
           data={traces as Data[]}
           layout={{
-            xaxis: { title: { text: '' } },
-            yaxis: { title: { text: '' }, zeroline: manualScatter.yName === 'Residual', zerolinecolor: '#94A3B8', zerolinewidth: 1.5 },
+            xaxis: { title: { text: '' }, ...(xAxisRange ? { range: xAxisRange } : {}) },
+            yaxis: { title: { text: '' }, zeroline: manualScatter.yName === 'Residual', zerolinecolor: '#94A3B8', zerolinewidth: 1.5, ...(yAxisRange ? { range: yAxisRange } : {}) },
             margin: { t: 12, r: 16, b: 44, l: 52 },
             showlegend: groups.length > 0,
             shapes: manualScatter.yName === 'Residual'
@@ -381,14 +400,30 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
   const showDirectChart       = !isBlank && !activeTransition && !isCustomRendered
 
   useEffect(() => {
+    function updateCustomizePosition() {
+      const rect = customizeButtonRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const panelWidth = 320
+      const left = Math.min(window.innerWidth - panelWidth - 12, Math.max(12, rect.right - panelWidth))
+      setCustomizePos({ top: rect.bottom + 8, left })
+    }
+
     function handlePointerDown(event: MouseEvent) {
+      if (customizeButtonRef.current?.contains(event.target as Node)) return
       if (!customizeRef.current?.contains(event.target as Node)) {
         setShowCustomize(false)
       }
     }
     if (!showCustomize) return
+    updateCustomizePosition()
     document.addEventListener('mousedown', handlePointerDown)
-    return () => document.removeEventListener('mousedown', handlePointerDown)
+    window.addEventListener('resize', updateCustomizePosition)
+    window.addEventListener('scroll', updateCustomizePosition, true)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      window.removeEventListener('resize', updateCustomizePosition)
+      window.removeEventListener('scroll', updateCustomizePosition, true)
+    }
   }, [showCustomize])
 
   const inner = (
@@ -494,15 +529,16 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
         </div>
 
         <div className="flex items-start gap-3 flex-wrap justify-end">
-          <div ref={customizeRef} className="relative">
+          <div className="relative">
             <button
+              ref={customizeButtonRef}
               onClick={() => setShowCustomize(v => !v)}
               className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] transition-colors hover:border-slate-300"
             >
               Customize
             </button>
-            {showCustomize && (
-              <div className="absolute right-0 top-full z-20 mt-2 w-72 rounded-xl border border-[var(--color-border)] bg-white p-3 shadow-lg">
+            {showCustomize && customizePos && typeof document !== 'undefined' && createPortal(
+              <div ref={customizeRef} className="fixed z-[1200] w-80 rounded-xl border border-[var(--color-border)] bg-white p-3 shadow-lg" style={{ top: customizePos.top, left: customizePos.left }}>
                 <div className="space-y-3">
                   <label className="block text-xs text-[var(--color-muted)]">
                     <span className="mb-1 block font-medium">Title</span>
@@ -563,6 +599,18 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                     </div>
                   )}
 
+                  {currentChart === 'scatter' && xCol?.type === 'numeric' && yCol?.type === 'numeric' && (
+                    <label className="flex items-center gap-2 text-sm text-[var(--color-text)] select-none">
+                      <input
+                        type="checkbox"
+                        checked={config.showMeans ?? false}
+                        onChange={e => onSetShowMeans(e.target.checked)}
+                        className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                      />
+                      <span>Show means</span>
+                    </label>
+                  )}
+
                   {currentChart === 'box' && (
                     <label className="flex items-center gap-2 text-sm text-[var(--color-text)] select-none">
                       <input
@@ -606,6 +654,19 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                     </div>
                   )}
 
+                  {supportsAxisRange && (
+                    <div className="space-y-2">
+                      <span className="block text-xs font-medium text-[var(--color-muted)]">Axis range</span>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <input type="number" value={config.xAxisMin ?? ''} onChange={e => onSetXAxisMin(e.target.value)} placeholder="X min" className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]" />
+                        <input type="number" value={config.xAxisMax ?? ''} onChange={e => onSetXAxisMax(e.target.value)} placeholder="X max" className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]" />
+                        <input type="number" value={config.yAxisMin ?? ''} onChange={e => onSetYAxisMin(e.target.value)} placeholder="Y min" className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]" />
+                        <input type="number" value={config.yAxisMax ?? ''} onChange={e => onSetYAxisMax(e.target.value)} placeholder="Y max" className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]" />
+                      </div>
+                      <p className="text-[10px] text-[var(--color-muted)]">Leave blank to use automatic axis ranges.</p>
+                    </div>
+                  )}
+
                   {currentChart === 'scatter' && xCol?.type === 'numeric' && yCol?.type === 'numeric' && (
                     <div className="space-y-2">
                       <label className="flex items-center gap-2 text-sm text-[var(--color-text)] select-none">
@@ -634,7 +695,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                     </div>
                   )}
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
           <button
@@ -674,7 +736,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
             </div>
           )}
           <div className="flex-1 min-h-0" data-graph-plot-area="true">
-            <GraphCardContext.Provider value={{ hideAxisTitles: true, colors: [...activeColors], dotSize, showOutlierFences: config.showOutlierFences ?? false }}>
+            <GraphCardContext.Provider value={{ hideAxisTitles: true, colors: [...activeColors], dotSize, showMeans: config.showMeans ?? false, showOutlierFences: config.showOutlierFences ?? false, xAxisRange, yAxisRange }}>
               {renderChart()}
             </GraphCardContext.Provider>
           </div>
@@ -748,7 +810,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                   </p>
                 </div>
               ) : showDirectChart ? (
-                <GraphCardContext.Provider value={{ hideAxisTitles: true, colors: [...activeColors], dotSize, showOutlierFences: config.showOutlierFences ?? false }}>
+                <GraphCardContext.Provider value={{ hideAxisTitles: true, colors: [...activeColors], dotSize, showMeans: config.showMeans ?? false, showOutlierFences: config.showOutlierFences ?? false, xAxisRange, yAxisRange }}>
                   {renderChart()}
                 </GraphCardContext.Provider>
               ) : null}

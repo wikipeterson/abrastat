@@ -61,7 +61,7 @@ function useAnimatedY(targetY: number[], animate: boolean): number[] {
 
 export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none' }: ScatterPlotProps) {
   const { grid } = useStore()
-  const { hideAxisTitles, colors, dotSize } = useGraphCardContext()
+  const { hideAxisTitles, colors, dotSize, showMeans, xAxisRange, yAxisRange } = useGraphCardContext()
   const prevYColIdRef = useRef<string | null>(null)
   const [shouldAnimate, setShouldAnimate] = useState(false)
 
@@ -121,7 +121,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
   const yValues = animatedY.length === rawYValues.length ? animatedY : rawYValues
 
   // Lock y-axis to its final range during animation so the axis doesn't rescale each frame
-  const yAxisRange = shouldAnimate && rawYValues.length > 0
+  const animatedYAxisRange = shouldAnimate && rawYValues.length > 0
     ? (() => {
         const yMin = Math.min(...rawYValues)
         const yMax = Math.max(...rawYValues)
@@ -180,11 +180,32 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
   }
 
   let annotations: Partial<Annotations>[] = []
+  const meanX = xValues.length > 0 ? xValues.reduce((sum, x) => sum + x, 0) / xValues.length : 0
+  const meanY = rawYValues.length > 0 ? rawYValues.reduce((sum, y) => sum + y, 0) / rawYValues.length : 0
+  const meanShapes = showMeans ? [
+    {
+      type: 'line' as const,
+      x0: meanX,
+      x1: meanX,
+      y0: 0,
+      y1: 1,
+      yref: 'paper' as const,
+      line: { color: '#8B5CF6', width: 1.5, dash: 'dot' as const },
+    },
+    {
+      type: 'line' as const,
+      x0: 0,
+      x1: 1,
+      xref: 'paper' as const,
+      y0: meanY,
+      y1: meanY,
+      line: { color: '#8B5CF6', width: 1.5, dash: 'dot' as const },
+    },
+  ] : []
   if (bestFitMode === 'overall' && xValues.length >= 2) {
     const { slope, intercept, r } = linearRegression(xValues, rawYValues)
     const xMin = Math.min(...xValues)
     const xMax = Math.max(...xValues)
-    const r2 = r * r
     traces.push({
       type: 'scatter',
       mode: 'lines',
@@ -198,7 +219,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
       xref: 'paper', yref: 'paper',
       x: 0.02, y: 0.98,
       xanchor: 'left', yanchor: 'top',
-      text: `ŷ = ${slope.toFixed(3)}x + ${intercept.toFixed(3)}<br>r = ${r.toFixed(3)}, r² = ${r2.toFixed(3)}`,
+      text: `ŷ = ${slope.toFixed(3)}x + ${intercept.toFixed(3)}`,
       showarrow: false,
       font: { size: 12, color: '#EF4444' },
       bgcolor: 'rgba(255,255,255,0.8)',
@@ -236,10 +257,11 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
         <PlotlyChart
           data={traces as import("plotly.js").Data[]}
           layout={{
-            xaxis: { title: hideAxisTitles ? { text: '' } : { text: xCol.name } },
-            yaxis: { title: hideAxisTitles ? { text: '' } : { text: yCol.name }, ...(yAxisRange ? { range: yAxisRange } : {}) },
+            xaxis: { title: hideAxisTitles ? { text: '' } : { text: xCol.name }, ...(xAxisRange ? { range: xAxisRange } : {}) },
+            yaxis: { title: hideAxisTitles ? { text: '' } : { text: yCol.name }, ...((yAxisRange ?? animatedYAxisRange) ? { range: (yAxisRange ?? animatedYAxisRange) } : {}) },
             showlegend: !!useColorGroups,
             annotations,
+            shapes: meanShapes,
             ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
           }}
           title={hideAxisTitles ? '' : `${yCol.name} vs ${xCol.name}`}

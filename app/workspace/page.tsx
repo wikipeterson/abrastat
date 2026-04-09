@@ -61,6 +61,7 @@ const LIBRARY_ITEMS: { id: LibrarySection; label: string; soon?: boolean }[] = [
 ]
 
 const PUBLIC_DATASET_CACHE_KEY = 'abrastat.publicDatasets.v1'
+const WORKSPACE_INTRO_DISMISSED_KEY = 'abrastat.workspaceIntro.dismissed'
 
 function serializeDatasetMeta(dataset: DatasetMeta) {
   return {
@@ -620,6 +621,50 @@ function UnsavedGuard({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
   )
 }
 
+function WorkspaceIntroModal({
+  onClose,
+}: {
+  onClose: (dontShowAgain: boolean) => void
+}) {
+  const [dontShowAgain, setDontShowAgain] = useState(false)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={() => onClose(dontShowAgain)} />
+      <div className="relative bg-white rounded-2xl shadow-xl p-6 max-w-lg w-full">
+        <h3 className="font-semibold text-[var(--color-text)] mb-2">Welcome to AbraStat</h3>
+        <div className="space-y-4 text-sm text-[var(--color-muted)]">
+          <div>
+            <div className="font-semibold text-[var(--color-text)] mb-1">Library</div>
+            <p>Browse public datasets, open your own saved datasets, and launch games or applets.</p>
+          </div>
+          <div>
+            <div className="font-semibold text-[var(--color-text)] mb-1">Lab</div>
+            <p>Upload or build a dataset, add cards, make graphs, run statistics, and explore data interactively.</p>
+          </div>
+        </div>
+        <label className="mt-5 flex items-center gap-2 text-sm text-[var(--color-muted)] select-none">
+          <input
+            type="checkbox"
+            checked={dontShowAgain}
+            onChange={e => setDontShowAgain(e.target.checked)}
+            className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+          />
+          <span>Don’t show again</span>
+        </label>
+        <div className="mt-5 flex justify-end">
+          <button
+            onClick={() => onClose(dontShowAgain)}
+            className="px-4 py-2 rounded-lg text-sm bg-[var(--color-accent)] text-white font-medium hover:brightness-105"
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function WorkspaceContent() {
   const searchParams = useSearchParams()
   const initialMode = searchParams.get('mode') === 'library' ? 'library' : 'lab'
@@ -633,6 +678,7 @@ function WorkspaceContent() {
   const [confirmNew, setConfirmNew] = useState(false)
   const [showSave, setShowSave] = useState(false)
   const [showShare, setShowShare] = useState(false)
+  const [showIntro, setShowIntro] = useState(false)
   const [shareDatasetId, setShareDatasetId] = useState<string | null>(null)
   const [shareIsPublic, setShareIsPublic] = useState(false)
   const [mode, setMode] = useState<WorkspaceMode>(initialMode)
@@ -651,6 +697,27 @@ function WorkspaceContent() {
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [isDirty])
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(WORKSPACE_INTRO_DISMISSED_KEY) !== 'true') {
+        setShowIntro(true)
+      }
+    } catch {
+      setShowIntro(true)
+    }
+  }, [])
+
+  function handleCloseIntro(dontShowAgain: boolean) {
+    if (dontShowAgain) {
+      try {
+        window.localStorage.setItem(WORKSPACE_INTRO_DISMISSED_KEY, 'true')
+      } catch {
+        // ignore localStorage failures
+      }
+    }
+    setShowIntro(false)
+  }
 
   function handleNewDataset() {
     if (isDirty) {
@@ -829,6 +896,8 @@ function WorkspaceContent() {
           onCancel={() => setConfirmNew(false)}
         />
       )}
+
+      {showIntro && <WorkspaceIntroModal onClose={handleCloseIntro} />}
 
       <SaveDatasetModal open={showSave} onClose={() => setShowSave(false)} onSaved={handleSaved} />
       {shareDatasetId && (

@@ -751,52 +751,56 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
 
         {/* ── Null distribution ── */}
         <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 flex flex-col gap-1.5">
-          <div className="flex items-start justify-between gap-3 flex-shrink-0">
-            <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex gap-4 items-stretch">
+            <div className="w-44 flex-shrink-0 flex flex-col gap-3">
               <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
-              <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-[10px]">
-                {(['proportions', 'counts'] as GraphView[]).map((v, i) => (
-                  <button key={v} onClick={() => setGraphView(v)}
-                    className={`px-2 py-0.5 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${graphView === v ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}>
-                    {v === 'proportions' ? 'Sample Proportions' : 'Counts'}
-                  </button>
-                ))}
+              <div className="flex flex-col items-start gap-2">
+                <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-[10px]">
+                  {(['proportions', 'counts'] as GraphView[]).map((v, i) => (
+                    <button key={v} onClick={() => setGraphView(v)}
+                      className={`px-2 py-0.5 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${graphView === v ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}>
+                      {v === 'proportions' ? 'Sample Proportions' : 'Counts'}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-col items-start text-xs text-[var(--color-muted)]">
+                  <label className="flex items-center gap-2 select-none">
+                    <input
+                      type="checkbox"
+                      checked={showNormalCurve}
+                      onChange={e => updateExploreCard(cardId, { config: { ...config, showNormalCurve: e.target.checked } })}
+                      className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                    />
+                    Overlay normal curve
+                  </label>
+                  {showNormalCurve && (
+                    <div className="pl-6 pt-1 leading-tight">
+                      <div>Mean = {normMean.toFixed(4)}</div>
+                      <div>SD = {normSD.toFixed(4)}</div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex flex-col items-start text-xs text-[var(--color-muted)]">
-              <label className="flex items-center gap-2 select-none">
-                <input
-                  type="checkbox"
-                  checked={showNormalCurve}
-                  onChange={e => updateExploreCard(cardId, { config: { ...config, showNormalCurve: e.target.checked } })}
-                  className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
-                />
-                Overlay normal curve
-              </label>
-              {showNormalCurve && (
-                <div className="pl-6 pt-1 leading-tight">
-                  <div>Mean = {normMean.toFixed(4)}</div>
-                  <div>SD = {normSD.toFixed(4)}</div>
-                </div>
-              )}
-            </div>
-          </div>
 
-          <div className="min-h-0" style={{ height: simCount === 0 ? 180 : 260 }}>
-            {simCount === 0
-              ? <div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">
-                  Use the step buttons above or batch-run to build the null distribution
-                </div>
-              : <OnePropNullDistPlot
-                  counts={nullDist}
-                  xObs={x}
-                  n={n}
-                  p0Num={p0Num}
-                  alternative={alternative}
-                  view={graphView}
-                  showNormalCurve={showNormalCurve}
-                />
-            }
+            <div className="flex-1 min-w-0">
+              <div className="min-h-0" style={{ height: simCount === 0 ? 220 : 320 }}>
+                {simCount === 0
+                  ? <div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">
+                      Use the step buttons above or batch-run to build the null distribution
+                    </div>
+                  : <OnePropNullDistPlot
+                      counts={nullDist}
+                      xObs={x}
+                      n={n}
+                      p0Num={p0Num}
+                      alternative={alternative}
+                      view={graphView}
+                      showNormalCurve={showNormalCurve}
+                    />
+                }
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-3 pt-1.5 border-t border-[var(--color-border)] flex-shrink-0">

@@ -136,10 +136,15 @@ function RegressionByEyePlot({ pairs, xName, yName, lsSlope, lsIntercept, plotId
   const predicted = pairs.map(([x]) => slope * x + intercept)
   const residuals = pairs.map(([, y], i) => y - predicted[i])
   const sse = residuals.reduce((s, r) => s + r * r, 0)
+  const lsPredicted = pairs.map(([x]) => lsSlope * x + lsIntercept)
+  const lsResiduals = pairs.map(([, y], i) => y - lsPredicted[i])
+  const lsSSE = lsResiduals.reduce((s, r) => s + r * r, 0)
 
   // Equation display
   const sign = intercept >= 0 ? '+' : '−'
   const equation = `ŷ = ${fmtNum(slope)}x ${sign} ${fmtNum(Math.abs(intercept))}`
+  const lsSign = lsIntercept >= 0 ? '+' : '−'
+  const lsEquation = `ŷ = ${fmtNum(lsSlope)}x ${lsSign} ${fmtNum(Math.abs(lsIntercept))}`
 
   // Line endpoints (full plot width)
   const lineX1 = toPixX(xMin), lineY1 = toPixY(slope * xMin + intercept)
@@ -164,17 +169,23 @@ function RegressionByEyePlot({ pairs, xName, yName, lsSlope, lsIntercept, plotId
   return (
     <div className="flex flex-col gap-2.5 h-full">
       {/* Equation / SSE bar */}
-      <div className="bg-[var(--color-accent-light)] rounded-xl px-4 py-2 flex items-center justify-between gap-4 shrink-0">
-        <div>
-          <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)] mb-0.5">Your line</div>
-          <div className="font-mono text-sm font-semibold text-[var(--color-text)]">{equation}</div>
-        </div>
-        {showSSE && (
-          <div className="text-right">
-            <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)] mb-0.5">SSE</div>
-            <div className="font-mono text-sm font-semibold text-[var(--color-text)]">{fmtNum(sse)}</div>
+      <div className="bg-[var(--color-accent-light)] rounded-xl px-4 py-2 flex items-start justify-between gap-4 shrink-0">
+        <div className="flex flex-wrap items-start gap-x-6 gap-y-2">
+          <div>
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)] mb-0.5">Your line</div>
+            <div className="font-mono text-sm font-semibold text-[var(--color-text)]">{equation}</div>
+            {showSSE && (
+              <div className="text-[11px] text-[var(--color-muted)] mt-0.5">SSE: <span className="font-mono font-semibold text-[var(--color-text)]">{fmtNum(sse)}</span></div>
+            )}
           </div>
-        )}
+          {showLS && (
+            <div>
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-[#10B981] mb-0.5">Least-squares</div>
+              <div className="font-mono text-sm font-semibold text-[#047857]">{lsEquation}</div>
+              <div className="text-[11px] text-[#047857] mt-0.5">SSE: <span className="font-mono font-semibold">{fmtNum(lsSSE)}</span></div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* SVG scatterplot */}

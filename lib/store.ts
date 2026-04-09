@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import { User as FirebaseUser } from 'firebase/auth'
 import { ColumnType, GridState, RowFilter, RecodeRule } from '@/types'
-import { ExploreCard, CardConfig, DistributionPreFill, GraphCardConfig, SimResultsCardConfig, TableOutputCardConfig, TwoPropSimCardConfig, TwoMeanSimCardConfig } from './exploreTypes'
+import { ExploreCard, CardConfig, DistributionPreFill, GraphCardConfig, SimResultsCardConfig, TableOutputCardConfig, TwoPropSimCardConfig, TwoMeanSimCardConfig, OnePropSimCardConfig } from './exploreTypes'
 import { createEmptyGrid } from './gridHelpers'
 import { computeColumnValues } from './formulaEval'
 import { sortCategoryValues } from './categoryOrder'
@@ -217,6 +217,10 @@ interface AbraStatStore {
   ) => string
   addTwoMeanSimCard: (
     config: Omit<TwoMeanSimCardConfig, 'type' | 'nullDist' | 'simCount' | 'extremeCount'>,
+    sourceCard: ExploreCard,
+  ) => string
+  addOnePropSimCard: (
+    config: Omit<OnePropSimCardConfig, 'type' | 'nullDist' | 'simCount' | 'extremeCount'>,
     sourceCard: ExploreCard,
   ) => string
   pushSimResult: (cardId: string, roll: number[]) => void
@@ -619,6 +623,8 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'table'        ? { type: 'table',       rowsColId: null, colsColId: null } :
       type === 'regression'   ? { type: 'regression',  xColId: null, yColId: null, groupColId: null } :
       type === 'regression-by-eye' ? { type: 'regression-by-eye', xColId: null, yColId: null } :
+      type === 'one-prop-randomization' ? { type: 'one-prop-randomization', var1ColId: null } :
+      type === 'one-prop-sim' ? { type: 'one-prop-sim', n: 0, x: 0, successLabel: 'Success', failureLabel: 'Failure', nullP: '0.5', alternative: 'two' as const, nullDist: [], simCount: 0, extremeCount: 0, showNormalCurve: false } :
       type === 'distribution'    ? { type: 'distribution', preFill: scanChiSquareContext(state.exploreCards, state.grid) } :
       type === 'compare-normals' ? { type: 'compare-normals' } :
       type === 'generator'       ? { type: 'generator' } :
@@ -633,6 +639,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'summary'     ? { width: 700, height: 620 } :
       type === 'table'       ? { width: 960, height: 740 } :
       type === 'regression-by-eye' ? { width: 860, height: 700 } :
+      type === 'one-prop-randomization' ? { width: 820, height: 520 } :
       type === 'means'       ? { width: 760, height: 500 } :
       type === 'distribution'    ? { width: 700, height: 540 } :
       type === 'compare-normals' ? { width: 760, height: 560 } :
@@ -666,6 +673,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       if (cfg.type === 'table')      return { ...card, config: { ...cfg, rowsColId: nil(cfg.rowsColId), colsColId: nil(cfg.colsColId) } }
       if (cfg.type === 'regression') return { ...card, config: { ...cfg, xColId: nil(cfg.xColId), yColId: nil(cfg.yColId), groupColId: nil(cfg.groupColId) } }
       if (cfg.type === 'regression-by-eye') return { ...card, config: { ...cfg, xColId: nil(cfg.xColId), yColId: nil(cfg.yColId) } }
+      if (cfg.type === 'one-prop-randomization') return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId) } }
       if (cfg.type === 'means')      return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }
       if (cfg.type === 'proportions') return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }
       if (cfg.type === 'two-prop-randomization') return { ...card, config: { ...cfg, var1ColId: nil(cfg.var1ColId), var2ColId: nil(cfg.var2ColId) } }
@@ -693,6 +701,18 @@ export const useStore = create<AbraStatStore>((set) => ({
       const width = 1120, height = 860
       const { x: fx, y: fy } = findOpenCardPosition(state.exploreCards, x, y, width, height)
       const simConfig: TwoMeanSimCardConfig = { type: 'two-mean-sim', ...config, nullDist: [], simCount: 0, extremeCount: 0, showNormalCurve: false }
+      return { exploreCards: [...state.exploreCards, { id, config: simConfig, x: fx, y: fy, width, height }] }
+    })
+    return id
+  },
+  addOnePropSimCard: (config, sourceCard) => {
+    const id = uuid()
+    set(state => {
+      const x = sourceCard.x + sourceCard.width + 40
+      const y = sourceCard.y
+      const width = 1060, height = 820
+      const { x: fx, y: fy } = findOpenCardPosition(state.exploreCards, x, y, width, height)
+      const simConfig: OnePropSimCardConfig = { type: 'one-prop-sim', ...config, nullDist: [], simCount: 0, extremeCount: 0, showNormalCurve: false }
       return { exploreCards: [...state.exploreCards, { id, config: simConfig, x: fx, y: fy, width, height }] }
     })
     return id

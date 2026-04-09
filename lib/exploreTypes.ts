@@ -79,6 +79,28 @@ export interface RegressionByEyeCardConfig {
   yColId: string | null
 }
 
+export interface OnePropRandomizationCardConfig {
+  type: 'one-prop-randomization'
+  var1ColId: string | null  // categorical variable
+}
+
+export interface OnePropSimCardConfig {
+  type: 'one-prop-sim'
+  // Input snapshot
+  n: number
+  x: number            // observed successes
+  successLabel: string
+  failureLabel: string
+  // Hypothesis settings
+  nullP: string        // hypothesized proportion as string, e.g. "0.5"
+  alternative: import('./randomizationTest').Alternative
+  // Accumulated simulation results (xSim counts stored)
+  nullDist: number[]
+  simCount: number
+  extremeCount: number
+  showNormalCurve?: boolean
+}
+
 // ─── Distribution pre-fill context ───────────────────────────────────────────
 // A one-time snapshot of canvas context used to pre-populate the Distribution
 // card when it is first created (e.g. chi² params from a Two-Way Table card).
@@ -208,6 +230,8 @@ export type CardConfig =
   | TableOutputCardConfig
   | RegressionCardConfig
   | RegressionByEyeCardConfig
+  | OnePropRandomizationCardConfig
+  | OnePropSimCardConfig
   | DistributionCardConfig
   | CompareNormalsCardConfig
   | RandomGeneratorCardConfig

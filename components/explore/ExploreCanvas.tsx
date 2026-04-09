@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/core'
 import { useStore } from '@/lib/store'
 import { GridColumn } from '@/types'
-import { CardConfig, GraphCardConfig, MeansCardConfig, ExploreCard, ManualTwoWayTableSnapshot, TwoPropRandomizationCardConfig, TwoMeanRandomizationCardConfig } from '@/lib/exploreTypes'
+import { CardConfig, GraphCardConfig, MeansCardConfig, ExploreCard, ManualTwoWayTableSnapshot, TwoPropRandomizationCardConfig, TwoMeanRandomizationCardConfig, OnePropRandomizationCardConfig } from '@/lib/exploreTypes'
 import { ChartType, inferCharts } from '@/lib/chartHelpers'
 import { SwapAnimContext, SwapAnimState } from '@/lib/swapAnimContext'
 import { GraphCard } from './cards/GraphCard'
@@ -28,6 +28,7 @@ import { MeansCard } from '@/components/inference/MeansCard'
 import { ProportionsCard } from '@/components/inference/ProportionsCard'
 import { TwoPropRandomizationTest, TwoPropSimCard } from '@/components/inference/TwoPropRandomizationTest'
 import { TwoMeanRandomizationTest, TwoMeanSimCard } from '@/components/inference/TwoMeanRandomizationTest'
+import { OnePropRandomizationTest, OnePropSimCard } from '@/components/inference/OnePropRandomizationTest'
 import { RandomGeneratorCard } from '@/components/probability/RandomGeneratorCard'
 import { CompareNormalsCard } from '@/components/probability/CompareNormalsCard'
 import { DiceRollerCard } from '@/components/probability/DiceRollerCard'
@@ -61,6 +62,7 @@ const PROBABILITY_CARD_OPTIONS: CardOption[] = [
 const INFERENCE_CARD_OPTIONS: CardOption[] = [
   { type: 'means', icon: '📐', label: 'Means' },
   { type: 'proportions', icon: '⚖️', label: 'Proportions' },
+  { type: 'one-prop-randomization', icon: '🎯', label: 'One-Proportion Randomization Test' },
   { type: 'two-prop-randomization', icon: '🎲', label: 'Two-Prop Randomization Test' },
   { type: 'two-mean-randomization', icon: '📏', label: 'Two-Mean Randomization Test' },
 ]
@@ -97,6 +99,8 @@ function cardLabel(type: CardConfig['type']): string {
     case 'dice-roller':  return 'Dice Roller'
     case 'sim-results':   return 'Roll Results'
     case 'proportions': return 'Proportions'
+    case 'one-prop-randomization': return 'One-Proportion Randomization Test'
+    case 'one-prop-sim':           return 'One-Prop Simulation'
     case 'two-prop-randomization': return 'Two-Prop Randomization Test'
     case 'two-prop-sim':           return 'Randomization Simulation'
     case 'two-mean-randomization': return 'Two-Mean Randomization Test'
@@ -395,7 +399,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
     const cfg = card.config
 
     // Only these card types have drop zones
-    if (cfg.type !== 'graph' && cfg.type !== 'summary' && cfg.type !== 'regression' && cfg.type !== 'regression-by-eye' && cfg.type !== 'means' && cfg.type !== 'proportions' && cfg.type !== 'table') return
+    if (cfg.type !== 'graph' && cfg.type !== 'summary' && cfg.type !== 'regression' && cfg.type !== 'regression-by-eye' && cfg.type !== 'means' && cfg.type !== 'proportions' && cfg.type !== 'table' && cfg.type !== 'one-prop-randomization' && cfg.type !== 'two-prop-randomization' && cfg.type !== 'two-mean-randomization') return
 
     const sourceZone = (sourceZoneId && sourceZoneId.startsWith(cardId + ':'))
       ? sourceZoneId.slice(cardId.length + 1)
@@ -488,6 +492,13 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       }
       newConfig = c
     }
+    if (cfg.type === 'one-prop-randomization') {
+      const droppedCol = grid.columns.find(c => c.id === colId)
+      if (!droppedCol || droppedCol.type !== 'categorical') return
+      let c: OnePropRandomizationCardConfig = { ...cfg }
+      if (targetZone === 'var1') c = { ...c, var1ColId: colId }
+      newConfig = c
+    }
     if ((cfg as CardConfig).type === 'two-prop-randomization') {
       const droppedCol = grid.columns.find(c => c.id === colId)
       if (!droppedCol || droppedCol.type !== 'categorical') return
@@ -546,6 +557,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
           'regression-by-eye': ['x', 'y'],
           means:             ['var1', 'var2'],
           proportions:['var1', 'var2'],
+          'one-prop-randomization': ['var1'],
           'two-prop-randomization': ['var1', 'var2'],
           'two-mean-randomization': ['var1', 'var2'],
           table:      ['rows', 'cols'],
@@ -603,6 +615,9 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
     if (cfg.type === 'proportions') {
       if (zone === 'var1') newConfig = { ...cfg, var1ColId: null }
       if (zone === 'var2') newConfig = { ...cfg, var2ColId: null }
+    }
+    if (cfg.type === 'one-prop-randomization') {
+      if (zone === 'var1') newConfig = { ...cfg, var1ColId: null }
     }
     if ((cfg as CardConfig).type === 'two-prop-randomization') {
       const c = cfg as unknown as TwoPropRandomizationCardConfig
@@ -670,6 +685,8 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       case 'sim-results':  return { minWidth: 360, minHeight: 360 }
       case 'means':        return { minWidth: 700, minHeight: 460 }
       case 'proportions':  return { minWidth: 820, minHeight: 580 }
+      case 'one-prop-randomization': return { minWidth: 820, minHeight: 520 }
+      case 'one-prop-sim':           return { minWidth: 700, minHeight: 500 }
       case 'two-prop-randomization': return { minWidth: 900, minHeight: 700 }
       case 'two-prop-sim':           return { minWidth: 700, minHeight: 500 }
       case 'two-mean-randomization': return { minWidth: 900, minHeight: 700 }
@@ -1090,6 +1107,16 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                               config={card.config}
                               onClearZone={z => clearZone(card.id, z)}
                             />
+                          )}
+                          {card.config.type === 'one-prop-randomization' && (
+                            <OnePropRandomizationTest
+                              cardId={card.id}
+                              config={card.config}
+                              onClearZone={z => clearZone(card.id, z)}
+                            />
+                          )}
+                          {card.config.type === 'one-prop-sim' && (
+                            <OnePropSimCard cardId={card.id} config={card.config} />
                           )}
                           {card.config.type === 'two-prop-randomization' && (
                             <TwoPropRandomizationTest

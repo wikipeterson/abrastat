@@ -126,6 +126,42 @@ export function runTwoMeanRandomization(data: TwoMeanData): TwoMeanResult {
   return { assignment: g1Sim.map(c => c.id), mean1Sim, mean2Sim, diffSim: mean1Sim - mean2Sim }
 }
 
+// ── One-proportion randomization (Bernoulli simulation) ──────────────────────
+
+export interface OnePropResult {
+  xSim: number   // simulated count of successes
+  pSim: number   // xSim / n
+}
+
+/**
+ * Draw n independent Bernoulli trials with success probability p0.
+ * Used for one-proportion null randomization test.
+ */
+export function runOnePropRandomization(n: number, p0: number): OnePropResult {
+  let xSim = 0
+  for (let i = 0; i < n; i++) {
+    if (Math.random() < p0) xSim++
+  }
+  return { xSim, pSim: xSim / n }
+}
+
+/**
+ * Whether a simulated count is at least as extreme as the observed count,
+ * relative to the null center np0.
+ */
+export function isExtremeOneProp(
+  xSim: number,
+  xObs: number,
+  n: number,
+  p0: number,
+  alt: Alternative,
+): boolean {
+  if (alt === 'greater') return xSim >= xObs
+  if (alt === 'less')    return xSim <= xObs
+  // Two-sided: distance from null center np0
+  return Math.abs(xSim - n * p0) >= Math.abs(xObs - n * p0)
+}
+
 /**
  * Build TwoProportionData from raw counts. Generates case objects with IDs.
  * Successes come first within each group (id order), then failures.

@@ -25,10 +25,12 @@ const APPLET_LINKS = [
 export function AppletShell({
   title,
   activeApplet,
+  contentClassName,
   children,
 }: {
   title: string
   activeApplet: string
+  contentClassName?: string
   children: ReactNode
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -104,7 +106,7 @@ export function AppletShell({
         </aside>
 
         <main className="flex-1 min-h-0 overflow-y-auto">
-          <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className={`mx-auto px-4 py-6 ${contentClassName ?? 'max-w-6xl'}`}>
             {children}
           </div>
         </main>

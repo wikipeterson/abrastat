@@ -731,13 +731,18 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
               <div className="px-2.5 py-1.5 bg-slate-50 border-b border-[var(--color-border)]">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Observed Sample</span>
               </div>
-              <div className="px-2.5 py-2 grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
-                <span className="text-[var(--color-muted)]">n</span>
-                <span className="font-bold text-right">{n}</span>
-                <span className="text-[var(--color-muted)]">X ({config.successLabel})</span>
-                <span className="font-bold text-right">{x}</span>
-                <span className="text-[var(--color-muted)]">p̂</span>
-                <span className="font-bold text-[var(--color-accent)] text-right">{phat.toFixed(4)}</span>
+              <div className="px-2.5 py-2 text-xs">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-[var(--color-muted)]">p̂</span>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex flex-col items-center text-[var(--color-text)] leading-none">
+                      <span className="font-bold">{x}</span>
+                      <span className="my-1 w-10 border-t-2 border-[var(--color-text)]" />
+                      <span className="font-bold">{n}</span>
+                    </div>
+                    <div className="font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -777,7 +782,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
             </div>
           </div>
 
-          <div className="min-h-0" style={{ height: simCount === 0 ? 120 : 180 }}>
+          <div className="min-h-0" style={{ height: simCount === 0 ? 180 : 260 }}>
             {simCount === 0
               ? <div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">
                   Use the step buttons above or batch-run to build the null distribution

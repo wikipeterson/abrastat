@@ -58,8 +58,8 @@ interface PlotProps {
 function RegressionByEyePlot({ pairs, xName, yName, lsSlope, lsIntercept, plotId }: PlotProps) {
   const xs = pairs.map(p => p[0])
   const ys = pairs.map(p => p[1])
-  const [xMin, xMax] = niceRange(Math.min(...xs), Math.max(...xs))
-  const [yMin, yMax] = niceRange(Math.min(...ys), Math.max(...ys))
+  const [xMin, xMax] = niceRange(Math.min(...xs), Math.max(...xs), 0.16)
+  const [yMin, yMax] = niceRange(Math.min(...ys), Math.max(...ys), 0.16)
 
   // Default student line: half LS slope, pivoting around data centroid
   const xMid = (xMin + xMax) / 2

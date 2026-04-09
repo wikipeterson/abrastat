@@ -716,50 +716,6 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
               )}
             </div>
 
-            {/* Step buttons */}
-            <div className="px-3 pb-3 flex items-center gap-2 flex-wrap">
-              {/* Randomize: available in observing or plotted */}
-              <button
-                onClick={handleRandomize}
-                disabled={phase === 'spinning' || phase === 'computed'}
-                className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
-                  phase === 'observing' || phase === 'plotted'
-                    ? 'bg-[var(--color-accent)] text-white hover:opacity-90 shadow-sm'
-                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                }`}
-              >
-                <span>① Randomize</span>
-                {(phase === 'observing' || phase === 'plotted') && <span>→</span>}
-              </button>
-
-              {/* Compute: available in spinning */}
-              <button
-                onClick={handleCompute}
-                disabled={phase !== 'spinning'}
-                className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
-                  phase === 'spinning'
-                    ? 'bg-amber-500 text-white hover:opacity-90 shadow-sm'
-                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                }`}
-              >
-                <span>② Compute</span>
-                {phase === 'spinning' && <span>→</span>}
-              </button>
-
-              {/* Plot: available in computed */}
-              <button
-                onClick={handlePlot}
-                disabled={phase !== 'computed'}
-                className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
-                  phase === 'computed'
-                    ? 'bg-indigo-600 text-white hover:opacity-90 shadow-sm'
-                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                }`}
-              >
-                <span>③ Plot</span>
-                {phase === 'computed' && <span>→</span>}
-              </button>
-            </div>
           </div>
 
           {/* ── Stats panel ── */}
@@ -884,8 +840,43 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
         </div>
       </div>
 
-      {/* ── Batch run controls ── */}
+      {/* ── Controls ── */}
       <div className="flex-shrink-0 flex flex-wrap items-center gap-2 px-4 py-3 border-t border-[var(--color-border)] bg-slate-50">
+        <button
+          onClick={handleRandomize}
+          disabled={phase === 'spinning' || phase === 'computed'}
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+            phase === 'observing' || phase === 'plotted'
+              ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
+              : 'border border-[var(--color-border)] text-[var(--color-border)] bg-white cursor-not-allowed'
+          }`}
+        >
+          1. Randomize
+        </button>
+        <button
+          onClick={handleCompute}
+          disabled={phase !== 'spinning'}
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+            phase === 'spinning'
+              ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
+              : 'border border-[var(--color-border)] text-[var(--color-border)] bg-white cursor-not-allowed'
+          }`}
+        >
+          2. Compute
+        </button>
+        <button
+          onClick={handlePlot}
+          disabled={phase !== 'computed'}
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+            phase === 'computed'
+              ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
+              : 'border border-[var(--color-border)] text-[var(--color-border)] bg-white cursor-not-allowed'
+          }`}
+        >
+          3. Plot
+        </button>
+
+        <span className="text-[var(--color-border)]">|</span>
         <span className="text-[10px] text-[var(--color-muted)] uppercase tracking-wide mr-1">Batch</span>
         {([10, 100, 1000] as const).map(cnt => (
           <button key={cnt} onClick={() => runBatch(cnt)}

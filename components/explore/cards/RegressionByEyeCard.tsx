@@ -469,11 +469,13 @@ export function RegressionByEyeCard({ cardId, config, onClearZone, onRemove, hid
   const content = (() => {
     if (!xCol || !yCol) {
       return (
-        <EmptyState
-          icon="📏"
-          title="Drop two numeric variables"
-          description="Choose an X variable and a Y variable, then drag the handles to fit a line."
-        />
+        <div className="h-full flex flex-col items-center justify-center gap-2 text-center p-6">
+          <span className="text-4xl opacity-25 select-none">📏</span>
+          <p className="text-sm font-medium text-[var(--color-muted)]">Drop two numeric variables</p>
+          <p className="text-xs text-[var(--color-muted)] opacity-70">
+            Add a response variable on the left and an explanatory variable on the bottom.
+          </p>
+        </div>
       )
     }
     if (xCol.type !== 'numeric' || yCol.type !== 'numeric') {
@@ -508,29 +510,49 @@ export function RegressionByEyeCard({ cardId, config, onClearZone, onRemove, hid
   })()
 
   const inner = (
-    <div className="h-full flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-3">
+    <div
+      className="h-full min-h-0"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '36px 1fr',
+        gridTemplateRows: '1fr auto',
+        gap: '6px',
+      }}
+    >
+      <div style={{ gridRow: '1', gridColumn: '1' }}>
+        <div className="h-full" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('y')}>
+          <DropZone
+            id={`${cardId}:y`}
+            label="Response Variable"
+            hint="numeric variable"
+            assignedCol={yCol}
+            onClear={() => onClearZone('y')}
+            variant="vertical"
+          />
+        </div>
+      </div>
+
+      <div
+        style={{ gridRow: '1', gridColumn: '2' }}
+        className="min-h-[260px] overflow-hidden rounded-xl border-2 border-dashed border-[var(--color-border)] bg-slate-50/40"
+      >
+        <div className="h-full min-h-[260px] bg-white flex flex-col">
+          <div className="flex-1 min-h-0">
+            {content}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ gridRow: '2', gridColumn: '2' }}>
         <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('x')}>
           <DropZone
             id={`${cardId}:x`}
-            label="X Variable"
+            label="Explanatory Variable"
             hint="numeric variable"
             assignedCol={xCol}
             onClear={() => onClearZone('x')}
           />
         </div>
-        <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('y')}>
-          <DropZone
-            id={`${cardId}:y`}
-            label="Y Variable"
-            hint="numeric variable"
-            assignedCol={yCol}
-            onClear={() => onClearZone('y')}
-          />
-        </div>
-      </div>
-      <div className="flex-1 min-h-0">
-        {content}
       </div>
     </div>
   )
@@ -543,7 +565,7 @@ export function RegressionByEyeCard({ cardId, config, onClearZone, onRemove, hid
         <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">Regression by Eye</span>
         <button onClick={onRemove} className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none">×</button>
       </div>
-      <div className="p-4 min-h-[520px]">
+      <div className="p-4 min-h-[620px]">
         {inner}
       </div>
     </div>

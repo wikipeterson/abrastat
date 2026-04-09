@@ -632,7 +632,7 @@ export const useStore = create<AbraStatStore>((set) => ({
     const { width, height } =
       type === 'summary'     ? { width: 700, height: 620 } :
       type === 'table'       ? { width: 960, height: 740 } :
-      type === 'regression-by-eye' ? { width: 760, height: 640 } :
+      type === 'regression-by-eye' ? { width: 860, height: 700 } :
       type === 'means'       ? { width: 760, height: 500 } :
       type === 'distribution'    ? { width: 700, height: 540 } :
       type === 'compare-normals' ? { width: 760, height: 560 } :

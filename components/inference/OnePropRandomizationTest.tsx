@@ -290,7 +290,7 @@ function OnePropNullDistPlot({
           <g key={i} transform={`translate(${xOf(v)},${PH})`}>
             <line y2={3} stroke="#111111" strokeWidth={1} />
             <text y={12} textAnchor="middle" fontSize={8} fill="#111111" fontFamily="DM Sans,sans-serif">
-              {formatTick(v, xRange)}
+              {view === 'counts' ? Math.round(v).toString() : formatTick(v, xRange)}
             </text>
           </g>
         ))}

@@ -542,6 +542,30 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
 
   const pValue = simCount > 0 ? extremeCount / simCount : null
 
+  // ── Custom threshold for p-value query ──
+  const [customThreshold, setCustomThreshold] = useState<string>(() =>
+    graphView === 'counts' ? String(x) : (x / Math.max(1, n)).toFixed(4)
+  )
+  // Reset when switching between Counts ↔ Proportions
+  useEffect(() => {
+    setCustomThreshold(graphView === 'counts' ? String(x) : (x / Math.max(1, n)).toFixed(4))
+  }, [graphView]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const customThresholdNum = parseFloat(customThreshold)
+  const nullCenter = graphView === 'counts' ? n * p0Num : p0Num
+
+  const customPValue = useMemo(() => {
+    if (nullDist.length === 0 || !Number.isFinite(customThresholdNum)) return null
+    const values = graphView === 'counts' ? nullDist : nullDist.map(c => c / n)
+    const dist = Math.abs(customThresholdNum - nullCenter)
+    const extreme = values.filter(v => {
+      if (alternative === 'greater') return v >= customThresholdNum
+      if (alternative === 'less')    return v <= customThresholdNum
+      return Math.abs(v - nullCenter) >= dist
+    }).length
+    return extreme / nullDist.length
+  }, [nullDist, customThresholdNum, graphView, n, alternative, nullCenter])
+
   const altSymbol    = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
   const altStatement = `p̂ ${altSymbol} ${config.nullP}`
 
@@ -847,10 +871,24 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                     <div>
                       Extreme: <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
                     </div>
-                    <div className="pt-1 font-semibold text-[var(--color-accent)]">
-                      {pValue !== null
-                        ? `${probabilityLabel} = ${pValue < 0.001 ? '< 0.001' : pValue.toFixed(4)}`
-                        : `${probabilityLabel} = —`}
+                    {/* Editable p-value threshold */}
+                    <div className="pt-1 flex items-baseline gap-0.5 font-semibold text-[var(--color-accent)] flex-wrap">
+                      <span>P({graphView === 'counts' ? 'X' : 'p̂'} {altOperator(alternative)}</span>
+                      <input
+                        type="number"
+                        value={customThreshold}
+                        onChange={e => setCustomThreshold(e.target.value)}
+                        step={graphView === 'counts' ? 1 : 0.01}
+                        min={graphView === 'counts' ? 0 : 0}
+                        max={graphView === 'counts' ? n : 1}
+                        className="w-14 text-center text-[var(--color-accent)] font-semibold bg-transparent border-b border-[var(--color-accent)] focus:outline-none text-xs [appearance:textfield] mx-0.5"
+                      />
+                      <span>) =</span>
+                      <span className="ml-0.5">
+                        {customPValue !== null
+                          ? customPValue < 0.001 ? '< 0.001' : customPValue.toFixed(4)
+                          : '—'}
+                      </span>
                     </div>
                   </div>
                 </div>

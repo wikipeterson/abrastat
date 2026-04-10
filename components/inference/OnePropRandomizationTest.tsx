@@ -390,7 +390,6 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
   const canLaunch = error === null && n > 0 && p0Valid
 
   const altSymbol    = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
-  const altStatement = `p ${altSymbol} ${nullP}`
 
   function handleLaunch() {
     if (!canLaunch) return
@@ -419,14 +418,15 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
               className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white" />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₁</span>
+            <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Hₐ</span>
+            <span className="text-sm font-mono font-medium text-[var(--color-text)]">p̂</span>
             <select value={alternative} onChange={e => setAlternative(e.target.value as Alternative)}
               className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white">
               <option value="less">&lt;</option>
               <option value="greater">&gt;</option>
               <option value="two">≠</option>
             </select>
-            <span className="text-sm font-mono font-medium text-[var(--color-text)]">{altStatement}</span>
+            <span className="text-sm font-mono font-medium text-[var(--color-text)]">{nullP}</span>
           </div>
           <button onClick={handleLaunch} disabled={!canLaunch}
             className="ml-auto rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity">
@@ -540,7 +540,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
   const pValue = simCount > 0 ? extremeCount / simCount : null
 
   const altSymbol    = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
-  const altStatement = `p ${altSymbol} ${config.nullP}`
+  const altStatement = `p̂ ${altSymbol} ${config.nullP}`
 
   const normMean = graphView === 'counts' ? n * p0Num : p0Num
   const normSD   = graphView === 'counts'
@@ -676,7 +676,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
         <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-xs text-[var(--color-muted)]">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
             <span><span className="font-semibold text-[var(--color-text)]">H₀:</span> p = {config.nullP}</span>
-            <span><span className="font-semibold text-[var(--color-text)]">H₁:</span> {altStatement}</span>
+            <span><span className="font-semibold text-[var(--color-text)]">Hₐ:</span> {altStatement}</span>
             <span><span className="font-semibold text-[var(--color-text)]">n:</span> {n}</span>
             <span><span className="font-semibold text-[var(--color-text)]">p̂:</span> <span className="font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</span></span>
           </div>
@@ -774,6 +774,16 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                       <div>SD = {normSD.toFixed(graphView === 'counts' ? 1 : 4)}</div>
                     </div>
                   )}
+                  <div className="pt-2 leading-tight">
+                    <div>
+                      Extreme: <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
+                    </div>
+                    <div className="pt-1 font-semibold text-[var(--color-accent)]">
+                      {pValue !== null
+                        ? `${probabilityLabel} = ${pValue < 0.001 ? '< 0.001' : pValue.toFixed(4)}`
+                        : `${probabilityLabel} = —`}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -798,16 +808,6 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
             </div>
           </div>
 
-          <div className="flex items-center gap-3 pt-1.5 border-t border-[var(--color-border)] flex-shrink-0">
-            <span className="text-xs text-[var(--color-muted)]">
-              Extreme: <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
-            </span>
-            <span className="ml-auto text-sm font-bold text-[var(--color-accent)]">
-              {pValue !== null
-                ? `${probabilityLabel} = ${pValue < 0.001 ? '< 0.001' : pValue.toFixed(4)}`
-                : `${probabilityLabel} = —`}
-            </span>
-          </div>
         </div>
       </div>
 

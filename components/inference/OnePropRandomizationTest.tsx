@@ -299,7 +299,7 @@ function OnePropNullDistPlot({
             <circle key={i} cx={c.cx} cy={c.cy} r={dotR}
               fill="#111111" opacity={0.85}
               style={i === circles.length - 1 && values.length > 0
-                ? { animation: 'dot-drop-full 250ms ease-out' } : undefined}
+                ? { animation: 'dot-drop-full 500ms ease-out' } : undefined}
             />
           ))}
           {normalPath && (
@@ -779,7 +779,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="min-h-0" style={{ height: simCount === 0 ? 260 : 400 }}>
+              <div className="min-h-0" style={{ height: 320 }}>
                 {simCount === 0
                   ? <div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">
                       Use the step buttons above or batch-run to build the null distribution

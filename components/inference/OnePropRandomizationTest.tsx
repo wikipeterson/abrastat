@@ -182,7 +182,7 @@ function OnePropNullDistPlot({
   const clipId = useId()
   const SVG_W = 760
   const MG = { t: 14, r: 16, b: 30, l: 16 }
-  const plotHeight = 150
+  const plotHeight = 320
   const SVG_H = plotHeight + MG.t + MG.b
   const PW = SVG_W - MG.l - MG.r
   const PH = SVG_H - MG.t - MG.b

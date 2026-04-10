@@ -314,7 +314,7 @@ interface ConfigProps { cardId: string; config: OnePropRandomizationCardConfig; 
 export function OnePropRandomizationTest({ cardId, config, onClearZone }: ConfigProps) {
   const { grid, updateExploreCard, addOnePropSimCard, exploreCards } = useStore()
 
-  const [sourceMode, setSourceMode]     = useState<SourceMode>('data')
+  const [sourceMode, setSourceMode]     = useState<SourceMode>('manual')
   const [successLevel, setSuccessLevel] = useState('')
   const [manualX, setManualX]           = useState('')
   const [manualN, setManualN]           = useState('')
@@ -398,6 +398,29 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
   return (
     <div className="space-y-4">
       <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-white px-4 py-4">
+        {/* Hypothesis */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₀: p =</span>
+            <input type="number" min={0} max={1} step={0.01} value={nullP} onChange={e => setNullP(e.target.value)}
+              className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₁</span>
+            <select value={alternative} onChange={e => setAlternative(e.target.value as Alternative)}
+              className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white">
+              <option value="less">&lt;</option>
+              <option value="greater">&gt;</option>
+              <option value="two">≠</option>
+            </select>
+            <span className="text-sm font-mono font-medium text-[var(--color-text)]">{altStatement}</span>
+          </div>
+          <button onClick={handleLaunch} disabled={!canLaunch}
+            className="ml-auto rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity">
+            Launch Simulation →
+          </button>
+        </div>
+
         {/* Source mode toggle */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-[var(--color-muted)]">Source</span>
@@ -474,28 +497,6 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
           </div>
         )}
 
-        {/* Hypothesis */}
-        <div className="flex flex-wrap items-center gap-3 pt-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₀: p =</span>
-            <input type="number" min={0} max={1} step={0.01} value={nullP} onChange={e => setNullP(e.target.value)}
-              className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white" />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₁</span>
-            <select value={alternative} onChange={e => setAlternative(e.target.value as Alternative)}
-              className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white">
-              <option value="less">&lt;</option>
-              <option value="greater">&gt;</option>
-              <option value="two">≠</option>
-            </select>
-            <span className="text-sm font-mono font-medium text-[var(--color-text)]">{altStatement}</span>
-          </div>
-          <button onClick={handleLaunch} disabled={!canLaunch}
-            className="ml-auto rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity">
-            Launch Simulation →
-          </button>
-        </div>
       </div>
     </div>
   )
@@ -651,13 +652,10 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
       <style>{COIN_CSS}</style>
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-4 space-y-4">
 
-        {/* ── Two-column layout: coin panel + stats ── */}
-        <div className="grid items-start gap-4" style={{ gridTemplateColumns: 'minmax(0,1fr) 260px' }}>
-
+        <div className="space-y-3">
           {/* ── Unified coin panel ── */}
           <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden flex flex-col">
 
-            {/* Status bar */}
             <div className={`px-3 py-1.5 border-b border-[var(--color-border)] flex items-center gap-2 transition-colors duration-300 ${
               phase === 'spinning' ? 'bg-amber-50' :
               phase === 'computed' ? 'bg-teal-50'  :
@@ -675,16 +673,13 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
               <span className="text-xs font-medium text-[var(--color-text)]">{statusLabel}</span>
             </div>
 
-            {/* Coin grid */}
             <div
-              className="flex-1 flex items-start content-start overflow-hidden px-3 pt-3 pb-1"
+              className="flex flex-wrap content-start overflow-hidden px-3 pt-3 pb-2"
               style={{
-                display:     'flex',
-                flexWrap:    'wrap',
-                gap:         coinGap,
+                gap: coinGap,
                 alignContent: 'flex-start',
-                minHeight:   panelH,
-                maxHeight:   panelH,
+                minHeight: panelH,
+                maxHeight: panelH,
               }}
             >
               {displayFaces.map((face, i) => (
@@ -699,8 +694,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
               ))}
             </div>
 
-            {/* Legend */}
-            <div className="px-3 pb-2 pt-1 flex items-center gap-4 border-t border-[var(--color-border)] bg-slate-50">
+            <div className="px-3 py-2 flex items-center gap-4 border-t border-[var(--color-border)] bg-slate-50">
               <div className="flex items-center gap-1.5">
                 <AbraCoin face="check" size={13} />
                 <span className="text-xs text-[var(--color-muted)]">{config.successLabel}</span>
@@ -715,18 +709,19 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                 </span>
               )}
             </div>
-
           </div>
 
-          {/* ── Stats panel ── */}
-          <div className="space-y-3">
-            {/* Hypotheses */}
-            <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-xs text-[var(--color-muted)] space-y-1">
-              <div><span className="font-semibold text-[var(--color-text)]">H₀:</span> p = {config.nullP}</div>
-              <div><span className="font-semibold text-[var(--color-text)]">H₁:</span> {altStatement}</div>
+          {/* ── Slim summary row ── */}
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+            <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-xs text-[var(--color-muted)]">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+                <span><span className="font-semibold text-[var(--color-text)]">H₀:</span> p = {config.nullP}</span>
+                <span><span className="font-semibold text-[var(--color-text)]">H₁:</span> {altStatement}</span>
+                <span><span className="font-semibold text-[var(--color-text)]">n:</span> {n}</span>
+                <span><span className="font-semibold text-[var(--color-text)]">p̂:</span> <span className="font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</span></span>
+              </div>
             </div>
 
-            {/* Observed summary */}
             <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
               <div className="px-2.5 py-1.5 bg-slate-50 border-b border-[var(--color-border)]">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Observed Sample</span>
@@ -745,14 +740,13 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                 </div>
               </div>
             </div>
-
           </div>
         </div>
 
         {/* ── Null distribution ── */}
         <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 flex flex-col gap-1.5">
           <div className="flex gap-4 items-stretch">
-            <div className="w-44 flex-shrink-0 flex flex-col gap-3">
+            <div className="w-40 flex-shrink-0 flex flex-col gap-3">
               <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
               <div className="flex flex-col items-start gap-2">
                 <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-[10px]">
@@ -784,7 +778,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="min-h-0" style={{ height: simCount === 0 ? 220 : 320 }}>
+              <div className="min-h-0" style={{ height: simCount === 0 ? 260 : 400 }}>
                 {simCount === 0
                   ? <div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">
                       Use the step buttons above or batch-run to build the null distribution

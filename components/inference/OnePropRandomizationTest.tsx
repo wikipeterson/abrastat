@@ -169,7 +169,7 @@ function altOperator(alternative: Alternative): string {
 }
 
 function OnePropNullDistPlot({
-  counts, xObs, n, p0Num, alternative, view, showNormalCurve = false,
+  counts, xObs, n, p0Num, alternative, view, showNormalCurve = false, thresholdVal,
 }: {
   counts: number[]
   xObs: number
@@ -178,6 +178,7 @@ function OnePropNullDistPlot({
   alternative: Alternative
   view: GraphView
   showNormalCurve?: boolean
+  thresholdVal?: number
 }) {
   const clipId = useId()
   const SVG_W = 760
@@ -235,14 +236,19 @@ function OnePropNullDistPlot({
   const yMaxCount = Math.max(maxStack, maxCurveCount) * 1.12
   const yScale = (PH - topPad) / Math.max(1, yMaxCount)
 
+  // Use custom threshold for shading/coloring if provided and valid
+  const thresh = (thresholdVal !== undefined && Number.isFinite(thresholdVal)) ? thresholdVal : obsVal
+
   const seenC = new Map<number, number>()
   const dotStep = Math.min(6, yScale)
   const dotR = Math.max(0.55, Math.min(2.6, dotStep / 2 - 0.15))
   const circles = normalizedValues.map(v => {
     const si = seenC.get(v) ?? 0
     seenC.set(v, si + 1)
-    const xSimVal = view === 'counts' ? v : Math.round(v * n)
-    const extreme = isExtremeOneProp(xSimVal, xObs, n, p0Num, alternative)
+    const dist = Math.abs(thresh - nullCenter)
+    const extreme = alternative === 'greater' ? v >= thresh
+                  : alternative === 'less'    ? v <= thresh
+                  : Math.abs(v - nullCenter) >= dist
     return { cx: xOf(v), cy: PH - (si + 1) * dotStep + dotStep / 2, extreme }
   })
 
@@ -252,15 +258,35 @@ function OnePropNullDistPlot({
         .join(' ')
     : ''
 
+  // Filled area under normal curve in extreme region
+  const normalFillPath = (() => {
+    if (!normalStats) return ''
+    const samp = normalStats.samples
+    const yPt = (s: { x: number; expectedCount: number }) =>
+      Math.min(PH, Math.max(0, PH - s.expectedCount * yScale))
+    const makeFill = (pts: typeof samp) => {
+      if (pts.length === 0) return ''
+      const inner = pts.map(s => `${xOf(s.x)},${yPt(s)}`).join(' L')
+      return `M${xOf(pts[0].x)},${PH} L${inner} L${xOf(pts[pts.length - 1].x)},${PH} Z`
+    }
+    const threshDist = Math.abs(thresh - nullCenter)
+    if (alternative === 'greater') return makeFill(samp.filter(s => s.x >= thresh))
+    if (alternative === 'less')    return makeFill(samp.filter(s => s.x <= thresh))
+    return makeFill(samp.filter(s => s.x <= nullCenter - threshDist)) + ' ' +
+           makeFill(samp.filter(s => s.x >= nullCenter + threshDist))
+  })()
+
   const obsX = xOf(obsVal)
+  const threshX = xOf(thresh)
+  const showThreshLine = Math.abs(thresh - obsVal) > (view === 'counts' ? 0.5 : 0.0001)
 
   let shade = ''
   if (alternative === 'greater') {
-    shade = `M${obsX},0 H${PW} V${PH} H${obsX} Z`
+    shade = `M${threshX},0 H${PW} V${PH} H${threshX} Z`
   } else if (alternative === 'less') {
-    shade = `M0,0 H${obsX} V${PH} H0 Z`
+    shade = `M0,0 H${threshX} V${PH} H0 Z`
   } else {
-    const dist = Math.abs(obsVal - nullCenter)
+    const dist = Math.abs(thresh - nullCenter)
     const xL = Math.max(0, xOf(nullCenter - dist))
     const xR = Math.min(PW, xOf(nullCenter + dist))
     shade = `M0,0 H${xL} V${PH} H0 Z M${xR},0 H${PW} V${PH} H${xR} Z`
@@ -284,6 +310,7 @@ function OnePropNullDistPlot({
       <style>{`@keyframes dot-drop-full{from{transform:translateY(-${PH}px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
       <defs><clipPath id={clipId}><rect x={0} y={0} width={PW} height={PH} /></clipPath></defs>
       <g transform={`translate(${MG.l},${MG.t})`}>
+        {/* Light shaded extreme region */}
         <path d={shade} fill="#0EA5A0" opacity={0.10} />
         <line x1={0} y1={PH} x2={PW} y2={PH} stroke="#111111" strokeWidth={1.5} />
         {ticks.map((v, i) => (
@@ -295,9 +322,13 @@ function OnePropNullDistPlot({
           </g>
         ))}
         <g clipPath={`url(#${clipId})`}>
+          {/* Normal curve extreme-region fill (darker) */}
+          {normalFillPath && (
+            <path d={normalFillPath} fill="#0EA5A0" opacity={0.28} />
+          )}
           {circles.map((c, i) => (
             <circle key={i} cx={c.cx} cy={c.cy} r={dotR}
-              fill="#111111" opacity={0.85}
+              fill={c.extreme ? '#0EA5A0' : '#111111'} opacity={0.85}
               style={i === circles.length - 1 && values.length > 0
                 ? { animation: 'dot-drop-full 500ms ease-out' } : undefined}
             />
@@ -307,10 +338,21 @@ function OnePropNullDistPlot({
               strokeLinejoin="round" strokeLinecap="round" />
           )}
         </g>
+        {/* Obs line — always red */}
         <line x1={obsX} y1={0} x2={obsX} y2={PH} stroke="#EF4444" strokeWidth={1.8} strokeDasharray="4,3" />
         <text x={obsX + (obsVal >= nullCenter ? 3 : -3)} y={5}
           textAnchor={obsVal >= nullCenter ? 'start' : 'end'}
           fontSize={8} fill="#EF4444" fontFamily="DM Sans,sans-serif" fontWeight="600">obs</text>
+        {/* Custom threshold line — teal, only when it differs from obs */}
+        {showThreshLine && (
+          <>
+            <line x1={threshX} y1={0} x2={threshX} y2={PH}
+              stroke="#0EA5A0" strokeWidth={1.6} strokeDasharray="5,3" />
+            <text x={threshX + (thresh >= nullCenter ? 3 : -3)} y={14}
+              textAnchor={thresh >= nullCenter ? 'start' : 'end'}
+              fontSize={8} fill="#0EA5A0" fontFamily="DM Sans,sans-serif" fontWeight="600">t</text>
+          </>
+        )}
         <text x={PW / 2} y={PH + 24} textAnchor="middle" fontSize={9} fill="#111111" fontFamily="DM Sans,sans-serif">
           {view === 'counts' ? 'Simulated X (count of successes)' : 'Simulated p̂'}
         </text>
@@ -909,6 +951,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                       alternative={alternative}
                       view={graphView}
                       showNormalCurve={showNormalCurve}
+                      thresholdVal={Number.isFinite(customThresholdNum) ? customThresholdNum : undefined}
                     />
                 }
               </div>

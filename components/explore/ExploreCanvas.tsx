@@ -686,7 +686,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       case 'means':        return { minWidth: 700, minHeight: 460 }
       case 'proportions':  return { minWidth: 820, minHeight: 580 }
       case 'one-prop-randomization': return { minWidth: 820, minHeight: 520 }
-      case 'one-prop-sim':           return { minWidth: 1080, minHeight: 820 }
+      case 'one-prop-sim':           return { minWidth: 1080, minHeight: 720 }
       case 'two-prop-randomization': return { minWidth: 900, minHeight: 700 }
       case 'two-prop-sim':           return { minWidth: 700, minHeight: 500 }
       case 'two-mean-randomization': return { minWidth: 900, minHeight: 700 }

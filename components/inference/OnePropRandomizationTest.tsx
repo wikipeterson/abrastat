@@ -652,6 +652,15 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
       <style>{COIN_CSS}</style>
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-4 space-y-4">
 
+        <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-xs text-[var(--color-muted)]">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+            <span><span className="font-semibold text-[var(--color-text)]">H₀:</span> p = {config.nullP}</span>
+            <span><span className="font-semibold text-[var(--color-text)]">H₁:</span> {altStatement}</span>
+            <span><span className="font-semibold text-[var(--color-text)]">n:</span> {n}</span>
+            <span><span className="font-semibold text-[var(--color-text)]">p̂:</span> <span className="font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</span></span>
+          </div>
+        </div>
+
         <div className="space-y-3">
           {/* ── Unified coin panel ── */}
           <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden flex flex-col">
@@ -712,35 +721,6 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
           </div>
 
           {/* ── Slim summary row ── */}
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
-            <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-xs text-[var(--color-muted)]">
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
-                <span><span className="font-semibold text-[var(--color-text)]">H₀:</span> p = {config.nullP}</span>
-                <span><span className="font-semibold text-[var(--color-text)]">H₁:</span> {altStatement}</span>
-                <span><span className="font-semibold text-[var(--color-text)]">n:</span> {n}</span>
-                <span><span className="font-semibold text-[var(--color-text)]">p̂:</span> <span className="font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</span></span>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
-              <div className="px-2.5 py-1.5 bg-slate-50 border-b border-[var(--color-border)]">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Observed Sample</span>
-              </div>
-              <div className="px-2.5 py-2 text-xs">
-                <div className="flex items-start justify-between gap-3">
-                  <span className="text-[var(--color-muted)]">p̂</span>
-                  <div className="flex flex-col items-end gap-1">
-                    <div className="flex flex-col items-center text-[var(--color-text)] leading-none">
-                      <span className="font-bold">{x}</span>
-                      <span className="my-1 w-10 border-t-2 border-[var(--color-text)]" />
-                      <span className="font-bold">{n}</span>
-                    </div>
-                    <div className="font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* ── Null distribution ── */}

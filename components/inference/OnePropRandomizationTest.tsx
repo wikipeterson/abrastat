@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useStore } from '@/lib/store'
 import { DropZone } from '@/components/explore/DropZone'
 import { OnePropRandomizationCardConfig, OnePropSimCardConfig } from '@/lib/exploreTypes'
@@ -523,10 +523,13 @@ type StepPhase = 'observing' | 'spinning' | 'computed' | 'plotted'
 export function OnePropSimCard({ cardId, config }: { cardId: string; config: OnePropSimCardConfig }) {
   const { updateExploreCard } = useStore()
 
-  const [phase, setPhase]         = useState<StepPhase>('observing')
-  const [pendingSim, setPendingSim] = useState<OnePropResult | null>(null)
+  const [phase, setPhase]               = useState<StepPhase>('observing')
+  const [pendingSim, setPendingSim]     = useState<OnePropResult | null>(null)
   const [displayedSim, setDisplayedSim] = useState<OnePropResult | null>(null)
-  const [graphView, setGraphView] = useState<GraphView>('proportions')
+  const [graphView, setGraphView]       = useState<GraphView>('proportions')
+  const [isRunning, setIsRunning]       = useState(false)
+  const [runProgress, setRunProgress]   = useState<{ current: number; total: number } | null>(null)
+  const cancelRef = useRef(false)
 
   const { n, x } = config
   const phat        = n > 0 ? x / n : 0
@@ -634,12 +637,78 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
   }
 
   function handleReset() {
+    cancelRef.current = true
+    setIsRunning(false)
+    setRunProgress(null)
     setPendingSim(null)
     setDisplayedSim(null)
     setPhase('observing')
     updateExploreCard(cardId, {
       config: { ...config, nullDist: [], simCount: 0, extremeCount: 0 }
     })
+  }
+
+  // ── Animated batch (Run 1 / Run 10) ──
+  function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)) }
+
+  async function runAnimated(count: number) {
+    if (isRunning || !Number.isFinite(p0Num) || p0Num < 0 || p0Num > 1) return
+    cancelRef.current = false
+    setIsRunning(true)
+
+    // Timing: slower for 1, snappier for 10
+    const spinMs    = count === 1 ? 750 : 220
+    const computeMs = count === 1 ? 450 : 130
+    const pauseMs   = count === 1 ? 80  : 40
+
+    // Track accumulating counts locally (config prop is stale in async closure)
+    let localNullDist     = [...config.nullDist]
+    let localSimCount     = config.simCount
+    let localExtremeCount = config.extremeCount
+
+    for (let i = 0; i < count; i++) {
+      if (cancelRef.current) break
+      setRunProgress({ current: i + 1, total: count })
+
+      // ① Randomize
+      const sim = runOnePropRandomization(n, p0Num)
+      setPendingSim(sim)
+      setPhase('spinning')
+      await sleep(spinMs)
+      if (cancelRef.current) break
+
+      // ② Compute
+      setDisplayedSim(sim)
+      setPhase('computed')
+      await sleep(computeMs)
+      if (cancelRef.current) break
+
+      // ③ Plot
+      const extreme = isExtremeOneProp(sim.xSim, x, n, p0Num, alternative) ? 1 : 0
+      localNullDist = [...localNullDist, sim.xSim]
+      localSimCount++
+      localExtremeCount += extreme
+      updateExploreCard(cardId, {
+        config: {
+          ...config,
+          nullDist:     localNullDist,
+          simCount:     localSimCount,
+          extremeCount: localExtremeCount,
+        }
+      })
+      setPendingSim(null)
+      setPhase('plotted')
+
+      if (i < count - 1) await sleep(pauseMs)
+    }
+
+    setIsRunning(false)
+    setRunProgress(null)
+    cancelRef.current = false
+  }
+
+  function stopRunning() {
+    cancelRef.current = true
   }
 
   // Last displayed sim stats
@@ -815,9 +884,9 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
       <div className="flex-shrink-0 flex flex-wrap items-center gap-2 px-4 py-3 border-t border-[var(--color-border)] bg-slate-50">
         <button
           onClick={handleRandomize}
-          disabled={phase === 'spinning' || phase === 'computed'}
+          disabled={isRunning || phase === 'spinning' || phase === 'computed'}
           className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-            phase === 'observing' || phase === 'plotted'
+            !isRunning && (phase === 'observing' || phase === 'plotted')
               ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
               : 'border border-[var(--color-border)] text-[var(--color-border)] bg-white cursor-not-allowed'
           }`}
@@ -826,9 +895,9 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
         </button>
         <button
           onClick={handleCompute}
-          disabled={phase !== 'spinning'}
+          disabled={isRunning || phase !== 'spinning'}
           className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-            phase === 'spinning'
+            !isRunning && phase === 'spinning'
               ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
               : 'border border-[var(--color-border)] text-[var(--color-border)] bg-white cursor-not-allowed'
           }`}
@@ -837,9 +906,9 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
         </button>
         <button
           onClick={handlePlot}
-          disabled={phase !== 'computed'}
+          disabled={isRunning || phase !== 'computed'}
           className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-            phase === 'computed'
+            !isRunning && phase === 'computed'
               ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
               : 'border border-[var(--color-border)] text-[var(--color-border)] bg-white cursor-not-allowed'
           }`}
@@ -848,17 +917,43 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
         </button>
 
         <span className="text-[var(--color-border)]">|</span>
-        <span className="text-[10px] text-[var(--color-muted)] uppercase tracking-wide mr-1">Batch</span>
-        {([10, 100, 1000] as const).map(cnt => (
-          <button key={cnt} onClick={() => runBatch(cnt)}
-            className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-white transition-colors">
+        <span className="text-[10px] text-[var(--color-muted)] uppercase tracking-wide">Batch</span>
+
+        {/* Run 1 and Run 10 — animated step-by-step */}
+        {([1, 10] as const).map(cnt => (
+          <button key={cnt} onClick={() => runAnimated(cnt)} disabled={isRunning}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+              isRunning
+                ? 'border-[var(--color-border)] text-[var(--color-border)] bg-white cursor-not-allowed'
+                : 'border-[var(--color-border)] text-[var(--color-text)] hover:bg-white'
+            }`}>
+            Run {cnt}
+          </button>
+        ))}
+
+        {/* Run 100 and Run 1,000 — instant */}
+        {([100, 1000] as const).map(cnt => (
+          <button key={cnt} onClick={() => runBatch(cnt)} disabled={isRunning}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+              isRunning
+                ? 'border-[var(--color-border)] text-[var(--color-border)] bg-white cursor-not-allowed'
+                : 'border-[var(--color-border)] text-[var(--color-text)] hover:bg-white'
+            }`}>
             Run {cnt.toLocaleString()}
           </button>
         ))}
-        <button onClick={handleReset}
-          className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] hover:bg-white transition-colors ml-auto">
-          Reset
-        </button>
+
+        {isRunning ? (
+          <button onClick={stopRunning}
+            className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors ml-auto">
+            {runProgress ? `Stop (${runProgress.current}/${runProgress.total})` : 'Stop'}
+          </button>
+        ) : (
+          <button onClick={handleReset}
+            className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] hover:bg-white transition-colors ml-auto">
+            Reset
+          </button>
+        )}
       </div>
     </div>
   )

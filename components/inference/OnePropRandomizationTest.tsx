@@ -25,10 +25,6 @@ const COIN_CSS = `
   87%  { transform: scaleX(0.06) rotateZ(1deg)  }
   100% { transform: scaleX(1)    rotateZ(0deg)  }
 }
-@keyframes dot-drop {
-  from { transform: translateY(-28px); opacity: 0 }
-  to   { transform: translateY(0);     opacity: 1 }
-}
 `
 
 // ── AbraCoin component ────────────────────────────────────────────────────────
@@ -166,6 +162,12 @@ function formatTick(v: number, range: number): string {
   return v.toFixed(3)
 }
 
+function altOperator(alternative: Alternative): string {
+  if (alternative === 'less') return '<'
+  if (alternative === 'greater') return '>'
+  return '≠'
+}
+
 function OnePropNullDistPlot({
   counts, xObs, n, p0Num, alternative, view, showNormalCurve = false,
 }: {
@@ -264,11 +266,22 @@ function OnePropNullDistPlot({
     shade = `M0,0 H${xL} V${PH} H0 Z M${xR},0 H${PW} V${PH} H${xR} Z`
   }
 
-  const ticks = Array.from({ length: 5 }, (_, i) => xLo + (i / 4) * xRange)
+  const ticks = view === 'counts'
+    ? (() => {
+        const intStart = Math.ceil(xLo)
+        const intEnd = Math.floor(xHi)
+        const allInts = Array.from({ length: Math.max(0, intEnd - intStart + 1) }, (_, i) => intStart + i)
+        if (allInts.length <= 8) return allInts
+        const step = Math.max(1, Math.ceil((allInts.length - 1) / 7))
+        const filtered = allInts.filter((_, i) => i % step === 0)
+        const last = allInts[allInts.length - 1]
+        return filtered[filtered.length - 1] === last ? filtered : [...filtered, last]
+      })()
+    : Array.from({ length: 5 }, (_, i) => xLo + (i / 4) * xRange)
 
   return (
     <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full h-full">
-      <style>{`@keyframes dot-drop{from{transform:translateY(-28px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
+      <style>{`@keyframes dot-drop-full{from{transform:translateY(-${PH}px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
       <defs><clipPath id={clipId}><rect x={0} y={0} width={PW} height={PH} /></clipPath></defs>
       <g transform={`translate(${MG.l},${MG.t})`}>
         <path d={shade} fill="#0EA5A0" opacity={0.10} />
@@ -286,7 +299,7 @@ function OnePropNullDistPlot({
             <circle key={i} cx={c.cx} cy={c.cy} r={dotR}
               fill="#111111" opacity={0.85}
               style={i === circles.length - 1 && values.length > 0
-                ? { animation: 'dot-drop 250ms ease-out' } : undefined}
+                ? { animation: 'dot-drop-full 250ms ease-out' } : undefined}
             />
           ))}
           {normalPath && (
@@ -634,6 +647,14 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
     ? isExtremeOneProp(displayedSim.xSim, x, n, p0Num, alternative)
     : false
 
+  const probabilityLabel = (() => {
+    const symbol = altOperator(alternative)
+    if (graphView === 'counts') return `P(X ${symbol} ${x})`
+    const observedProp = x / Math.max(1, n)
+    const shown = observedProp.toFixed(4).replace(/^0(?=\.)/, '')
+    return `P(p̂ ${symbol} ${shown})`
+  })()
+
   // Status label for the coin panel
   const statusLabel = (() => {
     if (phase === 'observing') return `Observed sample — n = ${n}, X = ${x}`
@@ -749,8 +770,8 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                   </label>
                   {showNormalCurve && (
                     <div className="pl-6 pt-1 leading-tight">
-                      <div>Mean = {normMean.toFixed(4)}</div>
-                      <div>SD = {normSD.toFixed(4)}</div>
+                      <div>Mean = {normMean.toFixed(graphView === 'counts' ? 1 : 4)}</div>
+                      <div>SD = {normSD.toFixed(graphView === 'counts' ? 1 : 4)}</div>
                     </div>
                   )}
                 </div>
@@ -783,8 +804,8 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
             </span>
             <span className="ml-auto text-sm font-bold text-[var(--color-accent)]">
               {pValue !== null
-                ? `p ≈ ${pValue < 0.001 ? '< 0.001' : pValue.toFixed(4)}`
-                : 'p = —'}
+                ? `${probabilityLabel} = ${pValue < 0.001 ? '< 0.001' : pValue.toFixed(4)}`
+                : `${probabilityLabel} = —`}
             </span>
           </div>
         </div>

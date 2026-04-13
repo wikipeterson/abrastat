@@ -210,7 +210,7 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
   const clipId = useId()
   const SVG_W = 760
   const MG = { t: 14, r: 16, b: 30, l: 16 }
-  const plotHeight = 150
+  const plotHeight = 320
   const SVG_H = plotHeight + MG.t + MG.b
   const PW = SVG_W - MG.l - MG.r, PH = SVG_H - MG.t - MG.b
   const xOf = (v: number) => ((v + 1) / 2) * PW
@@ -309,10 +309,6 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
       </g>
     </svg>
   )
-}
-
-function getNullDistributionPanelHeight(values: number[]) {
-  return values.length === 0 ? 140 : 180
 }
 
 function getNullDistributionSummary(data: TwoProportionData) {
@@ -637,8 +633,6 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
   const isAnimating = ['pooling','shuffling','reassigning','plotting'].includes(stage)
   const pValue     = simCount > 0 ? extremeCount / simCount : null
   const positions  = computePositions(data, stage, assignment, shufflePhase, pileCY)
-  const nullPanelHeight = getNullDistributionPanelHeight(nullDist)
-  const visibleNullPanelHeight = simCount === 0 ? 180 : nullPanelHeight
   const cardTransDur    = stage==='shuffling' ? SHUFFLE_DUR : stage==='reassigning' ? DEAL_DUR : POOL_DUR
   const showNormalCurve = config.showNormalCurve ?? false
   const nullSummary = useMemo(() => getNullDistributionSummary(data), [data])
@@ -734,12 +728,25 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
   const rightStats   = colStats(cases, 1, showFaceUp ? assignment : null, stage)
   const altSymbol    = alternative==='less'?'<':alternative==='greater'?'>':'≠'
   const altStatement = `p₁ − p₂ ${altSymbol} ${nullDiff}`
+  const currentSimLine = currentResult
+    ? `${currentResult.s1Sim}/${data.n1} = ${currentResult.p1Sim.toFixed(3)}, ${currentResult.s2Sim}/${data.n2} = ${currentResult.p2Sim.toFixed(3)}, p̂₁ − p̂₂ = ${currentResult.diffSim.toFixed(3)}${isExtremeResult(currentResult.diffSim,data.diffObs,alternative)?' ★':''}`
+    : 'Run a simulation to show the current randomized proportions.'
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-4 space-y-4">
-        <div className="grid gap-4 xl:grid-cols-[680px_minmax(320px,1fr)]">
-          {/* Animation canvas */}
+        <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-xs text-[var(--color-muted)]">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+            <span><span className="font-semibold text-[var(--color-text)]">H₀:</span> p₁ − p₂ = {nullDiff}</span>
+            <span><span className="font-semibold text-[var(--color-text)]">Hₐ:</span> {altStatement}</span>
+            <span><span className="font-semibold text-[var(--color-text)]">n₁:</span> {data.n1}</span>
+            <span><span className="font-semibold text-[var(--color-text)]">n₂:</span> {data.n2}</span>
+            <span><span className="font-semibold text-[var(--color-text)]">N:</span> {cases.length}</span>
+            <span><span className="font-semibold text-[var(--color-text)]">p̂₁ − p̂₂:</span> <span className="font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</span></span>
+          </div>
+        </div>
+
+        <div className="space-y-3">
           <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
             <div className="overflow-x-auto flex justify-center">
               <div className="w-fit">
@@ -802,90 +809,52 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
             </div>
           </div>
 
-          {/* Stats + hypotheses */}
-          <div className="space-y-4">
-            <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
-            <div className="grid text-xs" style={{gridTemplateColumns:'auto 1fr 1fr 1fr'}}>
-              <div className="px-2 py-1.5 bg-slate-50 border-b border-[var(--color-border)]"/>
-              {[config.label1, config.label2, 'p̂₁ − p̂₂'].map(h=>(
-                <div key={h} className="px-2 py-1.5 bg-slate-50 border-b border-[var(--color-border)] text-center font-semibold text-[var(--color-muted)] truncate">{h}</div>
-              ))}
-              <div className="px-2 py-1.5 font-semibold text-[var(--color-muted)] bg-slate-50 text-[10px] flex items-center">Obs.</div>
-              <div className="px-2 py-1.5 text-center text-[var(--color-text)]">{data.s1}/{data.n1}<br/><span className="font-bold">{data.p1.toFixed(3)}</span></div>
-              <div className="px-2 py-1.5 text-center text-[var(--color-text)]">{data.s2}/{data.n2}<br/><span className="font-bold">{data.p2.toFixed(3)}</span></div>
-              <div className="px-2 py-1.5 text-center font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</div>
-              {currentResult?(
-                <>
-                  <div className={`px-2 py-1.5 text-[10px] font-semibold flex items-center text-[var(--color-muted)] ${highlightSim?'bg-[var(--color-accent-light)]':''}`}>Sim.</div>
-                  {[{s:currentResult.s1Sim,n:data.n1,p:currentResult.p1Sim},{s:currentResult.s2Sim,n:data.n2,p:currentResult.p2Sim}].map((cell,i)=>(
-                    <div key={i} className={`px-2 py-1.5 text-center text-[var(--color-text)] ${highlightSim?'bg-[var(--color-accent-light)]':''}`}>
-                      {cell.s}/{cell.n}<br/><span className="font-bold">{cell.p.toFixed(3)}</span>
-                    </div>
-                  ))}
-                  <div className={`px-2 py-1.5 text-center ${highlightSim?'bg-[var(--color-accent-light)]':''}`}>
-                    <span className={`font-bold ${isExtremeResult(currentResult.diffSim,data.diffObs,alternative)?'text-[var(--color-accent)]':'text-[var(--color-text)]'}`}>
-                      {currentResult.diffSim.toFixed(3)}
-                    </span>
-                    {isExtremeResult(currentResult.diffSim,data.diffObs,alternative)&&<span className="text-[10px] text-[var(--color-accent)] ml-0.5">★</span>}
-                  </div>
-                </>
-              ):(
-                <>
-                  <div className="px-2 py-1.5 text-[10px] text-[var(--color-muted)] opacity-30">Sim.</div>
-                  <div className="px-2 py-1.5 text-center text-[var(--color-muted)] opacity-30">—</div>
-                  <div className="px-2 py-1.5 text-center text-[var(--color-muted)] opacity-30">—</div>
-                  <div className="px-2 py-1.5 text-center text-[var(--color-muted)] opacity-30">—</div>
-                </>
-              )}
-            </div>
-            <div className="px-3 py-1 flex items-center justify-between border-t border-[var(--color-border)]">
-              <span className="text-[10px] text-[var(--color-muted)]">Simulation #{simCount>0?simCount:'—'}</span>
-              <span className="text-[10px] text-[var(--color-muted)]">{simCount} total</span>
-            </div>
-            </div>
-            <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-3 text-xs text-[var(--color-muted)] space-y-1">
-              <div><span className="font-semibold">H₀:</span> p₁ − p₂ = {nullDiff}</div>
-              <div><span className="font-semibold">H₁:</span> {altStatement}</div>
-            </div>
-            <div className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-3 text-xs text-[var(--color-muted)] grid grid-cols-3 gap-2">
-              <span>n₁={data.n1}</span>
-              <span>n₂={data.n2}</span>
-              <span>N={cases.length}</span>
+          <div className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-xs text-[var(--color-muted)]">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+              <span><span className="font-semibold text-[var(--color-text)]">Obs:</span> {data.s1}/{data.n1} = {data.p1.toFixed(3)}, {data.s2}/{data.n2} = {data.p2.toFixed(3)}</span>
+              <span><span className="font-semibold text-[var(--color-text)]">Sim:</span> {currentSimLine}</span>
+              <span className="ml-auto"><span className="font-semibold text-[var(--color-text)]">Total:</span> {simCount}</span>
             </div>
           </div>
         </div>
 
         {/* Null distribution */}
         <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 flex flex-col gap-1.5">
-          <div className="flex items-start justify-between gap-3 flex-shrink-0">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
-            <div className="flex flex-col items-end gap-1">
-              <label className="flex items-center gap-2 text-xs text-[var(--color-muted)] select-none">
-                <input
-                  type="checkbox"
-                  checked={showNormalCurve}
-                  onChange={e => updateExploreCard(cardId, { config: { ...config, showNormalCurve: e.target.checked } })}
-                  className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
-                />
-                <span>Overlay normal curve</span>
-              </label>
-              <div className="text-[11px] text-[var(--color-muted)] text-right leading-tight">
-                <div>Mean = {nullSummary.mean.toFixed(3)}</div>
-                <div>SD = {nullSummary.sd.toFixed(3)}</div>
+          <div className="flex gap-4 items-stretch">
+            <div className="w-40 flex-shrink-0 flex flex-col gap-3">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
+              <div className="flex flex-col items-start gap-2 text-xs text-[var(--color-muted)]">
+                <label className="flex items-center gap-2 select-none">
+                  <input
+                    type="checkbox"
+                    checked={showNormalCurve}
+                    onChange={e => updateExploreCard(cardId, { config: { ...config, showNormalCurve: e.target.checked } })}
+                    className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                  />
+                  <span>Overlay normal curve</span>
+                </label>
+                <div className="pl-6 leading-tight">
+                  <div>Mean = {nullSummary.mean.toFixed(3)}</div>
+                  <div>SD = {nullSummary.sd.toFixed(3)}</div>
+                </div>
+                <div className="pt-2 leading-tight">
+                  <div>
+                    Extreme: <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
+                  </div>
+                  <div className="pt-1 font-semibold text-[var(--color-accent)]">
+                    {pValue!==null?`p ≈ ${pValue<0.001?'< 0.001':pValue.toFixed(4)}`:'p = —'}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="min-h-0" style={{height: visibleNullPanelHeight}}>
+            <div className="flex-1 min-w-0">
+              <div className="min-h-0" style={{height: 320}}>
             {simCount===0
               ?<div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">Run simulations to build the null distribution</div>
               :<NullDistPlot values={nullDist} diffObs={data.diffObs} alternative={alternative} showNormalCurve={showNormalCurve}/>
             }
-          </div>
-          <div className="flex items-center gap-3 pt-1.5 border-t border-[var(--color-border)] flex-shrink-0">
-            <span className="text-xs text-[var(--color-muted)]">Extreme: <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}</span>
-            <span className="ml-auto text-sm font-bold text-[var(--color-accent)]">
-              {pValue!==null?`p ≈ ${pValue<0.001?'< 0.001':pValue.toFixed(4)}`:'p = —'}
-            </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

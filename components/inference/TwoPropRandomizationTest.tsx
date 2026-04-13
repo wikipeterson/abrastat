@@ -276,7 +276,7 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
 
   return (
     <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full h-full">
-      <style>{`@keyframes dot-drop{from{transform:translateY(-28px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
+      <style>{`@keyframes dot-drop-full{from{transform:translateY(-${PH}px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
       <defs><clipPath id={clipId}><rect x={0} y={0} width={PW} height={PH}/></clipPath></defs>
       <g transform={`translate(${MG.l},${MG.t})`}>
         <path d={shade} fill="#0EA5A0" opacity={0.10}/>
@@ -290,7 +290,7 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
         <g clipPath={`url(#${clipId})`}>
           {circles.map((c,i) => (
             <circle key={i} cx={c.cx} cy={c.cy} r={dotR} fill={c.extreme?'#0EA5A0':'#94A3B8'} opacity={0.85}
-              style={i===circles.length-1&&values.length>0?{animation:'dot-drop 250ms ease-out'}:undefined}/>
+              style={i===circles.length-1&&values.length>0?{animation:'dot-drop-full 500ms ease-out'}:undefined}/>
           ))}
           {normalPath && (
             <polyline
@@ -618,6 +618,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
   const [assignment, setAssignment]     = useState<number[]>([])
   const [currentResult, setCurrentResult] = useState<TwoProportionResult|null>(null)
   const [highlightSim, setHighlightSim] = useState(false)
+  const [isRunning, setIsRunning]       = useState(false)
 
   // Persisted results come from card config
   const nullDist    = config.nullDist
@@ -640,33 +641,25 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
   const dataRef   = useRef(data)
   const altRef    = useRef(alternative)
   const resultRef = useRef<TwoProportionResult|null>(null)
+  const cancelRef = useRef(false)
   useEffect(()=>{ dataRef.current=data },[data])
   useEffect(()=>{ altRef.current=alternative },[alternative])
 
   // ── Stage machine ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!['pooling','reassigning','plotting'].includes(stage)) return
+    if (!['pooling','reassigning'].includes(stage)) return
     let id: ReturnType<typeof setTimeout>
     if (stage==='pooling') {
       id = setTimeout(()=>setStage('pooled'), POOL_DUR + 80)
     } else if (stage==='reassigning') {
       const total = dealStaggerMax(dataRef.current.cases.length) + DEAL_DUR + 120
       id = setTimeout(()=>setStage('reassigned'), total)
-    } else if (stage==='plotting') {
-      id = setTimeout(()=>{
-        const result = resultRef.current
-        if (result) {
-          const newDist = [...nullDist, result.diffSim]
-          const newCount = simCount + 1
-          const newExtreme = extremeCount + (isExtremeResult(result.diffSim, dataRef.current.diffObs, altRef.current) ? 1 : 0)
-          updateExploreCard(cardId, { config: { ...config, nullDist: newDist, simCount: newCount, extremeCount: newExtreme } })
-        }
-        setStage('done')
-      }, 320)
     }
     return ()=>clearTimeout(id)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage])
+
+  function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)) }
 
   // ── Shuffle phase machine ─────────────────────────────────────────────────
   useEffect(() => {
@@ -680,7 +673,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
   }, [stage, shufflePhase])
 
   function handleStep() {
-    if (isAnimating) return
+    if (isAnimating || isRunning) return
     if (stage==='observed'||stage==='done')  { setStage('pooling') }
     else if (stage==='pooled')   { setStage('shuffling'); setShufflePhase(1) }
     else if (stage==='shuffled') {
@@ -688,10 +681,83 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
       resultRef.current = result; setAssignment(result.assignment); setCurrentResult(result); setStage('reassigning')
     }
     else if (stage==='reassigned') { setHighlightSim(true); setStage('computing') }
-    else if (stage==='computing')  { setHighlightSim(false); setStage('plotting') }
+    else if (stage==='computing')  {
+      setHighlightSim(false)
+      setStage('plotting')
+      const result = resultRef.current
+      if (!result) return
+      window.setTimeout(() => {
+        const newDist = [...nullDist, result.diffSim]
+        const newCount = simCount + 1
+        const newExtreme = extremeCount + (isExtremeResult(result.diffSim, data.diffObs, alternative) ? 1 : 0)
+        updateExploreCard(cardId, { config: { ...config, nullDist: newDist, simCount: newCount, extremeCount: newExtreme } })
+        setStage('done')
+      }, 320)
+    }
+  }
+
+  async function runAnimated(count: number) {
+    if (isRunning || isAnimating) return
+    cancelRef.current = false
+    setIsRunning(true)
+
+    let localNullDist = [...config.nullDist]
+    let localSimCount = config.simCount
+    let localExtremeCount = config.extremeCount
+
+    const computePause = count === 1 ? 220 : 120
+    const gapPause = count === 1 ? 80 : 40
+
+    for (let i = 0; i < count; i++) {
+      if (cancelRef.current) break
+      setHighlightSim(false)
+      setStage('pooling')
+      await sleep(POOL_DUR + 100)
+      if (cancelRef.current) break
+
+      setStage('shuffling')
+      setShufflePhase(1)
+      await sleep(NUM_SH_PHASES * (SHUFFLE_DUR + 15) + 40)
+      if (cancelRef.current) break
+
+      const result = runTwoProportionRandomization(dataRef.current)
+      resultRef.current = result
+      setAssignment(result.assignment)
+      setCurrentResult(result)
+      setStage('reassigning')
+      await sleep(dealStaggerMax(dataRef.current.cases.length) + DEAL_DUR + 140)
+      if (cancelRef.current) break
+
+      setHighlightSim(true)
+      setStage('computing')
+      await sleep(computePause)
+      if (cancelRef.current) break
+
+      setHighlightSim(false)
+      setStage('plotting')
+      await sleep(320)
+      if (cancelRef.current) break
+
+      localNullDist = [...localNullDist, result.diffSim]
+      localSimCount += 1
+      localExtremeCount += isExtremeResult(result.diffSim, dataRef.current.diffObs, altRef.current) ? 1 : 0
+      updateExploreCard(cardId, { config: {
+        ...config,
+        nullDist: localNullDist,
+        simCount: localSimCount,
+        extremeCount: localExtremeCount,
+      }})
+      setStage('done')
+
+      if (i < count - 1) await sleep(gapPause)
+    }
+
+    setIsRunning(false)
+    cancelRef.current = false
   }
 
   function runBatch(count: number) {
+    if (isRunning || isAnimating) return
     const diffs: number[] = []
     let newExtreme = 0
     let last: TwoProportionResult | null = null
@@ -715,6 +781,8 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
   }
 
   function handleReset() {
+    cancelRef.current = true
+    setIsRunning(false)
     setStage('observed'); setShufflePhase(0); setAssignment([]); setCurrentResult(null); setHighlightSim(false)
     updateExploreCard(cardId, { config: { ...config, nullDist: [], simCount: 0, extremeCount: 0 } })
   }
@@ -877,13 +945,19 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
         </div>
         {isAnimating&&<span className="text-xs italic text-[var(--color-muted)]">Animating…</span>}
         <div className="w-px h-5 bg-[var(--color-border)] mx-1"/>
-        {[1,10,100,1000].map(n=>(
-          <button key={n} onClick={()=>runBatch(n)} disabled={isAnimating}
+        {[1,10].map(n=>(
+          <button key={n} onClick={()=>runAnimated(n)} disabled={isAnimating || isRunning}
             className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
             Run {n.toLocaleString()}
           </button>
         ))}
-        <button onClick={handleReset} disabled={isAnimating}
+        {[100,1000].map(n=>(
+          <button key={n} onClick={()=>runBatch(n)} disabled={isAnimating || isRunning}
+            className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            Run {n.toLocaleString()}
+          </button>
+        ))}
+        <button onClick={handleReset} disabled={isAnimating || isRunning}
           className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
           Reset
         </button>

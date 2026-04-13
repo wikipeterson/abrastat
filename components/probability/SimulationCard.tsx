@@ -110,15 +110,15 @@ function FlipCoin({
 
 function getCoinLayout(n: number) {
   const size =
-    n <= 12 ? 46 :
-    n <= 20 ? 40 :
-    n <= 35 ? 32 :
-    n <= 55 ? 25 :
-    n <= 90 ? 19 :
-    n <= 160 ? 14 :
-    11
+    n <= 12 ? 72 :
+    n <= 20 ? 60 :
+    n <= 35 ? 48 :
+    n <= 55 ? 38 :
+    n <= 90 ? 30 :
+    n <= 160 ? 22 :
+    16
   const gap = Math.max(3, Math.round(size * 0.10))
-  const perRow = Math.max(1, Math.floor(760 / (size + gap)))
+  const perRow = Math.max(1, Math.floor(860 / (size + gap)))
   return { size, gap, perRow }
 }
 
@@ -156,28 +156,12 @@ interface SimulationCardProps {
 }
 
 export function SimulationCard({ cardId, config }: SimulationCardProps) {
-  const exploreCards = useStore(s => s.exploreCards)
-  const addSimResultsCard = useStore(s => s.addSimResultsCard)
-  const updateExploreCard = useStore(s => s.updateExploreCard)
-  const pushSimResult = useStore(s => s.pushSimResult)
-  const clearSimResults = useStore(s => s.clearSimResults)
-
   const [probabilityHeads, setProbabilityHeads] = useState(0.5)
   const [flipsPerGroup, setFlipsPerGroup] = useState(100)
   const [history, setHistory] = useState<number[][]>([])
   const [displayFlips, setDisplayFlips] = useState<number[]>([])
   const [isSpinning, setIsSpinning] = useState(false)
   const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const linkedResultsCardId = config.linkedResultsCardId ?? null
-  const linkedResultsCard = linkedResultsCardId
-    ? exploreCards.find(card => card.id === linkedResultsCardId && card.config.type === 'sim-results')
-    : null
-
-  const range = useMemo(
-    () => ({ minValue: 0, maxValue: flipsPerGroup }),
-    [flipsPerGroup],
-  )
 
   const recentHeads = history.map(group => group.reduce((sum, value) => sum + value, 0))
   const totalGroups = history.length
@@ -202,54 +186,6 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
     }
   }, [])
 
-  useEffect(() => {
-    if (!linkedResultsCard || linkedResultsCard.config.type !== 'sim-results') return
-    const cfg = linkedResultsCard.config
-    if (
-      cfg.minValue === range.minValue &&
-      cfg.maxValue === range.maxValue &&
-      cfg.valueLabel === 'Heads'
-    ) return
-
-    updateExploreCard(linkedResultsCard.id, {
-      config: {
-        ...cfg,
-        minValue: range.minValue,
-        maxValue: cfg.valueMode === 'proportion' ? 100 : range.maxValue,
-        thresholdValue: cfg.thresholdValue ?? (cfg.valueMode === 'proportion' ? 50 : range.maxValue / 2),
-        valueLabel: 'Heads',
-      },
-    })
-  }, [linkedResultsCard, range.maxValue, range.minValue, updateExploreCard])
-
-  function ensureResultsCard() {
-    if (linkedResultsCardId && linkedResultsCard) return linkedResultsCardId
-
-    const myCard = exploreCards.find(card => card.id === cardId)
-    const position = myCard
-      ? { x: myCard.x + myCard.width + 40, y: myCard.y }
-      : { x: 700, y: 20 }
-
-    const newId = addSimResultsCard(
-      cardId,
-      'sum',
-      position,
-      'Coin Flipper',
-      range,
-      'Heads',
-    )
-    if (history.length > 0) {
-      history.forEach(group => pushSimResult(newId, group))
-    }
-    updateExploreCard(cardId, {
-      config: {
-        ...config,
-        linkedResultsCardId: newId,
-      },
-    })
-    return newId
-  }
-
   function simulateOneGroup() {
     const outcome = flipGroup(probabilityHeads, flipsPerGroup)
     if (spinTimerRef.current) clearTimeout(spinTimerRef.current)
@@ -259,10 +195,6 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
       setDisplayFlips(outcome.flips)
       setIsSpinning(false)
       setHistory(prev => [...prev, outcome.flips])
-
-      if (linkedResultsCardId) {
-        pushSimResult(linkedResultsCardId, outcome.flips)
-      }
     }, 700)
   }
 
@@ -271,9 +203,6 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
     setHistory([])
     setDisplayFlips([])
     setIsSpinning(false)
-    if (linkedResultsCardId) {
-      clearSimResults(linkedResultsCardId)
-    }
   }
 
   return (
@@ -295,7 +224,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
           </label>
 
           <label className="space-y-1.5">
-            <span className="text-sm font-medium text-[var(--color-text)]">Flips per Group</span>
+            <span className="text-sm font-medium text-[var(--color-text)]">Number of Coins</span>
             <input
               type="number"
               min={1}
@@ -315,15 +244,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
             disabled={isSpinning}
             className="shrink-0 rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
           >
-            Flip One Group
-          </button>
-          <button
-            type="button"
-            onClick={ensureResultsCard}
-            disabled={isSpinning}
-            className="shrink-0 rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] hover:bg-slate-50"
-          >
-            Graph Results
+            Flip Coins
           </button>
           <button
             type="button"

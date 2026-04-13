@@ -160,12 +160,10 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
   const addSimResultsCard = useStore(s => s.addSimResultsCard)
   const updateExploreCard = useStore(s => s.updateExploreCard)
   const pushSimResult = useStore(s => s.pushSimResult)
-  const pushSimResultsBatch = useStore(s => s.pushSimResultsBatch)
   const clearSimResults = useStore(s => s.clearSimResults)
 
   const [probabilityHeads, setProbabilityHeads] = useState(0.5)
   const [flipsPerGroup, setFlipsPerGroup] = useState(100)
-  const [groupCount, setGroupCount] = useState(1000)
   const [history, setHistory] = useState<number[][]>([])
   const [displayFlips, setDisplayFlips] = useState<number[]>([])
   const [isSpinning, setIsSpinning] = useState(false)
@@ -184,9 +182,6 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
   const recentHeads = history.map(group => group.reduce((sum, value) => sum + value, 0))
   const totalGroups = history.length
   const lastHeads = recentHeads.at(-1) ?? '—'
-  const meanHeads = recentHeads.length
-    ? (recentHeads.reduce((sum, value) => sum + value, 0) / recentHeads.length).toFixed(2)
-    : '—'
   const lastFlips = history.at(-1) ?? []
   const visibleFlips = isSpinning
     ? Array.from({ length: flipsPerGroup }, () => 1)
@@ -244,7 +239,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
       'Heads',
     )
     if (history.length > 0) {
-      pushSimResultsBatch(newId, history)
+      history.forEach(group => pushSimResult(newId, group))
     }
     updateExploreCard(cardId, {
       config: {
@@ -271,17 +266,6 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
     }, 700)
   }
 
-  function simulateManyGroups() {
-    const groups = Array.from({ length: groupCount }, () => flipGroup(probabilityHeads, flipsPerGroup))
-    setHistory(prev => [...prev, ...groups.map(group => group.flips)])
-    setDisplayFlips(groups.at(-1)?.flips ?? [])
-    setIsSpinning(false)
-
-    if (linkedResultsCardId) {
-      pushSimResultsBatch(linkedResultsCardId, groups.map(group => group.flips))
-    }
-  }
-
   function reset() {
     if (spinTimerRef.current) clearTimeout(spinTimerRef.current)
     setHistory([])
@@ -296,7 +280,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
     <div className="h-full overflow-auto">
       <style>{COIN_CSS}</style>
       <div className="space-y-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="space-y-1.5">
             <span className="text-sm font-medium text-[var(--color-text)]">Probability of Heads</span>
             <input
@@ -322,17 +306,6 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
             />
           </label>
 
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-[var(--color-text)]">Number of Groups</span>
-            <input
-              type="number"
-              min={1}
-              max={10000}
-              value={groupCount}
-              onChange={e => setGroupCount(clampPositiveInt(Number(e.target.value), 10000))}
-              className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
-            />
-          </label>
         </div>
 
         <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
@@ -343,14 +316,6 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
             className="shrink-0 rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
           >
             Flip One Group
-          </button>
-          <button
-            type="button"
-            onClick={simulateManyGroups}
-            disabled={isSpinning}
-            className="shrink-0 rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] hover:bg-slate-50"
-          >
-            Run {groupCount} Groups
           </button>
           <button
             type="button"
@@ -369,10 +334,9 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <StatPill label="Last Heads" value={lastHeads} />
           <StatPill label="Groups Run" value={totalGroups} />
-          <StatPill label="Mean Heads" value={meanHeads} />
           <StatPill label="Expected Heads" value={(probabilityHeads * flipsPerGroup).toFixed(2)} />
         </div>
 

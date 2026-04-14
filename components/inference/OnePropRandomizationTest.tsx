@@ -808,7 +808,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
       <style>{COIN_CSS}</style>
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-4 space-y-4">
 
-        <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-xs text-[var(--color-muted)]">
+        <div className="rounded-xl bg-[var(--color-accent-light)] border border-[var(--color-border)] px-3 py-2.5 text-xs text-[var(--color-muted)]">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
             <span><span className="font-semibold text-[var(--color-text)]">H₀:</span> p = {config.nullP}</span>
             <span><span className="font-semibold text-[var(--color-text)]">Hₐ:</span> {altStatement}</span>
@@ -819,12 +819,12 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
 
         <div className="space-y-3">
           {/* ── Unified coin panel ── */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden flex flex-col">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden flex flex-col">
 
             <div className={`px-3 py-1.5 border-b border-[var(--color-border)] flex items-center gap-2 transition-colors duration-300 ${
-              phase === 'spinning' ? 'bg-amber-50' :
-              phase === 'computed' ? 'bg-teal-50'  :
-              'bg-slate-50'
+              phase === 'spinning' ? 'bg-[var(--color-accent-light)]' :
+              phase === 'computed' ? 'bg-[var(--color-accent-light)]'  :
+              'bg-[var(--color-accent-light)]'
             }`}>
               {phase === 'spinning' && (
                 <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
@@ -833,7 +833,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                 <span className="inline-block w-2 h-2 rounded-full bg-teal-500" />
               )}
               {(phase === 'observing' || phase === 'plotted') && (
-                <span className="inline-block w-2 h-2 rounded-full bg-slate-300" />
+                <span className="inline-block w-2 h-2 rounded-full bg-[var(--color-border)]" />
               )}
               <span className="text-xs font-medium text-[var(--color-text)]">{statusLabel}</span>
             </div>
@@ -859,7 +859,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
               ))}
             </div>
 
-            <div className="px-3 py-2 flex items-center gap-4 border-t border-[var(--color-border)] bg-slate-50">
+            <div className="px-3 py-2 flex items-center gap-4 border-t border-[var(--color-border)] bg-[var(--color-accent-light)]">
               <div className="flex items-center gap-1.5">
                 <AbraCoin face="check" size={13} />
                 <span className="text-xs text-[var(--color-muted)]">{config.successLabel}</span>
@@ -880,7 +880,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
         </div>
 
         {/* ── Null distribution ── */}
-        <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 flex flex-col gap-1.5">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 flex flex-col gap-1.5">
           <div className="flex gap-4 items-stretch">
             <div className="w-40 flex-shrink-0 flex flex-col gap-3">
               <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
@@ -888,7 +888,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                 <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-[10px]">
                   {(['proportions', 'counts'] as GraphView[]).map((v, i) => (
                     <button key={v} onClick={() => setGraphView(v)}
-                      className={`px-2 py-0.5 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${graphView === v ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}>
+                      className={`px-2 py-0.5 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${graphView === v ? 'bg-[var(--color-text)] text-[var(--color-surface)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
                       {v === 'proportions' ? 'Sample Proportions' : 'Counts'}
                     </button>
                   ))}
@@ -962,14 +962,14 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
       </div>
 
       {/* ── Controls ── */}
-      <div className="flex-shrink-0 flex flex-wrap items-center gap-2 px-4 py-3 border-t border-[var(--color-border)] bg-slate-50">
+      <div className="flex-shrink-0 flex flex-wrap items-center gap-2 px-4 py-3 border-t border-[var(--color-border)] bg-[var(--color-accent-light)]">
         <button
           onClick={handleRandomize}
           disabled={isRunning || phase === 'spinning' || phase === 'computed'}
           className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
             !isRunning && (phase === 'observing' || phase === 'plotted')
               ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
-              : 'border border-[var(--color-border)] text-[var(--color-border)] bg-white cursor-not-allowed'
+              : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
           }`}
         >
           1. Randomize
@@ -980,7 +980,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
           className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
             !isRunning && phase === 'spinning'
               ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
-              : 'border border-[var(--color-border)] text-[var(--color-border)] bg-white cursor-not-allowed'
+              : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
           }`}
         >
           2. Compute
@@ -991,7 +991,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
           className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
             !isRunning && phase === 'computed'
               ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
-              : 'border border-[var(--color-border)] text-[var(--color-border)] bg-white cursor-not-allowed'
+              : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
           }`}
         >
           3. Plot
@@ -1005,8 +1005,8 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
           <button key={cnt} onClick={() => runAnimated(cnt)} disabled={isRunning}
             className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
               isRunning
-                ? 'border-[var(--color-border)] text-[var(--color-border)] bg-white cursor-not-allowed'
-                : 'border-[var(--color-border)] text-[var(--color-text)] hover:bg-white'
+                ? 'border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
+                : 'border-[var(--color-border)] text-[var(--color-text)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)]'
             }`}>
             Run {cnt}
           </button>
@@ -1017,8 +1017,8 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
           <button key={cnt} onClick={() => runBatch(cnt)} disabled={isRunning}
             className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
               isRunning
-                ? 'border-[var(--color-border)] text-[var(--color-border)] bg-white cursor-not-allowed'
-                : 'border-[var(--color-border)] text-[var(--color-text)] hover:bg-white'
+                ? 'border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
+                : 'border-[var(--color-border)] text-[var(--color-text)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)]'
             }`}>
             Run {cnt.toLocaleString()}
           </button>
@@ -1031,7 +1031,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
           </button>
         ) : (
           <button onClick={handleReset}
-            className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] hover:bg-white transition-colors ml-auto">
+            className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)] transition-colors ml-auto">
             Reset
           </button>
         )}

@@ -454,13 +454,13 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
   return (
     <div className="space-y-4">
       {/* Config card */}
-      <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-white px-4 py-4">
+      <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4">
         <div className="flex items-center gap-2">
           <span className="text-xs text-[var(--color-muted)]">Source</span>
           <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
             {(['data','manual'] as SourceMode[]).map((m,i)=>(
               <button key={m} onClick={()=>setSourceMode(m)}
-                className={`px-2.5 py-1 font-medium transition-colors ${i>0?'border-l border-[var(--color-border)]':''} ${sourceMode===m?'bg-slate-700 text-white':'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}>
+                className={`px-2.5 py-1 font-medium transition-colors ${i>0?'border-l border-[var(--color-border)]':''} ${sourceMode===m?'bg-[var(--color-text)] text-[var(--color-surface)]':'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
                 {m==='data'?'Use Data':'Enter Info'}
               </button>
             ))}
@@ -480,7 +480,7 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
             {responseLevels.length>1&&(
               <div className="flex items-center gap-2">
                 <span className="text-xs text-[var(--color-muted)] whitespace-nowrap">Success</span>
-                <select value={successLevel} onChange={e=>setSuccessLevel(e.target.value)} className="flex-1 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white">
+                <select value={successLevel} onChange={e=>setSuccessLevel(e.target.value)} className="flex-1 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
                   {responseLevels.map(l=><option key={l} value={l}>{l}</option>)}
                 </select>
               </div>
@@ -492,7 +492,7 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
                   return (
                     <div key={lbl} className="flex-1 flex items-center gap-1.5">
                       <span className="text-[10px] font-semibold text-[var(--color-muted)] flex-shrink-0">{lbl}</span>
-                      <select value={val} onChange={e=>setter(e.target.value)} className="flex-1 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white">
+                      <select value={val} onChange={e=>setter(e.target.value)} className="flex-1 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
                         {groupLevels.filter(g=>g!==other).map(g=><option key={g} value={g}>{g}</option>)}
                       </select>
                     </div>
@@ -507,12 +507,12 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
               <div>
                 <label className="block text-xs text-[var(--color-muted)] mb-1">Group 1 name</label>
                 <input value={manualLabel1} onChange={e=>setManualLabel1(e.target.value)} placeholder="Group 1"
-                  className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm bg-white text-[var(--color-text)]"/>
+                  className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)]"/>
               </div>
               <div>
                 <label className="block text-xs text-[var(--color-muted)] mb-1">Group 2 name</label>
                 <input value={manualLabel2} onChange={e=>setManualLabel2(e.target.value)} placeholder="Group 2"
-                  className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm bg-white text-[var(--color-text)]"/>
+                  className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)]"/>
               </div>
             </div>
             <div className="flex items-center justify-around py-1">
@@ -521,7 +521,7 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
               <FractionInput label="p̂₂" numLabel="x₂" denLabel="n₂" numValue={manualS2} denValue={manualN2} onChangeNum={setManualS2} onChangeDen={setManualN2}/>
             </div>
             {data&&(
-              <div className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-2 text-center text-sm">
+              <div className="rounded-xl bg-[var(--color-accent-light)] border border-[var(--color-border)] px-4 py-2 text-center text-sm">
                 <span className="text-[var(--color-muted)]">p̂₁ − p̂₂ = {data.p1.toFixed(3)} − {data.p2.toFixed(3)} = </span>
                 <span className="font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</span>
               </div>
@@ -533,12 +533,12 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₀: p₁−p₂=</span>
             <input type="number" min={-1} max={1} step={0.01} value={nullDiff} onChange={e=>setNullDiff(e.target.value)}
-              className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white"/>
+              className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]"/>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₁</span>
             <select value={alternative} onChange={e=>setAlternative(e.target.value as Alternative)}
-              className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white">
+              className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
               <option value="less">&lt;</option><option value="greater">&gt;</option><option value="two">≠</option>
             </select>
             <span className="text-sm font-mono font-medium text-[var(--color-text)]">{altStatement}</span>
@@ -576,11 +576,11 @@ function FractionInput({ label, numLabel, denLabel, numValue, denValue, onChange
         <div className="flex flex-col items-center">
           <input type="number" min={0} step={1} value={numValue} onChange={e=>onChangeNum(e.target.value)}
             placeholder=" "
-            className="w-16 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-white text-[var(--color-text)] [appearance:textfield]"/>
+            className="w-16 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)] [appearance:textfield]"/>
           <div className="my-0.5 w-[4.5rem] border-t-2 border-[var(--color-text)]"/>
           <input type="number" min={1} step={1} value={denValue} onChange={e=>onChangeDen(e.target.value)}
             placeholder=" "
-            className="w-16 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-white text-[var(--color-text)] [appearance:textfield]"/>
+            className="w-16 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)] [appearance:textfield]"/>
         </div>
       </div>
       <div className="text-sm text-[var(--color-muted)]">= <span className="font-bold text-[var(--color-text)]">{phat}</span></div>
@@ -593,7 +593,7 @@ function ColStatLabel({ cx, n, s, p, highlight, layout }: {
 }) {
   return (
     <div style={{position:'absolute',left:cx,top:5,transform:'translateX(-50%)',textAlign:'center',pointerEvents:'none'}}>
-      <div className={`rounded-lg px-2 py-0.5 text-[10px] font-semibold transition-colors ${highlight?'bg-[var(--color-accent)] text-white':'bg-slate-100 text-[var(--color-muted)]'}`}>
+      <div className={`rounded-lg px-2 py-0.5 text-[10px] font-semibold transition-colors ${highlight?'bg-[var(--color-accent)] text-white':'bg-[var(--color-accent-light)] text-[var(--color-muted)]'}`}>
         {s}/{n} = {p.toFixed(3)}
       </div>
     </div>

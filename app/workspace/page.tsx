@@ -193,7 +193,7 @@ function GroupedAddCardMenu({
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 z-[70] bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden min-w-[260px]">
+          <div className="absolute right-0 top-full mt-2 z-[70] bg-[var(--color-surface)] rounded-2xl shadow-xl border border-[var(--color-border)] overflow-hidden min-w-[260px]">
             {groups.map(group => (
               <div key={group.id} className="border-b border-[var(--color-border)] last:border-b-0">
                 <div className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
@@ -204,7 +204,7 @@ function GroupedAddCardMenu({
                     <button
                       key={option.type}
                       onClick={() => { onAdd(option.type); setOpen(false) }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 text-left"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--color-accent-light)] text-left transition-colors"
                     >
                       <span className="text-base leading-none">{option.icon}</span>
                       <span className="text-sm font-medium text-[var(--color-text)]">{option.label}</span>

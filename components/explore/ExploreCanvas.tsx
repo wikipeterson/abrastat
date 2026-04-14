@@ -136,7 +136,7 @@ function WorkspaceContextMenu({
     <>
       <div className="fixed inset-0 z-[90]" onClick={onClose} onContextMenu={e => { e.preventDefault(); onClose() }} />
       <div
-        className="fixed z-[100] w-[280px] rounded-2xl border border-slate-100 bg-white shadow-xl overflow-hidden"
+        className="fixed z-[100] w-[280px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden"
         style={{ left: x, top: y }}
       >
         <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--color-border)]">
@@ -153,7 +153,7 @@ function WorkspaceContextMenu({
                 <button
                   key={option.type}
                   onClick={() => onAdd(option.type)}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50"
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-[var(--color-accent-light)] transition-colors"
                 >
                   <span className="text-base leading-none">{option.icon}</span>
                   <span className="text-sm font-medium text-[var(--color-text)]">{option.label}</span>

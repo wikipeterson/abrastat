@@ -16,6 +16,42 @@ html {
   --color-grid-selected: #D6F5F2;
 }
 
+html[data-palette='classic'] {
+  --color-bg: #F6F2EA;
+  --color-surface: #FFFCF6;
+  --color-text: #24312F;
+  --color-muted: #5B6F69;
+  --color-accent: #2F7D73;
+  --color-accent-light: #DCEBE7;
+  --color-border: #B7D1CA;
+  --color-grid-header: #24312F;
+  --color-grid-selected: #E5F0EC;
+}
+
+html[data-palette='ocean'] {
+  --color-bg: #EAF3FF;
+  --color-surface: #FFFFFF;
+  --color-text: #18324A;
+  --color-muted: #3D6F91;
+  --color-accent: #2F80ED;
+  --color-accent-light: #DCEBFF;
+  --color-border: #A9CFF5;
+  --color-grid-header: #18324A;
+  --color-grid-selected: #DCEBFF;
+}
+
+html[data-palette='citrus'] {
+  --color-bg: #FFF6E8;
+  --color-surface: #FFFFFF;
+  --color-text: #3F3020;
+  --color-muted: #8A6A3E;
+  --color-accent: #F4A300;
+  --color-accent-light: #FFE7B5;
+  --color-border: #F2C970;
+  --color-grid-header: #3F3020;
+  --color-grid-selected: #FFF0CC;
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-text);

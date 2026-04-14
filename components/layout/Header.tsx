@@ -76,7 +76,7 @@ export function Header({
 
   return (
     <>
-      <header className="relative h-[4.5rem] flex items-center justify-between px-4 border-b border-[var(--color-border)] bg-white flex-shrink-0 gap-4">
+      <header className="relative h-[4.5rem] flex items-center justify-between px-4 border-b border-[var(--color-border)] bg-[var(--color-surface)] flex-shrink-0 gap-4">
         <div className="flex items-center gap-4 min-w-0">
           {onToggleSidebar && (
             <button
@@ -96,7 +96,7 @@ export function Header({
             <div className="flex items-center gap-2">
               {leadingNav && <div className="hidden md:flex">{leadingNav}</div>}
               {modeTabs && modeTabs.length > 0 && (
-                <div className="flex items-center rounded-xl border border-[var(--color-border)] bg-white p-1">
+                <div className="flex items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
                   {modeTabs.map(tab => {
                     const active = tab.id === activeModeId
                     return (
@@ -193,7 +193,7 @@ export function Header({
                 <ChevronDown size={12} className="text-[var(--color-muted)] hidden sm:block" />
               </button>
               {showUserMenu && (
-                <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-lg border border-[var(--color-border)] py-1 z-50">
+                <div className="absolute right-0 top-full mt-1 w-56 bg-[var(--color-surface)] rounded-xl shadow-lg border border-[var(--color-border)] py-1 z-50">
                   <div className="px-3 py-2 text-xs text-[var(--color-muted)] border-b border-[var(--color-border)] truncate">
                     {isGuest ? 'Guest — changes not saved' : user.displayName}
                   </div>

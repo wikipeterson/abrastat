@@ -451,19 +451,19 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
 
   return (
     <div className="space-y-4">
-      <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-white px-4 py-4">
+      <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4">
         {/* Hypothesis */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₀: p =</span>
             <input type="number" min={0} max={1} step={0.01} value={nullP} onChange={e => setNullP(e.target.value)}
-              className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white" />
+              className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]" />
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Hₐ</span>
             <span className="text-sm font-mono font-medium text-[var(--color-text)]">p̂</span>
             <select value={alternative} onChange={e => setAlternative(e.target.value as Alternative)}
-              className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white">
+              className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
               <option value="less">&lt;</option>
               <option value="greater">&gt;</option>
               <option value="two">≠</option>
@@ -482,7 +482,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
           <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
             {(['data', 'manual'] as SourceMode[]).map((m, i) => (
               <button key={m} onClick={() => setSourceMode(m)}
-                className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === m ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}>
+                className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === m ? 'bg-[var(--color-text)] text-[var(--color-surface)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
                 {m === 'data' ? 'Use Data' : 'Enter Info'}
               </button>
             ))}
@@ -505,13 +505,13 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
               <div className="flex items-center gap-2">
                 <span className="text-xs text-[var(--color-muted)] whitespace-nowrap">Success</span>
                 <select value={successLevel} onChange={e => setSuccessLevel(e.target.value)}
-                  className="flex-1 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white">
+                  className="flex-1 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
                   {catLevels.map(l => <option key={l} value={l}>{l}</option>)}
                 </select>
               </div>
             )}
             {phat !== null && (
-              <div className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-2 text-center text-sm">
+              <div className="rounded-xl bg-[var(--color-accent-light)] border border-[var(--color-border)] px-4 py-2 text-center text-sm">
                 <span className="text-[var(--color-muted)]">p̂ = {x}/{n} = </span>
                 <span className="font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</span>
               </div>
@@ -532,11 +532,11 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
                   <div className="flex flex-col items-center">
                     <input type="number" min={0} step={1} value={manualX} onChange={e => setManualX(e.target.value)}
                       placeholder=" "
-                      className="w-20 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-white text-[var(--color-text)] [appearance:textfield]" />
+                      className="w-20 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)] [appearance:textfield]" />
                     <div className="my-0.5 w-[5rem] border-t-2 border-[var(--color-text)]" />
                     <input type="number" min={1} step={1} value={manualN} onChange={e => setManualN(e.target.value)}
                       placeholder=" "
-                      className="w-20 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-white text-[var(--color-text)] [appearance:textfield]" />
+                      className="w-20 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)] [appearance:textfield]" />
                   </div>
                 </div>
                 <div className="text-sm text-[var(--color-muted)]">
@@ -547,7 +547,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
             <div>
               <label className="block text-xs text-[var(--color-muted)] mb-1">Success label (optional)</label>
               <input value={manualLabel} onChange={e => setManualLabel(e.target.value)} placeholder="Success"
-                className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm bg-white text-[var(--color-text)]" />
+                className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)]" />
             </div>
           </div>
         )}

@@ -8,6 +8,7 @@ import { Save, Library, LogOut, ChevronDown, FilePlus } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { signOut } from '@/lib/auth'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { PalettePicker } from '@/components/layout/PalettePicker'
 
 interface HeaderProps {
   onNew?: () => void
@@ -192,9 +193,12 @@ export function Header({
                 <ChevronDown size={12} className="text-[var(--color-muted)] hidden sm:block" />
               </button>
               {showUserMenu && (
-                <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-[var(--color-border)] py-1 z-50">
+                <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-lg border border-[var(--color-border)] py-1 z-50">
                   <div className="px-3 py-2 text-xs text-[var(--color-muted)] border-b border-[var(--color-border)] truncate">
                     {isGuest ? 'Guest — changes not saved' : user.displayName}
+                  </div>
+                  <div className="px-3 py-2 border-b border-[var(--color-border)]">
+                    <PalettePicker />
                   </div>
                   {isGuest ? (
                     <Link

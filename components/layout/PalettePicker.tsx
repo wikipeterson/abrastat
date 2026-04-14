@@ -30,12 +30,12 @@ export function PalettePicker() {
   }
 
   return (
-    <label className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm">
-      <span className="text-[var(--color-muted)] font-medium">Palette</span>
+    <div className="flex items-center justify-between gap-2 text-sm">
+      <span className="text-xs text-[var(--color-muted)] font-medium">Color palette</span>
       <select
         value={palette}
         onChange={event => handleChange(event.target.value as PaletteId)}
-        className="bg-transparent text-[var(--color-text)] outline-none"
+        className="bg-transparent text-[var(--color-text)] text-xs outline-none cursor-pointer"
         aria-label="Choose color palette"
       >
         {PALETTES.map(option => (
@@ -44,6 +44,6 @@ export function PalettePicker() {
           </option>
         ))}
       </select>
-    </label>
+    </div>
   )
 }

@@ -461,7 +461,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Hₐ</span>
-            <span className="text-sm font-mono font-medium text-[var(--color-text)]">p̂</span>
+            <span className="text-sm font-mono font-medium text-[var(--color-text)]">p</span>
             <select value={alternative} onChange={e => setAlternative(e.target.value as Alternative)}
               className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
               <option value="less">&lt;</option>
@@ -512,7 +512,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
             )}
             {phat !== null && (
               <div className="rounded-xl bg-[var(--color-accent-light)] border border-[var(--color-border)] px-4 py-2 text-center text-sm">
-                <span className="text-[var(--color-muted)]">p̂ = {x}/{n} = </span>
+                <span className="text-[var(--color-muted)]"><PHat /> = {x}/{n} = </span>
                 <span className="font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</span>
               </div>
             )}
@@ -522,7 +522,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
             <div className="flex items-center justify-around py-1">
               <div className="flex flex-col items-center gap-2">
                 <div className="text-sm font-bold text-[var(--color-text)]">
-                  p̂ <span className="text-xs text-[var(--color-muted)] font-normal">= x / n</span>
+                  <PHat /> <span className="text-xs text-[var(--color-muted)] font-normal">= x / n</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="flex flex-col items-end gap-1 text-xs font-mono text-[var(--color-muted)]" style={{ paddingBottom: 2 }}>
@@ -561,6 +561,20 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
 
 // Step phase for the manual 3-step sequence
 type StepPhase = 'observing' | 'spinning' | 'computed' | 'plotted'
+
+function PHat({ className = '' }: { className?: string }) {
+  return (
+    <span className={`relative inline-block leading-none ${className}`}>
+      <span>p</span>
+      <span
+        className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[0.34em] text-[0.78em] leading-none"
+        aria-hidden="true"
+      >
+        ^
+      </span>
+    </span>
+  )
+}
 
 export function OnePropSimCard({ cardId, config }: { cardId: string; config: OnePropSimCardConfig }) {
   const { updateExploreCard } = useStore()
@@ -609,7 +623,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
   }, [nullDist, customThresholdNum, graphView, n, alternative, nullCenter])
 
   const altSymbol    = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
-  const altStatement = `p̂ ${altSymbol} ${config.nullP}`
+  const altStatement = `p ${altSymbol} ${config.nullP}`
 
   const normMean = graphView === 'counts' ? n * p0Num : p0Num
   const normSD   = graphView === 'counts'

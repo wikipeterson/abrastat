@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from 'react'
 import { useStore } from '@/lib/store'
-import { getStringValues } from '@/lib/gridHelpers'
-import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
@@ -61,20 +59,24 @@ export function SegmentedBar({
 
     if (!xCol || !fillCol) return []
 
-    const xVals = getStringValues(grid, xCol.id)
-    const fillVals = getStringValues(grid, fillCol.id)
+    const pairedValues = grid.rows.flatMap(row => {
+      const xValue = String(row[xCol.id] ?? '').trim()
+      const fillValue = String(row[fillCol.id] ?? '').trim()
+      if (!xValue || !fillValue) return []
+      return [{ xValue, fillValue }]
+    })
 
-    const xGroups = sortCategoryValues([...new Set(xVals)].filter(Boolean))
-    const fillGroups = sortCategoryValues([...new Set(fillVals)].filter(Boolean))
+    const xGroups = sortCategoryValues([...new Set(pairedValues.map(pair => pair.xValue))])
+    const fillGroups = sortCategoryValues([...new Set(pairedValues.map(pair => pair.fillValue))])
 
     return fillGroups.map((fillGroup, gi) => {
       const counts = xGroups.map(xGroup =>
-        xVals.filter((v, i) => v === xGroup && fillVals[i] === fillGroup).length
+        pairedValues.filter(pair => pair.xValue === xGroup && pair.fillValue === fillGroup).length
       )
       const values = effectiveMode === 'count'
         ? counts
         : xGroups.map((xGroup, xi) => {
-            const total = xVals.filter(v => v === xGroup).length
+            const total = pairedValues.filter(pair => pair.xValue === xGroup).length
             return total ? (counts[xi] / total) * 100 : 0
           })
 

@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from 'react'
 import { useStore } from '@/lib/store'
-import { getStringValues } from '@/lib/gridHelpers'
-import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ManualTwoWayTableSnapshot } from '@/lib/exploreTypes'
 import { useGraphCardContext } from '@/lib/graphCardContext'
@@ -88,22 +86,24 @@ export function MosaicPlot({
       }
     }
 
-    const xVals = getStringValues(grid, xCol.id)
-    const fillVals = getStringValues(grid, fillCol.id)
-    const xGroups = sortCategoryValues([...new Set(xVals)].filter(Boolean))
-    const fillGroups = sortCategoryValues([...new Set(fillVals)].filter(Boolean))
-    const grandTotal = xGroups.reduce(
-      (sum, xGroup) => sum + xVals.filter(value => value === xGroup).length,
-      0,
-    )
+    const pairedValues = grid.rows.flatMap(row => {
+      const xValue = String(row[xCol.id] ?? '').trim()
+      const fillValue = String(row[fillCol.id] ?? '').trim()
+      if (!xValue || !fillValue) return []
+      return [{ xValue, fillValue }]
+    })
+
+    const xGroups = sortCategoryValues([...new Set(pairedValues.map(pair => pair.xValue))])
+    const fillGroups = sortCategoryValues([...new Set(pairedValues.map(pair => pair.fillValue))])
+    const grandTotal = pairedValues.length
 
     const derivedColumns = xGroups.map((xGroup) => {
-      const total = xVals.filter(value => value === xGroup).length
+      const total = pairedValues.filter(pair => pair.xValue === xGroup).length
       return {
         label: xGroup,
         total,
         segments: fillGroups.map((fillGroup, gi) => {
-          const count = xVals.filter((value, index) => value === xGroup && fillVals[index] === fillGroup).length
+          const count = pairedValues.filter(pair => pair.xValue === xGroup && pair.fillValue === fillGroup).length
           return {
             label: fillGroup,
             count,

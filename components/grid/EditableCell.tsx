@@ -82,9 +82,9 @@ export const EditableCell = memo(function EditableCell({
       onClick={() => { onActivate(); if (isActive) setEditing(true) }}
       onDoubleClick={() => { onActivate(); setDraft(String(value ?? '')); setEditing(true) }}
       onKeyDown={handleCellKeyDown}
-      className={`relative h-8 px-2 flex items-center text-sm border-r border-b border-[var(--color-border)] outline-none cursor-default select-none ${
+      className={`relative h-8 px-2 flex items-center text-sm text-[var(--color-text)] border-r border-b border-[var(--color-border)] outline-none cursor-default select-none ${
         isActive ? 'ring-2 ring-inset ring-[var(--color-accent)] z-10' : ''
-      } ${isSelected && !isActive ? 'bg-[var(--color-grid-selected)]' : 'bg-white'}`}
+      } ${isSelected && !isActive ? 'bg-[var(--color-grid-selected)]' : 'bg-[var(--color-surface)]'}`}
     >
       {editing ? (
         <input
@@ -93,7 +93,7 @@ export const EditableCell = memo(function EditableCell({
           onChange={e => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={handleKeyDown}
-          className="absolute inset-0 w-full h-full px-2 text-sm bg-white border-none outline-none"
+          className="absolute inset-0 w-full h-full px-2 text-sm text-[var(--color-text)] bg-[var(--color-surface)] border-none outline-none"
         />
       ) : (
         <span className="truncate w-full">{displayValue}</span>

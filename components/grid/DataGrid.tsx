@@ -326,7 +326,7 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
             {/* Row number */}
             <div
               style={{ width: ROW_NUM_WIDTH, minWidth: ROW_NUM_WIDTH }}
-              className={`flex-shrink-0 flex items-center justify-center text-xs border-r border-b border-[var(--color-border)] cursor-pointer select-none ${selectedRows.has(originalIdx) ? 'bg-[var(--color-accent)] text-white' : 'bg-slate-50 text-[var(--color-muted)]'}`}
+              className={`flex-shrink-0 flex items-center justify-center text-xs border-r border-b border-[var(--color-border)] cursor-pointer select-none ${selectedRows.has(originalIdx) ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-accent-light)] text-[var(--color-muted)]'}`}
               onClick={() => handleRowClick(originalIdx)}
               onContextMenu={e => handleRowContextMenu(e, originalIdx)}
             >
@@ -362,7 +362,7 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
       {/* Context menu */}
       {contextMenu && (
         <div
-          className="fixed z-50 bg-white rounded-lg shadow-lg border border-[var(--color-border)] py-1 text-sm"
+          className="fixed z-50 bg-[var(--color-surface)] rounded-lg shadow-lg border border-[var(--color-border)] py-1 text-sm"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
           {[
@@ -373,7 +373,7 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
             <button
               key={item.label}
               onClick={() => { item.action(); setContextMenu(null) }}
-              className={`w-full text-left px-4 py-2 hover:bg-slate-50 ${item.danger ? 'text-red-500' : 'text-[var(--color-text)]'}`}
+              className={`w-full text-left px-4 py-2 hover:bg-[var(--color-accent-light)] ${item.danger ? 'text-red-500' : 'text-[var(--color-text)]'}`}
             >
               {item.label}
             </button>

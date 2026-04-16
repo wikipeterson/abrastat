@@ -213,7 +213,6 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
   const plotHeight = 320
   const SVG_H = plotHeight + MG.t + MG.b
   const PW = SVG_W - MG.l - MG.r, PH = SVG_H - MG.t - MG.b
-  const xOf = (v: number) => ((v + 1) / 2) * PW
 
   const normalizedValues = values.map(v => Number(v.toFixed(6)))
   const uniqueValues = Array.from(new Set(normalizedValues)).sort((a, b) => a - b)
@@ -224,6 +223,20 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
         return gap > 0 ? Math.min(minGap, gap) : minGap
       }, Number.POSITIVE_INFINITY)
   const bucket = Number.isFinite(inferredStep) && inferredStep > 0 ? inferredStep : 0.05
+
+  const rangeSource = values.length > 0 ? [...values, diffObs, 0] : [diffObs, 0]
+  const maxAbsValue = Math.max(...rangeSource.map(value => Math.abs(value)))
+  const axisHalfRange = Math.max(0.05, maxAbsValue * 1.25 + bucket * 2)
+  const xMin = -axisHalfRange
+  const xMax = axisHalfRange
+  const xSpan = Math.max(1e-9, xMax - xMin)
+  const xOf = (v: number) => ((v - xMin) / xSpan) * PW
+
+  const tickValues = Array.from({ length: 5 }, (_, i) => xMin + (xSpan * i) / 4)
+  const tickLabel = (value: number) => {
+    const rounded = Math.abs(value) < 0.0005 ? 0 : value
+    return rounded.toFixed(axisHalfRange < 0.1 ? 2 : 1)
+  }
 
   const stackCounts = new Map<number, number>()
   normalizedValues.forEach(v => {
@@ -238,7 +251,7 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
     const sd = Math.sqrt(variance)
     if (!Number.isFinite(sd) || sd <= 0) return null
     const samples = Array.from({ length: 241 }, (_, i) => {
-      const x = -1 + (2 * i) / 240
+      const x = xMin + (xSpan * i) / 240
       const z = (x - mean) / sd
       const pdf = Math.exp(-0.5 * z * z) / (sd * Math.sqrt(2 * Math.PI))
       return { x, expectedCount: values.length * pdf * bucket }
@@ -281,10 +294,10 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
       <g transform={`translate(${MG.l},${MG.t})`}>
         <path d={shade} fill="#0EA5A0" opacity={0.10}/>
         <line x1={0} y1={PH} x2={PW} y2={PH} stroke="#E2E8F0" strokeWidth={1.5}/>
-        {[-1,-0.5,0,0.5,1].map(v => (
+        {tickValues.map(v => (
           <g key={v} transform={`translate(${xOf(v)},${PH})`}>
             <line y2={3} stroke="#CBD5E1" strokeWidth={1}/>
-            <text y={12} textAnchor="middle" fontSize={8} fill="#94A3B8" fontFamily="DM Sans,sans-serif">{v.toFixed(1)}</text>
+            <text y={12} textAnchor="middle" fontSize={8} fill="#94A3B8" fontFamily="DM Sans,sans-serif">{tickLabel(v)}</text>
           </g>
         ))}
         <g clipPath={`url(#${clipId})`}>

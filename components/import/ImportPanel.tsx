@@ -21,6 +21,7 @@ export function ImportPanel({ open, onClose }: ImportPanelProps) {
   const [sheetsUrl, setSheetsUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [hasHeaders, setHasHeaders] = useState(true)
+  const [dragActive, setDragActive] = useState(false)
   const setGrid = useStore(s => s.setGrid)
 
   function reset() {
@@ -28,6 +29,7 @@ export function ImportPanel({ open, onClose }: ImportPanelProps) {
     setError(null)
     setPasteText('')
     setSheetsUrl('')
+    setDragActive(false)
   }
 
   function handleClose() {
@@ -58,8 +60,7 @@ export function ImportPanel({ open, onClose }: ImportPanelProps) {
     if (pasteText.trim()) handlePasteChange(pasteText, checked)
   }
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
+  async function loadFile(file: File) {
     if (!file) return
     setError(null)
     setPreview(null)
@@ -69,7 +70,32 @@ export function ImportPanel({ open, onClose }: ImportPanelProps) {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Import failed.')
     }
+  }
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    await loadFile(file)
     e.target.value = ''
+  }
+
+  async function handleFileDrop(e: React.DragEvent<HTMLLabelElement>) {
+    e.preventDefault()
+    setDragActive(false)
+    const file = e.dataTransfer.files?.[0]
+    if (!file) return
+    await loadFile(file)
+  }
+
+  function handleFileDragOver(e: React.DragEvent<HTMLLabelElement>) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+    setDragActive(true)
+  }
+
+  function handleFileDragLeave(e: React.DragEvent<HTMLLabelElement>) {
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
+    setDragActive(false)
   }
 
   async function handleSheetsImport() {
@@ -132,9 +158,21 @@ export function ImportPanel({ open, onClose }: ImportPanelProps) {
       {/* File */}
       {tab === 'file' && (
         <div className="space-y-3">
-          <label className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--color-border)] rounded-xl py-10 cursor-pointer hover:border-[var(--color-accent)] transition-colors">
+          <label
+            onDragOver={handleFileDragOver}
+            onDragEnter={() => setDragActive(true)}
+            onDragLeave={handleFileDragLeave}
+            onDrop={handleFileDrop}
+            className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl py-10 cursor-pointer transition-colors ${
+              dragActive
+                ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
+                : 'border-[var(--color-border)] hover:border-[var(--color-accent)]'
+            }`}
+          >
             <span className="text-3xl mb-2">📁</span>
-            <span className="text-sm font-medium text-[var(--color-text)]">Drop a file or click to browse</span>
+            <span className="text-sm font-medium text-[var(--color-text)]">
+              {dragActive ? 'Release to upload file' : 'Drop a file or click to browse'}
+            </span>
             <span className="text-xs text-[var(--color-muted)] mt-1">.csv  .tsv  .txt  .xlsx  .xls</span>
             <input type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" className="hidden" onChange={handleFile} />
           </label>

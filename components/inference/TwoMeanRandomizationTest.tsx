@@ -473,9 +473,6 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone }: Props)
     return buildTwoMeanData(values1, values2, groupA, groupB)
   }, [config.var1ColId, config.var2ColId, dataShape, grid.rows, groupA, groupB, manualValues1, manualValues2, manualLabel1, manualLabel2, parsed1, parsed2, quantCol?.name, secondCol?.name, sourceMode])
 
-  const altSymbol    = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
-  const altStatement = `μ₁ − μ₂ ${altSymbol} ${nullDiff}`
-
   function handleLaunch() {
     if (!data) return
     const myCard = exploreCards.find(c => c.id === cardId)
@@ -623,7 +620,8 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone }: Props)
               <option value="greater">&gt;</option>
               <option value="two">≠</option>
             </select>
-            <span className="text-sm font-mono font-medium text-[var(--color-text)]">{altStatement}</span>
+            <span className="text-sm font-mono font-medium text-[var(--color-text)]">μ₁ − μ₂</span>
+            <span className="text-sm font-mono font-medium text-[var(--color-text)]">{nullDiff}</span>
           </div>
           <button onClick={handleLaunch} disabled={!data}
             className="ml-auto rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity">

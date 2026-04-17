@@ -445,9 +445,6 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
     return buildTwoProportionData(n1,s1,n2,s2,groupA,groupB,successLevel,'Not Success')
   }, [config.var1ColId,config.var2ColId,grid.rows,groupA,groupB,manualN1,manualN2,manualS1,manualS2,manualLabel1,manualLabel2,sourceMode,successLevel])
 
-  const altSymbol    = alternative==='less'?'<':alternative==='greater'?'>':'≠'
-  const altStatement = `p₁ − p₂ ${altSymbol} ${nullDiff}`
-
   function handleLaunch() {
     if (!data) return
     const myCard = exploreCards.find(c => c.id === cardId)
@@ -513,6 +510,21 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
                 })}
               </div>
             )}
+            {data && (
+              <div className="rounded-xl bg-[var(--color-accent-light)] border border-[var(--color-border)] px-4 py-2 text-sm space-y-1.5">
+                <div className="text-[var(--color-muted)]">
+                  Success means <span className="font-semibold text-[var(--color-text)]">{responseCol?.name ?? 'response'}</span> = <span className="font-semibold text-[var(--color-text)]">{successLevel}</span>
+                </div>
+                <div className="text-[var(--color-muted)]">
+                  <span className="font-semibold text-[var(--color-text)]">{data.group1Label}</span>: p̂₁ = {data.s1}/{data.n1} = <span className="font-semibold text-[var(--color-text)]">{data.p1.toFixed(3)}</span>
+                  <span className="mx-3">|</span>
+                  <span className="font-semibold text-[var(--color-text)]">{data.group2Label}</span>: p̂₂ = {data.s2}/{data.n2} = <span className="font-semibold text-[var(--color-text)]">{data.p2.toFixed(3)}</span>
+                </div>
+                <div className="text-[var(--color-muted)]">
+                  p̂₁ − p̂₂ = {data.p1.toFixed(3)} − {data.p2.toFixed(3)} = <span className="font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</span>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="space-y-3">
@@ -554,7 +566,8 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
               className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
               <option value="less">&lt;</option><option value="greater">&gt;</option><option value="two">≠</option>
             </select>
-            <span className="text-sm font-mono font-medium text-[var(--color-text)]">{altStatement}</span>
+            <span className="text-sm font-mono font-medium text-[var(--color-text)]">p₁ − p₂</span>
+            <span className="text-sm font-mono font-medium text-[var(--color-text)]">{nullDiff}</span>
           </div>
           <button onClick={handleLaunch} disabled={!data}
             className="ml-auto rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity">
@@ -810,7 +823,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
   const altSymbol    = alternative==='less'?'<':alternative==='greater'?'>':'≠'
   const altStatement = `p₁ − p₂ ${altSymbol} ${nullDiff}`
   const currentSimLine = currentResult
-    ? `${currentResult.s1Sim}/${data.n1} = ${currentResult.p1Sim.toFixed(3)}, ${currentResult.s2Sim}/${data.n2} = ${currentResult.p2Sim.toFixed(3)}, p̂₁ − p̂₂ = ${currentResult.diffSim.toFixed(3)}${isExtremeResult(currentResult.diffSim,data.diffObs,alternative)?' ★':''}`
+    ? `${config.label1}: ${currentResult.s1Sim}/${data.n1} = ${currentResult.p1Sim.toFixed(3)}, ${config.label2}: ${currentResult.s2Sim}/${data.n2} = ${currentResult.p2Sim.toFixed(3)}, p̂₁ − p̂₂ = ${currentResult.diffSim.toFixed(3)}${isExtremeResult(currentResult.diffSim,data.diffObs,alternative)?' ★':''}`
     : 'Run a simulation to show the current randomized proportions.'
 
   return (
@@ -892,7 +905,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
 
           <div className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-xs text-[var(--color-muted)]">
             <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
-              <span><span className="font-semibold text-[var(--color-text)]">Obs:</span> {data.s1}/{data.n1} = {data.p1.toFixed(3)}, {data.s2}/{data.n2} = {data.p2.toFixed(3)}</span>
+              <span><span className="font-semibold text-[var(--color-text)]">Obs:</span> {config.label1}: {data.s1}/{data.n1} = {data.p1.toFixed(3)}, {config.label2}: {data.s2}/{data.n2} = {data.p2.toFixed(3)}</span>
               <span><span className="font-semibold text-[var(--color-text)]">Sim:</span> {currentSimLine}</span>
               <span className="ml-auto"><span className="font-semibold text-[var(--color-text)]">Total:</span> {simCount}</span>
             </div>

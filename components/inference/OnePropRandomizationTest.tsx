@@ -431,8 +431,6 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
   const p0Valid = Number.isFinite(p0Num) && p0Num >= 0 && p0Num <= 1
   const canLaunch = error === null && n > 0 && p0Valid
 
-  const altSymbol    = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
-
   function handleLaunch() {
     if (!canLaunch) return
     const myCard = exploreCards.find(c => c.id === cardId)

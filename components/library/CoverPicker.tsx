@@ -4,12 +4,12 @@ import { useRef, useEffect } from 'react'
 import { getCover } from '@/lib/datasetCovers'
 
 const GROUPS = [
-  { label: 'Stats & Data',      ids: ['teal-chart', 'indigo-data', 'sky-numbers', 'cyan-stats'] },
-  { label: 'Science',           ids: ['emerald-science', 'lime-biology', 'violet-chem', 'blue-space'] },
-  { label: 'Sports',            ids: ['orange-hoops', 'green-soccer', 'red-football', 'yellow-trophy'] },
-  { label: 'Nature & Weather',  ids: ['green-nature', 'blue-ocean', 'amber-weather', 'teal-earth'] },
-  { label: 'Society & School',  ids: ['rose-people', 'purple-school', 'slate-econ', 'gray-survey'] },
-  { label: 'Other',             ids: ['pink-health', 'red-food', 'blue-transport', 'zinc-tech'] },
+  { label: 'Stats & Data',      ids: ['teal-chart', 'indigo-data', 'sky-numbers', 'cyan-stats', 'emerald-calendar', 'violet-percent', 'amber-bars', 'rose-line'] },
+  { label: 'Science',           ids: ['emerald-science', 'lime-biology', 'violet-chem', 'blue-space', 'cyan-physics', 'amber-dino', 'pink-brain', 'teal-leaflab'] },
+  { label: 'Sports',            ids: ['orange-hoops', 'green-soccer', 'red-football', 'yellow-trophy', 'blue-baseball', 'teal-tennis', 'violet-volley', 'slate-runner'] },
+  { label: 'Nature & Weather',  ids: ['green-nature', 'blue-ocean', 'amber-weather', 'teal-earth', 'indigo-night', 'sky-rain', 'rose-flower', 'emerald-tree'] },
+  { label: 'Society & School',  ids: ['rose-people', 'purple-school', 'slate-econ', 'gray-survey', 'blue-books', 'amber-history', 'teal-vote', 'indigo-family'] },
+  { label: 'Other',             ids: ['pink-health', 'red-food', 'orange-pizza', 'green-broccoli', 'blue-transport', 'zinc-tech', 'sky-plane', 'emerald-bike', 'violet-robot', 'amber-phone'] },
 ]
 
 interface CoverPickerProps {
@@ -36,7 +36,7 @@ export function CoverPicker({ open, value, onChange, onClose }: CoverPickerProps
   return (
     <div
       ref={ref}
-      className="absolute top-full left-0 z-50 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-[var(--color-border)] p-4 space-y-3"
+      className="absolute top-full left-0 z-50 mt-2 w-[29rem] max-h-[32rem] overflow-y-auto bg-white rounded-2xl shadow-xl border border-[var(--color-border)] p-4 space-y-3"
     >
       {GROUPS.map(group => (
         <div key={group.label}>

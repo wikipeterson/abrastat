@@ -214,7 +214,9 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
 
     const p = direction === 'le'
       ? getCdf(dist, boundVal, params)
-      : 1 - getCdf(dist, boundVal, params)
+      : isContinuous(dist)
+        ? 1 - getCdf(dist, boundVal, params)
+        : 1 - getCdf(dist, Math.ceil(boundVal) - 1, params)
     return {
       probability: isFinite(p) ? Math.max(0, Math.min(1, p)) : null,
       bound: boundVal,

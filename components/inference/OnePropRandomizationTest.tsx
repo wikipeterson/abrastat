@@ -168,6 +168,12 @@ function altOperator(alternative: Alternative): string {
   return '≠'
 }
 
+function snapThresholdCount(threshold: number, n: number): number {
+  const scaled = threshold * n
+  const nearest = Math.round(scaled)
+  return Math.abs(scaled - nearest) <= 0.01 ? nearest : scaled
+}
+
 function OnePropNullDistPlot({
   counts, xObs, n, p0Num, alternative, view, showNormalCurve = false, thresholdVal,
 }: {
@@ -606,19 +612,21 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
   }, [graphView]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const customThresholdNum = parseFloat(customThreshold)
-  const nullCenter = graphView === 'counts' ? n * p0Num : p0Num
+  const thresholdOnCountScale = Number.isFinite(customThresholdNum)
+    ? (graphView === 'counts' ? customThresholdNum : snapThresholdCount(customThresholdNum, n))
+    : Number.NaN
+  const nullCenterCount = n * p0Num
 
   const customPValue = useMemo(() => {
-    if (nullDist.length === 0 || !Number.isFinite(customThresholdNum)) return null
-    const values = graphView === 'counts' ? nullDist : nullDist.map(c => c / n)
-    const dist = Math.abs(customThresholdNum - nullCenter)
-    const extreme = values.filter(v => {
-      if (alternative === 'greater') return v >= customThresholdNum
-      if (alternative === 'less')    return v <= customThresholdNum
-      return Math.abs(v - nullCenter) >= dist
+    if (nullDist.length === 0 || !Number.isFinite(thresholdOnCountScale)) return null
+    const dist = Math.abs(thresholdOnCountScale - nullCenterCount)
+    const extreme = nullDist.filter(xSim => {
+      if (alternative === 'greater') return xSim >= thresholdOnCountScale
+      if (alternative === 'less')    return xSim <= thresholdOnCountScale
+      return Math.abs(xSim - nullCenterCount) >= dist
     }).length
     return extreme / nullDist.length
-  }, [nullDist, customThresholdNum, graphView, n, alternative, nullCenter])
+  }, [nullDist, thresholdOnCountScale, alternative, nullCenterCount])
 
   const altSymbol    = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
   const altStatement = `p ${altSymbol} ${config.nullP}`
@@ -963,7 +971,9 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                       alternative={alternative}
                       view={graphView}
                       showNormalCurve={showNormalCurve}
-                      thresholdVal={Number.isFinite(customThresholdNum) ? customThresholdNum : undefined}
+                      thresholdVal={Number.isFinite(customThresholdNum)
+                        ? (graphView === 'counts' ? customThresholdNum : thresholdOnCountScale / Math.max(1, n))
+                        : undefined}
                     />
                 }
               </div>

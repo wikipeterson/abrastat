@@ -187,7 +187,17 @@ export function LinearRegressionCard({ xName, yName, xs, ys }: { xName: string; 
   )
 }
 
-type TableMode = 'count' | 'row' | 'col' | 'total'
+type TableMode = 'count' | 'row' | 'col' | 'total' | 'expected'
+
+function getExpectedCell(counts: number[][], ri: number, ci: number): number {
+  const rowTotals = counts.map(row => row.reduce((s, v) => s + v, 0))
+  const colTotals = counts[0]
+    ? counts[0].map((_, colIdx) => counts.reduce((s, row) => s + row[colIdx], 0))
+    : []
+  const grandTotal = rowTotals.reduce((s, v) => s + v, 0)
+  if (!grandTotal) return 0
+  return (rowTotals[ri] * colTotals[ci]) / grandTotal
+}
 
 function buildTwoWayCopiedTableText(
   rowLabels: string[],
@@ -203,13 +213,14 @@ function buildTwoWayCopiedTableText(
 
   function cellDisplay(count: number, ri: number, ci: number): string {
     if (mode === 'count') return String(count)
-    if (mode === 'row') return rowTotals[ri] ? (count / rowTotals[ri] * 100).toFixed(1) + '%' : '—'
-    if (mode === 'col') return colTotals[ci] ? (count / colTotals[ci] * 100).toFixed(1) + '%' : '—'
+    if (mode === 'row') return rowTotals[ri] ? `${count} (${(count / rowTotals[ri] * 100).toFixed(1)}%)` : String(count)
+    if (mode === 'col') return colTotals[ci] ? `${count} (${(count / colTotals[ci] * 100).toFixed(1)}%)` : String(count)
+    if (mode === 'expected') return getExpectedCell(counts, ri, ci).toFixed(2).replace(/\.00$/, '')
     return grandTotal ? (count / grandTotal * 100).toFixed(1) + '%' : '—'
   }
 
   function totalDisplay(val: number, base: number): string {
-    if (mode === 'count') return String(val)
+    if (mode === 'count' || mode === 'row' || mode === 'col' || mode === 'expected') return String(val)
     return base ? (val / base * 100).toFixed(1) + '%' : '—'
   }
 
@@ -219,7 +230,7 @@ function buildTwoWayCopiedTableText(
     ...colLabels.map((_, ci) => cellDisplay(counts[ri][ci], ri, ci)),
     totalDisplay(rowTotals[ri], grandTotal),
   ])
-  const totals = ['Total', ...colLabels.map((_, ci) => totalDisplay(colTotals[ci], grandTotal)), mode === 'count' ? String(grandTotal) : '100%']
+  const totals = ['Total', ...colLabels.map((_, ci) => totalDisplay(colTotals[ci], grandTotal)), mode === 'total' ? '100%' : String(grandTotal)]
 
   return [header, ...body, totals].map(row => row.join('\t')).join('\n')
 }
@@ -238,13 +249,14 @@ function buildTwoWayCopiedTableRows(
 
   function cellDisplay(count: number, ri: number, ci: number): string {
     if (mode === 'count') return String(count)
-    if (mode === 'row') return rowTotals[ri] ? (count / rowTotals[ri] * 100).toFixed(1) + '%' : '—'
-    if (mode === 'col') return colTotals[ci] ? (count / colTotals[ci] * 100).toFixed(1) + '%' : '—'
+    if (mode === 'row') return rowTotals[ri] ? `${count} (${(count / rowTotals[ri] * 100).toFixed(1)}%)` : String(count)
+    if (mode === 'col') return colTotals[ci] ? `${count} (${(count / colTotals[ci] * 100).toFixed(1)}%)` : String(count)
+    if (mode === 'expected') return getExpectedCell(counts, ri, ci).toFixed(2).replace(/\.00$/, '')
     return grandTotal ? (count / grandTotal * 100).toFixed(1) + '%' : '—'
   }
 
   function totalDisplay(val: number, base: number): string {
-    if (mode === 'count') return String(val)
+    if (mode === 'count' || mode === 'row' || mode === 'col' || mode === 'expected') return String(val)
     return base ? (val / base * 100).toFixed(1) + '%' : '—'
   }
 
@@ -254,7 +266,7 @@ function buildTwoWayCopiedTableRows(
     ...colLabels.map((_, ci) => cellDisplay(counts[ri][ci], ri, ci)),
     totalDisplay(rowTotals[ri], grandTotal),
   ])
-  const totals = ['Total', ...colLabels.map((_, ci) => totalDisplay(colTotals[ci], grandTotal)), mode === 'count' ? String(grandTotal) : '100%']
+  const totals = ['Total', ...colLabels.map((_, ci) => totalDisplay(colTotals[ci], grandTotal)), mode === 'total' ? '100%' : String(grandTotal)]
   return [header, ...body, totals]
 }
 
@@ -293,13 +305,14 @@ export function TwoWayTableCard({
 
   function cellDisplay(count: number, ri: number, ci: number): string {
     if (mode === 'count') return String(count)
-    if (mode === 'row') return rowTotals[ri] ? (count / rowTotals[ri] * 100).toFixed(1) + '%' : '—'
-    if (mode === 'col') return colTotals[ci] ? (count / colTotals[ci] * 100).toFixed(1) + '%' : '—'
+    if (mode === 'row') return rowTotals[ri] ? `${count} (${(count / rowTotals[ri] * 100).toFixed(1)}%)` : String(count)
+    if (mode === 'col') return colTotals[ci] ? `${count} (${(count / colTotals[ci] * 100).toFixed(1)}%)` : String(count)
+    if (mode === 'expected') return getExpectedCell(counts, ri, ci).toFixed(2).replace(/\.00$/, '')
     return grandTotal ? (count / grandTotal * 100).toFixed(1) + '%' : '—'
   }
 
   function totalDisplay(val: number, base: number): string {
-    if (mode === 'count') return String(val)
+    if (mode === 'count' || mode === 'row' || mode === 'col' || mode === 'expected') return String(val)
     return base ? (val / base * 100).toFixed(1) + '%' : '—'
   }
 
@@ -327,13 +340,13 @@ export function TwoWayTableCard({
           >
             {isCopying ? 'Copied' : 'Copy Table'}
           </button>
-          {(['count', 'row', 'col', 'total'] as TableMode[]).map(m => (
+          {(['count', 'row', 'col', 'expected', 'total'] as TableMode[]).map(m => (
             <button
               key={m}
               onClick={() => setMode(m)}
               className={`px-2 py-1 rounded text-xs font-medium transition-colors ${mode === m ? 'bg-[var(--color-accent)] text-white' : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'}`}
             >
-              {m === 'count' ? 'Counts' : m === 'row' ? 'Row %' : m === 'col' ? 'Col %' : 'Total %'}
+              {m === 'count' ? 'Counts' : m === 'row' ? 'Row %' : m === 'col' ? 'Col %' : m === 'expected' ? 'Expected' : 'Total %'}
             </button>
           ))}
         </div>

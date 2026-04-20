@@ -9,7 +9,7 @@ import { writeClipboardTable } from '@/lib/clipboardTable'
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type InputMode = 'raw' | 'manual'
-type TableView = 'counts' | 'row' | 'col'
+type TableView = 'counts' | 'row' | 'col' | 'expected'
 
 interface TwoWayData {
   explName: string
@@ -33,6 +33,14 @@ function getColTotals(cells: number[][], numCols: number): number[] {
 
 function getGrandTotal(cells: number[][]): number {
   return cells.flat().reduce((a, b) => a + b, 0)
+}
+
+function getExpectedCount(cells: number[][], ri: number, ci: number): number {
+  const rowTotals = getRowTotals(cells)
+  const colTotals = getColTotals(cells, cells[0]?.length ?? 0)
+  const grand = getGrandTotal(cells)
+  if (!grand) return 0
+  return (rowTotals[ri] * colTotals[ci]) / grand
 }
 
 // ─── Manual table input ───────────────────────────────────────────────────────
@@ -191,29 +199,29 @@ function ManualInput({
 function OutputTable({ data, view }: { data: TwoWayData; view: TableView }) {
   const rTotals = getRowTotals(data.cells)
   const cTotals = getColTotals(data.cells, data.colLabels.length)
-  const grand = getGrandTotal(data.cells)
 
-  function fmt(n: number, isPercent: boolean) {
-    return isPercent ? `${n.toFixed(1)}%` : String(n)
+  function fmtPercent(n: number) {
+    return `${n.toFixed(1)}%`
+  }
+
+  function fmtExpected(n: number) {
+    return n.toFixed(2).replace(/\.00$/, '')
   }
 
   function cellDisplay(ri: number, ci: number): string {
     const raw = data.cells[ri][ci]
     if (view === 'counts') return String(raw)
-    if (view === 'row') return rTotals[ri] ? fmt((raw / rTotals[ri]) * 100, true) : '—'
-    return cTotals[ci] ? fmt((raw / cTotals[ci]) * 100, true) : '—'
+    if (view === 'expected') return fmtExpected(getExpectedCount(data.cells, ri, ci))
+    if (view === 'row') return rTotals[ri] ? `${raw} (${fmtPercent((raw / rTotals[ri]) * 100)})` : String(raw)
+    return cTotals[ci] ? `${raw} (${fmtPercent((raw / cTotals[ci]) * 100)})` : String(raw)
   }
 
   function rowTotalDisplay(ri: number): string {
-    if (view === 'counts') return String(rTotals[ri])
-    if (view === 'row') return '100%'
-    return grand ? fmt((rTotals[ri] / grand) * 100, true) : '—'
+    return String(rTotals[ri])
   }
 
   function colTotalDisplay(ci: number): string {
-    if (view === 'counts') return String(cTotals[ci])
-    if (view === 'col') return '100%'
-    return grand ? fmt((cTotals[ci] / grand) * 100, true) : '—'
+    return String(cTotals[ci])
   }
 
   const th = 'px-3 py-2 text-xs font-semibold text-[var(--color-muted)] border border-slate-200'
@@ -248,9 +256,7 @@ function OutputTable({ data, view }: { data: TwoWayData; view: TableView }) {
           {data.colLabels.map((_, ci) => (
             <td key={ci} className={`${td} font-semibold bg-slate-100`}>{colTotalDisplay(ci)}</td>
           ))}
-          <td className={`${td} font-bold bg-slate-200`}>
-            {view === 'counts' ? grand : '100%'}
-          </td>
+          <td className={`${td} font-bold bg-slate-200`}>{getGrandTotal(data.cells)}</td>
         </tr>
       </tbody>
     </table>
@@ -260,29 +266,29 @@ function OutputTable({ data, view }: { data: TwoWayData; view: TableView }) {
 function buildCopiedTableText(data: TwoWayData, view: TableView) {
   const rTotals = getRowTotals(data.cells)
   const cTotals = getColTotals(data.cells, data.colLabels.length)
-  const grand = getGrandTotal(data.cells)
 
-  function fmt(n: number, isPercent: boolean) {
-    return isPercent ? `${n.toFixed(1)}%` : String(n)
+  function fmtPercent(n: number) {
+    return `${n.toFixed(1)}%`
+  }
+
+  function fmtExpected(n: number) {
+    return n.toFixed(2).replace(/\.00$/, '')
   }
 
   function cellDisplay(ri: number, ci: number): string {
     const raw = data.cells[ri][ci]
     if (view === 'counts') return String(raw)
-    if (view === 'row') return rTotals[ri] ? fmt((raw / rTotals[ri]) * 100, true) : '—'
-    return cTotals[ci] ? fmt((raw / cTotals[ci]) * 100, true) : '—'
+    if (view === 'expected') return fmtExpected(getExpectedCount(data.cells, ri, ci))
+    if (view === 'row') return rTotals[ri] ? `${raw} (${fmtPercent((raw / rTotals[ri]) * 100)})` : String(raw)
+    return cTotals[ci] ? `${raw} (${fmtPercent((raw / cTotals[ci]) * 100)})` : String(raw)
   }
 
   function rowTotalDisplay(ri: number): string {
-    if (view === 'counts') return String(rTotals[ri])
-    if (view === 'row') return '100%'
-    return grand ? fmt((rTotals[ri] / grand) * 100, true) : '—'
+    return String(rTotals[ri])
   }
 
   function colTotalDisplay(ci: number): string {
-    if (view === 'counts') return String(cTotals[ci])
-    if (view === 'col') return '100%'
-    return grand ? fmt((cTotals[ci] / grand) * 100, true) : '—'
+    return String(cTotals[ci])
   }
 
   const header = [data.explName, ...data.colLabels, 'Total']
@@ -291,7 +297,7 @@ function buildCopiedTableText(data: TwoWayData, view: TableView) {
     ...data.colLabels.map((_, ci) => cellDisplay(ri, ci)),
     rowTotalDisplay(ri),
   ])
-  const totals = ['Total', ...data.colLabels.map((_, ci) => colTotalDisplay(ci)), view === 'counts' ? String(grand) : '100%']
+  const totals = ['Total', ...data.colLabels.map((_, ci) => colTotalDisplay(ci)), String(getGrandTotal(data.cells))]
 
   return [header, ...body, totals].map(row => row.join('\t')).join('\n')
 }
@@ -299,29 +305,29 @@ function buildCopiedTableText(data: TwoWayData, view: TableView) {
 function buildCopiedTableRows(data: TwoWayData, view: TableView) {
   const rTotals = getRowTotals(data.cells)
   const cTotals = getColTotals(data.cells, data.colLabels.length)
-  const grand = getGrandTotal(data.cells)
 
-  function fmt(n: number, isPercent: boolean) {
-    return isPercent ? `${n.toFixed(1)}%` : String(n)
+  function fmtPercent(n: number) {
+    return `${n.toFixed(1)}%`
+  }
+
+  function fmtExpected(n: number) {
+    return n.toFixed(2).replace(/\.00$/, '')
   }
 
   function cellDisplay(ri: number, ci: number): string {
     const raw = data.cells[ri][ci]
     if (view === 'counts') return String(raw)
-    if (view === 'row') return rTotals[ri] ? fmt((raw / rTotals[ri]) * 100, true) : '—'
-    return cTotals[ci] ? fmt((raw / cTotals[ci]) * 100, true) : '—'
+    if (view === 'expected') return fmtExpected(getExpectedCount(data.cells, ri, ci))
+    if (view === 'row') return rTotals[ri] ? `${raw} (${fmtPercent((raw / rTotals[ri]) * 100)})` : String(raw)
+    return cTotals[ci] ? `${raw} (${fmtPercent((raw / cTotals[ci]) * 100)})` : String(raw)
   }
 
   function rowTotalDisplay(ri: number): string {
-    if (view === 'counts') return String(rTotals[ri])
-    if (view === 'row') return '100%'
-    return grand ? fmt((rTotals[ri] / grand) * 100, true) : '—'
+    return String(rTotals[ri])
   }
 
   function colTotalDisplay(ci: number): string {
-    if (view === 'counts') return String(cTotals[ci])
-    if (view === 'col') return '100%'
-    return grand ? fmt((cTotals[ci] / grand) * 100, true) : '—'
+    return String(cTotals[ci])
   }
 
   const header = [data.explName, ...data.colLabels, 'Total']
@@ -330,7 +336,7 @@ function buildCopiedTableRows(data: TwoWayData, view: TableView) {
     ...data.colLabels.map((_, ci) => cellDisplay(ri, ci)),
     rowTotalDisplay(ri),
   ])
-  const totals = ['Total', ...data.colLabels.map((_, ci) => colTotalDisplay(ci)), view === 'counts' ? String(grand) : '100%']
+  const totals = ['Total', ...data.colLabels.map((_, ci) => colTotalDisplay(ci)), String(getGrandTotal(data.cells))]
   return [header, ...body, totals]
 }
 
@@ -517,7 +523,7 @@ export function TwoWayTable({
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-[var(--color-muted)]">Table:</span>
-        {([['counts', 'Counts'], ['row', 'Row %'], ['col', 'Column %']] as [TableView, string][]).map(
+        {([['counts', 'Counts'], ['row', 'Row %'], ['col', 'Column %'], ['expected', 'Expected Counts']] as [TableView, string][]).map(
           ([v, label]) => (
             <button key={v} onClick={() => setTableView(v)} className={pill(tableView === v)}>
               {label}

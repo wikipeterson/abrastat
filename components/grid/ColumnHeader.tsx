@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { GridColumn } from '@/types'
 import { useStore } from '@/lib/store'
 import { RecodeModal } from './RecodeModal'
+import { RenameVariableModal } from './RenameVariableModal'
 
 interface ColumnHeaderProps {
   column: GridColumn
@@ -18,21 +19,12 @@ type MenuMode = 'closed' | 'main' | 'sort-asc' | 'sort-desc' | 'delete-confirm'
 export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderProps) {
   const [menuMode, setMenuMode] = useState<MenuMode>('closed')
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
-  const [renaming, setRenaming] = useState(false)
-  const [draft, setDraft] = useState(column.name)
+  const [showRename, setShowRename] = useState(false)
   const [zError, setZError] = useState<string | null>(null)
   const [showRecode, setShowRecode] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const { renameColumn, setColumnType, addColumn, deleteColumn, sortRows, addZScoreColumn, selectedColumnIds } = useStore()
-
-  useEffect(() => {
-    if (renaming && inputRef.current) {
-      inputRef.current.focus()
-      inputRef.current.select()
-    }
-  }, [renaming])
+  const { setColumnType, addColumn, deleteColumn, sortRows, addZScoreColumn, selectedColumnIds } = useStore()
 
   useEffect(() => {
     if (menuMode === 'closed') return
@@ -42,13 +34,6 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
     window.addEventListener('pointerdown', handleClick, true)
     return () => window.removeEventListener('pointerdown', handleClick, true)
   }, [menuMode])
-
-  function commitRename() {
-    const name = draft.trim()
-    if (name && name !== column.name) renameColumn(column.id, name)
-    else setDraft(column.name)
-    setRenaming(false)
-  }
 
   function handleRightClick(e: React.MouseEvent) {
     e.preventDefault()
@@ -81,23 +66,12 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
       >
         <span className="flex-shrink-0 text-slate-500 opacity-0 group-hover/col:opacity-60 transition-opacity cursor-grab text-[11px] leading-none" aria-hidden>⠿</span>
 
-        {renaming ? (
-          <input
-            ref={inputRef}
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            onBlur={commitRename}
-            onKeyDown={e => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') { setDraft(column.name); setRenaming(false) } }}
-            className="flex-1 bg-transparent text-white text-xs outline-none border-b border-white"
-          />
-        ) : (
-          <span
-            className="flex-1 truncate cursor-pointer"
-            onDoubleClick={() => { setDraft(column.name); setRenaming(true) }}
-          >
-            {column.name}
-          </span>
-        )}
+        <span
+          className="flex-1 truncate cursor-pointer"
+          onDoubleClick={() => setShowRename(true)}
+        >
+          {column.name}
+        </span>
 
         {column.computedFormula ? (
           <span className="text-[10px] px-1 rounded font-bold bg-amber-500 text-white" title={`Computed: ${column.computedFormula}`}>ƒ</span>
@@ -148,7 +122,7 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
             {/* Main menu */}
             {menuMode === 'main' && (
               <>
-                <button onClick={() => { setDraft(column.name); setRenaming(true); setMenuMode('closed') }} className="w-full text-left px-3 py-1.5 hover:bg-slate-50">
+                <button onClick={() => { setShowRename(true); setMenuMode('closed') }} className="w-full text-left px-3 py-1.5 hover:bg-slate-50">
                   Rename
                 </button>
                 <div className="h-px bg-[var(--color-border)] my-1" />
@@ -265,6 +239,10 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
 
       {showRecode && (
         <RecodeModal column={column} onClose={() => setShowRecode(false)} />
+      )}
+
+      {showRename && (
+        <RenameVariableModal column={column} onClose={() => setShowRename(false)} />
       )}
     </>
   )

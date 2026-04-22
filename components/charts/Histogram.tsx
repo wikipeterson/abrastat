@@ -8,6 +8,7 @@ import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
+import { truncateChartLabel } from '@/lib/chartLabels'
 import { sortCategoryValues } from '@/lib/categoryOrder'
 
 interface HistogramProps {
@@ -77,7 +78,6 @@ export function Histogram({ colId, groupColId, orientation = 'h' }: HistogramPro
   if (!col || values.length === 0) {
     return <EmptyState icon="📊" title="Drop a numeric variable" description="Drag a numeric variable to the horizontal axis to build a histogram." />
   }
-
   return (
     <HistogramInner
       key={`${colId}-${groupColId ?? 'nogroup'}-${orientation}`}
@@ -144,6 +144,8 @@ function BinWidthControl({ stats, binWidth, binWidthInput, setBinWidthInput, app
 
 function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideAxisTitles }: HistogramInnerProps) {
   const { colors } = useGraphCardContext()
+  const colLabel = truncateChartLabel(col.name)
+  const groupLabel = truncateChartLabel(groupCol?.name)
   const [showNormal, setShowNormal] = useState(false)
   const [showMean, setShowMean] = useState(false)
   const [showMedian, setShowMedian] = useState(false)
@@ -192,7 +194,7 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
         domain: [0, 1],
         ...(i > 0 ? { matches: 'x' } : {}),
         showticklabels: isBottom,
-        ...(isBottom && !hideAxisTitles ? { title: { text: col.name } } : {}),
+        ...(isBottom && !hideAxisTitles ? { title: { text: colLabel } } : {}),
         gridcolor: '#E2E8F0',
         linecolor: '#CBD5E1',
         zerolinecolor: '#CBD5E1',
@@ -259,7 +261,7 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
               showlegend: false,
               margin,
             }}
-            title={hideAxisTitles ? undefined : `Distribution of ${col.name} by ${groupCol.name}`}
+            title={hideAxisTitles ? undefined : `Distribution of ${colLabel} by ${groupLabel}`}
           />
         </div>
       </div>
@@ -286,7 +288,7 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
   } else {
     traces = [{
       type: 'histogram',
-      name: col.name,
+      name: colLabel,
       [binKey]: values,
       [binSpecKey]: binSpec,
       marker: { color: colors[0], opacity: 0.85, line: { color: 'white', width: 0.5 } },
@@ -335,8 +337,8 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
           data={traces as import("plotly.js").Data[]}
           layout={{
             barmode: groupCol ? 'overlay' : 'relative',
-            xaxis: { title: hideAxisTitles ? undefined : { text: vert ? 'Frequency' : col.name } },
-            yaxis: { title: hideAxisTitles ? undefined : { text: vert ? col.name : 'Frequency' } },
+            xaxis: { title: hideAxisTitles ? undefined : { text: vert ? 'Frequency' : colLabel } },
+            yaxis: { title: hideAxisTitles ? undefined : { text: vert ? colLabel : 'Frequency' } },
             showlegend: !!groupCol,
             shapes: !groupCol && !vert
               ? [
@@ -392,7 +394,7 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
               : undefined,
             ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
           }}
-          title={hideAxisTitles ? undefined : `Distribution of ${col.name}${groupCol ? ` by ${groupCol.name}` : ''}`}
+          title={hideAxisTitles ? undefined : `Distribution of ${colLabel}${groupCol ? ` by ${groupLabel}` : ''}`}
         />
       </div>
     </div>

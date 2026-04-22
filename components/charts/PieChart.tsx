@@ -8,6 +8,7 @@ import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
 import { sortCategoryValues } from '@/lib/categoryOrder'
+import { truncateChartLabel } from '@/lib/chartLabels'
 
 interface PieChartProps {
   colId: string | null
@@ -47,6 +48,7 @@ export function PieChart({ colId, groupColId }: PieChartProps) {
   if (allValues.length === 0) {
     return <EmptyState icon="🥧" title="No data" description="No non-empty values found in this column." />
   }
+  const colLabel = truncateChartLabel(col.name)
 
   const hasGroups = allGroups.length > 1
 
@@ -82,7 +84,7 @@ export function PieChart({ colId, groupColId }: PieChartProps) {
       type: 'pie' as const,
       labels,
       values,
-      name: group || col.name,
+      name: group || colLabel,
       title: hasGroups ? { text: group, font: { size: 12 } } : undefined,
       domain,
       marker: { colors: sliceColors },
@@ -145,7 +147,7 @@ export function PieChart({ colId, groupColId }: PieChartProps) {
             margin,
             // When showing multiple pies, annotations serve as group titles (already set via trace title)
           }}
-          title={hideAxisTitles ? undefined : col.name}
+          title={hideAxisTitles ? undefined : colLabel}
         />
       </div>
     </div>

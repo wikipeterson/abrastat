@@ -8,6 +8,7 @@ import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
 import jStat from 'jstat'
+import { truncateChartLabel } from '@/lib/chartLabels'
 
 interface NormalProbPlotProps {
   colId: string | null
@@ -30,6 +31,7 @@ export function NormalProbPlot({ colId }: NormalProbPlotProps) {
   if (!col || actual.length === 0) {
     return <EmptyState icon="📉" title="Drop a numeric variable" description="Drag a numeric variable to the horizontal axis to check for normality." />
   }
+  const colLabel = truncateChartLabel(col.name)
 
   // Best-fit reference line
   const n = actual.length
@@ -48,7 +50,7 @@ export function NormalProbPlot({ colId }: NormalProbPlotProps) {
             {
               type: 'scatter',
               mode: 'markers',
-              name: col.name,
+              name: colLabel,
               x: theoretical,
               y: actual,
               marker: { color: colors[0], size: 7, opacity: 0.85, line: { width: 0 } },
@@ -66,7 +68,7 @@ export function NormalProbPlot({ colId }: NormalProbPlotProps) {
           ]}
           layout={{
             xaxis: { title: hideAxisTitles ? undefined : { text: 'Theoretical Normal Quantiles' } },
-            yaxis: { title: hideAxisTitles ? undefined : { text: col.name } },
+            yaxis: { title: hideAxisTitles ? undefined : { text: colLabel } },
             showlegend: false,
             annotations: hideAxisTitles ? [] : [{
               xref: 'paper', yref: 'paper',
@@ -78,7 +80,7 @@ export function NormalProbPlot({ colId }: NormalProbPlotProps) {
             }],
             ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
           }}
-          title={hideAxisTitles ? undefined : `Normal Probability Plot — ${col.name}`}
+          title={hideAxisTitles ? undefined : `Normal Probability Plot — ${colLabel}`}
         />
       </div>
     </div>

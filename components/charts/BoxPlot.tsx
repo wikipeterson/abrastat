@@ -7,6 +7,7 @@ import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
 import { sortCategoryValues } from '@/lib/categoryOrder'
+import { truncateChartLabel } from '@/lib/chartLabels'
 
 interface BoxPlotProps {
   colId: string | null
@@ -58,7 +59,7 @@ export function BoxPlot({ colId, groupColId, orientation = 'v' }: BoxPlotProps) 
     return {
       traces: [{
       type: 'box',
-      name: hideAxisTitles ? '' : col.name,
+      name: hideAxisTitles ? '' : truncateChartLabel(col.name),
       orientation,
       ...(isH ? { x: numericValues } : { y: numericValues }),
       marker: { color: colors[0], outliercolor: '#EF4444', size: 5, line: { width: 0 } },
@@ -83,6 +84,8 @@ export function BoxPlot({ colId, groupColId, orientation = 'v' }: BoxPlotProps) 
   if (!col) {
     return <EmptyState icon="📦" title="Drop a numeric variable" description="Drag a numeric variable to build a box plot." />
   }
+  const colLabel = truncateChartLabel(col.name)
+  const groupLabel = truncateChartLabel(groupCol?.name)
 
   return (
     <div className="h-full flex flex-col">
@@ -91,12 +94,12 @@ export function BoxPlot({ colId, groupColId, orientation = 'v' }: BoxPlotProps) 
           data={traces as import("plotly.js").Data[]}
           layout={{
             ...(isH
-              ? { xaxis: { title: hideAxisTitles ? undefined : { text: col.name } } }
-              : { yaxis: { title: hideAxisTitles ? undefined : { text: col.name } } }),
+              ? { xaxis: { title: hideAxisTitles ? undefined : { text: colLabel } } }
+              : { yaxis: { title: hideAxisTitles ? undefined : { text: colLabel } } }),
             showlegend: !!groupCol,
             ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
           }}
-          title={hideAxisTitles ? undefined : `Box plot — ${col.name}${groupCol ? ` by ${groupCol.name}` : ''}`}
+          title={hideAxisTitles ? undefined : `Box plot — ${colLabel}${groupCol ? ` by ${groupLabel}` : ''}`}
         />
       </div>
     </div>

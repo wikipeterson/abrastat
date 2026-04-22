@@ -8,6 +8,7 @@ import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
 import { sortCategoryValues } from '@/lib/categoryOrder'
+import { truncateChartLabel } from '@/lib/chartLabels'
 
 interface DotPlotProps {
   colId: string | null
@@ -83,6 +84,8 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
   const [showMedian, setShowMedian] = useState(false)
   const col = grid.columns.find(c => c.id === colId) ?? null
   const groupCol = groupByColId ? (grid.columns.find(c => c.id === groupByColId) ?? null) : null
+  const colLabel = truncateChartLabel(col?.name)
+  const groupLabel = truncateChartLabel(groupCol?.name)
   const values = useMemo(() => colId ? getNumericValues(grid, colId) : [], [grid, colId])
   const markerSize = dotSize === 'small' ? 6 : dotSize === 'large' ? 12 : 9
 
@@ -205,11 +208,11 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
       traces: [{
         type: 'scatter',
         mode: 'markers',
-        name: col.name,
+        name: colLabel,
         x: vert ? y : x,
         y: vert ? x : y,
         marker: { color: colors[0], size: markerSize, opacity: 0.9, line: { width: 0 } },
-        hovertemplate: `${col.name}: %{${vert ? 'y' : 'x'}}<extra></extra>`,
+        hovertemplate: `${colLabel}: %{${vert ? 'y' : 'x'}}<extra></extra>`,
       }],
       maxStack,
     }
@@ -241,7 +244,7 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
               showlegend: false,
               margin,
             }}
-            title={hideAxisTitles ? undefined : `Dot plot — ${col.name} by ${groupCol?.name}`}
+            title={hideAxisTitles ? undefined : `Dot plot — ${colLabel} by ${groupLabel}`}
           />
         </div>
       </div>
@@ -317,12 +320,12 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
           data={[...(traces as Data[]), ...overlayTraces]}
           height={chartHeight}
           layout={{
-            xaxis: vert ? stackAxis : { title: hideAxisTitles ? undefined : { text: col.name } },
-            yaxis: vert ? { title: hideAxisTitles ? undefined : { text: col.name } } : stackAxis,
+            xaxis: vert ? stackAxis : { title: hideAxisTitles ? undefined : { text: colLabel } },
+            yaxis: vert ? { title: hideAxisTitles ? undefined : { text: colLabel } } : stackAxis,
             showlegend: !!groupCol,
             ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
           }}
-          title={hideAxisTitles ? undefined : `Dot plot — ${col.name}${groupCol ? ` by ${groupCol.name}` : ''}`}
+          title={hideAxisTitles ? undefined : `Dot plot — ${colLabel}${groupCol ? ` by ${groupLabel}` : ''}`}
         />
       </div>
     </div>

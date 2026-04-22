@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ManualTwoWayTableSnapshot } from '@/lib/exploreTypes'
 import { useGraphCardContext } from '@/lib/graphCardContext'
 import { sortCategoryValues } from '@/lib/categoryOrder'
+import { truncateChartLabel } from '@/lib/chartLabels'
 
 interface MosaicPlotProps {
   xColId: string | null
@@ -40,7 +41,7 @@ export function MosaicPlot({
   showControls = true,
 }: MosaicPlotProps) {
   const { grid } = useStore()
-  const { colors } = useGraphCardContext()
+  const { colors, hideAxisTitles } = useGraphCardContext()
   const [mode, setMode] = useState<'count' | 'row'>('count')
   const effectiveMode = modeOverride ?? mode
 
@@ -72,8 +73,8 @@ export function MosaicPlot({
       return {
         columns: derivedColumns,
         fillLabels: manualTable.rowLabels,
-        xAxisTitle: manualTable.explName,
-        legendTitle: manualTable.respName,
+        xAxisTitle: truncateChartLabel(manualTable.explName),
+        legendTitle: truncateChartLabel(manualTable.respName),
       }
     }
 
@@ -81,8 +82,8 @@ export function MosaicPlot({
       return {
         columns: [] as MosaicColumn[],
         fillLabels: [] as string[],
-        xAxisTitle: xCol?.name ?? '',
-        legendTitle: fillCol?.name ?? '',
+        xAxisTitle: truncateChartLabel(xCol?.name ?? ''),
+        legendTitle: truncateChartLabel(fillCol?.name ?? ''),
       }
     }
 
@@ -118,14 +119,16 @@ export function MosaicPlot({
     return {
       columns: derivedColumns,
       fillLabels: fillGroups,
-      xAxisTitle: xCol.name,
-      legendTitle: fillCol.name,
+      xAxisTitle: truncateChartLabel(xCol.name),
+      legendTitle: truncateChartLabel(fillCol.name),
     }
   }, [fillCol, grid, manualTable, xCol])
 
   const svgWidth = 840
   const svgHeight = 420
-  const margin = { top: 28, right: 210, bottom: 64, left: 28 }
+  const margin = hideAxisTitles
+    ? { top: 28, right: 132, bottom: 48, left: 28 }
+    : { top: 28, right: 210, bottom: 64, left: 28 }
   const plotWidth = svgWidth - margin.left - margin.right
   const plotHeight = svgHeight - margin.top - margin.bottom
   const legendX = margin.left + plotWidth + 40
@@ -263,29 +266,33 @@ export function MosaicPlot({
             )
           })}
 
-          <text
-            x={margin.left + plotWidth / 2}
-            y={svgHeight - 12}
-            textAnchor="middle"
-            fill="rgb(51 65 85)"
-            fontSize="13"
-            fontWeight="600"
-          >
-            {xAxisTitle}
-          </text>
+          {!hideAxisTitles && (
+            <text
+              x={margin.left + plotWidth / 2}
+              y={svgHeight - 12}
+              textAnchor="middle"
+              fill="rgb(51 65 85)"
+              fontSize="13"
+              fontWeight="600"
+            >
+              {xAxisTitle}
+            </text>
+          )}
 
-          <text
-            x={legendX}
-            y={margin.top + 8}
-            fill="rgb(51 65 85)"
-            fontSize="14"
-            fontWeight="700"
-          >
-            {legendTitle}
-          </text>
+          {!hideAxisTitles && (
+            <text
+              x={legendX}
+              y={margin.top + 8}
+              fill="rgb(51 65 85)"
+              fontSize="14"
+              fontWeight="700"
+            >
+              {legendTitle}
+            </text>
+          )}
 
           {fillLabels.map((label, index) => (
-            <g key={label} transform={`translate(${legendX}, ${margin.top + 28 + index * 24})`}>
+            <g key={label} transform={`translate(${legendX}, ${margin.top + (hideAxisTitles ? 8 : 28) + index * 24})`}>
               <rect width="14" height="14" rx="3" fill={colors[index % colors.length]} />
               <text x="22" y="11" fill="rgb(51 65 85)" fontSize="12" fontWeight="500">
                 {label}

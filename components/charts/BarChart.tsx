@@ -9,6 +9,7 @@ import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
+import { truncateChartLabel } from '@/lib/chartLabels'
 
 interface BarChartProps {
   colId: string | null
@@ -30,6 +31,8 @@ export function BarChart({ colId, valueMode = 'count', orientation = 'h' }: BarC
   if (!colId || !col) {
     return <EmptyState icon="🔢" title="Drop a categorical variable" description="Drag a categorical variable to see a bar chart of frequencies." />
   }
+
+  const colLabel = truncateChartLabel(col.name)
 
   const barColors = freqTable.map((_, i) => colors[i % colors.length])
   const totalCount = freqTable.reduce((sum, row) => sum + row.count, 0)
@@ -69,7 +72,7 @@ export function BarChart({ colId, valueMode = 'count', orientation = 'h' }: BarC
 
   const layout = orientation === 'h'
     ? {
-        xaxis: { title: hideAxisTitles ? undefined : { text: col.name } },
+        xaxis: { title: hideAxisTitles ? undefined : { text: colLabel } },
         yaxis: {
           title: hideAxisTitles ? undefined : { text: valueMode === 'percent' ? 'Percent' : 'Count' },
           ticksuffix: valueMode === 'percent' ? '%' : '',
@@ -95,7 +98,7 @@ export function BarChart({ colId, valueMode = 'count', orientation = 'h' }: BarC
         <PlotlyChart
           data={traces as import("plotly.js").Data[]}
           layout={layout}
-          title={hideAxisTitles ? undefined : `${col.name} — ${valueMode === 'percent' ? 'Percent' : 'Frequency'}`}
+          title={hideAxisTitles ? undefined : `${colLabel} — ${valueMode === 'percent' ? 'Percent' : 'Frequency'}`}
         />
       </div>
     </div>

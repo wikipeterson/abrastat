@@ -8,6 +8,7 @@ import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
 import { sortCategoryValues } from '@/lib/categoryOrder'
+import { truncateChartLabel } from '@/lib/chartLabels'
 
 interface ScatterPlotProps {
   xColId: string | null
@@ -117,6 +118,8 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
   if (!xColId || !yColId || !xCol || !yCol) {
     return <EmptyState icon="⚫" title="Select X and Y columns" description="Choose two numeric columns to build a scatter plot." />
   }
+  const xLabel = truncateChartLabel(xCol.name)
+  const yLabel = truncateChartLabel(yCol.name)
 
   const yValues = animatedY.length === rawYValues.length ? animatedY : rawYValues
 
@@ -141,7 +144,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
       x: allPoints.filter(p => p.group === group).map(p => p.x),
       y: allPoints.filter(p => p.group === group).map(p => p.y),
       marker: { color: colors[i % colors.length], size: markerSize, opacity: 0.85, line: { width: 0 } },
-      hovertemplate: `${xCol.name}: %{x}<br>${yCol.name}: %{y}<extra>${group}</extra>`,
+      hovertemplate: `${xLabel}: %{x}<br>${yLabel}: %{y}<extra>${group}</extra>`,
     }))
   } else if (useBubbleSize && groupCol) {
     const minSize = Math.min(...sizeValues)
@@ -154,7 +157,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
     traces = [{
       type: 'scatter',
       mode: 'markers',
-      name: `${xCol.name} vs ${yCol.name}`,
+      name: `${xLabel} vs ${yLabel}`,
       x: xValues,
       y: yValues,
       marker: {
@@ -164,18 +167,18 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
         opacity: 0.45,
         line: { width: 0 },
       },
-      hovertemplate: `${xCol.name}: %{x}<br>${yCol.name}: %{y}<br>${groupCol.name}: %{customdata}<extra></extra>`,
+      hovertemplate: `${xLabel}: %{x}<br>${yLabel}: %{y}<br>${truncateChartLabel(groupCol.name)}: %{customdata}<extra></extra>`,
       customdata: allPoints.map(p => p.size),
     }]
   } else {
     traces = [{
       type: 'scatter',
       mode: 'markers',
-      name: `${xCol.name} vs ${yCol.name}`,
+      name: `${xLabel} vs ${yLabel}`,
       x: xValues,
       y: yValues,
       marker: { color: colors[0], size: markerSize, opacity: 0.85, line: { width: 0 } },
-      hovertemplate: `${xCol.name}: %{x}<br>${yCol.name}: %{y}<extra></extra>`,
+      hovertemplate: `${xLabel}: %{x}<br>${yLabel}: %{y}<extra></extra>`,
     }]
   }
 
@@ -257,14 +260,14 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
         <PlotlyChart
           data={traces as import("plotly.js").Data[]}
           layout={{
-            xaxis: { title: hideAxisTitles ? { text: '' } : { text: xCol.name }, ...(xAxisRange ? { range: xAxisRange } : {}) },
-            yaxis: { title: hideAxisTitles ? { text: '' } : { text: yCol.name }, ...((yAxisRange ?? animatedYAxisRange) ? { range: (yAxisRange ?? animatedYAxisRange) } : {}) },
+            xaxis: { title: hideAxisTitles ? { text: '' } : { text: xLabel }, ...(xAxisRange ? { range: xAxisRange } : {}) },
+            yaxis: { title: hideAxisTitles ? { text: '' } : { text: yLabel }, ...((yAxisRange ?? animatedYAxisRange) ? { range: (yAxisRange ?? animatedYAxisRange) } : {}) },
             showlegend: !!useColorGroups,
             annotations,
             shapes: meanShapes,
             ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
           }}
-          title={hideAxisTitles ? '' : `${yCol.name} vs ${xCol.name}`}
+          title={hideAxisTitles ? '' : `${yLabel} vs ${xLabel}`}
         />
       </div>
     </div>

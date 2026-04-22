@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { useGraphCardContext } from '@/lib/graphCardContext'
 import { sortCategoryValues } from '@/lib/categoryOrder'
 import { ManualTwoWayTableSnapshot } from '@/lib/exploreTypes'
+import { truncateChartLabel } from '@/lib/chartLabels'
 
 interface SegmentedBarProps {
   xColId: string | null
@@ -97,11 +98,12 @@ export function SegmentedBar({
     return <EmptyState icon="📊" title="Select two variables" description="Choose an X variable and a Fill variable above." />
   }
 
-  const xAxisTitle = manualTable ? manualTable.explName : xCol?.name
-  const legendTitle = manualTable ? manualTable.respName : fillCol?.name
+  const xAxisTitle = truncateChartLabel(manualTable ? manualTable.explName : xCol?.name)
+  const legendTitle = truncateChartLabel(manualTable ? manualTable.respName : fillCol?.name)
   const chartTitle = manualTable
-    ? `${manualTable.explName} by ${manualTable.respName}`
-    : `${xCol?.name} by ${fillCol?.name}`
+    ? `${truncateChartLabel(manualTable.explName)} by ${truncateChartLabel(manualTable.respName)}`
+    : `${truncateChartLabel(xCol?.name)} by ${truncateChartLabel(fillCol?.name)}`
+  const compactLegend = hideAxisTitles
 
   return (
     <div className="h-full flex flex-col">
@@ -126,8 +128,10 @@ export function SegmentedBar({
             xaxis: { title: hideAxisTitles ? undefined : { text: xAxisTitle } },
             yaxis: { title: hideAxisTitles ? undefined : { text: effectiveMode === 'count' ? 'Count' : 'Percent' }, ticksuffix: effectiveMode === 'count' ? '' : '%' },
             showlegend: true,
-            legend: { title: { text: legendTitle } },
-            ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
+            legend: compactLegend
+              ? { orientation: 'h', x: 0, xanchor: 'left', y: 1.08, yanchor: 'bottom', font: { size: 11 } }
+              : { title: { text: legendTitle }, x: 1.02, xanchor: 'left', y: 1, yanchor: 'top' },
+            ...(hideAxisTitles ? { margin: { t: 28, r: 16, b: 44, l: 52 } } : {}),
           }}
           title={hideAxisTitles ? undefined : chartTitle}
         />

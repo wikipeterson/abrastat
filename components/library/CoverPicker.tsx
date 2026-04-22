@@ -4,12 +4,13 @@ import { useRef, useEffect } from 'react'
 import { getCover } from '@/lib/datasetCovers'
 
 const GROUPS = [
-  { label: 'Stats & Data',      ids: ['teal-chart', 'indigo-data', 'sky-numbers', 'cyan-stats', 'emerald-calendar', 'violet-percent', 'amber-bars', 'rose-line'] },
-  { label: 'Science',           ids: ['emerald-science', 'lime-biology', 'violet-chem', 'blue-space', 'cyan-physics', 'amber-dino', 'pink-brain', 'teal-leaflab'] },
-  { label: 'Sports',            ids: ['orange-hoops', 'green-soccer', 'red-football', 'yellow-trophy', 'blue-baseball', 'teal-tennis', 'violet-volley', 'slate-runner'] },
-  { label: 'Nature & Weather',  ids: ['green-nature', 'blue-ocean', 'amber-weather', 'teal-earth', 'indigo-night', 'sky-rain', 'rose-flower', 'emerald-tree'] },
-  { label: 'Society & School',  ids: ['rose-people', 'purple-school', 'slate-econ', 'gray-survey', 'blue-books', 'amber-history', 'teal-vote', 'indigo-family'] },
-  { label: 'Other',             ids: ['pink-health', 'red-food', 'orange-pizza', 'green-broccoli', 'blue-transport', 'zinc-tech', 'sky-plane', 'emerald-bike', 'violet-robot', 'amber-phone'] },
+  { label: 'Stats & Data',      ids: ['teal-chart', 'indigo-data', 'sky-numbers', 'cyan-stats', 'emerald-calendar', 'violet-percent', 'amber-bars', 'rose-line', 'indigo-checklist', 'teal-abacus', 'blue-folder', 'amber-target'] },
+  { label: 'Science',           ids: ['emerald-science', 'lime-biology', 'violet-chem', 'blue-space', 'cyan-physics', 'amber-dino', 'pink-brain', 'teal-leaflab', 'sky-planet', 'red-dna', 'green-frog', 'slate-gear'] },
+  { label: 'Sports',            ids: ['orange-hoops', 'green-soccer', 'red-football', 'yellow-trophy', 'blue-baseball', 'teal-tennis', 'violet-volley', 'slate-runner', 'pink-swim', 'indigo-badminton', 'emerald-golf', 'red-boxing'] },
+  { label: 'Nature & Weather',  ids: ['green-nature', 'blue-ocean', 'amber-weather', 'teal-earth', 'indigo-night', 'sky-rain', 'rose-flower', 'emerald-tree', 'violet-snow', 'orange-sunrise', 'slate-mountain', 'teal-forest'] },
+  { label: 'Society & School',  ids: ['rose-people', 'purple-school', 'slate-econ', 'gray-survey', 'blue-books', 'amber-history', 'teal-vote', 'indigo-family', 'sky-globe', 'rose-theater', 'emerald-briefcase', 'amber-law'] },
+  { label: 'Health & Food',     ids: ['pink-health', 'red-food', 'orange-pizza', 'green-broccoli', 'teal-hospital', 'violet-sleep', 'amber-coffee', 'rose-apple'] },
+  { label: 'Transport & Tech',  ids: ['blue-transport', 'zinc-tech', 'sky-plane', 'emerald-bike', 'violet-robot', 'amber-phone', 'teal-laptop', 'indigo-satellite', 'sky-train', 'red-bus'] },
 ]
 
 interface CoverPickerProps {

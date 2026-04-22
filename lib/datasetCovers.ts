@@ -15,6 +15,10 @@ export const DATASET_COVERS: DatasetCover[] = [
   { id: 'violet-percent',   bg: 'linear-gradient(135deg,#8b5cf6,#6d28d9)', emoji: '💯', label: 'Percent' },
   { id: 'amber-bars',       bg: 'linear-gradient(135deg,#f59e0b,#d97706)', emoji: '📶', label: 'Bars' },
   { id: 'rose-line',        bg: 'linear-gradient(135deg,#fb7185,#e11d48)', emoji: '〽️', label: 'Line' },
+  { id: 'indigo-checklist', bg: 'linear-gradient(135deg,#4f46e5,#312e81)', emoji: '📝', label: 'Checklist' },
+  { id: 'teal-abacus',      bg: 'linear-gradient(135deg,#14b8a6,#0f766e)', emoji: '🧮', label: 'Abacus' },
+  { id: 'blue-folder',      bg: 'linear-gradient(135deg,#38bdf8,#1d4ed8)', emoji: '🗂️', label: 'Folder' },
+  { id: 'amber-target',     bg: 'linear-gradient(135deg,#f59e0b,#b45309)', emoji: '🎯', label: 'Target' },
 
   // Science
   { id: 'emerald-science', bg: 'linear-gradient(135deg,#10B981,#059669)',  emoji: '🔬', label: 'Science' },
@@ -25,6 +29,10 @@ export const DATASET_COVERS: DatasetCover[] = [
   { id: 'amber-dino',      bg: 'linear-gradient(135deg,#f59e0b,#ea580c)',  emoji: '🦖', label: 'Fossils' },
   { id: 'pink-brain',      bg: 'linear-gradient(135deg,#ec4899,#db2777)',  emoji: '🧠', label: 'Brain' },
   { id: 'teal-leaflab',    bg: 'linear-gradient(135deg,#34d399,#0f766e)',  emoji: '🧪', label: 'Lab' },
+  { id: 'sky-planet',      bg: 'linear-gradient(135deg,#0ea5e9,#4338ca)',  emoji: '🪐', label: 'Planet' },
+  { id: 'red-dna',         bg: 'linear-gradient(135deg,#ef4444,#be123c)',  emoji: '🧫', label: 'Culture' },
+  { id: 'green-frog',      bg: 'linear-gradient(135deg,#22c55e,#15803d)',  emoji: '🐸', label: 'Ecology' },
+  { id: 'slate-gear',      bg: 'linear-gradient(135deg,#64748b,#334155)',  emoji: '⚙️', label: 'Engineering' },
 
   // Sports
   { id: 'orange-hoops',    bg: 'linear-gradient(135deg,#F97316,#ea580c)',  emoji: '🏀', label: 'Basketball' },
@@ -35,6 +43,10 @@ export const DATASET_COVERS: DatasetCover[] = [
   { id: 'teal-tennis',     bg: 'linear-gradient(135deg,#2dd4bf,#0f766e)',  emoji: '🎾', label: 'Tennis' },
   { id: 'violet-volley',   bg: 'linear-gradient(135deg,#818cf8,#6366f1)',  emoji: '🏐', label: 'Volleyball' },
   { id: 'slate-runner',    bg: 'linear-gradient(135deg,#94a3b8,#475569)',  emoji: '🏃', label: 'Running' },
+  { id: 'pink-swim',       bg: 'linear-gradient(135deg,#f472b6,#db2777)',  emoji: '🏊', label: 'Swimming' },
+  { id: 'indigo-badminton',bg: 'linear-gradient(135deg,#818cf8,#4338ca)',  emoji: '🏸', label: 'Badminton' },
+  { id: 'emerald-golf',    bg: 'linear-gradient(135deg,#34d399,#059669)',  emoji: '⛳', label: 'Golf' },
+  { id: 'red-boxing',      bg: 'linear-gradient(135deg,#f87171,#b91c1c)',  emoji: '🥊', label: 'Boxing' },
 
   // Nature & Weather
   { id: 'green-nature',    bg: 'linear-gradient(135deg,#4ade80,#16a34a)',  emoji: '🌿', label: 'Nature' },
@@ -45,6 +57,10 @@ export const DATASET_COVERS: DatasetCover[] = [
   { id: 'sky-rain',        bg: 'linear-gradient(135deg,#38bdf8,#0f766e)',  emoji: '🌧️', label: 'Rain' },
   { id: 'rose-flower',     bg: 'linear-gradient(135deg,#fb7185,#db2777)',  emoji: '🌸', label: 'Flower' },
   { id: 'emerald-tree',    bg: 'linear-gradient(135deg,#22c55e,#15803d)',  emoji: '🌳', label: 'Tree' },
+  { id: 'violet-snow',     bg: 'linear-gradient(135deg,#a78bfa,#6366f1)',  emoji: '❄️', label: 'Snow' },
+  { id: 'orange-sunrise',  bg: 'linear-gradient(135deg,#fb923c,#f59e0b)',  emoji: '🌅', label: 'Sunrise' },
+  { id: 'slate-mountain',  bg: 'linear-gradient(135deg,#94a3b8,#475569)',  emoji: '⛰️', label: 'Mountain' },
+  { id: 'teal-forest',     bg: 'linear-gradient(135deg,#2dd4bf,#166534)',  emoji: '🌲', label: 'Forest' },
 
   // Society & School
   { id: 'rose-people',     bg: 'linear-gradient(135deg,#EC4899,#db2777)',  emoji: '👥', label: 'People' },
@@ -55,12 +71,20 @@ export const DATASET_COVERS: DatasetCover[] = [
   { id: 'amber-history',   bg: 'linear-gradient(135deg,#f59e0b,#b45309)',  emoji: '🏛️', label: 'History' },
   { id: 'teal-vote',       bg: 'linear-gradient(135deg,#14b8a6,#0f766e)',  emoji: '🗳️', label: 'Voting' },
   { id: 'indigo-family',   bg: 'linear-gradient(135deg,#818cf8,#4338ca)',  emoji: '👨‍👩‍👧‍👦', label: 'Family' },
+  { id: 'sky-globe',       bg: 'linear-gradient(135deg,#38bdf8,#2563eb)',  emoji: '🌐', label: 'World' },
+  { id: 'rose-theater',    bg: 'linear-gradient(135deg,#fb7185,#be185d)',  emoji: '🎭', label: 'Arts' },
+  { id: 'emerald-briefcase', bg: 'linear-gradient(135deg,#34d399,#047857)', emoji: '💼', label: 'Work' },
+  { id: 'amber-law',       bg: 'linear-gradient(135deg,#fbbf24,#b45309)',  emoji: '⚖️', label: 'Law' },
 
   // Health & Food
   { id: 'pink-health',     bg: 'linear-gradient(135deg,#f472b6,#ec4899)',  emoji: '❤️', label: 'Health' },
   { id: 'red-food',        bg: 'linear-gradient(135deg,#f87171,#ef4444)',  emoji: '🍎', label: 'Food' },
   { id: 'orange-pizza',    bg: 'linear-gradient(135deg,#fb923c,#ea580c)',  emoji: '🍕', label: 'Pizza' },
   { id: 'green-broccoli',  bg: 'linear-gradient(135deg,#4ade80,#15803d)',  emoji: '🥦', label: 'Veggies' },
+  { id: 'teal-hospital',   bg: 'linear-gradient(135deg,#2dd4bf,#0f766e)',  emoji: '🩺', label: 'Medical' },
+  { id: 'violet-sleep',    bg: 'linear-gradient(135deg,#a78bfa,#7c3aed)',  emoji: '😴', label: 'Sleep' },
+  { id: 'amber-coffee',    bg: 'linear-gradient(135deg,#f59e0b,#92400e)',  emoji: '☕', label: 'Coffee' },
+  { id: 'rose-apple',      bg: 'linear-gradient(135deg,#fb7185,#ef4444)',  emoji: '🍓', label: 'Fruit' },
 
   // Transport & Tech
   { id: 'blue-transport',  bg: 'linear-gradient(135deg,#60a5fa,#3b82f6)',  emoji: '🚗', label: 'Transport' },
@@ -69,6 +93,10 @@ export const DATASET_COVERS: DatasetCover[] = [
   { id: 'emerald-bike',    bg: 'linear-gradient(135deg,#34d399,#059669)',  emoji: '🚲', label: 'Bike' },
   { id: 'violet-robot',    bg: 'linear-gradient(135deg,#a78bfa,#6d28d9)',  emoji: '🤖', label: 'Robot' },
   { id: 'amber-phone',     bg: 'linear-gradient(135deg,#fbbf24,#d97706)',  emoji: '📱', label: 'Phone' },
+  { id: 'teal-laptop',     bg: 'linear-gradient(135deg,#14b8a6,#0f766e)',  emoji: '💻', label: 'Laptop' },
+  { id: 'indigo-satellite',bg: 'linear-gradient(135deg,#6366f1,#312e81)',  emoji: '🛰️', label: 'Satellite' },
+  { id: 'sky-train',       bg: 'linear-gradient(135deg,#38bdf8,#0284c7)',  emoji: '🚆', label: 'Train' },
+  { id: 'red-bus',         bg: 'linear-gradient(135deg,#f87171,#dc2626)',  emoji: '🚌', label: 'Bus' },
 ]
 
 export const COVER_IDS = new Set(DATASET_COVERS.map(c => c.id))

@@ -12,7 +12,9 @@ export function evaluateFormula(
   for (const col of sorted) {
     const val = Number(row[col.id])
     const replacement = isFinite(val) ? String(val) : 'NaN'
-    expr = expr.replace(new RegExp(`\\b${col.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g'), replacement)
+    const escapedName = col.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const pattern = new RegExp(`(^|[^A-Za-z0-9_])${escapedName}(?=$|[^A-Za-z0-9_])`, 'g')
+    expr = expr.replace(pattern, (_, prefix: string) => `${prefix}${replacement}`)
   }
 
   // Map friendly function names to Math.*

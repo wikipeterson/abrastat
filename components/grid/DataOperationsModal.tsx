@@ -640,7 +640,14 @@ export function DataOperationsModal({ open, onClose, defaultSection }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl flex overflow-hidden" style={{ width: '860px', maxHeight: '90vh', height: 600 }}>
+      <div
+        className="relative bg-white rounded-2xl shadow-xl flex overflow-hidden"
+        style={{
+          width: 'min(980px, calc(100vw - 2rem))',
+          height: 'min(720px, calc(100vh - 2rem))',
+          maxHeight: 'calc(100vh - 2rem)',
+        }}
+      >
 
         {/* Left sidebar */}
         <div className="w-44 flex-shrink-0 bg-slate-50 border-r border-[var(--color-border)] py-4 overflow-y-auto">

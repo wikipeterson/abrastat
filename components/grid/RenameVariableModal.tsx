@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { GridColumn } from '@/types'
 import { useStore } from '@/lib/store'
@@ -13,12 +14,18 @@ interface Props {
 export function RenameVariableModal({ column, onClose }: Props) {
   const { renameColumn } = useStore()
   const [name, setName] = useState(column.name)
+  const [mounted, setMounted] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    setMounted(true)
+    return () => setMounted(false)
+  }, [])
 
   useEffect(() => {
     inputRef.current?.focus()
     inputRef.current?.select()
-  }, [])
+  }, [mounted])
 
   function handleSave() {
     const trimmed = name.trim()
@@ -27,7 +34,9 @@ export function RenameVariableModal({ column, onClose }: Props) {
     onClose()
   }
 
-  return (
+  if (!mounted) return null
+
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
@@ -68,6 +77,7 @@ export function RenameVariableModal({ column, onClose }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

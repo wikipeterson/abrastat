@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { Data, Annotations, Layout } from 'plotly.js'
 import { useStore } from '@/lib/store'
 import { getNumericValues, getNumericGroup } from '@/lib/gridHelpers'
@@ -79,9 +79,7 @@ type DotResult = NormalResult | FacetedResult
 
 export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps) {
   const { grid } = useStore()
-  const { hideAxisTitles, colors, dotSize } = useGraphCardContext()
-  const [showMean, setShowMean] = useState(false)
-  const [showMedian, setShowMedian] = useState(false)
+  const { hideAxisTitles, colors, dotSize, showMeans, showMedian } = useGraphCardContext()
   const col = grid.columns.find(c => c.id === colId) ?? null
   const groupCol = groupByColId ? (grid.columns.find(c => c.id === groupByColId) ?? null) : null
   const colLabel = truncateChartLabel(col?.name)
@@ -274,7 +272,7 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
 
   const overlayTraces: Data[] = []
   if (!groupCol && values.length > 1) {
-    if (showMean) {
+    if (showMeans) {
       overlayTraces.push({
         type: 'scatter',
         mode: 'lines',
@@ -303,18 +301,6 @@ export function DotPlot({ colId, groupByColId, orientation = 'h' }: DotPlotProps
 
   return (
     <div className="h-full flex flex-col">
-      {!groupCol && (
-        <div className="flex-shrink-0 flex items-center gap-4 px-4 pt-2 flex-wrap">
-          <label className="flex items-center gap-2 text-sm text-[var(--color-muted)] cursor-pointer">
-            <input type="checkbox" checked={showMean} onChange={e => setShowMean(e.target.checked)} className="accent-[var(--color-accent)]" />
-            Mean
-          </label>
-          <label className="flex items-center gap-2 text-sm text-[var(--color-muted)] cursor-pointer">
-            <input type="checkbox" checked={showMedian} onChange={e => setShowMedian(e.target.checked)} className="accent-[var(--color-accent)]" />
-            Median
-          </label>
-        </div>
-      )}
       <div className="flex-1 min-h-0 px-4">
         <PlotlyChart
           data={[...(traces as Data[]), ...overlayTraces]}

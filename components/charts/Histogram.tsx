@@ -143,12 +143,10 @@ function BinWidthControl({ stats, binWidth, binWidthInput, setBinWidthInput, app
 }
 
 function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideAxisTitles }: HistogramInnerProps) {
-  const { colors } = useGraphCardContext()
+  const { colors, showMeans, showMedian } = useGraphCardContext()
   const colLabel = truncateChartLabel(col.name)
   const groupLabel = truncateChartLabel(groupCol?.name)
   const [showNormal, setShowNormal] = useState(false)
-  const [showMean, setShowMean] = useState(false)
-  const [showMedian, setShowMedian] = useState(false)
   const [binWidth, setBinWidth] = useState(stats.defaultWidth)
   const [binWidthInput, setBinWidthInput] = useState(formatBinWidth(stats.defaultWidth))
 
@@ -321,14 +319,6 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
               <input type="checkbox" checked={showNormal} onChange={e => setShowNormal(e.target.checked)} className="accent-[var(--color-accent)]" />
               Normal curve
             </label>
-            <label className="flex items-center gap-2 text-sm text-[var(--color-muted)] cursor-pointer">
-              <input type="checkbox" checked={showMean} onChange={e => setShowMean(e.target.checked)} className="accent-[var(--color-accent)]" />
-              Mean
-            </label>
-            <label className="flex items-center gap-2 text-sm text-[var(--color-muted)] cursor-pointer">
-              <input type="checkbox" checked={showMedian} onChange={e => setShowMedian(e.target.checked)} className="accent-[var(--color-accent)]" />
-              Median
-            </label>
           </>
         )}
       </div>
@@ -342,7 +332,7 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
             showlegend: !!groupCol,
             shapes: !groupCol && !vert
               ? [
-                  ...(showMean
+                  ...(showMeans
                     ? [{
                         type: 'line' as const,
                         x0: mean,
@@ -368,7 +358,7 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
               : undefined,
             annotations: !groupCol && !vert
               ? [
-                  ...(showMean
+                  ...(showMeans
                     ? [{
                         x: mean,
                         y: 1,

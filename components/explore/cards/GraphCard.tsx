@@ -39,6 +39,7 @@ interface GraphCardProps {
   onSetColorPalette: (palette: string) => void
   onSetDotSize: (size: 'small' | 'medium' | 'large') => void
   onSetShowMeans: (show: boolean) => void
+  onSetShowMedian: (show: boolean) => void
   onSetShowOutlierFences: (show: boolean) => void
   onSetBestFitMode: (mode: 'none' | 'overall' | 'group') => void
   onSetBarValueMode: (mode: 'count' | 'percent') => void
@@ -47,7 +48,7 @@ interface GraphCardProps {
   hideHeader?: boolean
 }
 
-export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTitle, onSetXLabel, onSetYLabel, onSetXAxisMin, onSetXAxisMax, onSetYAxisMin, onSetYAxisMax, onSetColorPalette, onSetDotSize, onSetShowMeans, onSetShowOutlierFences, onSetBestFitMode, onSetBarValueMode, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
+export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTitle, onSetXLabel, onSetYLabel, onSetXAxisMin, onSetXAxisMax, onSetYAxisMin, onSetYAxisMax, onSetColorPalette, onSetDotSize, onSetShowMeans, onSetShowMedian, onSetShowOutlierFences, onSetBestFitMode, onSetBarValueMode, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
   const { grid } = useStore()
   const [manualTableGraphType, setManualTableGraphType] = useState<'segmented' | 'sidebyside' | 'mosaic'>('segmented')
   const [manualTableValueMode, setManualTableValueMode] = useState<'count' | 'row'>('count')
@@ -611,6 +612,29 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                     </label>
                   )}
 
+                  {(currentChart === 'dot' || currentChart === 'histogram') && !groupCol && (
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm text-[var(--color-text)] select-none">
+                        <input
+                          type="checkbox"
+                          checked={config.showMeans ?? false}
+                          onChange={e => onSetShowMeans(e.target.checked)}
+                          className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                        />
+                        <span>Plot mean</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-[var(--color-text)] select-none">
+                        <input
+                          type="checkbox"
+                          checked={config.showMedian ?? false}
+                          onChange={e => onSetShowMedian(e.target.checked)}
+                          className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                        />
+                        <span>Plot median</span>
+                      </label>
+                    </div>
+                  )}
+
                   {currentChart === 'box' && (
                     <label className="flex items-center gap-2 text-sm text-[var(--color-text)] select-none">
                       <input
@@ -736,7 +760,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
             </div>
           )}
           <div className="flex-1 min-h-0" data-graph-plot-area="true">
-            <GraphCardContext.Provider value={{ hideAxisTitles: true, colors: [...activeColors], dotSize, showMeans: config.showMeans ?? false, showOutlierFences: config.showOutlierFences ?? false, xAxisRange, yAxisRange }}>
+            <GraphCardContext.Provider value={{ hideAxisTitles: true, colors: [...activeColors], dotSize, showMeans: config.showMeans ?? false, showMedian: config.showMedian ?? false, showOutlierFences: config.showOutlierFences ?? false, xAxisRange, yAxisRange }}>
               {renderChart()}
             </GraphCardContext.Provider>
           </div>
@@ -810,7 +834,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                   </p>
                 </div>
               ) : showDirectChart ? (
-                <GraphCardContext.Provider value={{ hideAxisTitles: true, colors: [...activeColors], dotSize, showMeans: config.showMeans ?? false, showOutlierFences: config.showOutlierFences ?? false, xAxisRange, yAxisRange }}>
+                <GraphCardContext.Provider value={{ hideAxisTitles: true, colors: [...activeColors], dotSize, showMeans: config.showMeans ?? false, showMedian: config.showMedian ?? false, showOutlierFences: config.showOutlierFences ?? false, xAxisRange, yAxisRange }}>
                   {renderChart()}
                 </GraphCardContext.Provider>
               ) : null}

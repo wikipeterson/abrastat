@@ -39,6 +39,7 @@ export interface GraphCardConfig {
   colorPalette?: string
   dotSize?: 'small' | 'medium' | 'large'
   showMeans?: boolean
+  showMedian?: boolean
   showOutlierFences?: boolean
   chartType?: ChartType | null
   bestFitMode?: 'none' | 'overall' | 'group'

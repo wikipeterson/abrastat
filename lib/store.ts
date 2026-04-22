@@ -618,7 +618,7 @@ export const useStore = create<AbraStatStore>((set) => ({
     const idx = analysisCards.length
     const config: CardConfig =
       type === 'data-grid'    ? { type: 'data-grid' } :
-      type === 'graph'        ? { type: 'graph',       xColId: null, yColId: null, groupColId: null, title: '', bestFitMode: 'none', barValueMode: 'count', dotSize: 'medium', showOutlierFences: false } :
+      type === 'graph'        ? { type: 'graph',       xColId: null, yColId: null, groupColId: null, title: '', bestFitMode: 'none', barValueMode: 'count', dotSize: 'medium', showMeans: false, showMedian: false, showOutlierFences: false } :
       type === 'summary'      ? { type: 'summary',     variableColIds: [], groupColId: null } :
       type === 'table'        ? { type: 'table',       rowsColId: null, colsColId: null } :
       type === 'regression'   ? { type: 'regression',  xColId: null, yColId: null, groupColId: null } :

@@ -6,6 +6,7 @@ interface GraphCardContextValue {
   colors: string[]
   dotSize: 'small' | 'medium' | 'large'
   showMeans: boolean
+  showMedian: boolean
   showOutlierFences: boolean
   xAxisRange?: [number, number]
   yAxisRange?: [number, number]
@@ -16,6 +17,7 @@ export const GraphCardContext = createContext<GraphCardContextValue>({
   colors: ABRA_COLORS,
   dotSize: 'medium',
   showMeans: false,
+  showMedian: false,
   showOutlierFences: false,
   xAxisRange: undefined,
   yAxisRange: undefined,

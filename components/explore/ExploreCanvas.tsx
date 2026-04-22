@@ -281,7 +281,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
 
   const normalizeGraphConfig = useCallback((cfg: GraphCardConfig): GraphCardConfig => {
     if (cfg.manualScatter) {
-      return { ...cfg, chartType: 'scatter', bestFitMode: cfg.bestFitMode ?? 'none', barValueMode: cfg.barValueMode ?? 'count', dotSize: cfg.dotSize ?? 'medium', showOutlierFences: cfg.showOutlierFences ?? false }
+      return { ...cfg, chartType: 'scatter', bestFitMode: cfg.bestFitMode ?? 'none', barValueMode: cfg.barValueMode ?? 'count', dotSize: cfg.dotSize ?? 'medium', showMeans: cfg.showMeans ?? false, showMedian: cfg.showMedian ?? false, showOutlierFences: cfg.showOutlierFences ?? false }
     }
     const xType = cfg.xColId ? (grid.columns.find(c => c.id === cfg.xColId)?.type ?? null) : null
     const yType = cfg.yColId ? (grid.columns.find(c => c.id === cfg.yColId)?.type ?? null) : null
@@ -297,15 +297,15 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       : cfg
 
     if (!baseCfg.chartType) {
-      return { ...baseCfg, chartType: primary, bestFitMode: baseCfg.bestFitMode ?? 'none', barValueMode: baseCfg.barValueMode ?? 'count', dotSize: baseCfg.dotSize ?? 'medium', showOutlierFences: baseCfg.showOutlierFences ?? false }
+      return { ...baseCfg, chartType: primary, bestFitMode: baseCfg.bestFitMode ?? 'none', barValueMode: baseCfg.barValueMode ?? 'count', dotSize: baseCfg.dotSize ?? 'medium', showMeans: baseCfg.showMeans ?? false, showMedian: baseCfg.showMedian ?? false, showOutlierFences: baseCfg.showOutlierFences ?? false }
     }
     if (valid.length > 0 && !valid.includes(baseCfg.chartType)) {
-      return { ...baseCfg, chartType: primary, bestFitMode: baseCfg.bestFitMode ?? 'none', barValueMode: baseCfg.barValueMode ?? 'count', dotSize: baseCfg.dotSize ?? 'medium', showOutlierFences: baseCfg.showOutlierFences ?? false }
+      return { ...baseCfg, chartType: primary, bestFitMode: baseCfg.bestFitMode ?? 'none', barValueMode: baseCfg.barValueMode ?? 'count', dotSize: baseCfg.dotSize ?? 'medium', showMeans: baseCfg.showMeans ?? false, showMedian: baseCfg.showMedian ?? false, showOutlierFences: baseCfg.showOutlierFences ?? false }
     }
     if (valid.length === 0 && baseCfg.chartType) {
-      return { ...baseCfg, chartType: null, bestFitMode: baseCfg.bestFitMode ?? 'none', barValueMode: baseCfg.barValueMode ?? 'count', dotSize: baseCfg.dotSize ?? 'medium', showOutlierFences: baseCfg.showOutlierFences ?? false }
+      return { ...baseCfg, chartType: null, bestFitMode: baseCfg.bestFitMode ?? 'none', barValueMode: baseCfg.barValueMode ?? 'count', dotSize: baseCfg.dotSize ?? 'medium', showMeans: baseCfg.showMeans ?? false, showMedian: baseCfg.showMedian ?? false, showOutlierFences: baseCfg.showOutlierFences ?? false }
     }
-    return { ...baseCfg, bestFitMode: baseCfg.bestFitMode ?? 'none', barValueMode: baseCfg.barValueMode ?? 'count', dotSize: baseCfg.dotSize ?? 'medium', showOutlierFences: baseCfg.showOutlierFences ?? false }
+    return { ...baseCfg, bestFitMode: baseCfg.bestFitMode ?? 'none', barValueMode: baseCfg.barValueMode ?? 'count', dotSize: baseCfg.dotSize ?? 'medium', showMeans: baseCfg.showMeans ?? false, showMedian: baseCfg.showMedian ?? false, showOutlierFences: baseCfg.showOutlierFences ?? false }
   }, [grid.columns])
 
   const sensors = useSensors(
@@ -1024,6 +1024,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                               onSetColorPalette={colorPalette => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), colorPalette } })}
                               onSetDotSize={dotSize => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), dotSize } })}
                               onSetShowMeans={showMeans => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), showMeans } })}
+                              onSetShowMedian={showMedian => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), showMedian } })}
                               onSetShowOutlierFences={showOutlierFences => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), showOutlierFences } })}
                               onSetBestFitMode={bestFitMode => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), bestFitMode } })}
                               onSetBarValueMode={mode => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), barValueMode: mode } })}

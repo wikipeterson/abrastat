@@ -562,11 +562,11 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₁</span>
+            <span className="text-sm font-mono font-medium text-[var(--color-text)]">p₁ − p₂</span>
             <select value={alternative} onChange={e=>setAlternative(e.target.value as Alternative)}
               className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
               <option value="less">&lt;</option><option value="greater">&gt;</option><option value="two">≠</option>
             </select>
-            <span className="text-sm font-mono font-medium text-[var(--color-text)]">p₁ − p₂</span>
             <span className="text-sm font-mono font-medium text-[var(--color-text)]">{nullDiff}</span>
           </div>
           <button onClick={handleLaunch} disabled={!data}

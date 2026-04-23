@@ -4,6 +4,149 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '@/lib/store'
 import { SimulationCardConfig } from '@/lib/exploreTypes'
 
+function longestStreak(flips: number[]): number {
+  if (flips.length === 0) return 0
+  let maxRun = 1, run = 1
+  for (let i = 1; i < flips.length; i++) {
+    if (flips[i] === flips[i - 1]) { run++; if (run > maxRun) maxRun = run }
+    else run = 1
+  }
+  return maxRun
+}
+
+function countSwitches(flips: number[]): number {
+  let n = 0
+  for (let i = 1; i < flips.length; i++) if (flips[i] !== flips[i - 1]) n++
+  return n
+}
+
+function simStats(values: number[]) {
+  const sorted = [...values].sort((a, b) => a - b)
+  const n = sorted.length
+  const mean = values.reduce((s, v) => s + v, 0) / n
+  const median = n % 2 === 0
+    ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
+    : sorted[Math.floor(n / 2)]
+  return { min: sorted[0], max: sorted[n - 1], mean, median }
+}
+
+function DotPlotSVG({
+  values,
+  label,
+  xMin,
+  xMax,
+  color,
+}: {
+  values: number[]
+  label: string
+  xMin: number
+  xMax: number
+  color: string
+}) {
+  const marginL = 44, marginR = 20, marginT = 16, marginB = 36
+  const svgW = 560
+  const plotW = svgW - marginL - marginR
+  const r = 5, spacing = r * 2 + 3
+
+  // Frequency map
+  const counts: Record<number, number> = {}
+  for (const v of values) counts[v] = (counts[v] || 0) + 1
+  const maxStack = Math.max(...Object.values(counts), 1)
+  const plotH = Math.max(60, maxStack * spacing + r + 4)
+  const svgH = plotH + marginT + marginB
+
+  const range = xMax > xMin ? xMax - xMin : 1
+  const xScale = (v: number) => marginL + ((v - xMin) / range) * plotW
+  const yBase = marginT + plotH
+
+  // Dots
+  const dots: { cx: number; cy: number; v: number }[] = []
+  for (const [vStr, count] of Object.entries(counts)) {
+    const v = Number(vStr)
+    const cx = xScale(v)
+    for (let i = 0; i < count; i++) {
+      dots.push({ cx, cy: yBase - r - i * spacing, v })
+    }
+  }
+
+  // X axis ticks — aim for ~8 evenly spaced
+  const tickCount = Math.min(xMax - xMin + 1, 9)
+  const tickStep = Math.max(1, Math.round((xMax - xMin) / (tickCount - 1)))
+  const ticks: number[] = []
+  for (let t = xMin; t <= xMax; t += tickStep) ticks.push(t)
+  if (ticks[ticks.length - 1] !== xMax) ticks.push(xMax)
+
+  const { min, max, mean, median } = simStats(values)
+  const meanX = xScale(mean)
+
+  return (
+    <div>
+      <div className="text-sm font-semibold text-[var(--color-text)] mb-1">{label}</div>
+      <div className="overflow-x-auto">
+        <svg
+          width={svgW}
+          height={svgH}
+          viewBox={`0 0 ${svgW} ${svgH}`}
+          style={{ display: 'block', maxWidth: '100%' }}
+        >
+          {/* Mean line */}
+          <line
+            x1={meanX} y1={marginT}
+            x2={meanX} y2={yBase}
+            stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="4 3" opacity={0.7}
+          />
+
+          {/* Dots */}
+          {dots.map((d, i) => (
+            <circle key={i} cx={d.cx} cy={d.cy} r={r} fill={color} opacity={0.82}>
+              <title>{d.v}</title>
+            </circle>
+          ))}
+
+          {/* X axis line */}
+          <line
+            x1={marginL} y1={yBase + 1}
+            x2={marginL + plotW} y2={yBase + 1}
+            stroke="#CBD5E1" strokeWidth={1}
+          />
+
+          {/* Ticks + labels */}
+          {ticks.map(t => (
+            <g key={t}>
+              <line
+                x1={xScale(t)} y1={yBase + 1}
+                x2={xScale(t)} y2={yBase + 6}
+                stroke="#94A3B8" strokeWidth={1}
+              />
+              <text
+                x={xScale(t)} y={yBase + 18}
+                textAnchor="middle"
+                fontSize={11}
+                fill="#64748B"
+              >{t}</text>
+            </g>
+          ))}
+
+          {/* Mean label */}
+          <text
+            x={meanX} y={marginT - 4}
+            textAnchor="middle"
+            fontSize={10}
+            fill="#F59E0B"
+            fontWeight={600}
+          >mean</text>
+        </svg>
+      </div>
+      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[var(--color-muted)]">
+        <span>Min: <span className="font-semibold text-[var(--color-text)]">{min}</span></span>
+        <span>Mean: <span className="font-semibold text-[var(--color-text)]">{mean.toFixed(2)}</span></span>
+        <span>Median: <span className="font-semibold text-[var(--color-text)]">{median}</span></span>
+        <span>Max: <span className="font-semibold text-[var(--color-text)]">{max}</span></span>
+      </div>
+    </div>
+  )
+}
+
 const COIN_CSS = `
 @keyframes coin-flat-spin {
   0%   { transform: scaleX(1)    rotateZ(0deg)  }
@@ -158,9 +301,11 @@ interface SimulationCardProps {
 export function SimulationCard({ cardId, config }: SimulationCardProps) {
   const [probabilityHeads, setProbabilityHeads] = useState(0.5)
   const [flipsPerGroup, setFlipsPerGroup] = useState(100)
+  const [numSimulations, setNumSimulations] = useState(30)
   const [history, setHistory] = useState<number[][]>([])
   const [displayFlips, setDisplayFlips] = useState<number[]>([])
   const [isSpinning, setIsSpinning] = useState(false)
+  const [multiResults, setMultiResults] = useState<{ streaks: number[]; switches: number[] } | null>(null)
   const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const recentHeads = history.map(group => group.reduce((sum, value) => sum + value, 0))
@@ -203,13 +348,26 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
     setHistory([])
     setDisplayFlips([])
     setIsSpinning(false)
+    setMultiResults(null)
+  }
+
+  function simulateMany() {
+    const n = clampPositiveInt(numSimulations, 200)
+    const streaks: number[] = []
+    const switches: number[] = []
+    for (let i = 0; i < n; i++) {
+      const { flips } = flipGroup(probabilityHeads, flipsPerGroup)
+      streaks.push(longestStreak(flips))
+      switches.push(countSwitches(flips))
+    }
+    setMultiResults({ streaks, switches })
   }
 
   return (
     <div className="h-full overflow-auto">
       <style>{COIN_CSS}</style>
       <div className="space-y-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <label className="space-y-1.5">
             <span className="text-sm font-medium text-[var(--color-text)]">Probability of Heads</span>
             <input
@@ -235,6 +393,17 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
             />
           </label>
 
+          <label className="space-y-1.5">
+            <span className="text-sm font-medium text-[var(--color-text)]">Number of Simulations</span>
+            <input
+              type="number"
+              min={1}
+              max={200}
+              value={numSimulations}
+              onChange={e => setNumSimulations(clampPositiveInt(Number(e.target.value), 200))}
+              className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
+            />
+          </label>
         </div>
 
         <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
@@ -245,6 +414,14 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
             className="shrink-0 rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
           >
             Flip Coins
+          </button>
+          <button
+            type="button"
+            onClick={simulateMany}
+            disabled={isSpinning}
+            className="shrink-0 rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 opacity-80"
+          >
+            Simulate Many
           </button>
           <button
             type="button"
@@ -306,6 +483,31 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
             )}
           </div>
         </div>
+
+        {multiResults && (
+          <div className="space-y-5 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <div>
+              <div className="text-sm font-semibold text-[var(--color-text)]">Multi-Simulation Results</div>
+              <div className="text-xs text-[var(--color-muted)]">
+                {multiResults.streaks.length} simulation{multiResults.streaks.length !== 1 ? 's' : ''} · {flipsPerGroup} coins each · p(H) = {probabilityHeads.toFixed(2)}
+              </div>
+            </div>
+            <DotPlotSVG
+              values={multiResults.streaks}
+              label="Longest Streak (consecutive H's or T's)"
+              xMin={1}
+              xMax={flipsPerGroup}
+              color="#0EA5A0"
+            />
+            <DotPlotSVG
+              values={multiResults.switches}
+              label="Number of Switches (H→T or T→H)"
+              xMin={0}
+              xMax={flipsPerGroup - 1}
+              color="#6366F1"
+            />
+          </div>
+        )}
       </div>
     </div>
   )

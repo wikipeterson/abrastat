@@ -147,6 +147,150 @@ function DotPlotSVG({
   )
 }
 
+function ConvergencePlotSVG({
+  simFlips,
+  probabilityHeads,
+}: {
+  simFlips: number[][]
+  probabilityHeads: number
+}) {
+  const n = simFlips[0]?.length ?? 0
+  if (n === 0 || simFlips.length === 0) return null
+
+  const marginL = 44, marginR = 64, marginT = 20, marginB = 36
+  const svgW = 560
+  const svgH = 240
+  const plotW = svgW - marginL - marginR
+  const plotH = svgH - marginT - marginB
+
+  // Downsample x-axis to at most 400 points so SVG stays fast
+  const step = Math.max(1, Math.ceil(n / 400))
+  const indices: number[] = []
+  for (let i = 0; i < n; i += step) indices.push(i)
+  if (indices[indices.length - 1] !== n - 1) indices.push(n - 1)
+
+  const xScale = (i: number) => marginL + (i / (n - 1 || 1)) * plotW
+  const yScale = (p: number) => marginT + plotH * (1 - p)
+
+  // Running proportions for each sim, sampled at `indices`
+  const runningProps: number[][] = simFlips.map(flips => {
+    let heads = 0
+    let si = 0
+    const sampled: number[] = new Array(indices.length)
+    for (let i = 0; i < n; i++) {
+      heads += flips[i]
+      if (si < indices.length && indices[si] === i) {
+        sampled[si] = heads / (i + 1)
+        si++
+      }
+    }
+    return sampled
+  })
+
+  // Mean proportion at each sampled position
+  const meanProps: number[] = indices.map((_, si) =>
+    runningProps.reduce((sum, props) => sum + props[si], 0) / simFlips.length
+  )
+
+  // SVG path strings
+  const allPaths = runningProps.map(props =>
+    props.map((p, si) =>
+      `${si === 0 ? 'M' : 'L'}${xScale(indices[si]).toFixed(1)},${yScale(p).toFixed(1)}`
+    ).join(' ')
+  )
+  const meanPathD = meanProps.map((p, si) =>
+    `${si === 0 ? 'M' : 'L'}${xScale(indices[si]).toFixed(1)},${yScale(p).toFixed(1)}`
+  ).join(' ')
+
+  const lineOpacity =
+    simFlips.length <= 5  ? 0.55 :
+    simFlips.length <= 15 ? 0.40 :
+    simFlips.length <= 40 ? 0.25 :
+    simFlips.length <= 100 ? 0.16 : 0.10
+
+  const yTicks = [0, 0.25, 0.5, 0.75, 1.0]
+  const xTickVals = n <= 10
+    ? Array.from({ length: n }, (_, i) => i + 1)
+    : [1, Math.round(n * 0.25), Math.round(n * 0.5), Math.round(n * 0.75), n]
+
+  const pRefY = yScale(probabilityHeads)
+
+  return (
+    <div>
+      <div className="text-sm font-semibold text-[var(--color-text)] mb-1">
+        Cumulative Proportion of Heads (by Flip #)
+      </div>
+      <div className="overflow-x-auto">
+        <svg
+          width={svgW}
+          height={svgH}
+          viewBox={`0 0 ${svgW} ${svgH}`}
+          style={{ display: 'block', maxWidth: '100%' }}
+        >
+          {/* Horizontal grid lines */}
+          {yTicks.map(p => (
+            <line key={p}
+              x1={marginL} y1={yScale(p)}
+              x2={marginL + plotW} y2={yScale(p)}
+              stroke={p === 0.5 ? '#CBD5E1' : '#E2E8F0'} strokeWidth={1}
+            />
+          ))}
+
+          {/* p(Heads) reference line */}
+          <line
+            x1={marginL} y1={pRefY}
+            x2={marginL + plotW} y2={pRefY}
+            stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="5 3"
+          />
+          <text
+            x={marginL + plotW + 6} y={pRefY + 4}
+            fontSize={10} fill="#F59E0B" fontWeight={600}
+          >p={probabilityHeads.toFixed(2)}</text>
+
+          {/* Individual simulation lines */}
+          {allPaths.map((d, i) => (
+            <path key={i} d={d} fill="none" stroke="#64748B" strokeWidth={1} opacity={lineOpacity} />
+          ))}
+
+          {/* Mean line */}
+          <path d={meanPathD} fill="none" stroke="#0EA5A0" strokeWidth={2.5} />
+
+          {/* Axes */}
+          <line x1={marginL} y1={marginT} x2={marginL} y2={marginT + plotH + 1} stroke="#CBD5E1" strokeWidth={1} />
+          <line x1={marginL} y1={marginT + plotH + 1} x2={marginL + plotW} y2={marginT + plotH + 1} stroke="#CBD5E1" strokeWidth={1} />
+
+          {/* Y ticks */}
+          {yTicks.map(p => (
+            <g key={p}>
+              <line x1={marginL - 4} y1={yScale(p)} x2={marginL} y2={yScale(p)} stroke="#94A3B8" strokeWidth={1} />
+              <text x={marginL - 7} y={yScale(p) + 4} textAnchor="end" fontSize={10} fill="#64748B">
+                {p === 1 ? '1' : p === 0 ? '0' : p.toFixed(2)}
+              </text>
+            </g>
+          ))}
+
+          {/* X ticks */}
+          {xTickVals.map(t => {
+            const x = xScale(t - 1)
+            return (
+              <g key={t}>
+                <line x1={x} y1={marginT + plotH + 1} x2={x} y2={marginT + plotH + 6} stroke="#94A3B8" strokeWidth={1} />
+                <text x={x} y={marginT + plotH + 18} textAnchor="middle" fontSize={11} fill="#64748B">{t}</text>
+              </g>
+            )
+          })}
+
+          {/* Legend */}
+          <line x1={marginL + plotW - 80} y1={marginT + 8} x2={marginL + plotW - 60} y2={marginT + 8} stroke="#0EA5A0" strokeWidth={2.5} />
+          <text x={marginL + plotW - 56} y={marginT + 12} fontSize={10} fill="#0EA5A0">mean</text>
+          <line x1={marginL + plotW - 80} y1={marginT + 22} x2={marginL + plotW - 60} y2={marginT + 22} stroke="#64748B" strokeWidth={1} opacity={0.5} />
+          <text x={marginL + plotW - 56} y={marginT + 26} fontSize={10} fill="#64748B">each sim</text>
+        </svg>
+      </div>
+    </div>
+  )
+}
+
 const COIN_CSS = `
 @keyframes coin-flat-spin {
   0%   { transform: scaleX(1)    rotateZ(0deg)  }
@@ -305,7 +449,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
   const [history, setHistory] = useState<number[][]>([])
   const [displayFlips, setDisplayFlips] = useState<number[]>([])
   const [isSpinning, setIsSpinning] = useState(false)
-  const [multiResults, setMultiResults] = useState<{ streaks: number[]; switches: number[] } | null>(null)
+  const [multiResults, setMultiResults] = useState<{ streaks: number[]; switches: number[]; flips: number[][] } | null>(null)
   const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const recentHeads = history.map(group => group.reduce((sum, value) => sum + value, 0))
@@ -355,12 +499,14 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
     const n = clampPositiveInt(numSimulations, 200)
     const streaks: number[] = []
     const switches: number[] = []
+    const allFlips: number[][] = []
     for (let i = 0; i < n; i++) {
       const { flips } = flipGroup(probabilityHeads, flipsPerGroup)
       streaks.push(longestStreak(flips))
       switches.push(countSwitches(flips))
+      allFlips.push(flips)
     }
-    setMultiResults({ streaks, switches })
+    setMultiResults({ streaks, switches, flips: allFlips })
   }
 
   return (
@@ -492,6 +638,10 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
                 {multiResults.streaks.length} simulation{multiResults.streaks.length !== 1 ? 's' : ''} · {flipsPerGroup} coins each · p(H) = {probabilityHeads.toFixed(2)}
               </div>
             </div>
+            <ConvergencePlotSVG
+              simFlips={multiResults.flips}
+              probabilityHeads={probabilityHeads}
+            />
             <DotPlotSVG
               values={multiResults.streaks}
               label="Longest Streak (consecutive H's or T's)"

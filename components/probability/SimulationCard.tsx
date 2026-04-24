@@ -663,126 +663,128 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
   return (
     <div className="h-full overflow-auto">
       <style>{COIN_CSS}</style>
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-[var(--color-text)]">Probability of Heads</span>
-            <input
-              type="number"
-              min={0}
-              max={1}
-              step={0.01}
-              value={probabilityHeads}
-              onChange={e => setProbabilityHeads(clampProbability(Number(e.target.value)))}
-              className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
-            />
-          </label>
+      <div className="flex gap-6 items-start">
 
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-[var(--color-text)]">Number of Coins</span>
-            <input
-              type="number"
-              min={1}
-              max={10000}
-              value={flipsPerGroup}
-              onChange={e => setFlipsPerGroup(clampPositiveInt(Number(e.target.value), 10000))}
-              className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
-            />
-          </label>
+        {/* ── Left column: controls ── */}
+        <div className="w-[340px] shrink-0 space-y-4">
+          <div className="grid grid-cols-1 gap-3">
+            <label className="space-y-1.5">
+              <span className="text-sm font-medium text-[var(--color-text)]">Probability of Heads</span>
+              <input
+                type="number"
+                min={0}
+                max={1}
+                step={0.01}
+                value={probabilityHeads}
+                onChange={e => setProbabilityHeads(clampProbability(Number(e.target.value)))}
+                className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
+              />
+            </label>
 
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-[var(--color-text)]">Number of Simulations</span>
-            <input
-              type="number"
-              min={1}
-              max={200}
-              value={numSimulations}
-              onChange={e => setNumSimulations(clampPositiveInt(Number(e.target.value), 200))}
-              className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
-            />
-          </label>
-        </div>
+            <label className="space-y-1.5">
+              <span className="text-sm font-medium text-[var(--color-text)]">Number of Coins</span>
+              <input
+                type="number"
+                min={1}
+                max={10000}
+                value={flipsPerGroup}
+                onChange={e => setFlipsPerGroup(clampPositiveInt(Number(e.target.value), 10000))}
+                className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
+              />
+            </label>
 
-        <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
-          <button
-            type="button"
-            onClick={simulateOneGroup}
-            disabled={isSpinning}
-            className="shrink-0 rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-          >
-            Flip Coins
-          </button>
-          <button
-            type="button"
-            onClick={simulateMany}
-            disabled={isSpinning}
-            className="shrink-0 rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 opacity-80"
-          >
-            Simulate Many
-          </button>
-          <button
-            type="button"
-            onClick={reset}
-            className="shrink-0 rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-slate-50"
-          >
-            Reset
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <StatPill label="Last Heads" value={lastHeads} />
-          <StatPill label="Groups Run" value={totalGroups} />
-          <StatPill label="Expected Heads" value={(probabilityHeads * flipsPerGroup).toFixed(2)} />
-        </div>
-
-        <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <div className="text-sm font-semibold text-[var(--color-text)]">Latest Group Flip</div>
-              <div className="text-xs text-[var(--color-muted)]">
-                {isSpinning
-                  ? `Flipping ${flipsPerGroup} coin${flipsPerGroup !== 1 ? 's' : ''}...`
-                  : `Showing the latest group of ${flipsPerGroup} flip${flipsPerGroup !== 1 ? 's' : ''}.`}
-              </div>
-            </div>
-            <div className="text-sm text-[var(--color-muted)]">
-              p(Heads): <span className="font-semibold text-[var(--color-text)]">{probabilityHeads.toFixed(2)}</span>
-            </div>
+            <label className="space-y-1.5">
+              <span className="text-sm font-medium text-[var(--color-text)]">Number of Simulations</span>
+              <input
+                type="number"
+                min={1}
+                max={200}
+                value={numSimulations}
+                onChange={e => setNumSimulations(clampPositiveInt(Number(e.target.value), 200))}
+                className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
+              />
+            </label>
           </div>
 
-          <div className="mt-4 rounded-xl bg-slate-50 border border-slate-100 p-3 min-h-[120px]">
-            {history.length === 0 && !isSpinning ? (
-              <div className="text-sm text-[var(--color-muted)]">
-                No groups simulated yet. Set the head probability and run one or more groups.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div
-                  className="flex flex-wrap items-start"
-                  style={{ gap: coinGap }}
-                >
-                  {visibleFlips.map((value, index) => (
-                    <FlipCoin
-                      key={`${index}-${isSpinning ? 'spin' : value}`}
-                      face={(value ? 'heads' : 'tails')}
-                      size={coinSize}
-                      spinning={isSpinning}
-                      spinDelay={spinDelays[index] ?? 0}
-                    />
-                  ))}
-                </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--color-muted)]">
-                  <span>Heads: <span className="font-semibold text-[var(--color-text)]">{visibleHeads ?? '—'}</span></span>
-                  <span>Tails: <span className="font-semibold text-[var(--color-text)]">{visibleHeads === null ? '—' : visibleFlips.length - visibleHeads}</span></span>
-                  <span>Rows: <span className="font-semibold text-[var(--color-text)]">{Math.max(1, Math.ceil(flipsPerGroup / perRow))}</span></span>
-                </div>
-              </div>
-            )}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={simulateOneGroup}
+              disabled={isSpinning}
+              className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+            >
+              Flip Coins
+            </button>
+            <button
+              type="button"
+              onClick={simulateMany}
+              disabled={isSpinning}
+              className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 opacity-80"
+            >
+              Simulate Many
+            </button>
+            <button
+              type="button"
+              onClick={reset}
+              className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-slate-50"
+            >
+              Reset
+            </button>
           </div>
-        </div>
 
-        {multiResults && (
+          <div className="grid grid-cols-3 gap-2">
+            <StatPill label="Last Heads" value={lastHeads} />
+            <StatPill label="Groups Run" value={totalGroups} />
+            <StatPill label="Expected" value={(probabilityHeads * flipsPerGroup).toFixed(2)} />
+          </div>
+
           <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-sm font-semibold text-[var(--color-text)]">Latest Group Flip</div>
+                <div className="text-xs text-[var(--color-muted)]">
+                  {isSpinning
+                    ? `Flipping ${flipsPerGroup} coin${flipsPerGroup !== 1 ? 's' : ''}...`
+                    : `${flipsPerGroup} flip${flipsPerGroup !== 1 ? 's' : ''}`}
+                </div>
+              </div>
+              <div className="text-sm text-[var(--color-muted)]">
+                p(H): <span className="font-semibold text-[var(--color-text)]">{probabilityHeads.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-3 min-h-[100px]">
+              {history.length === 0 && !isSpinning ? (
+                <div className="text-sm text-[var(--color-muted)]">
+                  No groups simulated yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-start" style={{ gap: coinGap }}>
+                    {visibleFlips.map((value, index) => (
+                      <FlipCoin
+                        key={`${index}-${isSpinning ? 'spin' : value}`}
+                        face={(value ? 'heads' : 'tails')}
+                        size={coinSize}
+                        spinning={isSpinning}
+                        spinDelay={spinDelays[index] ?? 0}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--color-muted)]">
+                    <span>H: <span className="font-semibold text-[var(--color-text)]">{visibleHeads ?? '—'}</span></span>
+                    <span>T: <span className="font-semibold text-[var(--color-text)]">{visibleHeads === null ? '—' : visibleFlips.length - visibleHeads}</span></span>
+                    <span>Rows: <span className="font-semibold text-[var(--color-text)]">{Math.max(1, Math.ceil(flipsPerGroup / perRow))}</span></span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Right column: multi-sim graph ── */}
+        {multiResults ? (
+          <div className="flex-1 min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
             <div className="mb-3">
               <div className="text-sm font-semibold text-[var(--color-text)]">Multi-Simulation Results</div>
               <div className="text-xs text-[var(--color-muted)]">
@@ -790,7 +792,6 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
               </div>
             </div>
 
-            {/* Plot selector tabs */}
             <div className="mb-4 flex flex-wrap gap-1.5">
               {(
                 [
@@ -840,7 +841,12 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
               />
             )}
           </div>
+        ) : (
+          <div className="flex-1 min-w-0 flex items-center justify-center rounded-2xl border border-dashed border-slate-200 p-8 text-sm text-[var(--color-muted)]">
+            Click <span className="mx-1 font-medium text-[var(--color-text)]">Simulate Many</span> to see graphs here.
+          </div>
         )}
+
       </div>
     </div>
   )

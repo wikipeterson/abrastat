@@ -291,6 +291,156 @@ function ConvergencePlotSVG({
   )
 }
 
+function GapPlotSVG({
+  simFlips,
+  probabilityHeads,
+}: {
+  simFlips: number[][]
+  probabilityHeads: number
+}) {
+  const n = simFlips[0]?.length ?? 0
+  if (n === 0 || simFlips.length === 0) return null
+
+  const marginL = 52, marginR = 20, marginT = 20, marginB = 36
+  const svgW = 560
+  const svgH = 240
+  const plotW = svgW - marginL - marginR
+  const plotH = svgH - marginT - marginB
+
+  const step = Math.max(1, Math.ceil(n / 400))
+  const indices: number[] = []
+  for (let i = 0; i < n; i += step) indices.push(i)
+  if (indices[indices.length - 1] !== n - 1) indices.push(n - 1)
+
+  // Running gap = heads - tails = 2*heads - (i+1), sampled at indices
+  const runningGaps: number[][] = simFlips.map(flips => {
+    let heads = 0
+    let si = 0
+    const sampled: number[] = new Array(indices.length)
+    for (let i = 0; i < n; i++) {
+      heads += flips[i]
+      if (si < indices.length && indices[si] === i) {
+        sampled[si] = 2 * heads - (i + 1)
+        si++
+      }
+    }
+    return sampled
+  })
+
+  // Mean gap at each sampled position
+  const meanGaps: number[] = indices.map((_, si) =>
+    runningGaps.reduce((sum, g) => sum + g[si], 0) / simFlips.length
+  )
+
+  // Y domain: symmetric around expected value, cover all data
+  const allVals = runningGaps.flat()
+  const dataMin = Math.min(...allVals)
+  const dataMax = Math.max(...allVals)
+  const pad = Math.max(1, Math.round((dataMax - dataMin) * 0.08))
+  const yMin = dataMin - pad
+  const yMax = dataMax + pad
+
+  const xScale = (i: number) => marginL + (i / (n - 1 || 1)) * plotW
+  const yScale = (v: number) => marginT + plotH * (1 - (v - yMin) / (yMax - yMin || 1))
+
+  const allPaths = runningGaps.map(gaps =>
+    gaps.map((g, si) =>
+      `${si === 0 ? 'M' : 'L'}${xScale(indices[si]).toFixed(1)},${yScale(g).toFixed(1)}`
+    ).join(' ')
+  )
+  const meanPathD = meanGaps.map((g, si) =>
+    `${si === 0 ? 'M' : 'L'}${xScale(indices[si]).toFixed(1)},${yScale(g).toFixed(1)}`
+  ).join(' ')
+
+  const lineOpacity =
+    simFlips.length <= 5  ? 0.55 :
+    simFlips.length <= 15 ? 0.40 :
+    simFlips.length <= 40 ? 0.25 :
+    simFlips.length <= 100 ? 0.16 : 0.10
+
+  // Y ticks: a few round numbers spanning the range
+  const rawStep = (yMax - yMin) / 5
+  const tickStep = Math.max(1, Math.pow(10, Math.floor(Math.log10(rawStep))) * Math.round(rawStep / Math.pow(10, Math.floor(Math.log10(rawStep)))))
+  const yTicks: number[] = []
+  const tStart = Math.ceil(yMin / tickStep) * tickStep
+  for (let t = tStart; t <= yMax + 0.001; t += tickStep) yTicks.push(Math.round(t))
+
+  const xTickVals = n <= 10
+    ? Array.from({ length: n }, (_, i) => i + 1)
+    : [1, Math.round(n * 0.25), Math.round(n * 0.5), Math.round(n * 0.75), n]
+
+  // Expected final gap = (2p-1)*n
+  const expectedFinalGap = (2 * probabilityHeads - 1) * n
+  const zeroY = yScale(0)
+
+  return (
+    <div>
+      <div className="text-sm font-semibold text-[var(--color-text)] mb-1">
+        Head–Tail Gap (Heads − Tails, by Flip #)
+      </div>
+      <div className="overflow-x-auto">
+        <svg
+          width={svgW}
+          height={svgH}
+          viewBox={`0 0 ${svgW} ${svgH}`}
+          style={{ display: 'block', maxWidth: '100%' }}
+        >
+          {/* Grid lines at y ticks */}
+          {yTicks.map(t => (
+            <line key={t}
+              x1={marginL} y1={yScale(t)}
+              x2={marginL + plotW} y2={yScale(t)}
+              stroke={t === 0 ? '#CBD5E1' : '#E2E8F0'} strokeWidth={t === 0 ? 1.5 : 1}
+            />
+          ))}
+
+          {/* Zero reference label */}
+          {zeroY >= marginT && zeroY <= marginT + plotH && (
+            <text x={marginL - 7} y={zeroY + 4} textAnchor="end" fontSize={10} fill="#94A3B8">0</text>
+          )}
+
+          {/* Individual sim lines */}
+          {allPaths.map((d, i) => (
+            <path key={i} d={d} fill="none" stroke="#64748B" strokeWidth={1} opacity={lineOpacity} />
+          ))}
+
+          {/* Mean line */}
+          <path d={meanPathD} fill="none" stroke="#0EA5A0" strokeWidth={2.5} />
+
+          {/* Axes */}
+          <line x1={marginL} y1={marginT} x2={marginL} y2={marginT + plotH + 1} stroke="#CBD5E1" strokeWidth={1} />
+          <line x1={marginL} y1={marginT + plotH + 1} x2={marginL + plotW} y2={marginT + plotH + 1} stroke="#CBD5E1" strokeWidth={1} />
+
+          {/* Y ticks */}
+          {yTicks.map(t => (
+            <g key={t}>
+              <line x1={marginL - 4} y1={yScale(t)} x2={marginL} y2={yScale(t)} stroke="#94A3B8" strokeWidth={1} />
+              <text x={marginL - 7} y={yScale(t) + 4} textAnchor="end" fontSize={10} fill="#64748B">{t}</text>
+            </g>
+          ))}
+
+          {/* X ticks */}
+          {xTickVals.map(t => {
+            const x = xScale(t - 1)
+            return (
+              <g key={t}>
+                <line x1={x} y1={marginT + plotH + 1} x2={x} y2={marginT + plotH + 6} stroke="#94A3B8" strokeWidth={1} />
+                <text x={x} y={marginT + plotH + 18} textAnchor="middle" fontSize={11} fill="#64748B">{t}</text>
+              </g>
+            )
+          })}
+
+          {/* Legend */}
+          <line x1={marginL + plotW - 80} y1={marginT + 8} x2={marginL + plotW - 60} y2={marginT + 8} stroke="#0EA5A0" strokeWidth={2.5} />
+          <text x={marginL + plotW - 56} y={marginT + 12} fontSize={10} fill="#0EA5A0">mean</text>
+          <line x1={marginL + plotW - 80} y1={marginT + 22} x2={marginL + plotW - 60} y2={marginT + 22} stroke="#64748B" strokeWidth={1} opacity={0.5} />
+          <text x={marginL + plotW - 56} y={marginT + 26} fontSize={10} fill="#64748B">each sim</text>
+        </svg>
+      </div>
+    </div>
+  )
+}
+
 const COIN_CSS = `
 @keyframes coin-flat-spin {
   0%   { transform: scaleX(1)    rotateZ(0deg)  }
@@ -450,6 +600,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
   const [displayFlips, setDisplayFlips] = useState<number[]>([])
   const [isSpinning, setIsSpinning] = useState(false)
   const [multiResults, setMultiResults] = useState<{ streaks: number[]; switches: number[]; flips: number[][] } | null>(null)
+  const [activePlot, setActivePlot] = useState<'convergence' | 'gap' | 'streak' | 'switches'>('convergence')
   const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const recentHeads = history.map(group => group.reduce((sum, value) => sum + value, 0))
@@ -631,31 +782,63 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
         </div>
 
         {multiResults && (
-          <div className="space-y-5 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-            <div>
+          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <div className="mb-3">
               <div className="text-sm font-semibold text-[var(--color-text)]">Multi-Simulation Results</div>
               <div className="text-xs text-[var(--color-muted)]">
                 {multiResults.streaks.length} simulation{multiResults.streaks.length !== 1 ? 's' : ''} · {flipsPerGroup} coins each · p(H) = {probabilityHeads.toFixed(2)}
               </div>
             </div>
-            <ConvergencePlotSVG
-              simFlips={multiResults.flips}
-              probabilityHeads={probabilityHeads}
-            />
-            <DotPlotSVG
-              values={multiResults.streaks}
-              label="Longest Streak (consecutive H's or T's)"
-              xMin={1}
-              xMax={flipsPerGroup}
-              color="#0EA5A0"
-            />
-            <DotPlotSVG
-              values={multiResults.switches}
-              label="Number of Switches (H→T or T→H)"
-              xMin={0}
-              xMax={flipsPerGroup - 1}
-              color="#6366F1"
-            />
+
+            {/* Plot selector tabs */}
+            <div className="mb-4 flex flex-wrap gap-1.5">
+              {(
+                [
+                  { key: 'convergence', label: 'Proportion' },
+                  { key: 'gap',         label: 'Head–Tail Gap' },
+                  { key: 'streak',      label: 'Longest Streak' },
+                  { key: 'switches',    label: 'Switches' },
+                ] as const
+              ).map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActivePlot(key)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                    activePlot === key
+                      ? 'bg-[var(--color-accent)] text-white'
+                      : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {activePlot === 'convergence' && (
+              <ConvergencePlotSVG simFlips={multiResults.flips} probabilityHeads={probabilityHeads} />
+            )}
+            {activePlot === 'gap' && (
+              <GapPlotSVG simFlips={multiResults.flips} probabilityHeads={probabilityHeads} />
+            )}
+            {activePlot === 'streak' && (
+              <DotPlotSVG
+                values={multiResults.streaks}
+                label="Longest Streak (consecutive H's or T's)"
+                xMin={1}
+                xMax={flipsPerGroup}
+                color="#0EA5A0"
+              />
+            )}
+            {activePlot === 'switches' && (
+              <DotPlotSVG
+                values={multiResults.switches}
+                label="Number of Switches (H→T or T→H)"
+                xMin={0}
+                xMax={flipsPerGroup - 1}
+                color="#6366F1"
+              />
+            )}
           </div>
         )}
       </div>

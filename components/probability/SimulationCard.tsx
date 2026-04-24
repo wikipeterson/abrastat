@@ -825,8 +825,8 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
               <DotPlotSVG
                 values={multiResults.streaks}
                 label="Longest Streak (consecutive H's or T's)"
-                xMin={1}
-                xMax={flipsPerGroup}
+                xMin={Math.min(...multiResults.streaks)}
+                xMax={Math.max(...multiResults.streaks)}
                 color="#0EA5A0"
               />
             )}
@@ -834,8 +834,8 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
               <DotPlotSVG
                 values={multiResults.switches}
                 label="Number of Switches (H→T or T→H)"
-                xMin={0}
-                xMax={flipsPerGroup - 1}
+                xMin={Math.min(...multiResults.switches)}
+                xMax={Math.max(...multiResults.switches)}
                 color="#6366F1"
               />
             )}

@@ -45,15 +45,16 @@ function DotPlotSVG({
 }) {
   const marginL = 44, marginR = 20, marginT = 16, marginB = 36
   const svgW = 560
+  const svgH = 260
   const plotW = svgW - marginL - marginR
-  const r = 5, spacing = r * 2 + 3
 
   // Frequency map
   const counts: Record<number, number> = {}
   for (const v of values) counts[v] = (counts[v] || 0) + 1
   const maxStack = Math.max(...Object.values(counts), 1)
-  const plotH = Math.max(60, maxStack * spacing + r + 4)
-  const svgH = plotH + marginT + marginB
+  const plotH = svgH - marginT - marginB
+  const stackStep = Math.min(13, plotH / maxStack)
+  const r = Math.max(2, Math.min(5, stackStep / 2 - 0.35))
 
   const range = xMax > xMin ? xMax - xMin : 1
   const xScale = (v: number) => marginL + ((v - xMin) / range) * plotW
@@ -65,7 +66,7 @@ function DotPlotSVG({
     const v = Number(vStr)
     const cx = xScale(v)
     for (let i = 0; i < count; i++) {
-      dots.push({ cx, cy: yBase - r - i * spacing, v })
+      dots.push({ cx, cy: yBase - r - i * stackStep, v })
     }
   }
 

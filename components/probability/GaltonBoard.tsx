@@ -492,6 +492,10 @@ export function GaltonBoard() {
 
   useEffect(() => { redrawStatic() }, [redrawStatic])
 
+  useEffect(() => {
+    requestAnimationFrame(redrawStatic)
+  }, [showNormalCurve, redrawStatic])
+
   useEffect(() => () => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
   }, [])

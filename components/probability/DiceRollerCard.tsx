@@ -372,7 +372,12 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
 
       {/* ── Physics tray ───────────────────────────────────────────────────── */}
       <div className="flex-1 min-h-[clamp(360px,58vh,760px)] px-3 py-3">
-        <div className="mx-auto h-full max-w-full aspect-[11.1/6.5]">
+        <div
+          className="mx-auto h-full max-w-full"
+          style={{
+            width: 'min(100%, calc(clamp(360px, 58vh, 760px) * 11.1 / 6.5))',
+          }}
+        >
           <D6Canvas
             ref={canvasRef}
             onDieSettled={handleDieSettled}

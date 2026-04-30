@@ -476,7 +476,6 @@ function FlipCoin({
   const innerInset = Math.max(4, Math.round(size * 0.11))
   const reliefInset = Math.max(7, Math.round(size * 0.19))
   const letterSize = Math.max(10, Math.round(size * 0.36))
-  const neutralBackground = 'linear-gradient(90deg, #0EA5A0 0%, #47CFC8 48%, #D7E2EE 52%, #A7B6C8 100%)'
   const goldOuter = 'linear-gradient(145deg, #8B6100 0%, #C99300 18%, #F8DD72 40%, #C68800 68%, #7B5100 100%)'
   const goldInner = 'radial-gradient(circle at 32% 28%, #FFF2A3 0%, #F7D24E 24%, #E0A815 58%, #A86900 100%)'
   const silverOuter = 'linear-gradient(145deg, #70757E 0%, #B8BDC5 18%, #F5F7FA 40%, #A0A7B0 68%, #666B73 100%)'
@@ -508,12 +507,8 @@ function FlipCoin({
           position: 'relative',
         overflow: 'hidden',
         boxSizing: 'border-box',
-        background: spinning
-          ? neutralBackground
-          : isHeads
-            ? goldInner
-            : silverInner,
-        border: `${rimSize}px solid ${spinning ? '#5E7085' : isHeads ? '#8B6100' : '#70757E'}`,
+        background: isHeads ? goldInner : silverInner,
+        border: `${rimSize}px solid ${isHeads ? '#8B6100' : '#70757E'}`,
         boxShadow: spinning
           ? `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(22,52,76,0.18), inset 0 1px 2px rgba(255,255,255,0.24)`
           : `0 ${Math.round(size * 0.08)}px ${Math.round(size * 0.2)}px ${rimShadow}, inset 0 1px 2px rgba(255,255,255,0.4)`,
@@ -528,7 +523,7 @@ function FlipCoin({
               position: 'absolute',
               inset: 0,
               borderRadius: '50%',
-              background: spinning ? 'linear-gradient(145deg, #8E9BA7 0%, #D9E1E8 26%, #8DA0B2 52%, #E6EDF4 74%, #6E7E8E 100%)' : (isHeads ? goldOuter : silverOuter),
+              background: isHeads ? goldOuter : silverOuter,
             }}
           />
           <div
@@ -536,7 +531,7 @@ function FlipCoin({
               position: 'absolute',
               inset: innerInset,
               borderRadius: '50%',
-              background: spinning ? 'radial-gradient(circle at 32% 28%, #F4FAFF 0%, #AEC0D2 28%, #6F869A 68%, #D9E1E8 100%)' : (isHeads ? goldInner : silverInner),
+              background: isHeads ? goldInner : silverInner,
               boxShadow: `inset 0 1px 1px ${spinning ? 'rgba(255,255,255,0.6)' : edgeHighlight}, inset 0 -2px 4px rgba(0,0,0,0.15)`,
             }}
           />
@@ -545,7 +540,7 @@ function FlipCoin({
               position: 'absolute',
               inset: reliefInset,
               borderRadius: '50%',
-              border: `${Math.max(1, Math.round(size * 0.028))}px solid ${spinning ? 'rgba(95,110,126,0.4)' : (isHeads ? 'rgba(142,99,0,0.4)' : 'rgba(98,106,116,0.35)')}`,
+              border: `${Math.max(1, Math.round(size * 0.028))}px solid ${isHeads ? 'rgba(142,99,0,0.4)' : 'rgba(98,106,116,0.35)'}`,
               boxShadow: `inset 0 1px 0 ${spinning ? 'rgba(255,255,255,0.65)' : edgeHighlight}, 0 0 0 1px rgba(255,255,255,0.18)`,
             }}
           />

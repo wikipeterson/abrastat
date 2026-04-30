@@ -376,13 +376,13 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
 
       {/* ── Physics tray ───────────────────────────────────────────────────── */}
       <div
-        className="flex-1 min-h-0 px-3 py-3"
+        className="flex-1 min-h-0 px-3 py-3 grid place-items-center"
         style={{ height: stageHeight }}
       >
         <div
-          className="mx-auto h-full max-w-full"
+          className="h-full max-w-full"
           style={{
-            width: `min(100%, calc(${stageHeight} * ${stageAspect}))`,
+            aspectRatio: stageAspect,
           }}
         >
           <D6Canvas

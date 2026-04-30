@@ -595,7 +595,7 @@ interface SimulationCardProps {
 
 export function SimulationCard({ cardId, config }: SimulationCardProps) {
   const [probabilityHeads, setProbabilityHeads] = useState(0.5)
-  const [flipsPerGroup, setFlipsPerGroup] = useState(100)
+  const [flipsPerGroup, setFlipsPerGroup] = useState(10)
   const [numSimulations, setNumSimulations] = useState(30)
   const [history, setHistory] = useState<number[][]>([])
   const [displayFlips, setDisplayFlips] = useState<number[]>([])

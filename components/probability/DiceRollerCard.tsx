@@ -10,6 +10,7 @@ import { DiceRollerCardConfig } from '@/lib/exploreTypes'
 
 const DICE_TYPES = [6, 10, 100] as const
 type DiceSides = typeof DICE_TYPES[number]
+const DICE_STAGE_ASPECT = 10.96 / 6.66
 
 const DIE_BG: Record<DiceSides, string> = {
   6:   '#0EA5A0',
@@ -107,6 +108,7 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   const [tray, setTray]               = useState<DieInTray[]>([])
   const [finalResults, setFinalResults] = useState<Record<string, number>>({})
   const [tuning] = useState<DiceTuning>(DEFAULT_DICE_TUNING)
+  const [viewportHeight, setViewportHeight] = useState(900)
   const canvasRef = useRef<D6CanvasHandle>(null)
   const rollAudioRef = useRef<HTMLAudioElement | null>(null)
   const thudPoolRef = useRef<HTMLAudioElement[]>([])
@@ -262,7 +264,19 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   const stageHeight = hideHeader
     ? 'clamp(420px, calc(100vh - 11rem), 760px)'
     : 'clamp(360px, 62vh, 760px)'
-  const stageAspect = '10.96 / 6.66'
+  const stageMaxWidth = hideHeader
+    ? Math.max(760, Math.min(1320, (viewportHeight - 176) * DICE_STAGE_ASPECT))
+    : undefined
+
+  useEffect(() => {
+    function updateViewportHeight() {
+      setViewportHeight(window.innerHeight)
+    }
+
+    updateViewportHeight()
+    window.addEventListener('resize', updateViewportHeight)
+    return () => window.removeEventListener('resize', updateViewportHeight)
+  }, [])
 
   // Keep linked results card's minValue/maxValue in sync with current tray
   useEffect(() => {
@@ -380,9 +394,10 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
         style={{ height: stageHeight }}
       >
         <div
-          className="h-full max-w-full"
+          className="h-full w-full"
           style={{
-            aspectRatio: stageAspect,
+            aspectRatio: `${DICE_STAGE_ASPECT}`,
+            maxWidth: stageMaxWidth ? `${stageMaxWidth}px` : undefined,
           }}
         >
           <D6Canvas

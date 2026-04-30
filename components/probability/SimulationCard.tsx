@@ -470,9 +470,19 @@ function FlipCoin({
   spinDelay?: number
 }) {
   const isHeads = face === 'heads'
-  const rimSize = Math.max(1, Math.round(size * 0.055))
-  const iconSize = Math.round(size * (isHeads ? 0.52 : 0.46))
+  const rimSize = Math.max(2, Math.round(size * 0.06))
+  const innerInset = Math.max(4, Math.round(size * 0.11))
+  const reliefInset = Math.max(7, Math.round(size * 0.19))
+  const letterSize = Math.max(10, Math.round(size * 0.36))
   const neutralBackground = 'linear-gradient(90deg, #0EA5A0 0%, #47CFC8 48%, #D7E2EE 52%, #A7B6C8 100%)'
+  const goldOuter = 'linear-gradient(145deg, #8B6100 0%, #C99300 18%, #F8DD72 40%, #C68800 68%, #7B5100 100%)'
+  const goldInner = 'radial-gradient(circle at 32% 28%, #FFF2A3 0%, #F7D24E 24%, #E0A815 58%, #A86900 100%)'
+  const silverOuter = 'linear-gradient(145deg, #70757E 0%, #B8BDC5 18%, #F5F7FA 40%, #A0A7B0 68%, #666B73 100%)'
+  const silverInner = 'radial-gradient(circle at 32% 28%, #FFFFFF 0%, #E7EBEF 26%, #C7CDD4 58%, #969DA6 100%)'
+  const edgeHighlight = isHeads ? 'rgba(255,245,180,0.78)' : 'rgba(255,255,255,0.72)'
+  const rimShadow = isHeads ? 'rgba(104,65,0,0.45)' : 'rgba(70,78,88,0.34)'
+  const stampColor = isHeads ? '#7B4F00' : '#555D67'
+  const stampHighlight = isHeads ? 'rgba(255,244,188,0.82)' : 'rgba(255,255,255,0.8)'
 
   return (
     <div
@@ -488,57 +498,86 @@ function FlipCoin({
     >
       <div
         style={{
-          width: '100%',
-          height: '100%',
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
+        width: '100%',
+        height: '100%',
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          overflow: 'hidden',
-          boxSizing: 'border-box',
-          background: spinning
-            ? neutralBackground
-            : isHeads
-              ? 'radial-gradient(circle at 36% 33%, #5CE0DB, #0EA5A0 52%, #097B76)'
-              : 'radial-gradient(circle at 36% 33%, #F1F5F9, #CBD5E1 52%, #94A3B8)',
-          border: `${rimSize}px solid ${spinning ? '#5E7085' : isHeads ? '#0A6663' : '#7C8FA1'}`,
-          boxShadow: spinning
-            ? `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(22,52,76,0.18), inset 0 1px 2px rgba(255,255,255,0.24)`
-            : isHeads
-              ? `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(0,80,76,0.30), inset 0 1px 2px rgba(255,255,255,0.28)`
-              : `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(0,0,0,0.18), inset 0 1px 2px rgba(255,255,255,0.40)`,
+        overflow: 'hidden',
+        boxSizing: 'border-box',
+        background: spinning
+          ? neutralBackground
+          : isHeads
+            ? goldInner
+            : silverInner,
+        border: `${rimSize}px solid ${spinning ? '#5E7085' : isHeads ? '#8B6100' : '#70757E'}`,
+        boxShadow: spinning
+          ? `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(22,52,76,0.18), inset 0 1px 2px rgba(255,255,255,0.24)`
+          : `0 ${Math.round(size * 0.08)}px ${Math.round(size * 0.2)}px ${rimShadow}, inset 0 1px 2px rgba(255,255,255,0.4)`,
         }}
       >
-        <div style={{
-          position: 'absolute',
-          top: '6%',
-          left: '14%',
-          width: '38%',
-          height: '30%',
-          borderRadius: '50%',
-          background: 'rgba(255,255,255,0.24)',
-          transform: 'rotate(-22deg)',
-          pointerEvents: 'none',
-        }} />
         {!spinning && (
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            {isHeads ? (
-              <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none">
-                <polyline
-                  points="3.5,12 9,18.5 20.5,6"
-                  stroke="white"
-                  strokeWidth="3.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            ) : (
-              <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none">
-                <line x1="6" y1="6" x2="18" y2="18" stroke="#3D5166" strokeWidth="2.8" strokeLinecap="round" />
-                <line x1="18" y1="6" x2="6" y2="18" stroke="#3D5166" strokeWidth="2.8" strokeLinecap="round" />
-              </svg>
-            )}
+          <>
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                background: isHeads ? goldOuter : silverOuter,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                inset: innerInset,
+                borderRadius: '50%',
+                background: isHeads ? goldInner : silverInner,
+                boxShadow: `inset 0 1px 1px ${edgeHighlight}, inset 0 -2px 4px rgba(0,0,0,0.15)`,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                inset: reliefInset,
+                borderRadius: '50%',
+                border: `${Math.max(1, Math.round(size * 0.028))}px solid ${isHeads ? 'rgba(142,99,0,0.4)' : 'rgba(98,106,116,0.35)'}`,
+                boxShadow: `inset 0 1px 0 ${edgeHighlight}, 0 0 0 1px rgba(255,255,255,0.18)`,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                top: '10%',
+                left: '16%',
+                width: '42%',
+                height: '28%',
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.32)',
+                transform: 'rotate(-20deg)',
+                filter: 'blur(0.4px)',
+                pointerEvents: 'none',
+              }}
+            />
+          </>
+        )}
+        {!spinning && (
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              fontSize: letterSize,
+              lineHeight: 1,
+              fontWeight: 700,
+              fontFamily: 'Georgia, "Times New Roman", serif',
+              color: stampColor,
+              textShadow: `0 1px 0 ${stampHighlight}, 0 -1px 0 rgba(0,0,0,0.12)`,
+              transform: 'translateY(-2%)',
+              letterSpacing: '0.02em',
+            }}
+          >
+            {isHeads ? 'H' : 'T'}
           </div>
         )}
       </div>

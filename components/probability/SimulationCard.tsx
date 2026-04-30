@@ -443,16 +443,18 @@ function GapPlotSVG({
 }
 
 const COIN_CSS = `
-@keyframes coin-flat-spin {
-  0%   { transform: scaleX(1)    rotateZ(0deg)  }
-  12%  { transform: scaleX(0.06) rotateZ(3deg)  }
-  25%  { transform: scaleX(1)    rotateZ(-2deg) }
-  37%  { transform: scaleX(0.06) rotateZ(2deg)  }
-  50%  { transform: scaleX(1)    rotateZ(-1deg) }
-  62%  { transform: scaleX(0.06) rotateZ(3deg)  }
-  75%  { transform: scaleX(1)    rotateZ(-2deg) }
-  87%  { transform: scaleX(0.06) rotateZ(1deg)  }
-  100% { transform: scaleX(1)    rotateZ(0deg)  }
+@keyframes coin-flip-spin {
+  0%   { transform: translateY(0) rotateY(0deg) scale(1); }
+  20%  { transform: translateY(-7%) rotateY(88deg) scale(0.92, 1.04); }
+  50%  { transform: translateY(-12%) rotateY(180deg) scale(1.01); }
+  80%  { transform: translateY(-7%) rotateY(272deg) scale(0.92, 1.04); }
+  100% { transform: translateY(0) rotateY(360deg) scale(1); }
+}
+
+@keyframes coin-spin-shimmer {
+  0%   { opacity: 0.18; transform: translateX(-18%) rotate(-22deg); }
+  50%  { opacity: 0.42; transform: translateX(16%) rotate(-22deg); }
+  100% { opacity: 0.18; transform: translateX(-18%) rotate(-22deg); }
 }
 `
 
@@ -492,13 +494,12 @@ function FlipCoin({
         borderRadius: '50%',
         position: 'relative',
         flexShrink: 0,
-        animation: spinning ? 'coin-flat-spin 0.22s linear infinite' : 'none',
-        animationDelay: spinning ? `${spinDelay}ms` : '0ms',
+        perspective: `${Math.max(140, Math.round(size * 5))}px`,
       }}
     >
       <div
         style={{
-        width: '100%',
+          width: '100%',
         height: '100%',
         borderRadius: '50%',
         display: 'flex',
@@ -516,52 +517,55 @@ function FlipCoin({
         boxShadow: spinning
           ? `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(22,52,76,0.18), inset 0 1px 2px rgba(255,255,255,0.24)`
           : `0 ${Math.round(size * 0.08)}px ${Math.round(size * 0.2)}px ${rimShadow}, inset 0 1px 2px rgba(255,255,255,0.4)`,
+          transformStyle: 'preserve-3d',
+          animation: spinning ? 'coin-flip-spin 0.5s linear infinite' : 'none',
+          animationDelay: spinning ? `${spinDelay}ms` : '0ms',
         }}
       >
-        {!spinning && (
-          <>
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                borderRadius: '50%',
-                background: isHeads ? goldOuter : silverOuter,
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                inset: innerInset,
-                borderRadius: '50%',
-                background: isHeads ? goldInner : silverInner,
-                boxShadow: `inset 0 1px 1px ${edgeHighlight}, inset 0 -2px 4px rgba(0,0,0,0.15)`,
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                inset: reliefInset,
-                borderRadius: '50%',
-                border: `${Math.max(1, Math.round(size * 0.028))}px solid ${isHeads ? 'rgba(142,99,0,0.4)' : 'rgba(98,106,116,0.35)'}`,
-                boxShadow: `inset 0 1px 0 ${edgeHighlight}, 0 0 0 1px rgba(255,255,255,0.18)`,
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                top: '10%',
-                left: '16%',
-                width: '42%',
-                height: '28%',
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.32)',
-                transform: 'rotate(-20deg)',
-                filter: 'blur(0.4px)',
-                pointerEvents: 'none',
-              }}
-            />
-          </>
-        )}
+        <>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: '50%',
+              background: spinning ? 'linear-gradient(145deg, #8E9BA7 0%, #D9E1E8 26%, #8DA0B2 52%, #E6EDF4 74%, #6E7E8E 100%)' : (isHeads ? goldOuter : silverOuter),
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: innerInset,
+              borderRadius: '50%',
+              background: spinning ? 'radial-gradient(circle at 32% 28%, #F4FAFF 0%, #AEC0D2 28%, #6F869A 68%, #D9E1E8 100%)' : (isHeads ? goldInner : silverInner),
+              boxShadow: `inset 0 1px 1px ${spinning ? 'rgba(255,255,255,0.6)' : edgeHighlight}, inset 0 -2px 4px rgba(0,0,0,0.15)`,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: reliefInset,
+              borderRadius: '50%',
+              border: `${Math.max(1, Math.round(size * 0.028))}px solid ${spinning ? 'rgba(95,110,126,0.4)' : (isHeads ? 'rgba(142,99,0,0.4)' : 'rgba(98,106,116,0.35)')}`,
+              boxShadow: `inset 0 1px 0 ${spinning ? 'rgba(255,255,255,0.65)' : edgeHighlight}, 0 0 0 1px rgba(255,255,255,0.18)`,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: '10%',
+              left: '16%',
+              width: '42%',
+              height: '28%',
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.32)',
+              transform: 'rotate(-20deg)',
+              filter: 'blur(0.4px)',
+              pointerEvents: 'none',
+              animation: spinning ? 'coin-spin-shimmer 0.42s ease-in-out infinite' : 'none',
+              animationDelay: spinning ? `${spinDelay}ms` : '0ms',
+            }}
+          />
+        </>
         {!spinning && (
           <div
             style={{

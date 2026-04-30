@@ -107,7 +107,6 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   const [tray, setTray]               = useState<DieInTray[]>([])
   const [finalResults, setFinalResults] = useState<Record<string, number>>({})
   const [tuning] = useState<DiceTuning>(DEFAULT_DICE_TUNING)
-  const [fastRollCount, setFastRollCount] = useState('100')
   const canvasRef = useRef<D6CanvasHandle>(null)
   const rollAudioRef = useRef<HTMLAudioElement | null>(null)
   const thudPoolRef = useRef<HTMLAudioElement[]>([])
@@ -119,7 +118,6 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   const updateExploreCard = useStore(s => s.updateExploreCard)
   const addSimResultsCard = useStore(s => s.addSimResultsCard)
   const pushSimResult     = useStore(s => s.pushSimResult)
-  const pushSimResultsBatch = useStore(s => s.pushSimResultsBatch)
 
   const diceConfig = cardId
     ? (exploreCards.find(c => c.id === cardId)?.config as DiceRollerCardConfig | undefined)
@@ -222,22 +220,6 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
     await primeAudio()
     playRollSound()
     canvasRef.current?.rollAll()
-  }
-
-  function fastRollMany() {
-    const count = Math.max(1, Math.min(10000, Math.floor(Number(fastRollCount) || 0)))
-    if (tray.length === 0 || count < 1) return
-
-    const rolls = Array.from({ length: count }, () =>
-      tray.map(die => Math.floor(Math.random() * die.sides) + 1),
-    )
-
-    if (linkedResultsCardId) {
-      pushSimResultsBatch(linkedResultsCardId, rolls)
-    }
-
-    const lastRoll = rolls[rolls.length - 1]
-    setFinalResults(Object.fromEntries(tray.map((die, index) => [die.id, lastRoll[index]])))
   }
 
   // ── Roll-complete detection → push tracked value to linked results ──────────
@@ -351,28 +333,6 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-medium text-[var(--color-muted)] whitespace-nowrap">
-              Fast roll
-            </span>
-            <input
-              type="number"
-              min={1}
-              max={10000}
-              step={1}
-              value={fastRollCount}
-              onChange={e => setFastRollCount(e.target.value)}
-              className="w-24 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"
-            />
-            <button
-              onClick={fastRollMany}
-              disabled={tray.length === 0}
-              className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-            >
-              Roll {Math.max(1, Math.min(10000, Math.floor(Number(fastRollCount) || 0)))} Times
-            </button>
-          </div>
-
           <div className="flex-1 min-w-0" />
 
           {cardId && (
@@ -412,7 +372,7 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
 
       {/* ── Physics tray — left anchored to leave room for results on the right ── */}
       <div className="flex-1 min-h-[200px] px-3 py-3">
-        <div className="h-full w-full max-w-[1200px] mr-auto">
+        <div className="h-full w-full">
           <D6Canvas
             ref={canvasRef}
             onDieSettled={handleDieSettled}

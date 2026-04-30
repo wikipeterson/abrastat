@@ -370,8 +370,8 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
         </div>
       </div>
 
-      {/* ── Physics tray — left anchored to leave room for results on the right ── */}
-      <div className="flex-1 min-h-[200px] px-3 py-3">
+      {/* ── Physics tray ───────────────────────────────────────────────────── */}
+      <div className="flex-1 min-h-[clamp(360px,58vh,760px)] px-3 py-3">
         <div className="h-full w-full">
           <D6Canvas
             ref={canvasRef}

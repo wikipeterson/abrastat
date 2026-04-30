@@ -259,6 +259,10 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
     exploreCards.some(c => c.id === linkedResultsCardId)
   const trackedRange = getTrackedRange(tray, trackedMode)
   const supportsDifference = tray.length === 2
+  const stageHeight = hideHeader
+    ? 'clamp(420px, calc(100vh - 11rem), 760px)'
+    : 'clamp(360px, 62vh, 760px)'
+  const stageAspect = '10.96 / 6.66'
 
   // Keep linked results card's minValue/maxValue in sync with current tray
   useEffect(() => {
@@ -371,11 +375,14 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
       </div>
 
       {/* ── Physics tray ───────────────────────────────────────────────────── */}
-      <div className="flex-1 min-h-[clamp(360px,58vh,760px)] px-3 py-3">
+      <div
+        className="flex-1 min-h-0 px-3 py-3"
+        style={{ height: stageHeight }}
+      >
         <div
           className="mx-auto h-full max-w-full"
           style={{
-            width: 'min(100%, calc(clamp(360px, 58vh, 760px) * 11.1 / 6.5))',
+            width: `min(100%, calc(${stageHeight} * ${stageAspect}))`,
           }}
         >
           <D6Canvas

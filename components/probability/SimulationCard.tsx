@@ -664,12 +664,12 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
   return (
     <div className="h-full overflow-auto">
       <style>{COIN_CSS}</style>
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4">
 
-        <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)] items-start">
+        <div className="grid gap-4 xl:grid-cols-[290px_minmax(0,1fr)] items-start">
 
           {/* ── Left column: setup + quick stats ── */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="grid grid-cols-1 gap-3">
               <label className="space-y-1.5">
                 <span className="text-sm font-medium text-[var(--color-text)]">Probability of Heads</span>
@@ -723,7 +723,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
           </div>
 
           {/* ── Right column: latest group flip ── */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
@@ -739,9 +739,9 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
                 </div>
               </div>
 
-              <div className="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-4 min-h-[260px]">
+              <div className="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-4">
                 {history.length === 0 && !isSpinning ? (
-                  <div className="flex min-h-[228px] items-center justify-center text-sm text-[var(--color-muted)]">
+                  <div className="flex min-h-[120px] items-center justify-center text-sm text-[var(--color-muted)]">
                     No groups simulated yet.
                   </div>
                 ) : (
@@ -767,8 +767,8 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-              <label className="min-w-[220px] flex-1 space-y-1.5">
+            <div className="grid gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+              <label className="min-w-0 space-y-1.5">
                 <span className="text-sm font-medium text-[var(--color-text)]">Number of Simulations</span>
                 <input
                   type="number"
@@ -783,7 +783,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
                 type="button"
                 onClick={simulateMany}
                 disabled={isSpinning}
-                className="rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-medium text-white hover:opacity-90"
+                className="rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-medium text-white hover:opacity-90 md:self-end"
               >
                 Simulate Many
               </button>

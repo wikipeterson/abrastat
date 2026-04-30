@@ -87,10 +87,14 @@ export function Header({
               ☰
             </button>
           )}
-          <div className="flex-shrink-0 select-none" aria-label="AbraStat logo">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <Link
+            href="/home"
+            className="flex-shrink-0 select-none"
+            aria-label="AbraStat logo"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(110px, 20vw, 220px)', height: 'auto' }} />
-          </div>
+          </Link>
 
           {(leadingNav || modeTabs?.length) && (
             <div className="flex items-center gap-2">

@@ -645,6 +645,19 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
   const altSymbol    = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
   const altStatement = `p ${altSymbol} ${config.nullP}`
 
+  function updateAlternative(next: Alternative) {
+    const nextExtremeCount = nullDist.reduce((countExtreme, xSim) => (
+      countExtreme + (isExtremeOneProp(xSim, x, n, p0Num, next) ? 1 : 0)
+    ), 0)
+    updateExploreCard(cardId, {
+      config: {
+        ...config,
+        alternative: next,
+        extremeCount: nextExtremeCount,
+      }
+    })
+  }
+
   const normMean = graphView === 'counts' ? n * p0Num : p0Num
   const normSD   = graphView === 'counts'
     ? Math.sqrt(Math.max(0, n * p0Num * (1 - p0Num)))
@@ -902,7 +915,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                     </button>
                   ))}
                 </div>
-                <div className="flex flex-col items-start text-xs text-[var(--color-muted)]">
+                <div className="flex flex-col items-start text-[12px] leading-tight text-[var(--color-muted)]">
                   <label className="flex items-center gap-2 select-none">
                     <input
                       type="checkbox"
@@ -913,23 +926,36 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                     Overlay normal curve
                   </label>
                   {showNormalCurve && (
-                    <div className="pl-6 pt-1 leading-tight">
+                    <div className="pl-6 pt-1 leading-tight text-[12px]">
                       <div>Mean = {normMean.toFixed(graphView === 'counts' ? 1 : 4)}</div>
                       <div>SD = {normSD.toFixed(graphView === 'counts' ? 1 : 4)}</div>
                     </div>
                   )}
-                  <div className="pt-2 leading-tight text-[11px]">
+                  <div className="pt-2 space-y-1 text-[12px] leading-tight">
                     <div><span className="font-semibold text-[var(--color-text)]">H₀:</span> p = {config.nullP}</div>
-                    <div><span className="font-semibold text-[var(--color-text)]">Hₐ:</span> {altStatement}</div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span><span className="font-semibold text-[var(--color-text)]">Hₐ:</span></span>
+                      <span className="font-medium text-[var(--color-text)]">p</span>
+                      <select
+                        value={alternative}
+                        onChange={e => updateAlternative(e.target.value as Alternative)}
+                        className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-0.5 text-[12px] text-[var(--color-text)]"
+                      >
+                        <option value="less">&lt;</option>
+                        <option value="greater">&gt;</option>
+                        <option value="two">≠</option>
+                      </select>
+                      <span className="font-medium text-[var(--color-text)]">{config.nullP}</span>
+                    </div>
                     <div><span className="font-semibold text-[var(--color-text)]">n:</span> {n}</div>
                     <div><span className="font-semibold text-[var(--color-text)]">p̂:</span> <span className="font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</span></div>
                   </div>
-                  <div className="pt-2 leading-tight">
+                  <div className="pt-2 space-y-1 leading-tight text-[12px]">
                     <div>
                       Extreme: <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
                     </div>
                     {/* Editable p-value threshold */}
-                    <div className="pt-1 flex items-baseline gap-0.5 font-semibold text-[var(--color-accent)] flex-wrap">
+                    <div className="flex items-baseline gap-0.5 font-semibold text-[var(--color-accent)] flex-wrap">
                       <span>P({graphView === 'counts' ? 'X' : 'p̂'} {altOperator(alternative)}</span>
                       <input
                         type="number"
@@ -938,7 +964,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                         step={graphView === 'counts' ? 1 : 0.01}
                         min={graphView === 'counts' ? 0 : 0}
                         max={graphView === 'counts' ? n : 1}
-                        className="w-14 text-center text-[var(--color-accent)] font-semibold bg-transparent border-b border-[var(--color-accent)] focus:outline-none text-xs [appearance:textfield] mx-0.5"
+                        className="w-14 text-center text-[var(--color-accent)] font-semibold bg-transparent border-b border-[var(--color-accent)] focus:outline-none text-[12px] [appearance:textfield] mx-0.5"
                       />
                       <span>) =</span>
                       <span className="ml-0.5">

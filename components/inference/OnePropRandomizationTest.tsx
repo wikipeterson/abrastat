@@ -350,7 +350,7 @@ function OnePropNullDistPlot({
             <circle key={i} cx={c.cx} cy={c.cy} r={dotR}
               fill={c.extreme ? '#0EA5A0' : '#111111'} opacity={0.85}
               style={i === circles.length - 1 && values.length > 0
-                ? { animation: 'dot-drop-full 500ms ease-out' } : undefined}
+                ? { animation: 'dot-drop-full 700ms ease-out' } : undefined}
             />
           ))}
           {normalPath && (
@@ -643,7 +643,6 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
   }, [nullDist, thresholdOnCountScale, alternative, nullCenterCount])
 
   const altSymbol    = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
-  const altStatement = `p ${altSymbol} ${config.nullP}`
 
   function updateAlternative(next: Alternative) {
     const nextExtremeCount = nullDist.reduce((countExtreme, xSim) => (
@@ -915,7 +914,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                     </button>
                   ))}
                 </div>
-                <div className="flex flex-col items-start text-[12px] leading-tight text-[var(--color-muted)]">
+                <div className="flex flex-col items-start text-[12px] leading-[1.35] text-[var(--color-muted)]">
                   <label className="flex items-center gap-2 select-none">
                     <input
                       type="checkbox"
@@ -926,20 +925,20 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                     Overlay normal curve
                   </label>
                   {showNormalCurve && (
-                    <div className="pl-6 pt-1 leading-tight text-[12px]">
+                    <div className="pl-6 pt-1 leading-[1.35] text-[12px]">
                       <div>Mean = {normMean.toFixed(graphView === 'counts' ? 1 : 4)}</div>
                       <div>SD = {normSD.toFixed(graphView === 'counts' ? 1 : 4)}</div>
                     </div>
                   )}
-                  <div className="pt-2 space-y-1 text-[12px] leading-tight">
+                  <div className="pt-2 space-y-1 text-[12px] leading-[1.35]">
                     <div><span className="font-semibold text-[var(--color-text)]">H₀:</span> p = {config.nullP}</div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span><span className="font-semibold text-[var(--color-text)]">Hₐ:</span></span>
+                      <span className="font-semibold text-[var(--color-text)]">Hₐ:</span>
                       <span className="font-medium text-[var(--color-text)]">p</span>
                       <select
                         value={alternative}
                         onChange={e => updateAlternative(e.target.value as Alternative)}
-                        className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-0.5 text-[12px] text-[var(--color-text)]"
+                        className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-0.5 text-[12px] font-medium text-[var(--color-text)]"
                       >
                         <option value="less">&lt;</option>
                         <option value="greater">&gt;</option>
@@ -950,12 +949,13 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                     <div><span className="font-semibold text-[var(--color-text)]">n:</span> {n}</div>
                     <div><span className="font-semibold text-[var(--color-text)]">p̂:</span> <span className="font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</span></div>
                   </div>
-                  <div className="pt-2 space-y-1 leading-tight text-[12px]">
+                  <div className="pt-2 space-y-1 leading-[1.35] text-[12px]">
                     <div>
-                      Extreme: <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
+                      <span className="font-semibold text-[var(--color-text)]">Extreme:</span>{' '}
+                      <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
                     </div>
                     {/* Editable p-value threshold */}
-                    <div className="flex items-baseline gap-0.5 font-semibold text-[var(--color-accent)] flex-wrap">
+                    <div className="flex items-baseline gap-0.5 flex-wrap text-[12px]">
                       <span>P({graphView === 'counts' ? 'X' : 'p̂'} {altOperator(alternative)}</span>
                       <input
                         type="number"
@@ -967,7 +967,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                         className="w-14 text-center text-[var(--color-accent)] font-semibold bg-transparent border-b border-[var(--color-accent)] focus:outline-none text-[12px] [appearance:textfield] mx-0.5"
                       />
                       <span>) =</span>
-                      <span className="ml-0.5">
+                      <span className="ml-0.5 font-semibold text-[var(--color-accent)]">
                         {customPValue !== null
                           ? customPValue < 0.001 ? '< 0.001' : customPValue.toFixed(4)
                           : '—'}

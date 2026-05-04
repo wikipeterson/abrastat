@@ -158,8 +158,7 @@ type GraphView = 'proportions' | 'counts'
 function formatTick(v: number, range: number): string {
   if (range >= 100) return v.toFixed(0)
   if (range >= 10)  return v.toFixed(1)
-  if (range >= 1)   return v.toFixed(2)
-  return v.toFixed(3)
+  return v.toFixed(2)
 }
 
 function formatDistance(v: number, range: number): string {
@@ -329,8 +328,13 @@ function OnePropNullDistPlot({
         return Array.from({ length: 5 }, (_, i) => center + (i - 2) * step)
       })()
     : (() => {
-        const step = niceTickStep(halfRange / 2, false)
-        return Array.from({ length: 5 }, (_, i) => nullCenter + (i - 2) * step)
+        const start = Math.ceil(xLo * 10) / 10
+        const end = Math.floor(xHi * 10) / 10
+        const values = Array.from(
+          { length: Math.max(0, Math.round((end - start) / 0.1) + 1) },
+          (_, i) => Number((start + i * 0.1).toFixed(10)),
+        )
+        return values.length > 0 ? values : [Number(nullCenter.toFixed(2))]
       })()
 
   return (
@@ -925,7 +929,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                     </button>
                   ))}
                 </div>
-                <div className="flex flex-col items-start text-[12px] leading-[1.35] text-[var(--color-muted)]">
+                <div className="flex flex-col items-start text-[14px] leading-[1.4] text-[var(--color-muted)]">
                   <label className="flex items-center gap-2 select-none">
                     <input
                       type="checkbox"
@@ -936,12 +940,12 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                     Overlay normal curve
                   </label>
                   {showNormalCurve && (
-                    <div className="pl-6 pt-1 leading-[1.35] text-[12px]">
+                    <div className="pl-6 pt-1 leading-[1.4] text-[14px]">
                       <div>Mean = {normMean.toFixed(graphView === 'counts' ? 1 : 4)}</div>
                       <div>SD = {normSD.toFixed(graphView === 'counts' ? 1 : 4)}</div>
                     </div>
                   )}
-                  <div className="pt-2 space-y-1 text-[12px] leading-[1.35]">
+                  <div className="pt-2 space-y-1 text-[14px] leading-[1.4]">
                     <div><span className="font-semibold text-[var(--color-text)]">H₀:</span> p = {config.nullP}</div>
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="font-semibold text-[var(--color-text)]">Hₐ:</span>
@@ -949,7 +953,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                       <select
                         value={alternative}
                         onChange={e => updateAlternative(e.target.value as Alternative)}
-                        className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-0.5 text-[12px] font-medium text-[var(--color-text)]"
+                        className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-0.5 text-[14px] font-medium text-[var(--color-text)]"
                       >
                         <option value="less">&lt;</option>
                         <option value="greater">&gt;</option>
@@ -960,13 +964,13 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                     <div><span className="font-semibold text-[var(--color-text)]">n:</span> {n}</div>
                     <div><span className="font-semibold text-[var(--color-text)]">p̂:</span> <span className="font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</span></div>
                   </div>
-                  <div className="pt-2 space-y-1 leading-[1.35] text-[12px]">
+                  <div className="pt-2 space-y-1 leading-[1.4] text-[14px]">
                     <div>
                       <span className="font-semibold text-[var(--color-text)]">As or more extreme:</span>{' '}
                       <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
                     </div>
                     {/* Editable p-value threshold */}
-                    <div className="flex items-baseline gap-0.5 flex-wrap text-[12px]">
+                    <div className="flex items-baseline gap-0.5 flex-wrap text-[14px]">
                       {alternative === 'two' ? (
                         <>
                           <span>
@@ -981,7 +985,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                             step={graphView === 'counts' ? 1 : 0.01}
                             min={graphView === 'counts' ? 0 : 0}
                             max={graphView === 'counts' ? n : 1}
-                            className="w-14 text-center text-[var(--color-accent)] font-semibold bg-transparent border-b border-[var(--color-accent)] focus:outline-none text-[12px] [appearance:textfield] mx-0.5"
+                            className="w-16 text-center text-[var(--color-accent)] font-semibold bg-transparent border-b border-[var(--color-accent)] focus:outline-none text-[14px] [appearance:textfield] mx-0.5"
                           />
                           <span>)</span>
                         </>
@@ -995,7 +999,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                             step={graphView === 'counts' ? 1 : 0.01}
                             min={graphView === 'counts' ? 0 : 0}
                             max={graphView === 'counts' ? n : 1}
-                            className="w-14 text-center text-[var(--color-accent)] font-semibold bg-transparent border-b border-[var(--color-accent)] focus:outline-none text-[12px] [appearance:textfield] mx-0.5"
+                            className="w-16 text-center text-[var(--color-accent)] font-semibold bg-transparent border-b border-[var(--color-accent)] focus:outline-none text-[14px] [appearance:textfield] mx-0.5"
                           />
                           <span>)</span>
                         </>

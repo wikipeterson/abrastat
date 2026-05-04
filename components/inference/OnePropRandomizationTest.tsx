@@ -837,16 +837,10 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
     : false
 
   const probabilityLabel = (() => {
-    const symbol = altOperator(alternative)
     if (alternative === 'two') {
-      if (graphView === 'counts') {
-        const observedDistance = Math.abs(x - nullCenterCount)
-        return `P(|X - ${nullCenterCount.toFixed(1)}| ≥ ${formatDistance(observedDistance, n)})`
-      }
-      const observedProp = x / Math.max(1, n)
-      const observedDistance = Math.abs(observedProp - p0Num)
-      return `P(|p̂ - ${p0Num.toFixed(4)}| ≥ ${formatDistance(observedDistance, 1)})`
+      return 'Two-sided p-value = 2 × smaller tail'
     }
+    const symbol = altOperator(alternative)
     if (graphView === 'counts') return `P(X ${symbol} ${x})`
     const observedProp = x / Math.max(1, n)
     const shown = observedProp.toFixed(4).replace(/^0(?=\.)/, '')

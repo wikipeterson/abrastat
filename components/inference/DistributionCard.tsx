@@ -7,7 +7,7 @@ import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { DistributionPreFill } from '@/lib/exploreTypes'
 
 type DistType = 'normal' | 't' | 'chi2' | 'binomial' | 'geometric'
-type CalcDirection = 'le' | 'ge' | 'between'
+type CalcDirection = 'le' | 'ge' | 'between' | 'eq'
 
 const isContinuous = (d: DistType) => d !== 'binomial' && d !== 'geometric'
 const getDistSymbol = (d: DistType) => {
@@ -200,6 +200,17 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
       }
     }
 
+    if (direction === 'eq') {
+      const discreteBound = Math.round(boundVal)
+      const p = getPdf(dist, discreteBound, params)
+      return {
+        probability: isFinite(p) ? Math.max(0, Math.min(1, p)) : null as number | null,
+        bound: discreteBound,
+        shadeMin: discreteBound,
+        shadeMax: discreteBound,
+      }
+    }
+
     if (lastEdited === 'probability' && isContinuous(dist)) {
       const nextBound = direction === 'le'
         ? getInv(dist, probabilityVal, params)
@@ -277,6 +288,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
 
     const inShade = (k: number) => {
       if (direction === 'between') return k >= Math.ceil(lowerVal) && k <= Math.floor(upperVal)
+      if (direction === 'eq') return k === Math.round(boundVal)
       if (direction === 'le') return k <= Math.floor(boundVal)
       return k >= Math.ceil(boundVal)
     }
@@ -302,7 +314,8 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
     { id: 'geometric', label: 'Geometric' },
   ]
 
-  const canInverse = isContinuous(dist) && direction !== 'between'
+  const canInverse = isContinuous(dist) && direction !== 'between' && direction !== 'eq'
+  const showEqualOption = !isContinuous(dist)
 
   return (
     <div className="h-full flex flex-col gap-2.5 min-h-0">
@@ -363,6 +376,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
               if (direction === 'between') {
                 if (next === 'le') setBound(upper)
                 if (next === 'ge') setBound(lower)
+                if (next === 'eq') setBound(lower)
               } else {
                 if (next === 'ge') setLower(bound)
                 if (next === 'le') setUpper(bound)
@@ -373,6 +387,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
           >
             <option value="le">≤</option>
             <option value="ge">≥</option>
+            {showEqualOption && <option value="eq">=</option>}
             <option value="between">between</option>
           </select>
         </label>
@@ -408,7 +423,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
           ) : (
             <>
               <span>{distSymbol}</span>
-              <span>{direction === 'le' ? '≤' : '≥'}</span>
+              <span>{direction === 'le' ? '≤' : direction === 'ge' ? '≥' : '='}</span>
               <input
                 type="number"
                 value={lastEdited === 'probability' && computed.bound !== null ? boundDisplay : bound}
@@ -462,6 +477,8 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
         <span className="text-sm font-mono font-semibold text-[var(--color-text)]">
           {direction === 'between'
             ? `P(${lower} ≤ ${distSymbol} ≤ ${upper}) = ${probabilityDisplay || '—'}`
+            : direction === 'eq'
+              ? `P(${distSymbol} = ${lastEdited === 'probability' ? boundDisplay || bound : bound}) = ${lastEdited === 'probability' ? probability : probabilityDisplay || '—'}`
             : direction === 'le'
               ? `P(${distSymbol} ≤ ${lastEdited === 'probability' ? boundDisplay || bound : bound}) = ${lastEdited === 'probability' ? probability : probabilityDisplay || '—'}`
               : `P(${distSymbol} ≥ ${lastEdited === 'probability' ? boundDisplay || bound : bound}) = ${lastEdited === 'probability' ? probability : probabilityDisplay || '—'}`}

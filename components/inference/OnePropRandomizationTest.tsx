@@ -190,6 +190,9 @@ function OnePropNullDistPlot({
   const SVG_W = 760
   const MG = { t: 14, r: 16, b: 30, l: 16 }
   const plotHeight = 320
+  const tickFontSize = 11
+  const axisLabelFontSize = 12
+  const markerFontSize = 10
   const SVG_H = plotHeight + MG.t + MG.b
   const PW = SVG_W - MG.l - MG.r
   const PH = SVG_H - MG.t - MG.b
@@ -322,7 +325,7 @@ function OnePropNullDistPlot({
         {ticks.map((v, i) => (
           <g key={i} transform={`translate(${xOf(v)},${PH})`}>
             <line y2={3} stroke="#111111" strokeWidth={1} />
-            <text y={12} textAnchor="middle" fontSize={8} fill="#111111" fontFamily="DM Sans,sans-serif">
+            <text y={15} textAnchor="middle" fontSize={tickFontSize} fill="#111111" fontFamily="DM Sans,sans-serif">
               {view === 'counts' ? Math.round(v).toString() : formatTick(v, xRange)}
             </text>
           </g>
@@ -348,7 +351,7 @@ function OnePropNullDistPlot({
         <line x1={obsX} y1={0} x2={obsX} y2={PH} stroke="#EF4444" strokeWidth={1.8} strokeDasharray="4,3" />
         <text x={obsX + (obsVal >= nullCenter ? 3 : -3)} y={5}
           textAnchor={obsVal >= nullCenter ? 'start' : 'end'}
-          fontSize={8} fill="#EF4444" fontFamily="DM Sans,sans-serif" fontWeight="600">obs</text>
+          fontSize={markerFontSize} fill="#EF4444" fontFamily="DM Sans,sans-serif" fontWeight="600">obs</text>
         {/* Custom threshold line — teal, only when it differs from obs */}
         {showThreshLine && (
           <>
@@ -356,10 +359,10 @@ function OnePropNullDistPlot({
               stroke="#0EA5A0" strokeWidth={1.6} strokeDasharray="5,3" />
             <text x={threshX + (thresh >= nullCenter ? 3 : -3)} y={14}
               textAnchor={thresh >= nullCenter ? 'start' : 'end'}
-              fontSize={8} fill="#0EA5A0" fontFamily="DM Sans,sans-serif" fontWeight="600">t</text>
+              fontSize={markerFontSize} fill="#0EA5A0" fontFamily="DM Sans,sans-serif" fontWeight="600">t</text>
           </>
         )}
-        <text x={PW / 2} y={PH + 24} textAnchor="middle" fontSize={9} fill="#111111" fontFamily="DM Sans,sans-serif">
+        <text x={PW / 2} y={PH + 27} textAnchor="middle" fontSize={axisLabelFontSize} fill="#111111" fontFamily="DM Sans,sans-serif">
           {view === 'counts' ? 'Simulated X (count of successes)' : 'Simulated p̂'}
         </text>
       </g>

@@ -962,7 +962,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                   </div>
                   <div className="pt-2 space-y-1 leading-[1.35] text-[12px]">
                     <div>
-                      <span className="font-semibold text-[var(--color-text)]">Extreme:</span>{' '}
+                      <span className="font-semibold text-[var(--color-text)]">As or more extreme:</span>{' '}
                       <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
                     </div>
                     {/* Editable p-value threshold */}
@@ -971,8 +971,8 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                         <>
                           <span>
                             {graphView === 'counts'
-                              ? `P(|X - ${nullCenterCount.toFixed(1)}| ≥`
-                              : `P(|p̂ - ${p0Num.toFixed(4)}| ≥`}
+                              ? 'P(X as or more extreme than'
+                              : 'P(p̂ as or more extreme than'}
                           </span>
                           <input
                             type="number"
@@ -983,7 +983,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                             max={graphView === 'counts' ? n : 1}
                             className="w-14 text-center text-[var(--color-accent)] font-semibold bg-transparent border-b border-[var(--color-accent)] focus:outline-none text-[12px] [appearance:textfield] mx-0.5"
                           />
-                          <span>{graphView === 'counts' ? ` - ${nullCenterCount.toFixed(1)}|)` : ` - ${p0Num.toFixed(4)}|)`}</span>
+                          <span>)</span>
                         </>
                       ) : (
                         <>

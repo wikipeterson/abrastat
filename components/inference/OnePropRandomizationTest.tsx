@@ -162,6 +162,14 @@ function formatTick(v: number, range: number): string {
   return v.toFixed(3)
 }
 
+function formatDistance(v: number, range: number): string {
+  const abs = Math.abs(v)
+  if (range >= 100) return abs.toFixed(0)
+  if (range >= 10) return abs.toFixed(1)
+  if (range >= 1) return abs.toFixed(2)
+  return abs.toFixed(4)
+}
+
 function niceTickStep(raw: number, integerOnly = false): number {
   if (!Number.isFinite(raw) || raw <= 0) return integerOnly ? 1 : 0.1
   if (integerOnly) return Math.max(1, Math.ceil(raw))
@@ -830,6 +838,15 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
 
   const probabilityLabel = (() => {
     const symbol = altOperator(alternative)
+    if (alternative === 'two') {
+      if (graphView === 'counts') {
+        const observedDistance = Math.abs(x - nullCenterCount)
+        return `P(|X - ${nullCenterCount.toFixed(1)}| ≥ ${formatDistance(observedDistance, n)})`
+      }
+      const observedProp = x / Math.max(1, n)
+      const observedDistance = Math.abs(observedProp - p0Num)
+      return `P(|p̂ - ${p0Num.toFixed(4)}| ≥ ${formatDistance(observedDistance, 1)})`
+    }
     if (graphView === 'counts') return `P(X ${symbol} ${x})`
     const observedProp = x / Math.max(1, n)
     const shown = observedProp.toFixed(4).replace(/^0(?=\.)/, '')
@@ -956,17 +973,40 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                     </div>
                     {/* Editable p-value threshold */}
                     <div className="flex items-baseline gap-0.5 flex-wrap text-[12px]">
-                      <span>P({graphView === 'counts' ? 'X' : 'p̂'} {altOperator(alternative)}</span>
-                      <input
-                        type="number"
-                        value={customThreshold}
-                        onChange={e => setCustomThreshold(e.target.value)}
-                        step={graphView === 'counts' ? 1 : 0.01}
-                        min={graphView === 'counts' ? 0 : 0}
-                        max={graphView === 'counts' ? n : 1}
-                        className="w-14 text-center text-[var(--color-accent)] font-semibold bg-transparent border-b border-[var(--color-accent)] focus:outline-none text-[12px] [appearance:textfield] mx-0.5"
-                      />
-                      <span>) =</span>
+                      {alternative === 'two' ? (
+                        <>
+                          <span>
+                            {graphView === 'counts'
+                              ? `P(|X - ${nullCenterCount.toFixed(1)}| ≥`
+                              : `P(|p̂ - ${p0Num.toFixed(4)}| ≥`}
+                          </span>
+                          <input
+                            type="number"
+                            value={customThreshold}
+                            onChange={e => setCustomThreshold(e.target.value)}
+                            step={graphView === 'counts' ? 1 : 0.01}
+                            min={graphView === 'counts' ? 0 : 0}
+                            max={graphView === 'counts' ? n : 1}
+                            className="w-14 text-center text-[var(--color-accent)] font-semibold bg-transparent border-b border-[var(--color-accent)] focus:outline-none text-[12px] [appearance:textfield] mx-0.5"
+                          />
+                          <span>{graphView === 'counts' ? ` - ${nullCenterCount.toFixed(1)}|)` : ` - ${p0Num.toFixed(4)}|)`}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>P({graphView === 'counts' ? 'X' : 'p̂'} {altOperator(alternative)}</span>
+                          <input
+                            type="number"
+                            value={customThreshold}
+                            onChange={e => setCustomThreshold(e.target.value)}
+                            step={graphView === 'counts' ? 1 : 0.01}
+                            min={graphView === 'counts' ? 0 : 0}
+                            max={graphView === 'counts' ? n : 1}
+                            className="w-14 text-center text-[var(--color-accent)] font-semibold bg-transparent border-b border-[var(--color-accent)] focus:outline-none text-[12px] [appearance:textfield] mx-0.5"
+                          />
+                          <span>)</span>
+                        </>
+                      )}
+                      <span>=</span>
                       <span className="ml-0.5 font-semibold text-[var(--color-accent)]">
                         {customPValue !== null
                           ? customPValue < 0.001 ? '< 0.001' : customPValue.toFixed(4)

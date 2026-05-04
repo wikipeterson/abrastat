@@ -635,11 +635,12 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
   const [probabilityHeads, setProbabilityHeads] = useState(0.5)
   const [flipsPerGroup, setFlipsPerGroup] = useState(10)
   const [numSimulations, setNumSimulations] = useState(30)
+  const [simulateSetsMode, setSimulateSetsMode] = useState(false)
   const [history, setHistory] = useState<number[][]>([])
   const [displayFlips, setDisplayFlips] = useState<number[]>([])
   const [isSpinning, setIsSpinning] = useState(false)
-  const [multiResults, setMultiResults] = useState<{ streaks: number[]; switches: number[]; flips: number[][] } | null>(null)
-  const [activePlot, setActivePlot] = useState<'convergence' | 'gap' | 'streak' | 'switches'>('convergence')
+  const [multiResults, setMultiResults] = useState<{ heads: number[]; streaks: number[]; switches: number[]; flips: number[][] } | null>(null)
+  const [activePlot, setActivePlot] = useState<'convergence' | 'heads' | 'gap' | 'streak' | 'switches'>('convergence')
   const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const recentHeads = history.map(group => group.reduce((sum, value) => sum + value, 0))
@@ -658,6 +659,13 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
     () => Array.from({ length: flipsPerGroup }, (_, i) => Math.round((i / Math.max(1, flipsPerGroup)) * 220)),
     [flipsPerGroup],
   )
+  const plotOptions = [
+    { key: 'convergence', label: 'Proportion' },
+    { key: 'heads', label: 'Number of Heads' },
+    { key: 'gap', label: 'Head–Tail Gap' },
+    { key: 'streak', label: 'Longest Streak' },
+    { key: 'switches', label: 'Switches' },
+  ] as const
 
   useEffect(() => {
     return () => {
@@ -687,16 +695,18 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
 
   function simulateMany() {
     const n = clampPositiveInt(numSimulations, 200)
+    const heads: number[] = []
     const streaks: number[] = []
     const switches: number[] = []
     const allFlips: number[][] = []
     for (let i = 0; i < n; i++) {
       const { flips } = flipGroup(probabilityHeads, flipsPerGroup)
+      heads.push(flips.reduce((sum, value) => sum + value, 0))
       streaks.push(longestStreak(flips))
       switches.push(countSwitches(flips))
       allFlips.push(flips)
     }
-    setMultiResults({ streaks, switches, flips: allFlips })
+    setMultiResults({ heads, streaks, switches, flips: allFlips })
   }
 
   return (
@@ -704,7 +714,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
       <style>{COIN_CSS}</style>
       <div className="flex flex-col gap-4">
 
-        <div className="grid gap-4 xl:grid-cols-[290px_minmax(0,1fr)] items-start">
+        <div className={`grid gap-4 items-start ${simulateSetsMode ? 'xl:grid-cols-[320px]' : 'xl:grid-cols-[290px_minmax(0,1fr)]'}`}>
 
           {/* ── Left column: setup + quick stats ── */}
           <div className="space-y-3">
@@ -735,15 +745,37 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
               </label>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={simulateOneGroup}
-                disabled={isSpinning}
-                className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-              >
-                Flip Coins
-              </button>
+            <label className="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-sm text-[var(--color-text)] shadow-sm">
+              <input
+                type="checkbox"
+                checked={simulateSetsMode}
+                onChange={e => setSimulateSetsMode(e.target.checked)}
+                className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+              />
+              <span className="font-medium">Simulate sets of flips</span>
+            </label>
+
+            {!simulateSetsMode && (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={simulateOneGroup}
+                  disabled={isSpinning}
+                  className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                >
+                  Flip Coins
+                </button>
+                <button
+                  type="button"
+                  onClick={reset}
+                  className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-slate-50"
+                >
+                  Reset
+                </button>
+              </div>
+            )}
+
+            {simulateSetsMode && (
               <button
                 type="button"
                 onClick={reset}
@@ -751,7 +783,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
               >
                 Reset
               </button>
-            </div>
+            )}
 
             <div className="grid grid-cols-3 gap-2">
               <StatPill label="Last Heads" value={lastHeads} />
@@ -761,6 +793,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
           </div>
 
           {/* ── Right column: latest group flip ── */}
+          {!simulateSetsMode && (
           <div className="space-y-3">
             <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -806,17 +839,15 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
             </div>
 
           </div>
+          )}
         </div>
 
         {/* ── Bottom section: multi-sim graph ── */}
-        {multiResults ? (
-          <div className="grid gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm lg:grid-cols-[280px_minmax(0,1fr)]">
+        {simulateSetsMode && (multiResults ? (
+          <div className="grid gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm lg:grid-cols-[260px_minmax(0,1fr)]">
             <div className="space-y-4">
-              <div>
-                <div className="text-sm font-semibold text-[var(--color-text)]">Multi-Simulation Results</div>
-                <div className="text-xs text-[var(--color-muted)]">
-                  {multiResults.streaks.length} simulation{multiResults.streaks.length !== 1 ? 's' : ''} · {flipsPerGroup} coins each · p(H) = {probabilityHeads.toFixed(2)}
-                </div>
+              <div className="text-sm text-[var(--color-muted)]">
+                {multiResults.streaks.length} simulation{multiResults.streaks.length !== 1 ? 's' : ''} · {flipsPerGroup} coins each · p(H) = {probabilityHeads.toFixed(2)}
               </div>
 
               <label className="block space-y-1.5">
@@ -841,14 +872,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
               </button>
 
               <div className="flex flex-wrap gap-1.5">
-                {(
-                  [
-                    { key: 'convergence', label: 'Proportion' },
-                    { key: 'gap',         label: 'Head–Tail Gap' },
-                    { key: 'streak',      label: 'Longest Streak' },
-                    { key: 'switches',    label: 'Switches' },
-                  ] as const
-                ).map(({ key, label }) => (
+                {plotOptions.map(({ key, label }) => (
                   <button
                     key={key}
                     type="button"
@@ -865,9 +889,18 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
               </div>
             </div>
 
-            <div className="min-w-0">
+            <div className="min-w-0 rounded-xl bg-white">
               {activePlot === 'convergence' && (
                 <ConvergencePlotSVG simFlips={multiResults.flips} probabilityHeads={probabilityHeads} />
+              )}
+              {activePlot === 'heads' && (
+                <DotPlotSVG
+                  values={multiResults.heads}
+                  label="Number of Heads"
+                  xMin={0}
+                  xMax={flipsPerGroup}
+                  color="#D97706"
+                />
               )}
               {activePlot === 'gap' && (
                 <GapPlotSVG simFlips={multiResults.flips} probabilityHeads={probabilityHeads} />
@@ -893,7 +926,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
             </div>
           </div>
         ) : (
-          <div className="grid gap-4 rounded-2xl border border-dashed border-slate-200 p-4 text-sm text-[var(--color-muted)] lg:grid-cols-[280px_minmax(0,1fr)]">
+          <div className="grid gap-4 rounded-2xl border border-dashed border-slate-200 p-4 text-sm text-[var(--color-muted)] lg:grid-cols-[260px_minmax(0,1fr)]">
             <div className="space-y-4">
               <label className="block space-y-1.5">
                 <span className="text-sm font-medium text-[var(--color-text)]">Number of Simulations</span>
@@ -915,14 +948,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
                 Simulate Many
               </button>
               <div className="flex flex-wrap gap-1.5">
-                {(
-                  [
-                    { key: 'convergence', label: 'Proportion' },
-                    { key: 'gap',         label: 'Head–Tail Gap' },
-                    { key: 'streak',      label: 'Longest Streak' },
-                    { key: 'switches',    label: 'Switches' },
-                  ] as const
-                ).map(({ key, label }) => (
+                {plotOptions.map(({ key, label }) => (
                   <button
                     key={key}
                     type="button"
@@ -938,11 +964,11 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
                 ))}
               </div>
             </div>
-            <div className="flex min-h-[220px] items-center justify-center rounded-xl bg-white/60 p-8 text-sm text-[var(--color-muted)]">
+            <div className="flex min-h-[360px] items-center justify-center rounded-xl bg-white/60 p-8 text-sm text-[var(--color-muted)]">
               Click <span className="mx-1 font-medium text-[var(--color-text)]">Simulate Many</span> to see graphs here.
             </div>
           </div>
-        )}
+        ))}
       </div>
     </div>
   )

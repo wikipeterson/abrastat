@@ -162,6 +162,15 @@ function formatTick(v: number, range: number): string {
   return v.toFixed(3)
 }
 
+function niceTickStep(raw: number, integerOnly = false): number {
+  if (!Number.isFinite(raw) || raw <= 0) return integerOnly ? 1 : 0.1
+  if (integerOnly) return Math.max(1, Math.ceil(raw))
+  const magnitude = Math.pow(10, Math.floor(Math.log10(raw)))
+  const normalized = raw / magnitude
+  const factor = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10
+  return factor * magnitude
+}
+
 function altOperator(alternative: Alternative): string {
   if (alternative === 'less') return '<'
   if (alternative === 'greater') return '>'
@@ -190,9 +199,9 @@ function OnePropNullDistPlot({
   const SVG_W = 760
   const MG = { t: 14, r: 16, b: 30, l: 16 }
   const plotHeight = 320
-  const tickFontSize = 11
-  const axisLabelFontSize = 12
-  const markerFontSize = 10
+  const tickFontSize = 13
+  const axisLabelFontSize = 14
+  const markerFontSize = 11
   const SVG_H = plotHeight + MG.t + MG.b
   const PW = SVG_W - MG.l - MG.r
   const PH = SVG_H - MG.t - MG.b
@@ -204,13 +213,17 @@ function OnePropNullDistPlot({
     ? Math.sqrt(Math.max(0, n * p0Num * (1 - p0Num)))
     : Math.sqrt(Math.max(0, p0Num * (1 - p0Num) / Math.max(1, n)))
 
-  const padSD = Math.max(normSD * 3.5, Math.abs(obsVal - nullCenter) * 1.3, (view === 'counts' ? 1 : 1 / n))
-  const rawMin = Math.min(...(values.length > 0 ? values : [obsVal]), nullCenter - padSD)
-  const rawMax = Math.max(...(values.length > 0 ? values : [obsVal]), nullCenter + padSD)
-  const rawRange = rawMax - rawMin || 1
-  const pad = rawRange * 0.08
-  const xLo = rawMin - pad
-  const xHi = rawMax + pad
+  const dataMaxDist = Math.max(
+    ...((values.length > 0 ? values : [obsVal]).map(v => Math.abs(v - nullCenter))),
+    Math.abs(obsVal - nullCenter),
+  )
+  const halfRange = Math.max(
+    normSD * 4,
+    dataMaxDist * 1.18,
+    view === 'counts' ? 2 : 2 / Math.max(1, n),
+  )
+  const xLo = nullCenter - halfRange
+  const xHi = nullCenter + halfRange
   const xRange = xHi - xLo
   const xOf = (v: number) => ((v - xLo) / xRange) * PW
 
@@ -303,16 +316,14 @@ function OnePropNullDistPlot({
 
   const ticks = view === 'counts'
     ? (() => {
-        const intStart = Math.ceil(xLo)
-        const intEnd = Math.floor(xHi)
-        const allInts = Array.from({ length: Math.max(0, intEnd - intStart + 1) }, (_, i) => intStart + i)
-        if (allInts.length <= 8) return allInts
-        const step = Math.max(1, Math.ceil((allInts.length - 1) / 7))
-        const filtered = allInts.filter((_, i) => i % step === 0)
-        const last = allInts[allInts.length - 1]
-        return filtered[filtered.length - 1] === last ? filtered : [...filtered, last]
+        const center = Math.round(nullCenter)
+        const step = niceTickStep(halfRange / 2, true)
+        return Array.from({ length: 5 }, (_, i) => center + (i - 2) * step)
       })()
-    : Array.from({ length: 5 }, (_, i) => xLo + (i / 4) * xRange)
+    : (() => {
+        const step = niceTickStep(halfRange / 2, false)
+        return Array.from({ length: 5 }, (_, i) => nullCenter + (i - 2) * step)
+      })()
 
   return (
     <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full h-full">
@@ -325,7 +336,7 @@ function OnePropNullDistPlot({
         {ticks.map((v, i) => (
           <g key={i} transform={`translate(${xOf(v)},${PH})`}>
             <line y2={3} stroke="#111111" strokeWidth={1} />
-            <text y={15} textAnchor="middle" fontSize={tickFontSize} fill="#111111" fontFamily="DM Sans,sans-serif">
+            <text y={18} textAnchor="middle" fontSize={tickFontSize} fill="#111111" fontFamily="DM Sans,sans-serif">
               {view === 'counts' ? Math.round(v).toString() : formatTick(v, xRange)}
             </text>
           </g>
@@ -349,7 +360,7 @@ function OnePropNullDistPlot({
         </g>
         {/* Obs line — always red */}
         <line x1={obsX} y1={0} x2={obsX} y2={PH} stroke="#EF4444" strokeWidth={1.8} strokeDasharray="4,3" />
-        <text x={obsX + (obsVal >= nullCenter ? 3 : -3)} y={5}
+        <text x={obsX + (obsVal >= nullCenter ? 3 : -3)} y={7}
           textAnchor={obsVal >= nullCenter ? 'start' : 'end'}
           fontSize={markerFontSize} fill="#EF4444" fontFamily="DM Sans,sans-serif" fontWeight="600">obs</text>
         {/* Custom threshold line — teal, only when it differs from obs */}
@@ -357,12 +368,12 @@ function OnePropNullDistPlot({
           <>
             <line x1={threshX} y1={0} x2={threshX} y2={PH}
               stroke="#0EA5A0" strokeWidth={1.6} strokeDasharray="5,3" />
-            <text x={threshX + (thresh >= nullCenter ? 3 : -3)} y={14}
+            <text x={threshX + (thresh >= nullCenter ? 3 : -3)} y={16}
               textAnchor={thresh >= nullCenter ? 'start' : 'end'}
               fontSize={markerFontSize} fill="#0EA5A0" fontFamily="DM Sans,sans-serif" fontWeight="600">t</text>
           </>
         )}
-        <text x={PW / 2} y={PH + 27} textAnchor="middle" fontSize={axisLabelFontSize} fill="#111111" fontFamily="DM Sans,sans-serif">
+        <text x={PW / 2} y={PH + 30} textAnchor="middle" fontSize={axisLabelFontSize} fill="#111111" fontFamily="DM Sans,sans-serif">
           {view === 'counts' ? 'Simulated X (count of successes)' : 'Simulated p̂'}
         </text>
       </g>
@@ -831,15 +842,6 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
       <style>{COIN_CSS}</style>
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-4 space-y-4">
 
-        <div className="rounded-xl bg-[var(--color-accent-light)] border border-[var(--color-border)] px-3 py-2.5 text-xs text-[var(--color-muted)]">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
-            <span><span className="font-semibold text-[var(--color-text)]">H₀:</span> p = {config.nullP}</span>
-            <span><span className="font-semibold text-[var(--color-text)]">Hₐ:</span> {altStatement}</span>
-            <span><span className="font-semibold text-[var(--color-text)]">n:</span> {n}</span>
-            <span><span className="font-semibold text-[var(--color-text)]">p̂:</span> <span className="font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</span></span>
-          </div>
-        </div>
-
         <div className="space-y-3">
           {/* ── Unified coin panel ── */}
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden flex flex-col">
@@ -881,22 +883,6 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                 />
               ))}
             </div>
-
-            <div className="px-3 py-2 flex items-center gap-4 border-t border-[var(--color-border)] bg-[var(--color-accent-light)]">
-              <div className="flex items-center gap-1.5">
-                <AbraCoin face="check" size={13} />
-                <span className="text-xs text-[var(--color-muted)]">{config.successLabel}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <AbraCoin face="x" size={13} />
-                <span className="text-xs text-[var(--color-muted)]">{config.failureLabel}</span>
-              </div>
-              {simCount > 0 && (
-                <span className="ml-auto text-[10px] italic text-[var(--color-muted)]">
-                  {simCount} simulation{simCount !== 1 ? 's' : ''} run
-                </span>
-              )}
-            </div>
           </div>
 
           {/* ── Slim summary row ── */}
@@ -905,7 +891,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
         {/* ── Null distribution ── */}
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 flex flex-col gap-1.5">
           <div className="flex gap-4 items-stretch">
-            <div className="w-40 flex-shrink-0 flex flex-col gap-3">
+            <div className="w-44 flex-shrink-0 flex flex-col gap-3">
               <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
               <div className="flex flex-col items-start gap-2">
                 <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-[10px]">
@@ -932,6 +918,12 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                       <div>SD = {normSD.toFixed(graphView === 'counts' ? 1 : 4)}</div>
                     </div>
                   )}
+                  <div className="pt-2 leading-tight text-[11px]">
+                    <div><span className="font-semibold text-[var(--color-text)]">H₀:</span> p = {config.nullP}</div>
+                    <div><span className="font-semibold text-[var(--color-text)]">Hₐ:</span> {altStatement}</div>
+                    <div><span className="font-semibold text-[var(--color-text)]">n:</span> {n}</div>
+                    <div><span className="font-semibold text-[var(--color-text)]">p̂:</span> <span className="font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</span></div>
+                  </div>
                   <div className="pt-2 leading-tight">
                     <div>
                       Extreme: <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
@@ -961,7 +953,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="min-h-0" style={{ height: 320 }}>
+              <div className="min-h-0" style={{ height: 392 }}>
                 {simCount === 0
                   ? <div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">
                       Use the step buttons above or batch-run to build the null distribution

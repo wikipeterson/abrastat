@@ -484,6 +484,97 @@ function FlipCoin({
   const rimShadow = isHeads ? 'rgba(104,65,0,0.45)' : 'rgba(70,78,88,0.34)'
   const stampColor = isHeads ? '#7B4F00' : '#555D67'
   const stampHighlight = isHeads ? 'rgba(255,244,188,0.82)' : 'rgba(255,255,255,0.8)'
+  const baseRotation = isHeads ? 'rotateY(0deg)' : 'rotateY(180deg)'
+
+  function CoinSurface({
+    side,
+    rotate,
+  }: {
+    side: CoinFace
+    rotate: string
+  }) {
+    const sideIsHeads = side === 'heads'
+    const sideEdgeHighlight = sideIsHeads ? 'rgba(255,245,180,0.78)' : 'rgba(255,255,255,0.72)'
+    const sideStampColor = sideIsHeads ? '#7B4F00' : '#555D67'
+    const sideStampHighlight = sideIsHeads ? 'rgba(255,244,188,0.82)' : 'rgba(255,255,255,0.8)'
+
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: '50%',
+          overflow: 'hidden',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+          transform: rotate,
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '50%',
+            background: sideIsHeads ? goldOuter : silverOuter,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            inset: innerInset,
+            borderRadius: '50%',
+            background: sideIsHeads ? goldInner : silverInner,
+            boxShadow: `inset 0 1px 1px ${sideEdgeHighlight}, inset 0 -2px 4px rgba(0,0,0,0.15)`,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            inset: reliefInset,
+            borderRadius: '50%',
+            border: `${Math.max(1, Math.round(size * 0.028))}px solid ${sideIsHeads ? 'rgba(142,99,0,0.4)' : 'rgba(98,106,116,0.35)'}`,
+            boxShadow: `inset 0 1px 0 ${sideEdgeHighlight}, 0 0 0 1px rgba(255,255,255,0.18)`,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            top: '10%',
+            left: '16%',
+            width: '42%',
+            height: '28%',
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.32)',
+            transform: 'rotate(-20deg)',
+            filter: 'blur(0.4px)',
+            pointerEvents: 'none',
+            animation: spinning ? 'coin-spin-shimmer 0.42s ease-in-out infinite' : 'none',
+            animationDelay: spinning ? `${spinDelay}ms` : '0ms',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1,
+            fontSize: letterSize,
+            lineHeight: 1,
+            fontWeight: 700,
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            color: sideStampColor,
+            textShadow: `0 1px 0 ${sideStampHighlight}, 0 -1px 0 rgba(0,0,0,0.12)`,
+            transform: 'translateY(-2%)',
+            letterSpacing: '0.02em',
+          }}
+        >
+          {sideIsHeads ? 'H' : 'T'}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -499,86 +590,31 @@ function FlipCoin({
       <div
         style={{
           width: '100%',
-        height: '100%',
-        borderRadius: '50%',
-        display: 'flex',
-        alignItems: 'center',
-          justifyContent: 'center',
+          height: '100%',
+          borderRadius: '50%',
           position: 'relative',
-        overflow: 'hidden',
-        boxSizing: 'border-box',
-        background: isHeads ? goldInner : silverInner,
-        border: `${rimSize}px solid ${isHeads ? '#8B6100' : '#70757E'}`,
-        boxShadow: spinning
-          ? `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(22,52,76,0.18), inset 0 1px 2px rgba(255,255,255,0.24)`
-          : `0 ${Math.round(size * 0.08)}px ${Math.round(size * 0.2)}px ${rimShadow}, inset 0 1px 2px rgba(255,255,255,0.4)`,
+          transform: baseRotation,
           transformStyle: 'preserve-3d',
-          animation: spinning ? 'coin-flip-spin 0.5s linear infinite' : 'none',
-          animationDelay: spinning ? `${spinDelay}ms` : '0ms',
         }}
       >
-        <>
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              borderRadius: '50%',
-              background: isHeads ? goldOuter : silverOuter,
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              inset: innerInset,
-              borderRadius: '50%',
-              background: isHeads ? goldInner : silverInner,
-              boxShadow: `inset 0 1px 1px ${spinning ? 'rgba(255,255,255,0.6)' : edgeHighlight}, inset 0 -2px 4px rgba(0,0,0,0.15)`,
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              inset: reliefInset,
-              borderRadius: '50%',
-              border: `${Math.max(1, Math.round(size * 0.028))}px solid ${isHeads ? 'rgba(142,99,0,0.4)' : 'rgba(98,106,116,0.35)'}`,
-              boxShadow: `inset 0 1px 0 ${spinning ? 'rgba(255,255,255,0.65)' : edgeHighlight}, 0 0 0 1px rgba(255,255,255,0.18)`,
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              top: '10%',
-              left: '16%',
-              width: '42%',
-              height: '28%',
-              borderRadius: '50%',
-              background: 'rgba(255,255,255,0.32)',
-              transform: 'rotate(-20deg)',
-              filter: 'blur(0.4px)',
-              pointerEvents: 'none',
-              animation: spinning ? 'coin-spin-shimmer 0.42s ease-in-out infinite' : 'none',
-              animationDelay: spinning ? `${spinDelay}ms` : '0ms',
-            }}
-          />
-        </>
-        {!spinning && (
-          <div
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              fontSize: letterSize,
-              lineHeight: 1,
-              fontWeight: 700,
-              fontFamily: 'Georgia, "Times New Roman", serif',
-              color: stampColor,
-              textShadow: `0 1px 0 ${stampHighlight}, 0 -1px 0 rgba(0,0,0,0.12)`,
-              transform: 'translateY(-2%)',
-              letterSpacing: '0.02em',
-            }}
-          >
-            {isHeads ? 'H' : 'T'}
-          </div>
-        )}
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%',
+            position: 'relative',
+            boxSizing: 'border-box',
+            boxShadow: spinning
+              ? `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(22,52,76,0.18), inset 0 1px 2px rgba(255,255,255,0.24)`
+              : `0 ${Math.round(size * 0.08)}px ${Math.round(size * 0.2)}px ${rimShadow}, inset 0 1px 2px rgba(255,255,255,0.4)`,
+            transformStyle: 'preserve-3d',
+            animation: spinning ? 'coin-flip-spin 0.5s linear infinite' : 'none',
+            animationDelay: spinning ? `${spinDelay}ms` : '0ms',
+          }}
+        >
+          <CoinSurface side="heads" rotate="rotateY(0deg)" />
+          <CoinSurface side="tails" rotate="rotateY(180deg)" />
+        </div>
       </div>
     </div>
   )

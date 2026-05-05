@@ -14,16 +14,18 @@ import {
 // ── Coin animation CSS ────────────────────────────────────────────────────────
 
 const COIN_CSS = `
-@keyframes coin-flat-spin {
-  0%   { transform: scaleX(1)    rotateZ(0deg)  }
-  12%  { transform: scaleX(0.06) rotateZ(3deg)  }
-  25%  { transform: scaleX(1)    rotateZ(-2deg) }
-  37%  { transform: scaleX(0.06) rotateZ(2deg)  }
-  50%  { transform: scaleX(1)    rotateZ(-1deg) }
-  62%  { transform: scaleX(0.06) rotateZ(3deg)  }
-  75%  { transform: scaleX(1)    rotateZ(-2deg) }
-  87%  { transform: scaleX(0.06) rotateZ(1deg)  }
-  100% { transform: scaleX(1)    rotateZ(0deg)  }
+@keyframes coin-flip-spin {
+  0%   { transform: translateY(0) rotateY(0deg) scale(1); }
+  20%  { transform: translateY(-7%) rotateY(88deg) scale(0.92, 1.04); }
+  50%  { transform: translateY(-12%) rotateY(180deg) scale(1.01); }
+  80%  { transform: translateY(-7%) rotateY(272deg) scale(0.92, 1.04); }
+  100% { transform: translateY(0) rotateY(360deg) scale(1); }
+}
+
+@keyframes coin-spin-shimmer {
+  0%   { opacity: 0.18; transform: translateX(-18%) rotate(-22deg); }
+  50%  { opacity: 0.42; transform: translateX(16%) rotate(-22deg); }
+  100% { opacity: 0.18; transform: translateX(-18%) rotate(-22deg); }
 }
 `
 
@@ -45,72 +47,97 @@ function AbraCoin({
   revealDelay?: number
 }) {
   const isCheck = face === 'check'
-  const rimSize  = Math.max(1, Math.round(size * 0.055))
+  const rimSize  = Math.max(2, Math.round(size * 0.06))
+  const innerRingInset = Math.max(3, Math.round(size * 0.085))
+  const innerInset = Math.max(5, Math.round(size * 0.135))
+  const reliefInset = Math.max(9, Math.round(size * 0.225))
   const iconSize = Math.round(size * (isCheck ? 0.52 : 0.46))
-  const neutralBackground = 'linear-gradient(90deg, #0EA5A0 0%, #47CFC8 48%, #D7E2EE 52%, #A7B6C8 100%)'
+  const tealOuter = 'linear-gradient(145deg, #064E4B 0%, #0D9488 18%, #72E8DF 40%, #0F766E 68%, #083B39 100%)'
+  const tealInner = 'radial-gradient(circle at 32% 28%, #B9FFF8 0%, #67E8DF 26%, #14B8A6 58%, #0F766E 100%)'
+  const silverOuter = 'linear-gradient(145deg, #70757E 0%, #B8BDC5 18%, #F5F7FA 40%, #A0A7B0 68%, #666B73 100%)'
+  const silverInner = 'radial-gradient(circle at 32% 28%, #FFFFFF 0%, #E7EBEF 26%, #C7CDD4 58%, #969DA6 100%)'
+  const rimShadow = isCheck ? 'rgba(0,80,76,0.30)' : 'rgba(70,78,88,0.34)'
+  const baseRotation = isCheck ? 'rotateY(0deg)' : 'rotateY(180deg)'
 
-  const containerStyle: React.CSSProperties = {
-    width:         size,
-    height:        size,
-    borderRadius:  '50%',
-    position:      'relative',
-    flexShrink:    0,
-    // Spin animation
-    animation:     spinning ? `coin-flat-spin 0.22s linear infinite` : 'none',
-    animationDelay: spinning ? `${spinDelay}ms` : '0ms',
-  }
+  function CoinSurface({
+    side,
+    rotate,
+  }: {
+    side: CoinFace
+    rotate: string
+  }) {
+    const sideIsCheck = side === 'check'
+    const rimStroke = sideIsCheck ? '#0A6663' : '#70757E'
+    const innerRingStroke = sideIsCheck ? 'rgba(195,255,251,0.9)' : 'rgba(255,255,255,0.88)'
+    const edgeHighlight = sideIsCheck ? 'rgba(215,255,252,0.78)' : 'rgba(255,255,255,0.72)'
+    const reliefStroke = sideIsCheck ? 'rgba(8,103,98,0.42)' : 'rgba(98,106,116,0.35)'
 
-  const faceStyle: React.CSSProperties = {
-    width:       '100%',
-    height:      '100%',
-    borderRadius: '50%',
-    display:     'flex',
-    alignItems:  'center',
-    justifyContent: 'center',
-    position:    'relative',
-    overflow:    'hidden',
-    boxSizing:   'border-box',
-    // Check → teal, X → cool silver
-    background: spinning
-      ? neutralBackground
-      : isCheck
-        ? 'radial-gradient(circle at 36% 33%, #5CE0DB, #0EA5A0 52%, #097B76)'
-        : 'radial-gradient(circle at 36% 33%, #F1F5F9, #CBD5E1 52%, #94A3B8)',
-    border: `${rimSize}px solid ${spinning ? '#5E7085' : isCheck ? '#0A6663' : '#7C8FA1'}`,
-    boxShadow: spinning
-      ? `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(22,52,76,0.18), inset 0 1px 2px rgba(255,255,255,0.24)`
-      : isCheck
-        ? `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(0,80,76,0.30), inset 0 1px 2px rgba(255,255,255,0.28)`
-        : `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(0,0,0,0.18), inset 0 1px 2px rgba(255,255,255,0.40)`,
-    // Smooth color transition on face change
-    transition: spinning
-      ? 'none'
-      : `background 0.30s ease ${revealDelay}ms, border-color 0.30s ease ${revealDelay}ms, box-shadow 0.30s ease ${revealDelay}ms`,
-  }
-
-  return (
-    <div style={containerStyle}>
-      <div style={faceStyle}>
-        {/* Specular highlight */}
-        <div style={{
-          position:     'absolute',
-          top:          '6%',
-          left:         '14%',
-          width:        '38%',
-          height:       '30%',
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
           borderRadius: '50%',
-          background:   'rgba(255,255,255,0.24)',
-          transform:    'rotate(-22deg)',
-          pointerEvents: 'none',
-        }} />
-        {/* Icon */}
+          overflow: 'hidden',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+          transform: rotate,
+        }}
+      >
         <div style={{
-          position: 'relative',
-          zIndex:   1,
-          opacity:   spinning ? 0.6 : 1,
+          position: 'absolute',
+          inset: 0,
+          borderRadius: '50%',
+          background: sideIsCheck ? tealOuter : silverOuter,
+          border: `${rimSize}px solid ${rimStroke}`,
+          boxSizing: 'border-box',
+        }} />
+        <div style={{
+          position: 'absolute',
+          inset: innerRingInset,
+          borderRadius: '50%',
+          border: `${Math.max(1, Math.round(size * 0.025))}px solid ${innerRingStroke}`,
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(0,0,0,0.14)',
+        }} />
+        <div style={{
+          position: 'absolute',
+          inset: innerInset,
+          borderRadius: '50%',
+          background: sideIsCheck ? tealInner : silverInner,
+          boxShadow: `inset 0 2px 2px ${edgeHighlight}, inset 0 -4px 6px rgba(0,0,0,0.18)`,
+        }} />
+        <div style={{
+          position: 'absolute',
+          inset: reliefInset,
+          borderRadius: '50%',
+          border: `${Math.max(1, Math.round(size * 0.028))}px solid ${reliefStroke}`,
+          boxShadow: `inset 0 1px 0 ${edgeHighlight}, inset 0 -2px 3px rgba(0,0,0,0.12), 0 0 0 1px rgba(255,255,255,0.15)`,
+        }} />
+        <div style={{
+          position: 'absolute',
+          top: '10%',
+          left: '16%',
+          width: '42%',
+          height: '28%',
+          borderRadius: '50%',
+          background: 'rgba(255,255,255,0.32)',
+          transform: 'rotate(-20deg)',
+          filter: 'blur(0.4px)',
+          pointerEvents: 'none',
+          animation: spinning ? 'coin-spin-shimmer 0.42s ease-in-out infinite' : 'none',
+          animationDelay: spinning ? `${spinDelay}ms` : '0ms',
+        }} />
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1,
+          opacity: spinning ? 0.92 : 1,
           transition: spinning ? 'none' : `opacity 0.25s ease ${revealDelay}ms`,
         }}>
-          {spinning ? null : isCheck ? (
+          {sideIsCheck ? (
             <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none">
               <polyline
                 points="3.5,12 9,18.5 20.5,6"
@@ -126,6 +153,46 @@ function AbraCoin({
               <line x1="18" y1="6" x2="6"  y2="18" stroke="#3D5166" strokeWidth="2.8" strokeLinecap="round" />
             </svg>
           )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{
+      width: size,
+      height: size,
+      borderRadius: '50%',
+      position: 'relative',
+      flexShrink: 0,
+      perspective: `${Math.max(140, Math.round(size * 5))}px`,
+    }}>
+      <div style={{
+        width: '100%',
+        height: '100%',
+        borderRadius: '50%',
+        position: 'relative',
+        transform: baseRotation,
+        transformStyle: 'preserve-3d',
+      }}>
+        <div style={{
+          width: '100%',
+          height: '100%',
+          borderRadius: '50%',
+          position: 'relative',
+          boxSizing: 'border-box',
+          boxShadow: spinning
+            ? `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(22,52,76,0.18), inset 0 1px 2px rgba(255,255,255,0.24)`
+            : `0 ${Math.round(size * 0.08)}px ${Math.round(size * 0.2)}px ${rimShadow}, inset 0 1px 2px rgba(255,255,255,0.4)`,
+          transformStyle: 'preserve-3d',
+          animation: spinning ? 'coin-flip-spin 0.32s linear infinite' : 'none',
+          animationDelay: spinning ? `${spinDelay}ms` : '0ms',
+          transition: spinning
+            ? 'none'
+            : `box-shadow 0.30s ease ${revealDelay}ms`,
+        }}>
+          <CoinSurface side="check" rotate="rotateY(0deg)" />
+          <CoinSurface side="x" rotate="rotateY(180deg)" />
         </div>
       </div>
     </div>
@@ -781,7 +848,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
     setIsRunning(true)
 
     // Timing: slower for 1, snappier for 10
-    const spinMs    = count === 1 ? 750 : 220
+    const spinMs    = count === 1 ? 1200 : 360
     const computeMs = count === 1 ? 450 : 130
     const pauseMs   = count === 1 ? 80  : 40
 

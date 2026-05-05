@@ -12,11 +12,11 @@ const SPEED_SEG: Record<Speed, number> = { slow: 2.5, medium: 10, fast: 50 }
 
 // ── Canvas geometry ───────────────────────────────────────────────────────────
 
-const CW         = 560
-const CH         = 650
-const SIDE_PAD   = 42
+const CW         = 600
+const CH         = 710
+const SIDE_PAD   = 44
 const TOP_PAD    = 34
-const BIN_AREA_H = 145
+const BIN_AREA_H = 152
 const PEG_R      = 4
 const BALL_R     = 6
 const MAX_ROWS   = 16
@@ -527,7 +527,7 @@ export function GaltonBoard() {
       </div>
 
       {/* ── Right panel ─────────────────────────────────────────────────────── */}
-      <div className="w-full xl:w-[420px] xl:flex-none min-w-0 flex flex-col gap-4">
+      <div className="w-full xl:w-[390px] xl:flex-none min-w-0 flex flex-col gap-4">
 
         {/* Board setup */}
         <div className="rounded-2xl border border-[var(--color-border)] bg-white shadow-sm p-4 space-y-4">

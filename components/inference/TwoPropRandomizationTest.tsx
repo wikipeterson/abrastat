@@ -303,7 +303,7 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
         <g clipPath={`url(#${clipId})`}>
           {circles.map((c,i) => (
             <circle key={i} cx={c.cx} cy={c.cy} r={dotR} fill={c.extreme?'#0EA5A0':'#94A3B8'} opacity={0.85}
-              style={i===circles.length-1&&values.length>0?{animation:'dot-drop-full 500ms ease-out'}:undefined}/>
+              style={i===circles.length-1&&values.length>0?{animation:'dot-drop-full 700ms ease-out'}:undefined}/>
           ))}
           {normalPath && (
             <polyline

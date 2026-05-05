@@ -473,8 +473,9 @@ function FlipCoin({
 }) {
   const isHeads = face === 'heads'
   const rimSize = Math.max(2, Math.round(size * 0.06))
-  const innerInset = Math.max(4, Math.round(size * 0.11))
-  const reliefInset = Math.max(7, Math.round(size * 0.19))
+  const innerRingInset = Math.max(3, Math.round(size * 0.085))
+  const innerInset = Math.max(5, Math.round(size * 0.135))
+  const reliefInset = Math.max(9, Math.round(size * 0.225))
   const letterSize = Math.max(10, Math.round(size * 0.36))
   const goldOuter = 'linear-gradient(145deg, #8B6100 0%, #C99300 18%, #F8DD72 40%, #C68800 68%, #7B5100 100%)'
   const goldInner = 'radial-gradient(circle at 32% 28%, #FFF2A3 0%, #F7D24E 24%, #E0A815 58%, #A86900 100%)'
@@ -482,8 +483,6 @@ function FlipCoin({
   const silverInner = 'radial-gradient(circle at 32% 28%, #FFFFFF 0%, #E7EBEF 26%, #C7CDD4 58%, #969DA6 100%)'
   const edgeHighlight = isHeads ? 'rgba(255,245,180,0.78)' : 'rgba(255,255,255,0.72)'
   const rimShadow = isHeads ? 'rgba(104,65,0,0.45)' : 'rgba(70,78,88,0.34)'
-  const stampColor = isHeads ? '#7B4F00' : '#555D67'
-  const stampHighlight = isHeads ? 'rgba(255,244,188,0.82)' : 'rgba(255,255,255,0.8)'
   const baseRotation = isHeads ? 'rotateY(0deg)' : 'rotateY(180deg)'
 
   function CoinSurface({
@@ -495,8 +494,11 @@ function FlipCoin({
   }) {
     const sideIsHeads = side === 'heads'
     const sideEdgeHighlight = sideIsHeads ? 'rgba(255,245,180,0.78)' : 'rgba(255,255,255,0.72)'
-    const sideStampColor = sideIsHeads ? '#7B4F00' : '#555D67'
-    const sideStampHighlight = sideIsHeads ? 'rgba(255,244,188,0.82)' : 'rgba(255,255,255,0.8)'
+    const sideStampColor = sideIsHeads ? '#865700' : '#5F6771'
+    const sideStampHighlight = sideIsHeads ? 'rgba(255,244,188,0.7)' : 'rgba(255,255,255,0.75)'
+    const rimStroke = sideIsHeads ? '#8B6100' : '#70757E'
+    const innerRingStroke = sideIsHeads ? 'rgba(255,240,170,0.9)' : 'rgba(255,255,255,0.88)'
+    const reliefStroke = sideIsHeads ? 'rgba(142,99,0,0.42)' : 'rgba(98,106,116,0.35)'
 
     return (
       <div
@@ -516,6 +518,17 @@ function FlipCoin({
             inset: 0,
             borderRadius: '50%',
             background: sideIsHeads ? goldOuter : silverOuter,
+            border: `${rimSize}px solid ${rimStroke}`,
+            boxSizing: 'border-box',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            inset: innerRingInset,
+            borderRadius: '50%',
+            border: `${Math.max(1, Math.round(size * 0.025))}px solid ${innerRingStroke}`,
+            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(0,0,0,0.14)`,
           }}
         />
         <div
@@ -524,7 +537,7 @@ function FlipCoin({
             inset: innerInset,
             borderRadius: '50%',
             background: sideIsHeads ? goldInner : silverInner,
-            boxShadow: `inset 0 1px 1px ${sideEdgeHighlight}, inset 0 -2px 4px rgba(0,0,0,0.15)`,
+            boxShadow: `inset 0 2px 2px ${sideEdgeHighlight}, inset 0 -4px 6px rgba(0,0,0,0.18)`,
           }}
         />
         <div
@@ -532,8 +545,8 @@ function FlipCoin({
             position: 'absolute',
             inset: reliefInset,
             borderRadius: '50%',
-            border: `${Math.max(1, Math.round(size * 0.028))}px solid ${sideIsHeads ? 'rgba(142,99,0,0.4)' : 'rgba(98,106,116,0.35)'}`,
-            boxShadow: `inset 0 1px 0 ${sideEdgeHighlight}, 0 0 0 1px rgba(255,255,255,0.18)`,
+            border: `${Math.max(1, Math.round(size * 0.028))}px solid ${reliefStroke}`,
+            boxShadow: `inset 0 1px 0 ${sideEdgeHighlight}, inset 0 -2px 3px rgba(0,0,0,0.12), 0 0 0 1px rgba(255,255,255,0.15)`,
           }}
         />
         <div
@@ -565,9 +578,10 @@ function FlipCoin({
             fontWeight: 700,
             fontFamily: 'Georgia, "Times New Roman", serif',
             color: sideStampColor,
-            textShadow: `0 1px 0 ${sideStampHighlight}, 0 -1px 0 rgba(0,0,0,0.12)`,
+            textShadow: `0 1px 0 ${sideStampHighlight}, 0 -1px 0 rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.18)`,
             transform: 'translateY(-2%)',
             letterSpacing: '0.02em',
+            filter: 'drop-shadow(0 1px 0 rgba(255,255,255,0.18))',
           }}
         >
           {sideIsHeads ? 'H' : 'T'}

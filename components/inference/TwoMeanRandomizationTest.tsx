@@ -287,7 +287,7 @@ function MeanNullDistPlot({ values, diffObs, alternative, showNormalCurve = fals
 
   return (
     <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full h-full">
-      <style>{`@keyframes dot-drop{from{transform:translateY(-28px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
+      <style>{`@keyframes dot-drop-full{from{transform:translateY(-${PH}px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
       <defs><clipPath id={clipId}><rect x={0} y={0} width={PW} height={PH}/></clipPath></defs>
       <g transform={`translate(${MG.l},${MG.t})`}>
         <path d={shade} fill="#0EA5A0" opacity={0.10}/>
@@ -303,7 +303,7 @@ function MeanNullDistPlot({ values, diffObs, alternative, showNormalCurve = fals
         <g clipPath={`url(#${clipId})`}>
           {circles.map((c,i) => (
             <circle key={i} cx={c.cx} cy={c.cy} r={dotR} fill={c.extreme?'#0EA5A0':'#94A3B8'} opacity={0.85}
-              style={i===circles.length-1&&values.length>0?{animation:'dot-drop 250ms ease-out'}:undefined}/>
+              style={i===circles.length-1&&values.length>0?{animation:'dot-drop-full 700ms ease-out'}:undefined}/>
           ))}
           {normalPath && (
             <polyline

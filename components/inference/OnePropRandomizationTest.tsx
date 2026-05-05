@@ -31,7 +31,7 @@ const COIN_CSS = `
 
 // ── AbraCoin component ────────────────────────────────────────────────────────
 
-type CoinFace = 'check' | 'x'
+type CoinFace = 'heads' | 'tails'
 
 function AbraCoin({
   face,
@@ -46,18 +46,18 @@ function AbraCoin({
   spinDelay?: number
   revealDelay?: number
 }) {
-  const isCheck = face === 'check'
+  const isHeads = face === 'heads'
   const rimSize  = Math.max(2, Math.round(size * 0.06))
   const innerRingInset = Math.max(3, Math.round(size * 0.085))
   const innerInset = Math.max(5, Math.round(size * 0.135))
   const reliefInset = Math.max(9, Math.round(size * 0.225))
-  const iconSize = Math.round(size * (isCheck ? 0.52 : 0.46))
-  const tealOuter = 'linear-gradient(145deg, #064E4B 0%, #0D9488 18%, #72E8DF 40%, #0F766E 68%, #083B39 100%)'
-  const tealInner = 'radial-gradient(circle at 32% 28%, #B9FFF8 0%, #67E8DF 26%, #14B8A6 58%, #0F766E 100%)'
+  const letterSize = Math.max(10, Math.round(size * 0.36))
+  const goldOuter = 'linear-gradient(145deg, #8B6100 0%, #C99300 18%, #F8DD72 40%, #C68800 68%, #7B5100 100%)'
+  const goldInner = 'radial-gradient(circle at 32% 28%, #FFF2A3 0%, #F7D24E 24%, #E0A815 58%, #A86900 100%)'
   const silverOuter = 'linear-gradient(145deg, #70757E 0%, #B8BDC5 18%, #F5F7FA 40%, #A0A7B0 68%, #666B73 100%)'
   const silverInner = 'radial-gradient(circle at 32% 28%, #FFFFFF 0%, #E7EBEF 26%, #C7CDD4 58%, #969DA6 100%)'
-  const rimShadow = isCheck ? 'rgba(0,80,76,0.30)' : 'rgba(70,78,88,0.34)'
-  const baseRotation = isCheck ? 'rotateY(0deg)' : 'rotateY(180deg)'
+  const rimShadow = isHeads ? 'rgba(104,65,0,0.45)' : 'rgba(70,78,88,0.34)'
+  const baseRotation = spinning ? 'rotateY(0deg)' : isHeads ? 'rotateY(0deg)' : 'rotateY(180deg)'
 
   function CoinSurface({
     side,
@@ -66,11 +66,13 @@ function AbraCoin({
     side: CoinFace
     rotate: string
   }) {
-    const sideIsCheck = side === 'check'
-    const rimStroke = sideIsCheck ? '#0A6663' : '#70757E'
-    const innerRingStroke = sideIsCheck ? 'rgba(195,255,251,0.9)' : 'rgba(255,255,255,0.88)'
-    const edgeHighlight = sideIsCheck ? 'rgba(215,255,252,0.78)' : 'rgba(255,255,255,0.72)'
-    const reliefStroke = sideIsCheck ? 'rgba(8,103,98,0.42)' : 'rgba(98,106,116,0.35)'
+    const sideIsHeads = side === 'heads'
+    const rimStroke = sideIsHeads ? '#8B6100' : '#70757E'
+    const innerRingStroke = sideIsHeads ? 'rgba(255,240,170,0.9)' : 'rgba(255,255,255,0.88)'
+    const edgeHighlight = sideIsHeads ? 'rgba(255,245,180,0.78)' : 'rgba(255,255,255,0.72)'
+    const reliefStroke = sideIsHeads ? 'rgba(142,99,0,0.42)' : 'rgba(98,106,116,0.35)'
+    const stampColor = sideIsHeads ? '#865700' : '#5F6771'
+    const stampHighlight = sideIsHeads ? 'rgba(255,244,188,0.7)' : 'rgba(255,255,255,0.75)'
 
     return (
       <div
@@ -88,7 +90,7 @@ function AbraCoin({
           position: 'absolute',
           inset: 0,
           borderRadius: '50%',
-          background: sideIsCheck ? tealOuter : silverOuter,
+          background: sideIsHeads ? goldOuter : silverOuter,
           border: `${rimSize}px solid ${rimStroke}`,
           boxSizing: 'border-box',
         }} />
@@ -103,7 +105,7 @@ function AbraCoin({
           position: 'absolute',
           inset: innerInset,
           borderRadius: '50%',
-          background: sideIsCheck ? tealInner : silverInner,
+          background: sideIsHeads ? goldInner : silverInner,
           boxShadow: `inset 0 2px 2px ${edgeHighlight}, inset 0 -4px 6px rgba(0,0,0,0.18)`,
         }} />
         <div style={{
@@ -134,25 +136,18 @@ function AbraCoin({
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1,
+          fontSize: letterSize,
+          lineHeight: 1,
+          fontWeight: 700,
+          fontFamily: 'Georgia, "Times New Roman", serif',
+          color: stampColor,
+          textShadow: `0 1px 0 ${stampHighlight}, 0 -1px 0 rgba(0,0,0,0.22)`,
+          transform: 'translateY(-2%)',
+          letterSpacing: '0.02em',
           opacity: spinning ? 0.92 : 1,
           transition: spinning ? 'none' : `opacity 0.25s ease ${revealDelay}ms`,
         }}>
-          {sideIsCheck ? (
-            <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none">
-              <polyline
-                points="3.5,12 9,18.5 20.5,6"
-                stroke="white"
-                strokeWidth="3.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          ) : (
-            <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none">
-              <line x1="6" y1="6"  x2="18" y2="18" stroke="#3D5166" strokeWidth="2.8" strokeLinecap="round" />
-              <line x1="18" y1="6" x2="6"  y2="18" stroke="#3D5166" strokeWidth="2.8" strokeLinecap="round" />
-            </svg>
-          )}
+          {sideIsHeads ? 'H' : 'T'}
         </div>
       </div>
     )
@@ -191,8 +186,8 @@ function AbraCoin({
             ? 'none'
             : `box-shadow 0.30s ease ${revealDelay}ms`,
         }}>
-          <CoinSurface side="check" rotate="rotateY(0deg)" />
-          <CoinSurface side="x" rotate="rotateY(180deg)" />
+          <CoinSurface side="heads" rotate="rotateY(0deg)" />
+          <CoinSurface side="tails" rotate="rotateY(180deg)" />
         </div>
       </div>
     </div>
@@ -750,11 +745,11 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
   const showSimFaces = (phase === 'computed' || phase === 'plotted') && displayedSim !== null
   const displayFaces = useMemo<CoinFace[]>(() => {
     if (showSimFaces && displayedSim) {
-      return displayedSim.outcomes.map(outcome => outcome ? 'check' as CoinFace : 'x' as CoinFace)
+      return displayedSim.outcomes.map(outcome => outcome ? 'heads' as CoinFace : 'tails' as CoinFace)
     }
     return [
-      ...Array(x).fill('check' as CoinFace),
-      ...Array(Math.max(0, n - x)).fill('x' as CoinFace),
+      ...Array(x).fill('heads' as CoinFace),
+      ...Array(Math.max(0, n - x)).fill('tails' as CoinFace),
     ]
   }, [showSimFaces, displayedSim, x, n])
 

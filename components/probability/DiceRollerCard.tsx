@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useMemo } from 'react'
 import { v4 as uuid } from 'uuid'
 import { D6Canvas, D6CanvasHandle, DEFAULT_DICE_TUNING, DiceTuning } from './D6Canvas'
 import { useStore } from '@/lib/store'
@@ -58,6 +58,82 @@ function deriveTrackedValues(
     .map(roll => Math.abs(roll[0] - roll[1]))
 }
 
+function ResultsDotPlot({
+  values,
+  label,
+  minValue,
+  maxValue,
+  color,
+}: {
+  values: number[]
+  label: string
+  minValue: number
+  maxValue: number
+  color: string
+}) {
+  const marginL = 48
+  const marginR = 20
+  const marginT = 16
+  const marginB = 38
+  const svgW = 420
+  const svgH = 300
+  const plotW = svgW - marginL - marginR
+  const plotH = svgH - marginT - marginB
+
+  const counts: Record<number, number> = {}
+  for (const v of values) counts[v] = (counts[v] || 0) + 1
+  const maxStack = Math.max(...Object.values(counts), 1)
+  const stackStep = Math.min(14, plotH / maxStack)
+  const r = Math.max(2.5, Math.min(5, stackStep / 2 - 0.4))
+
+  const range = maxValue > minValue ? maxValue - minValue : 1
+  const xScale = (v: number) => marginL + ((v - minValue) / range) * plotW
+  const yBase = marginT + plotH
+
+  const dots: { cx: number; cy: number }[] = []
+  for (const [vStr, count] of Object.entries(counts)) {
+    const v = Number(vStr)
+    const cx = xScale(v)
+    for (let i = 0; i < count; i++) {
+      dots.push({ cx, cy: yBase - r - i * stackStep })
+    }
+  }
+
+  const tickStep = Math.max(1, Math.ceil(range / 8))
+  const ticks: number[] = []
+  for (let t = minValue; t <= maxValue; t += tickStep) ticks.push(t)
+  if (ticks[ticks.length - 1] !== maxValue) ticks.push(maxValue)
+
+  return (
+    <div className="h-full rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+      <div className="mb-2 text-sm font-semibold text-[var(--color-text)]">{label}</div>
+      {values.length === 0 ? (
+        <div className="flex h-[calc(100%-1.5rem)] min-h-[320px] items-center justify-center rounded-xl bg-slate-50 text-sm text-[var(--color-muted)]">
+          Roll the dice to build the dot plot.
+        </div>
+      ) : (
+        <svg
+          width="100%"
+          height="100%"
+          viewBox={`0 0 ${svgW} ${svgH}`}
+          style={{ display: 'block', width: '100%', height: '100%', minHeight: '320px' }}
+        >
+          <line x1={marginL} y1={yBase + 1} x2={marginL + plotW} y2={yBase + 1} stroke="#CBD5E1" strokeWidth={1.2} />
+          {ticks.map(t => (
+            <g key={t}>
+              <line x1={xScale(t)} y1={yBase + 1} x2={xScale(t)} y2={yBase + 6} stroke="#94A3B8" strokeWidth={1} />
+              <text x={xScale(t)} y={yBase + 20} textAnchor="middle" fontSize={12} fill="#475569">{t}</text>
+            </g>
+          ))}
+          {dots.map((d, i) => (
+            <circle key={i} cx={d.cx} cy={d.cy} r={r} fill={color} opacity={0.82} />
+          ))}
+        </svg>
+      )}
+    </div>
+  )
+}
+
 // ── Palette die ───────────────────────────────────────────────────────────────
 
 function PaletteDie({ sides, count, onClick }: { sides: DiceSides; count: number; onClick: () => void }) {
@@ -107,6 +183,9 @@ interface DiceRollerCardProps {
 export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardProps) {
   const [tray, setTray]               = useState<DieInTray[]>([])
   const [finalResults, setFinalResults] = useState<Record<string, number>>({})
+  const [rollHistory, setRollHistory] = useState<number[][]>([])
+  const [showGraph, setShowGraph] = useState(false)
+  const [graphMode, setGraphMode] = useState<'sum' | 'difference'>('sum')
   const [tuning] = useState<DiceTuning>(DEFAULT_DICE_TUNING)
   const [viewportHeight, setViewportHeight] = useState(900)
   const canvasRef = useRef<D6CanvasHandle>(null)
@@ -212,6 +291,8 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
 
   function addDie(sides: DiceSides) {
     const id = uuid()
+    setRollHistory([])
+    setFinalResults({})
     setTray(prev => [...prev, { id, sides }])
     canvasRef.current?.addDie(id, sides)
   }
@@ -232,9 +313,10 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
 
     rollInProgressRef.current = false
 
-    if (!linkedResultsCardId) return
-
     const settled = tray.map(d => finalResults[d.id]).filter((v): v is number => v != null)
+    setRollHistory(prev => [...prev, settled])
+
+    if (!linkedResultsCardId) return
     pushSimResult(linkedResultsCardId, settled)
   }, [finalResults, tray, trackedMode, linkedResultsCardId, pushSimResult])
 
@@ -261,6 +343,12 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
     exploreCards.some(c => c.id === linkedResultsCardId)
   const trackedRange = getTrackedRange(tray, trackedMode)
   const supportsDifference = tray.length === 2
+  const effectiveGraphMode = graphMode === 'difference' && supportsDifference ? 'difference' : 'sum'
+  const graphRange = getTrackedRange(tray, effectiveGraphMode)
+  const graphValues = useMemo(
+    () => deriveTrackedValues(rollHistory, effectiveGraphMode),
+    [rollHistory, effectiveGraphMode],
+  )
   const stageHeight = hideHeader
     ? 'clamp(420px, calc(100vh - 11rem), 760px)'
     : 'clamp(360px, 62vh, 760px)'
@@ -319,10 +407,17 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
     updateExploreCard,
   ])
 
+  useEffect(() => {
+    if (graphMode === 'difference' && !supportsDifference) {
+      setGraphMode('sum')
+    }
+  }, [graphMode, supportsDifference])
+
   function clearAll() {
     canvasRef.current?.clearAll()
     setTray([])
     setFinalResults({})
+    setRollHistory([])
   }
 
   function handleDieSettled(id: string, value: number) {
@@ -350,6 +445,39 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
               />
             ))}
           </div>
+
+          <label className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-text)]">
+            <input
+              type="checkbox"
+              checked={showGraph}
+              onChange={e => setShowGraph(e.target.checked)}
+              className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+            />
+            <span className="font-medium">Graph results</span>
+          </label>
+
+          {showGraph && (
+            <div className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] bg-white p-1">
+              {(['sum', 'difference'] as const).map(mode => {
+                const disabled = mode === 'difference' && !supportsDifference
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => setGraphMode(mode)}
+                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                      effectiveGraphMode === mode
+                        ? 'bg-[var(--color-accent)] text-white'
+                        : 'text-[var(--color-muted)] hover:bg-slate-50'
+                    } ${disabled ? 'cursor-not-allowed opacity-40 hover:bg-transparent' : ''}`}
+                  >
+                    {mode === 'sum' ? 'Sum' : 'Difference'}
+                  </button>
+                )
+              })}
+            </div>
+          )}
 
           <div className="flex-1 min-w-0" />
 
@@ -390,14 +518,15 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
 
       {/* ── Physics tray ───────────────────────────────────────────────────── */}
       <div
-        className="flex-1 min-h-0 px-3 py-3 grid place-items-center"
+        className={`flex-1 min-h-0 px-3 py-3 ${showGraph ? 'grid gap-3 lg:grid-cols-[minmax(0,1fr)_400px]' : 'grid place-items-center'}`}
         style={{ height: stageHeight }}
       >
         <div
-          className="h-full w-full"
+          className={`${showGraph ? 'h-full w-full' : 'h-full w-full'}`}
           style={{
             aspectRatio: `${DICE_STAGE_ASPECT}`,
             maxWidth: stageMaxWidth ? `${stageMaxWidth}px` : undefined,
+            justifySelf: showGraph ? 'stretch' : 'center',
           }}
         >
           <D6Canvas
@@ -407,6 +536,16 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
             tuning={tuning}
           />
         </div>
+
+        {showGraph && (
+          <ResultsDotPlot
+            values={graphValues}
+            label={effectiveGraphMode === 'sum' ? 'Dot Plot of Roll Sums' : 'Dot Plot of Roll Differences'}
+            minValue={graphRange.minValue}
+            maxValue={graphRange.maxValue}
+            color={effectiveGraphMode === 'sum' ? '#0EA5A0' : '#8B5CF6'}
+          />
+        )}
       </div>
 
     </div>

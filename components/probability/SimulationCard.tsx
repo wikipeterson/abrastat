@@ -622,7 +622,7 @@ function FlipCoin({
               ? `0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.18)}px rgba(22,52,76,0.18), inset 0 1px 2px rgba(255,255,255,0.24)`
               : `0 ${Math.round(size * 0.08)}px ${Math.round(size * 0.2)}px ${rimShadow}, inset 0 1px 2px rgba(255,255,255,0.4)`,
             transformStyle: 'preserve-3d',
-            animation: spinning ? 'coin-flip-spin 0.5s linear infinite' : 'none',
+            animation: spinning ? 'coin-flip-spin 0.32s linear infinite' : 'none',
             animationDelay: spinning ? `${spinDelay}ms` : '0ms',
           }}
         >
@@ -732,7 +732,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
       setDisplayFlips(outcome.flips)
       setIsSpinning(false)
       setHistory(prev => [...prev, outcome.flips])
-    }, 700)
+    }, 1200)
   }
 
   function reset() {

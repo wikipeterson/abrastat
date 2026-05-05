@@ -12,11 +12,11 @@ const SPEED_SEG: Record<Speed, number> = { slow: 2.5, medium: 10, fast: 50 }
 
 // ── Canvas geometry ───────────────────────────────────────────────────────────
 
-const CW         = 480
-const CH         = 540
-const SIDE_PAD   = 38
-const TOP_PAD    = 32
-const BIN_AREA_H = 130
+const CW         = 560
+const CH         = 650
+const SIDE_PAD   = 42
+const TOP_PAD    = 34
+const BIN_AREA_H = 145
 const PEG_R      = 4
 const BALL_R     = 6
 const MAX_ROWS   = 16
@@ -503,10 +503,10 @@ export function GaltonBoard() {
   const animating = totalDropped > totalLanded
 
   return (
-    <div className="flex flex-col xl:flex-row gap-4">
+    <div className="flex flex-col xl:flex-row gap-4 items-start">
 
       {/* ── Canvas ──────────────────────────────────────────────────────────── */}
-      <div className="flex-shrink-0">
+      <div className="flex-1 min-w-0">
         <div className="rounded-2xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden inline-block">
           <canvas
             ref={canvasRef}
@@ -527,7 +527,7 @@ export function GaltonBoard() {
       </div>
 
       {/* ── Right panel ─────────────────────────────────────────────────────── */}
-      <div className="flex-1 min-w-0 flex flex-col gap-4">
+      <div className="w-full xl:w-[420px] xl:flex-none min-w-0 flex flex-col gap-4">
 
         {/* Board setup */}
         <div className="rounded-2xl border border-[var(--color-border)] bg-white shadow-sm p-4 space-y-4">

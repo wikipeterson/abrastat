@@ -290,12 +290,12 @@ export function Yacht({ onDone }: Props) {
   const bonusLabel = bonusAchieved ? '+35 ✓' : upperFilled > 0 ? `need ${upperNeeded} more` : '—'
 
   return (
-    <div className="grid items-stretch gap-4 xl:grid-cols-[1.75fr_0.95fr]">
+    <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="flex h-full flex-col">
         <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white">
           <div
             className="relative flex-1 overflow-hidden bg-white"
-            style={{ minHeight: 620 }}
+            style={{ minHeight: 720 }}
           >
             <D6Canvas
               ref={canvasRef}

@@ -290,8 +290,8 @@ export function Yacht({ onDone }: Props) {
   const bonusLabel = bonusAchieved ? '+35 ✓' : upperFilled > 0 ? `need ${upperNeeded} more` : '—'
 
   return (
-    <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
-      <div className="flex h-full flex-col">
+    <div className="grid w-full items-stretch gap-4 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="flex h-full min-w-0 flex-col">
         <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white">
           <div
             className="relative flex-1 overflow-hidden bg-white"

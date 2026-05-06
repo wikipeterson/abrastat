@@ -163,11 +163,11 @@ export function GameHub({ onChromeChange }: GameHubProps) {
 
   if (state.view === 'playing') {
     const containerClass = gameMeta.wide
-      ? 'max-w-[98vw] 2xl:max-w-[1880px] mx-auto py-6 px-3 space-y-4'
+      ? 'w-full max-w-[98vw] 2xl:max-w-[1880px] mx-auto py-6 px-3 space-y-4'
       : 'max-w-lg mx-auto py-6 px-4 space-y-4'
     return (
       <div className={containerClass}>
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+        <div className="w-full bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
           {state.gameId === GAME_IDS.guessCorrelation && (
             <GuessCorrelation onDone={s => handleDone(state.gameId, s)} />
           )}
@@ -190,11 +190,11 @@ export function GameHub({ onChromeChange }: GameHubProps) {
 
   // Done screen
   const doneContainerClass = gameMeta.wide
-    ? 'max-w-[98vw] 2xl:max-w-[1880px] mx-auto py-6 px-3 space-y-4'
+    ? 'w-full max-w-[98vw] 2xl:max-w-[1880px] mx-auto py-6 px-3 space-y-4'
     : 'max-w-lg mx-auto py-6 px-4 space-y-4'
   return (
     <div className={doneContainerClass}>
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+      <div className="w-full bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
         {state.submittedInitials === null ? (
           <ScoreEntry
             score={state.score}

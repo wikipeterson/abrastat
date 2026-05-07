@@ -1,9 +1,5 @@
-import { PuzzleWeekPreview } from '@/components/library/PuzzleWeekPreview'
+import { PuzzleWeekHub } from '@/components/library/PuzzleWeekHub'
 
 export default function PuzzleWeekAliasPage() {
-  return (
-    <main className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
-      <PuzzleWeekPreview direct />
-    </main>
-  )
+  return <PuzzleWeekHub />
 }

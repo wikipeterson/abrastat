@@ -224,7 +224,7 @@ export function PuzzleWeekHub() {
         <div className="flex items-center justify-between">
           <Link href="/home" className="flex-shrink-0 select-none" aria-label="Return to AbraStat">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(150px, 17vw, 220px)', height: 'auto' }} />
+            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(220px, 28vw, 380px)', height: 'auto' }} />
           </Link>
           {user && !isGuest && (
             <button
@@ -239,11 +239,11 @@ export function PuzzleWeekHub() {
         {/* Hero */}
         <div className="text-center space-y-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">
-            Haverford Math Teachers Present
+            The Haverford High School Math Department Presents
           </p>
           <h1
             className="text-5xl sm:text-6xl font-semibold leading-tight text-[var(--color-text)]"
-            style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic' }}
+            style={{ fontFamily: 'var(--font-fraunces)' }}
           >
             Puzzle Week 2026
           </h1>

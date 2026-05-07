@@ -29,7 +29,7 @@ export interface LeaderboardEntry {
   createdAt: Date
 }
 
-const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000
+const SIX_WEEKS_MS = 42 * 24 * 60 * 60 * 1000
 
 export async function submitScore(
   gameId: GameId,
@@ -48,7 +48,7 @@ export async function submitScore(
 }
 
 export async function getLeaderboard(gameId: GameId): Promise<LeaderboardEntry[]> {
-  const cutoff = Timestamp.fromDate(new Date(Date.now() - TWO_WEEKS_MS))
+  const cutoff = Timestamp.fromDate(new Date(Date.now() - SIX_WEEKS_MS))
   const q = query(
     collection(db, 'leaderboards', gameId, 'scores'),
     where('createdAt', '>=', cutoff),

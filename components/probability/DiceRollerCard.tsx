@@ -297,12 +297,30 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
     canvasRef.current?.addDie(id, sides)
   }
 
+  function generateSimulatedRolls(count: number): number[][] {
+    if (tray.length === 0 || count <= 0) return []
+    return Array.from({ length: count }, () =>
+      tray.map(die => Math.floor(Math.random() * die.sides) + 1),
+    )
+  }
+
   async function rollAll() {
     setFinalResults({})
     rollInProgressRef.current = true
     await primeAudio()
     playRollSound()
     canvasRef.current?.rollAll()
+  }
+
+  function fastRollMany(count: number) {
+    if (tray.length === 0 || count <= 0) return
+    const simulatedRolls = generateSimulatedRolls(count)
+    if (simulatedRolls.length === 0) return
+
+    setRollHistory(prev => [...prev, ...simulatedRolls])
+
+    if (!linkedResultsCardId) return
+    simulatedRolls.forEach(roll => pushSimResult(linkedResultsCardId, roll))
   }
 
   // ── Roll-complete detection → push tracked value to linked results ──────────
@@ -503,6 +521,17 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
             >
               Roll
             </button>
+            {showGraph && (
+              <button
+                onClick={() => fastRollMany(10)}
+                disabled={tray.length === 0}
+                className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-semibold
+                           text-[var(--color-text)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]
+                           disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Roll 10
+              </button>
+            )}
             <button
               onClick={clearAll}
               disabled={tray.length === 0}

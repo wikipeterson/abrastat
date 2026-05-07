@@ -9,12 +9,17 @@ import { canRegisterForPuzzleWeek, getPuzzleWeekEligibilityMessage } from '@/lib
 import {
   CURRENT_PUZZLE_WEEK_EVENT,
   PUZZLE_WEEK_MAX_TEAM_SIZE,
+  PUZZLE_WEEK_PUZZLES,
+  PuzzleWeekAnswerResult,
   PuzzleWeekEntry,
   PuzzleWeekMember,
+  PuzzleWeekProgress,
+  getPuzzleWeekProgress,
   getPuzzleWeekRegistration,
   joinPuzzleWeekTeam,
   registerPuzzleWeekSolo,
   registerPuzzleWeekTeam,
+  submitPuzzleWeekAnswer,
 } from '@/lib/puzzleWeek'
 
 type RegisterMode = 'solo' | 'create-team' | 'join-team' | null
@@ -26,6 +31,10 @@ export function PuzzleWeekHub() {
   const [registerMode, setRegisterMode] = useState<RegisterMode>(null)
   const [teamName, setTeamName] = useState('')
   const [joinCode, setJoinCode] = useState('')
+  const [puzzleAnswers, setPuzzleAnswers] = useState<Record<string, string>>({})
+  const [progress, setProgress] = useState<Record<string, PuzzleWeekProgress>>({})
+  const [answerMessages, setAnswerMessages] = useState<Record<string, PuzzleWeekAnswerResult | undefined>>({})
+  const [checkingPuzzleId, setCheckingPuzzleId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [loadingRegistration, setLoadingRegistration] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -50,10 +59,47 @@ export function PuzzleWeekHub() {
     if (!user) {
       setEntry(null)
       setMembers([])
+      setProgress({})
+      setPuzzleAnswers({})
+      setAnswerMessages({})
       return
     }
     void refreshRegistration(user.uid)
   }, [user])
+
+  useEffect(() => {
+    if (!entry) {
+      setProgress({})
+      setAnswerMessages({})
+      return
+    }
+
+    const entryId = entry.id
+
+    let cancelled = false
+
+    async function loadProgress() {
+      try {
+        const solved = await getPuzzleWeekProgress(CURRENT_PUZZLE_WEEK_EVENT.id, entryId)
+        if (cancelled) return
+        const next: Record<string, PuzzleWeekProgress> = {}
+        solved.forEach(item => {
+          next[item.puzzleId] = item
+        })
+        setProgress(next)
+      } catch {
+        if (!cancelled) {
+          setError('We couldn’t load your puzzle progress right now.')
+        }
+      }
+    }
+
+    void loadProgress()
+
+    return () => {
+      cancelled = true
+    }
+  }, [entry])
 
   async function handleSolo() {
     if (!user) return
@@ -105,6 +151,40 @@ export function PuzzleWeekHub() {
   async function handleSignOut() {
     setError(null)
     await signOut()
+  }
+
+  async function handleCheckAnswer(puzzleId: string) {
+    if (!entry) return
+    setCheckingPuzzleId(puzzleId)
+    setError(null)
+    try {
+      const result = await submitPuzzleWeekAnswer(
+        CURRENT_PUZZLE_WEEK_EVENT.id,
+        entry.id,
+        puzzleId,
+        puzzleAnswers[puzzleId] ?? '',
+      )
+      setAnswerMessages(current => ({ ...current, [puzzleId]: result }))
+      if (result.correct) {
+        const solved = await getPuzzleWeekProgress(CURRENT_PUZZLE_WEEK_EVENT.id, entry.id)
+        const next: Record<string, PuzzleWeekProgress> = {}
+        solved.forEach(item => {
+          next[item.puzzleId] = item
+        })
+        setProgress(next)
+        setPuzzleAnswers(current => ({ ...current, [puzzleId]: '' }))
+      }
+    } catch (err) {
+      setAnswerMessages(current => ({
+        ...current,
+        [puzzleId]: {
+          correct: false,
+          message: err instanceof Error ? err.message : 'Could not check that answer.',
+        },
+      }))
+    } finally {
+      setCheckingPuzzleId(null)
+    }
   }
 
   if (loading || loadingRegistration) {
@@ -245,6 +325,85 @@ export function PuzzleWeekHub() {
                 {error}
               </div>
             )}
+
+            <div className="rounded-2xl border border-[var(--color-border)] bg-white p-6 space-y-5">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-semibold text-[var(--color-text)]">Puzzle Answers</h3>
+                  <p className="mt-1 text-sm text-[var(--color-muted)]">
+                    Enter answers one puzzle at a time. Once a puzzle is correct, we’ll mark it solved and hide the input.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-accent-light)]/30 px-4 py-3 text-sm font-semibold text-[var(--color-text)]">
+                  Solved {Object.values(progress).filter(item => item.solved).length} / {PUZZLE_WEEK_PUZZLES.length}
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {PUZZLE_WEEK_PUZZLES.map((puzzle, index) => {
+                  const solved = progress[puzzle.id]?.solved === true
+                  const answerMessage = answerMessages[puzzle.id]
+                  return (
+                    <div key={puzzle.id} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-accent-light)]/20 p-5 space-y-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
+                            Puzzle {index + 1}
+                          </div>
+                          <div className="mt-1 text-lg font-semibold text-[var(--color-text)]">{puzzle.title}</div>
+                        </div>
+                        <div
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            solved
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-slate-100 text-[var(--color-muted)]'
+                          }`}
+                        >
+                          {solved ? 'Correct' : 'Unsolved'}
+                        </div>
+                      </div>
+
+                      {solved ? (
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                          This puzzle has been marked correct.
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <input
+                            value={puzzleAnswers[puzzle.id] ?? ''}
+                            onChange={e => {
+                              const value = e.target.value
+                              setPuzzleAnswers(current => ({ ...current, [puzzle.id]: value }))
+                              setAnswerMessages(current => ({ ...current, [puzzle.id]: undefined }))
+                            }}
+                            placeholder="Enter answer"
+                            className="w-full rounded-2xl border border-[var(--color-border)] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                          />
+                          <button
+                            onClick={() => handleCheckAnswer(puzzle.id)}
+                            disabled={checkingPuzzleId === puzzle.id}
+                            className="rounded-xl bg-[var(--color-accent)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {checkingPuzzleId === puzzle.id ? 'Checking…' : 'Check Answer'}
+                          </button>
+                          {answerMessage && (
+                            <div
+                              className={`rounded-xl px-4 py-3 text-sm ${
+                                answerMessage.correct
+                                  ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                                  : 'border border-amber-200 bg-amber-50 text-amber-800'
+                              }`}
+                            >
+                              {answerMessage.message}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="mx-auto max-w-5xl space-y-6">

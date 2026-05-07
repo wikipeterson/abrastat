@@ -3,10 +3,13 @@ import {
   Timestamp,
   addDoc,
   collection,
+  doc,
+  getDoc,
   getDocs,
   limit,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from 'firebase/firestore'
@@ -20,6 +23,22 @@ export const CURRENT_PUZZLE_WEEK_EVENT = {
 } as const
 
 export const PUZZLE_WEEK_MAX_TEAM_SIZE = 5
+
+export interface PuzzleWeekPuzzle {
+  id: string
+  title: string
+  acceptedAnswers: string[]
+}
+
+export const PUZZLE_WEEK_PUZZLES: PuzzleWeekPuzzle[] = [
+  { id: 'puzzle-1', title: 'Day 1: Trading Car[d]s', acceptedAnswers: ['SYDNEY'] },
+  { id: 'puzzle-2', title: 'Day 2: Its-a-me and my friends', acceptedAnswers: ['MIYAMOTO'] },
+  { id: 'puzzle-3', title: 'Day 3: Connect 4', acceptedAnswers: ['NICK FOLES'] },
+  { id: 'puzzle-4', title: 'Day 4: Development Review Boardn', acceptedAnswers: ['BULLDOG'] },
+  { id: 'puzzle-5', title: 'Day 5: Find the Math Teachers', acceptedAnswers: ['PRIME MERIDIAN'] },
+  { id: 'puzzle-6', title: 'Day 6: Mischief Managed', acceptedAnswers: ['PRINCIPAL DONAGHY'] },
+  { id: 'puzzle-7', title: 'Metapuzzle: Graph of the (Day, ?)', acceptedAnswers: ['AG CORNOG'] },
+] as const
 
 export type PuzzleWeekEntryType = 'solo' | 'team'
 
@@ -43,8 +62,28 @@ export interface PuzzleWeekMember {
   joinedAt: Date | null
 }
 
+export interface PuzzleWeekProgress {
+  puzzleId: string
+  entryId: string
+  eventId: string
+  solved: boolean
+  solvedAt: Date | null
+}
+
+export interface PuzzleWeekAnswerResult {
+  correct: boolean
+  message: string
+}
+
 function normalizeName(value: string) {
   return value.trim().replace(/\s+/g, ' ')
+}
+
+function normalizeAnswer(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '')
 }
 
 function mapEntry(data: Record<string, unknown>, id: string): PuzzleWeekEntry {
@@ -68,6 +107,16 @@ function mapMember(data: Record<string, unknown>, id: string): PuzzleWeekMember 
     displayName: String(data.displayName ?? ''),
     email: String(data.email ?? ''),
     joinedAt: data.joinedAt instanceof Timestamp ? data.joinedAt.toDate() : null,
+  }
+}
+
+function mapProgress(data: Record<string, unknown>, id: string): PuzzleWeekProgress {
+  return {
+    puzzleId: typeof data.puzzleId === 'string' ? data.puzzleId : id,
+    entryId: String(data.entryId ?? ''),
+    eventId: String(data.eventId ?? ''),
+    solved: Boolean(data.solved),
+    solvedAt: data.solvedAt instanceof Timestamp ? data.solvedAt.toDate() : null,
   }
 }
 
@@ -253,4 +302,74 @@ export async function joinPuzzleWeekTeam(eventId: string, user: User, rawJoinCod
     email: user.email ?? '',
     joinedAt: serverTimestamp(),
   })
+}
+
+export async function getPuzzleWeekProgress(eventId: string, entryId: string): Promise<PuzzleWeekProgress[]> {
+  const progressSnap = await getDocs(
+    query(
+      collection(db, 'puzzleWeekProgress'),
+      where('eventId', '==', eventId),
+      where('entryId', '==', entryId),
+    ),
+  )
+
+  return progressSnap.docs.map(docSnap => mapProgress(docSnap.data() as Record<string, unknown>, docSnap.id))
+}
+
+export async function submitPuzzleWeekAnswer(
+  eventId: string,
+  entryId: string,
+  puzzleId: string,
+  rawAnswer: string,
+): Promise<PuzzleWeekAnswerResult> {
+  const puzzle = PUZZLE_WEEK_PUZZLES.find(item => item.id === puzzleId)
+  if (!puzzle) {
+    throw new Error('That puzzle could not be found.')
+  }
+
+  if (puzzle.acceptedAnswers.length === 0) {
+    throw new Error('Answer checking for this puzzle is not configured yet.')
+  }
+
+  const normalizedAttempt = normalizeAnswer(rawAnswer)
+  if (!normalizedAttempt) {
+    throw new Error('Enter an answer first.')
+  }
+
+  const progressRef = doc(db, 'puzzleWeekProgress', `${eventId}__${entryId}__${puzzleId}`)
+  const existing = await getDoc(progressRef)
+  if (existing.exists() && existing.data().solved === true) {
+    return {
+      correct: true,
+      message: 'Already marked correct.',
+    }
+  }
+
+  const accepted = puzzle.acceptedAnswers.map(normalizeAnswer)
+  const correct = accepted.includes(normalizedAttempt)
+
+  if (!correct) {
+    return {
+      correct: false,
+      message: 'Not quite yet. Check for typos and try again.',
+    }
+  }
+
+  await setDoc(
+    progressRef,
+    {
+      eventId,
+      entryId,
+      puzzleId,
+      solved: true,
+      solvedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  )
+
+  return {
+    correct: true,
+    message: 'Correct!',
+  }
 }

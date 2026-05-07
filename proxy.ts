@@ -11,7 +11,7 @@ export function proxy(request: NextRequest) {
 
   if (isPuzzleWeekHost(request.headers.get('host')) && pathname === '/') {
     const url = request.nextUrl.clone()
-    url.pathname = '/puzzle-week'
+    url.pathname = '/puzzleweek'
     return NextResponse.rewrite(url)
   }
 

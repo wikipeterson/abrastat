@@ -217,39 +217,41 @@ export function PuzzleWeekHub() {
   ).length
 
   return (
-    <main className="min-h-screen px-6 py-10" style={{ background: 'var(--color-bg)' }}>
-      <div className="mx-auto max-w-5xl space-y-10">
+    <main className="min-h-screen px-6 py-8" style={{ background: 'var(--color-bg)' }}>
+      <div className="mx-auto max-w-5xl space-y-8">
 
-        {/* Nav */}
-        <div className="flex items-center justify-between">
+        {/* Header: logo | title | sign out */}
+        <div className="flex items-center gap-6">
           <Link href="/home" className="flex-shrink-0 select-none" aria-label="Return to AbraStat">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(220px, 28vw, 380px)', height: 'auto' }} />
+            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(160px, 20vw, 260px)', height: 'auto' }} />
           </Link>
-          {user && !isGuest && (
-            <button
-              onClick={handleSignOut}
-              className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+          <div className="flex-1 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--color-muted)]">
+              The Haverford High School Math Department Presents
+            </p>
+            <h1
+              className="mt-1 text-4xl sm:text-5xl font-semibold leading-tight text-[var(--color-text)]"
+              style={{ fontFamily: 'var(--font-fraunces)' }}
             >
-              Sign out
-            </button>
-          )}
-        </div>
-
-        {/* Hero */}
-        <div className="text-center space-y-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">
-            The Haverford High School Math Department Presents
-          </p>
-          <h1
-            className="text-5xl sm:text-6xl font-semibold leading-tight text-[var(--color-text)]"
-            style={{ fontFamily: 'var(--font-fraunces)' }}
-          >
-            Puzzle Week 2026
-          </h1>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-white px-4 py-1.5 text-sm font-medium text-[var(--color-muted)] shadow-sm">
-            <Calendar className="h-3.5 w-3.5" />
-            Monday, May 18 – Tuesday, May 26, 2026
+              Puzzle Week 2026
+            </h1>
+            <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] shadow-sm">
+              <Calendar className="h-3 w-3" />
+              Monday, May 18 – Tuesday, May 26, 2026
+            </div>
+          </div>
+          <div className="flex-shrink-0" style={{ width: 'clamp(160px, 20vw, 260px)' }}>
+            {user && !isGuest && (
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSignOut}
+                  className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

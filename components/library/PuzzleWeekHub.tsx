@@ -8,6 +8,7 @@ import { signOut } from '@/lib/auth'
 import { canRegisterForPuzzleWeek, getPuzzleWeekEligibilityMessage } from '@/lib/featureFlags'
 import {
   CURRENT_PUZZLE_WEEK_EVENT,
+  PUZZLE_WEEK_MAX_TEAM_SIZE,
   PuzzleWeekEntry,
   PuzzleWeekMember,
   getPuzzleWeekRegistration,
@@ -124,13 +125,24 @@ export function PuzzleWeekHub() {
           </Link>
           <div className="flex-1 space-y-3 pt-1 text-center">
           <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-            {CURRENT_PUZZLE_WEEK_EVENT.title}
+            Haverford Math Teachers Present
           </div>
-          <h1 className="text-4xl font-semibold text-[var(--color-text)]">Register for Puzzle Week</h1>
-          <p className="mx-auto max-w-2xl text-base text-[var(--color-muted)]">
-            Sign in with your AbraStat account or create one, then register as a solo participant, create a team,
-            or join a team with a code.
-          </p>
+          <h1 className="text-4xl font-semibold text-[var(--color-text)]">Puzzle Week 2026</h1>
+          <div className="text-lg font-medium text-[var(--color-text)]">Monday, May 18 - Tuesday, May 26, 2026</div>
+          <div className="mx-auto max-w-3xl space-y-3 text-base text-[var(--color-muted)]">
+            <p>
+              This packet contains 7 puzzles. The first 6 puzzles are independent of one another. The final puzzle is a metapuzzle, which means it uses the answers from the other 6 puzzles.
+            </p>
+            <p>
+              The answer to each puzzle is a single word, name, or short phrase in English.
+            </p>
+            <p>
+              You may use the internet and any other resources available to you, including artificial intelligence (AI).
+            </p>
+            <p>
+              These puzzles are designed to be collaborative. You may compete solo or as a team of up to {PUZZLE_WEEK_MAX_TEAM_SIZE} people. Please do not share answers with other teams.
+            </p>
+          </div>
           </div>
           <div className="w-[clamp(185px,22vw,290px)] flex-shrink-0 flex justify-end">
             {user && !isGuest ? (
@@ -245,7 +257,7 @@ export function PuzzleWeekHub() {
               />
               <ChoiceCard
                 title="Create Team"
-                body="Start a team, get a join code, and invite your teammates."
+                body={`Start a team, get a join code, and invite teammates. Teams may have up to ${PUZZLE_WEEK_MAX_TEAM_SIZE} members.`}
                 active={registerMode === 'create-team'}
                 onClick={() => {
                   setRegisterMode('create-team')
@@ -254,7 +266,7 @@ export function PuzzleWeekHub() {
               />
               <ChoiceCard
                 title="Join Team"
-                body="Enter a teammate’s join code to register under the same team entry."
+                body={`Enter a teammate’s join code to register under the same team entry, as long as the team has fewer than ${PUZZLE_WEEK_MAX_TEAM_SIZE} members.`}
                 active={registerMode === 'join-team'}
                 onClick={() => {
                   setRegisterMode('join-team')
@@ -274,7 +286,7 @@ export function PuzzleWeekHub() {
                 <div className="space-y-4 text-center">
                   <h3 className="text-xl font-semibold text-[var(--color-text)]">Register Solo</h3>
                   <p className="text-sm text-[var(--color-muted)]">
-                    This will create one Puzzle Week entry tied just to your AbraStat account.
+                    This will create one Puzzle Week entry tied just to your AbraStat account. You can still join a team later.
                   </p>
                   <button
                     onClick={handleSolo}
@@ -291,7 +303,7 @@ export function PuzzleWeekHub() {
                   <div className="text-center">
                     <h3 className="text-xl font-semibold text-[var(--color-text)]">Create a Team</h3>
                     <p className="mt-2 text-sm text-[var(--color-muted)]">
-                      Pick a team name. We’ll generate a join code you can share with teammates.
+                      Pick a team name. We’ll generate a join code you can share with teammates. Teams may have no more than {PUZZLE_WEEK_MAX_TEAM_SIZE} members.
                     </p>
                   </div>
                   <input
@@ -315,7 +327,7 @@ export function PuzzleWeekHub() {
                   <div className="text-center">
                     <h3 className="text-xl font-semibold text-[var(--color-text)]">Join a Team</h3>
                     <p className="mt-2 text-sm text-[var(--color-muted)]">
-                      Enter the 6-character team code from a teammate.
+                      Enter the 6-character team code from a teammate. You can join only if the team has fewer than {PUZZLE_WEEK_MAX_TEAM_SIZE} members.
                     </p>
                   </div>
                   <input

@@ -19,6 +19,8 @@ export const CURRENT_PUZZLE_WEEK_EVENT = {
   title: 'Puzzle Week',
 } as const
 
+export const PUZZLE_WEEK_MAX_TEAM_SIZE = 5
+
 export type PuzzleWeekEntryType = 'solo' | 'team'
 
 export interface PuzzleWeekEntry {
@@ -112,6 +114,18 @@ async function addMembership(entryId: string, eventId: string, user: User) {
   })
 }
 
+async function getEntryMembers(eventId: string, entryId: string): Promise<PuzzleWeekMember[]> {
+  const membersSnap = await getDocs(
+    query(
+      collection(db, 'puzzleWeekEntryMembers'),
+      where('eventId', '==', eventId),
+      where('entryId', '==', entryId),
+    ),
+  )
+
+  return membersSnap.docs.map(docSnap => mapMember(docSnap.data() as Record<string, unknown>, docSnap.id))
+}
+
 function assertPuzzleWeekEligibility(user: User) {
   if (!canRegisterForPuzzleWeek(user)) {
     throw new Error(getPuzzleWeekEligibilityMessage())
@@ -155,17 +169,11 @@ export async function getPuzzleWeekRegistration(eventId: string, userId: string)
     return { entry: null, members: [] }
   }
 
-  const membersSnap = await getDocs(
-    query(
-      collection(db, 'puzzleWeekEntryMembers'),
-      where('eventId', '==', eventId),
-      where('entryId', '==', membership.entryId),
-    ),
-  )
+  const members = await getEntryMembers(eventId, membership.entryId)
 
   return {
     entry: mapEntry(entryDoc.data() as Record<string, unknown>, entryDoc.id),
-    members: membersSnap.docs.map(docSnap => mapMember(docSnap.data() as Record<string, unknown>, docSnap.id)),
+    members,
   }
 }
 
@@ -228,6 +236,10 @@ export async function joinPuzzleWeekTeam(eventId: string, user: User, rawJoinCod
   }
   if (entry.isLocked) {
     throw new Error('This team is locked and can’t accept new members.')
+  }
+  const teamMembers = await getEntryMembers(eventId, entry.id)
+  if (teamMembers.length >= PUZZLE_WEEK_MAX_TEAM_SIZE) {
+    throw new Error(`This team already has ${PUZZLE_WEEK_MAX_TEAM_SIZE} members.`)
   }
 
   if (!membershipDoc) {

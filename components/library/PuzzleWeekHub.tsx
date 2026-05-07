@@ -219,7 +219,7 @@ export function PuzzleWeekHub() {
             <div className="grid gap-5 lg:grid-cols-3">
               <ChoiceCard
                 title="Play Solo"
-                body="Compete on your own with one registration tied to your account."
+                body="Compete on your own with one registration tied to your account. You can still join a team later."
                 active={registerMode === 'solo'}
                 onClick={() => {
                   setRegisterMode('solo')

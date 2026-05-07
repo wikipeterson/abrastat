@@ -1,8 +1,10 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { SignInButton } from '@/components/auth/SignInButton'
+import { canRegisterForPuzzleWeek, getPuzzleWeekEligibilityMessage } from '@/lib/featureFlags'
 import {
   CURRENT_PUZZLE_WEEK_EVENT,
   PuzzleWeekEntry,
@@ -25,6 +27,8 @@ export function PuzzleWeekHub() {
   const [submitting, setSubmitting] = useState(false)
   const [loadingRegistration, setLoadingRegistration] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const canRegister = canRegisterForPuzzleWeek(user)
+  const eligibilityMessage = getPuzzleWeekEligibilityMessage()
 
   async function refreshRegistration(currentUserId: string) {
     setLoadingRegistration(true)
@@ -107,7 +111,12 @@ export function PuzzleWeekHub() {
   return (
     <main className="min-h-screen px-6 py-12" style={{ background: 'var(--color-bg)' }}>
       <div className="mx-auto max-w-5xl space-y-8">
-        <div className="space-y-3 text-center">
+        <div className="flex items-start justify-between gap-4">
+          <Link href="/home" className="flex-shrink-0 select-none" aria-label="Return to AbraStat">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(110px, 14vw, 170px)', height: 'auto' }} />
+          </Link>
+          <div className="flex-1 space-y-3 pt-1 text-center">
           <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
             {CURRENT_PUZZLE_WEEK_EVENT.title}
           </div>
@@ -116,6 +125,8 @@ export function PuzzleWeekHub() {
             Sign in with your AbraStat account or create one, then register as a solo participant, create a team,
             or join a team with a code.
           </p>
+          </div>
+          <div className="w-[clamp(110px,14vw,170px)] flex-shrink-0" aria-hidden="true" />
         </div>
 
         {!user || isGuest ? (
@@ -128,6 +139,19 @@ export function PuzzleWeekHub() {
             </div>
             <div className="flex justify-center">
               <SignInButton />
+            </div>
+          </div>
+        ) : !canRegister ? (
+          <div className="mx-auto max-w-2xl rounded-3xl border border-amber-200 bg-amber-50 p-8 shadow-sm">
+            <div className="text-center">
+              <h2 className="text-2xl font-semibold text-[var(--color-text)]">Puzzle Week registration is limited</h2>
+              <p className="mt-3 text-base text-[var(--color-muted)]">{eligibilityMessage}</p>
+              <p className="mt-3 text-sm text-[var(--color-muted)]">
+                You’re signed in as <span className="font-semibold text-[var(--color-text)]">{user.email ?? user.displayName ?? 'this account'}</span>.
+              </p>
+              <p className="mt-3 text-sm text-[var(--color-muted)]">
+                If you have a Haverford School District account, sign out and sign back in with that address.
+              </p>
             </div>
           </div>
         ) : entry ? (
@@ -145,6 +169,32 @@ export function PuzzleWeekHub() {
               <StatCard label="Join Code" value={entry.joinCode ?? '—'} />
             </div>
 
+            {entry.type === 'solo' && (
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-accent-light)]/30 p-5 space-y-4">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-[var(--color-text)]">Want to join a team later?</h3>
+                  <p className="mt-2 text-sm text-[var(--color-muted)]">
+                    That’s okay. Enter a team’s join code below and we’ll move your solo registration onto that team.
+                  </p>
+                </div>
+                <div className="mx-auto max-w-md space-y-3">
+                  <input
+                    value={joinCode}
+                    onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                    placeholder="ABC123"
+                    className="w-full rounded-2xl border border-[var(--color-border)] px-4 py-3 text-center text-base tracking-[0.25em] uppercase focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  />
+                  <button
+                    onClick={handleJoinTeam}
+                    disabled={submitting}
+                    className="w-full rounded-xl bg-[var(--color-accent)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {submitting ? 'Joining Team…' : 'Join a Team'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {entry.type === 'team' && (
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-accent-light)]/40 p-5">
                 <div className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">Team Members</div>
@@ -155,6 +205,12 @@ export function PuzzleWeekHub() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {error}
               </div>
             )}
           </div>

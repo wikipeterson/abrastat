@@ -7,9 +7,11 @@ import {
   limit,
   query,
   serverTimestamp,
+  updateDoc,
   where,
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { canRegisterForPuzzleWeek, getPuzzleWeekEligibilityMessage } from './featureFlags'
 
 export const CURRENT_PUZZLE_WEEK_EVENT = {
   id: 'puzzle-week-2026',
@@ -110,10 +112,13 @@ async function addMembership(entryId: string, eventId: string, user: User) {
   })
 }
 
-export async function getPuzzleWeekRegistration(eventId: string, userId: string): Promise<{
-  entry: PuzzleWeekEntry | null
-  members: PuzzleWeekMember[]
-}> {
+function assertPuzzleWeekEligibility(user: User) {
+  if (!canRegisterForPuzzleWeek(user)) {
+    throw new Error(getPuzzleWeekEligibilityMessage())
+  }
+}
+
+async function getExistingMembershipDoc(eventId: string, userId: string) {
   const membershipSnap = await getDocs(
     query(
       collection(db, 'puzzleWeekEntryMembers'),
@@ -123,7 +128,14 @@ export async function getPuzzleWeekRegistration(eventId: string, userId: string)
     ),
   )
 
-  const membershipDoc = membershipSnap.docs[0]
+  return membershipSnap.docs[0] ?? null
+}
+
+export async function getPuzzleWeekRegistration(eventId: string, userId: string): Promise<{
+  entry: PuzzleWeekEntry | null
+  members: PuzzleWeekMember[]
+}> {
+  const membershipDoc = await getExistingMembershipDoc(eventId, userId)
   if (!membershipDoc) {
     return { entry: null, members: [] }
   }
@@ -158,6 +170,7 @@ export async function getPuzzleWeekRegistration(eventId: string, userId: string)
 }
 
 export async function registerPuzzleWeekSolo(eventId: string, user: User) {
+  assertPuzzleWeekEligibility(user)
   const existing = await getPuzzleWeekRegistration(eventId, user.uid)
   if (existing.entry) {
     throw new Error('You are already registered for this Puzzle Week.')
@@ -176,6 +189,7 @@ export async function registerPuzzleWeekSolo(eventId: string, user: User) {
 }
 
 export async function registerPuzzleWeekTeam(eventId: string, user: User, teamName: string) {
+  assertPuzzleWeekEligibility(user)
   const name = normalizeName(teamName)
   if (!name) throw new Error('Enter a team name.')
 
@@ -198,12 +212,14 @@ export async function registerPuzzleWeekTeam(eventId: string, user: User, teamNa
 }
 
 export async function joinPuzzleWeekTeam(eventId: string, user: User, rawJoinCode: string) {
+  assertPuzzleWeekEligibility(user)
   const joinCode = rawJoinCode.trim().toUpperCase()
   if (!joinCode) throw new Error('Enter a join code.')
 
-  const existing = await getPuzzleWeekRegistration(eventId, user.uid)
-  if (existing.entry) {
-    throw new Error('You are already registered for this Puzzle Week.')
+  const membershipDoc = await getExistingMembershipDoc(eventId, user.uid)
+  const existing = membershipDoc ? await getPuzzleWeekRegistration(eventId, user.uid) : { entry: null, members: [] }
+  if (existing.entry?.type === 'team') {
+    throw new Error('You are already registered on a team for this Puzzle Week.')
   }
 
   const entry = await getExistingJoinCodeEntry(eventId, joinCode)
@@ -214,5 +230,15 @@ export async function joinPuzzleWeekTeam(eventId: string, user: User, rawJoinCod
     throw new Error('This team is locked and can’t accept new members.')
   }
 
-  await addMembership(entry.id, eventId, user)
+  if (!membershipDoc) {
+    await addMembership(entry.id, eventId, user)
+    return
+  }
+
+  await updateDoc(membershipDoc.ref, {
+    entryId: entry.id,
+    displayName: user.displayName ?? user.email ?? 'Participant',
+    email: user.email ?? '',
+    joinedAt: serverTimestamp(),
+  })
 }

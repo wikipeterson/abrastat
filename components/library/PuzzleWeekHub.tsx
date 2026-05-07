@@ -142,6 +142,9 @@ export function PuzzleWeekHub() {
             <p>
               These puzzles are designed to be collaborative. You may compete solo or as a team of up to {PUZZLE_WEEK_MAX_TEAM_SIZE} people. Please do not share answers with other teams.
             </p>
+            <p>
+              Submit or check your answers by <strong>23:59 on Tuesday, May 26, 2026</strong>. You may check answers for each puzzle individually as you go, and the leaderboard will track how many puzzles each team has solved so far. If you are working with a team, make sure all teammates register under the same team using the team join code so your progress is recorded together. Double-check for typos before submitting an answer.
+            </p>
           </div>
           </div>
           <div className="w-[clamp(185px,22vw,290px)] flex-shrink-0 flex justify-end">

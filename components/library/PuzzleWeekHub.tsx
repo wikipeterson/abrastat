@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { SignInButton } from '@/components/auth/SignInButton'
+import { signOut } from '@/lib/auth'
 import { canRegisterForPuzzleWeek, getPuzzleWeekEligibilityMessage } from '@/lib/featureFlags'
 import {
   CURRENT_PUZZLE_WEEK_EVENT,
@@ -100,6 +101,11 @@ export function PuzzleWeekHub() {
     }
   }
 
+  async function handleSignOut() {
+    setError(null)
+    await signOut()
+  }
+
   if (loading || loadingRegistration) {
     return (
       <main className="min-h-screen flex items-center justify-center px-6" style={{ background: 'var(--color-bg)' }}>
@@ -126,7 +132,18 @@ export function PuzzleWeekHub() {
             or join a team with a code.
           </p>
           </div>
-          <div className="w-[clamp(110px,14vw,170px)] flex-shrink-0" aria-hidden="true" />
+          <div className="w-[clamp(110px,14vw,170px)] flex-shrink-0 flex justify-end">
+            {user && !isGuest ? (
+              <button
+                onClick={handleSignOut}
+                className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+              >
+                Sign out
+              </button>
+            ) : (
+              <div aria-hidden="true" />
+            )}
+          </div>
         </div>
 
         {!user || isGuest ? (

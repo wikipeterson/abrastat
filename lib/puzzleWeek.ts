@@ -316,6 +316,57 @@ export async function getPuzzleWeekProgress(eventId: string, entryId: string): P
   return progressSnap.docs.map(docSnap => mapProgress(docSnap.data() as Record<string, unknown>, docSnap.id))
 }
 
+export interface PuzzleWeekLeaderboardEntry {
+  entryId: string
+  name: string
+  type: PuzzleWeekEntryType
+  solvedCount: number
+  lastSolvedAt: Date | null
+  solvedPuzzleIds: string[]
+}
+
+export async function getPuzzleWeekLeaderboard(eventId: string): Promise<PuzzleWeekLeaderboardEntry[]> {
+  const [entriesSnap, progressSnap] = await Promise.all([
+    getDocs(query(collection(db, 'puzzleWeekEntries'), where('eventId', '==', eventId))),
+    getDocs(query(collection(db, 'puzzleWeekProgress'), where('eventId', '==', eventId))),
+  ])
+
+  const progressByEntry = new Map<string, PuzzleWeekProgress[]>()
+  for (const docSnap of progressSnap.docs) {
+    const item = mapProgress(docSnap.data() as Record<string, unknown>, docSnap.id)
+    if (!item.solved) continue
+    const arr = progressByEntry.get(item.entryId) ?? []
+    arr.push(item)
+    progressByEntry.set(item.entryId, arr)
+  }
+
+  const entries: PuzzleWeekLeaderboardEntry[] = entriesSnap.docs.map(docSnap => {
+    const entry = mapEntry(docSnap.data() as Record<string, unknown>, docSnap.id)
+    const solved = progressByEntry.get(docSnap.id) ?? []
+    const lastSolvedAt = solved.reduce<Date | null>((latest, item) => {
+      if (!item.solvedAt) return latest
+      if (!latest || item.solvedAt > latest) return item.solvedAt
+      return latest
+    }, null)
+    return {
+      entryId: docSnap.id,
+      name: entry.name,
+      type: entry.type,
+      solvedCount: solved.length,
+      lastSolvedAt,
+      solvedPuzzleIds: solved.map(item => item.puzzleId),
+    }
+  })
+
+  return entries.sort((a, b) => {
+    if (b.solvedCount !== a.solvedCount) return b.solvedCount - a.solvedCount
+    if (!a.lastSolvedAt && !b.lastSolvedAt) return 0
+    if (!a.lastSolvedAt) return 1
+    if (!b.lastSolvedAt) return -1
+    return a.lastSolvedAt.getTime() - b.lastSolvedAt.getTime()
+  })
+}
+
 export async function submitPuzzleWeekAnswer(
   eventId: string,
   entryId: string,

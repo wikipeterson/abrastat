@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
+import { Calendar, CheckCircle2, RefreshCw, Trophy, User, UserPlus, Users } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { SignInButton } from '@/components/auth/SignInButton'
 import { signOut } from '@/lib/auth'
@@ -12,8 +14,11 @@ import {
   PUZZLE_WEEK_PUZZLES,
   PuzzleWeekAnswerResult,
   PuzzleWeekEntry,
+  PuzzleWeekLeaderboardEntry,
   PuzzleWeekMember,
   PuzzleWeekProgress,
+  PuzzleWeekPuzzle,
+  getPuzzleWeekLeaderboard,
   getPuzzleWeekProgress,
   getPuzzleWeekRegistration,
   joinPuzzleWeekTeam,
@@ -23,6 +28,9 @@ import {
 } from '@/lib/puzzleWeek'
 
 type RegisterMode = 'solo' | 'create-team' | 'join-team' | null
+
+const MAIN_PUZZLES = PUZZLE_WEEK_PUZZLES.slice(0, PUZZLE_WEEK_PUZZLES.length - 1)
+const META_PUZZLE = PUZZLE_WEEK_PUZZLES[PUZZLE_WEEK_PUZZLES.length - 1]
 
 export function PuzzleWeekHub() {
   const { user, loading, isGuest } = useAuth()
@@ -38,8 +46,12 @@ export function PuzzleWeekHub() {
   const [submitting, setSubmitting] = useState(false)
   const [loadingRegistration, setLoadingRegistration] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [leaderboard, setLeaderboard] = useState<PuzzleWeekLeaderboardEntry[]>([])
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(true)
+  const [showJoinTeam, setShowJoinTeam] = useState(false)
   const canRegister = canRegisterForPuzzleWeek(user)
   const eligibilityMessage = getPuzzleWeekEligibilityMessage()
+  const solvedCount = Object.values(progress).filter(p => p.solved).length
 
   async function refreshRegistration(currentUserId: string) {
     setLoadingRegistration(true)
@@ -52,6 +64,18 @@ export function PuzzleWeekHub() {
       setError('We couldn’t load your Puzzle Week registration right now.')
     } finally {
       setLoadingRegistration(false)
+    }
+  }
+
+  async function loadLeaderboard() {
+    setLoadingLeaderboard(true)
+    try {
+      const data = await getPuzzleWeekLeaderboard(CURRENT_PUZZLE_WEEK_EVENT.id)
+      setLeaderboard(data)
+    } catch {
+      // best-effort
+    } finally {
+      setLoadingLeaderboard(false)
     }
   }
 
@@ -73,33 +97,24 @@ export function PuzzleWeekHub() {
       setAnswerMessages({})
       return
     }
-
     const entryId = entry.id
-
     let cancelled = false
-
     async function loadProgress() {
       try {
         const solved = await getPuzzleWeekProgress(CURRENT_PUZZLE_WEEK_EVENT.id, entryId)
         if (cancelled) return
         const next: Record<string, PuzzleWeekProgress> = {}
-        solved.forEach(item => {
-          next[item.puzzleId] = item
-        })
+        solved.forEach(item => { next[item.puzzleId] = item })
         setProgress(next)
       } catch {
-        if (!cancelled) {
-          setError('We couldn’t load your puzzle progress right now.')
-        }
+        if (!cancelled) setError('We couldn’t load your puzzle progress right now.')
       }
     }
-
     void loadProgress()
-
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [entry])
+
+  useEffect(() => { void loadLeaderboard() }, [])
 
   async function handleSolo() {
     if (!user) return
@@ -109,6 +124,7 @@ export function PuzzleWeekHub() {
       await registerPuzzleWeekSolo(CURRENT_PUZZLE_WEEK_EVENT.id, user)
       await refreshRegistration(user.uid)
       setRegisterMode(null)
+      void loadLeaderboard()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not register solo.')
     } finally {
@@ -125,6 +141,7 @@ export function PuzzleWeekHub() {
       await refreshRegistration(user.uid)
       setRegisterMode(null)
       setTeamName('')
+      void loadLeaderboard()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create your team.')
     } finally {
@@ -141,6 +158,7 @@ export function PuzzleWeekHub() {
       await refreshRegistration(user.uid)
       setRegisterMode(null)
       setJoinCode('')
+      setShowJoinTeam(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not join that team.')
     } finally {
@@ -168,11 +186,10 @@ export function PuzzleWeekHub() {
       if (result.correct) {
         const solved = await getPuzzleWeekProgress(CURRENT_PUZZLE_WEEK_EVENT.id, entry.id)
         const next: Record<string, PuzzleWeekProgress> = {}
-        solved.forEach(item => {
-          next[item.puzzleId] = item
-        })
+        solved.forEach(item => { next[item.puzzleId] = item })
         setProgress(next)
         setPuzzleAnswers(current => ({ ...current, [puzzleId]: '' }))
+        void loadLeaderboard()
       }
     } catch (err) {
       setAnswerMessages(current => ({
@@ -189,134 +206,212 @@ export function PuzzleWeekHub() {
 
   if (loading || loadingRegistration) {
     return (
-      <main className="min-h-screen flex items-center justify-center px-6" style={{ background: 'var(--color-bg)' }}>
+      <main className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-bg)' }}>
         <div className="h-10 w-10 rounded-full border-4 border-[var(--color-accent)] border-t-transparent animate-spin" />
       </main>
     )
   }
 
+  const mainPuzzlesSolvedCount = Object.values(progress).filter(
+    p => p.solved && MAIN_PUZZLES.some(mp => mp.id === p.puzzleId)
+  ).length
+
   return (
-    <main className="min-h-screen px-6 py-12" style={{ background: 'var(--color-bg)' }}>
-      <div className="mx-auto max-w-5xl space-y-8">
-        <div className="flex items-start justify-between gap-4">
+    <main className="min-h-screen px-6 py-10" style={{ background: 'var(--color-bg)' }}>
+      <div className="mx-auto max-w-5xl space-y-10">
+
+        {/* Nav */}
+        <div className="flex items-center justify-between">
           <Link href="/home" className="flex-shrink-0 select-none" aria-label="Return to AbraStat">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(185px, 22vw, 290px)', height: 'auto' }} />
+            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(150px, 17vw, 220px)', height: 'auto' }} />
           </Link>
-          <div className="flex-1 space-y-3 pt-1 text-center">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+          {user && !isGuest && (
+            <button
+              onClick={handleSignOut}
+              className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+            >
+              Sign out
+            </button>
+          )}
+        </div>
+
+        {/* Hero */}
+        <div className="text-center space-y-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">
             Haverford Math Teachers Present
-          </div>
-          <h1 className="text-4xl font-semibold text-[var(--color-text)]">Puzzle Week 2026</h1>
-          <div className="text-lg font-medium text-[var(--color-text)]">Monday, May 18 - Tuesday, May 26, 2026</div>
-          <div className="mx-auto max-w-3xl space-y-3 text-base text-[var(--color-muted)]">
-            <p>
-              This packet contains 7 puzzles. The first 6 puzzles are independent of one another. The final puzzle is a metapuzzle, which means it uses the answers from the other 6 puzzles.
-            </p>
-            <p>
-              The answer to each puzzle is a single word, name, or short phrase in English.
-            </p>
-            <p>
-              You may use the internet and any other resources available to you, including artificial intelligence (AI).
-            </p>
-            <p>
-              These puzzles are designed to be collaborative. You may compete solo or as a team of up to {PUZZLE_WEEK_MAX_TEAM_SIZE} people. Please do not share answers with other teams.
-            </p>
-            <p>
-              Submit or check your answers by <strong>23:59 on Tuesday, May 26, 2026</strong>. You may check answers for each puzzle individually as you go, and the leaderboard will track how many puzzles each team has solved so far. If you are working with a team, make sure all teammates register under the same team using the team join code so your progress is recorded together. Double-check for typos before submitting an answer.
-            </p>
-          </div>
-          </div>
-          <div className="w-[clamp(185px,22vw,290px)] flex-shrink-0 flex justify-end">
-            {user && !isGuest ? (
-              <button
-                onClick={handleSignOut}
-                className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
-              >
-                Sign out
-              </button>
-            ) : (
-              <div aria-hidden="true" />
-            )}
+          </p>
+          <h1
+            className="text-5xl sm:text-6xl font-semibold leading-tight text-[var(--color-text)]"
+            style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic' }}
+          >
+            Puzzle Week 2026
+          </h1>
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-white px-4 py-1.5 text-sm font-medium text-[var(--color-muted)] shadow-sm">
+            <Calendar className="h-3.5 w-3.5" />
+            Monday, May 18 – Tuesday, May 26, 2026
           </div>
         </div>
 
+        {/* Rules */}
+        <div className="mx-auto max-w-3xl rounded-3xl border border-[var(--color-border)] bg-white/70 px-7 py-6 shadow-sm">
+          <ul className="space-y-3 text-sm text-[var(--color-muted)] leading-relaxed">
+            {([
+              <>This packet contains <strong className="text-[var(--color-text)]">7 puzzles</strong>. Puzzles 1–6 are independent. Puzzle 7 is a <strong className="text-[var(--color-text)]">metapuzzle</strong> that uses the answers from the first six.</>,
+              <>Each answer is a <strong className="text-[var(--color-text)]">single word, name, or short phrase</strong> in English.</>,
+              <>You may use <strong className="text-[var(--color-text)]">any resources</strong>, including the internet and AI.</>,
+              <>Compete <strong className="text-[var(--color-text)]">solo or as a team</strong> of up to {PUZZLE_WEEK_MAX_TEAM_SIZE}. Please don&apos;t share answers with other teams.</>,
+              <>Check answers individually as you go. Submit by <strong className="text-[var(--color-text)]">23:59 on Tuesday, May 26, 2026</strong>. Double-check for typos.</>,
+            ] as ReactNode[]).map((text, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">
+                  {i + 1}
+                </span>
+                <span>{text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* ── Auth / registration states ── */}
         {!user || isGuest ? (
-          <div className="mx-auto max-w-md rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-            <div className="mb-4 text-center">
-              <h2 className="text-xl font-semibold text-[var(--color-text)]">Sign in to register</h2>
-              <p className="mt-2 text-sm text-[var(--color-muted)]">
-                Sign in with your Haverford School District Google account to register.
-              </p>
-            </div>
+          <div className="mx-auto max-w-sm rounded-3xl border border-[var(--color-border)] bg-white p-8 shadow-sm text-center space-y-4">
+            <h2 className="text-xl font-semibold text-[var(--color-text)]">Sign in to register</h2>
+            <p className="text-sm text-[var(--color-muted)]">
+              Use your Haverford School District Google account to join.
+            </p>
             <div className="flex justify-center">
               <SignInButton googleOnly />
             </div>
           </div>
         ) : !canRegister ? (
-          <div className="mx-auto max-w-2xl rounded-3xl border border-amber-200 bg-amber-50 p-8 shadow-sm">
-            <div className="text-center">
-              <h2 className="text-2xl font-semibold text-[var(--color-text)]">Puzzle Week registration is limited</h2>
-              <p className="mt-3 text-base text-[var(--color-muted)]">{eligibilityMessage}</p>
-              <p className="mt-3 text-sm text-[var(--color-muted)]">
-                You’re signed in as <span className="font-semibold text-[var(--color-text)]">{user.email ?? user.displayName ?? 'this account'}</span>.
-              </p>
-              <p className="mt-3 text-sm text-[var(--color-muted)]">
-                If you have a Haverford School District account, sign out and sign back in with that address.
-              </p>
-            </div>
+          <div className="mx-auto max-w-2xl rounded-3xl border border-amber-200 bg-amber-50 p-8 shadow-sm text-center space-y-3">
+            <h2 className="text-xl font-semibold text-[var(--color-text)]">Registration limited</h2>
+            <p className="text-sm text-[var(--color-muted)]">{eligibilityMessage}</p>
+            <p className="text-sm text-[var(--color-muted)]">
+              Signed in as{' '}
+              <span className="font-semibold text-[var(--color-text)]">
+                {user.email ?? user.displayName ?? 'this account'}
+              </span>
+              . If you have a Haverford School District account, sign out and sign back in with that address.
+            </p>
           </div>
         ) : entry ? (
-          <div className="mx-auto max-w-3xl rounded-3xl border border-[var(--color-border)] bg-white p-8 shadow-sm space-y-6">
-            <div className="text-center">
-              <h2 className="text-2xl font-semibold text-[var(--color-text)]">You’re registered</h2>
-              <p className="mt-2 text-[var(--color-muted)]">
-                Your Puzzle Week registration is active. This is the event shell we’ll build the puzzles and leaderboard into next.
-              </p>
-            </div>
+          <div className="space-y-6">
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <StatCard label="Entry Type" value={entry.type === 'team' ? 'Team' : 'Solo'} />
-              <StatCard label="Display Name" value={entry.name} />
-              <StatCard label="Join Code" value={entry.joinCode ?? '—'} />
-            </div>
-
-            {entry.type === 'solo' && (
-              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-accent-light)]/30 p-5 space-y-4">
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold text-[var(--color-text)]">Want to join a team later?</h3>
-                  <p className="mt-2 text-sm text-[var(--color-muted)]">
-                    That’s okay. Enter a team’s join code below and we’ll move your solo registration onto that team.
-                  </p>
+            {/* Entry header card */}
+            <div className="rounded-3xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden">
+              <div className="flex flex-wrap items-start justify-between gap-4 px-6 pt-6 pb-5">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+                    {entry.type === 'team' ? 'Team Entry' : 'Solo Entry'}
+                  </div>
+                  <h2 className="mt-1 text-2xl font-semibold text-[var(--color-text)]">{entry.name}</h2>
+                  {entry.joinCode && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs font-medium text-[var(--color-muted)]">Join code</span>
+                      <code className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-1 font-mono text-sm font-semibold tracking-widest text-[var(--color-text)]">
+                        {entry.joinCode}
+                      </code>
+                    </div>
+                  )}
                 </div>
-                <div className="mx-auto max-w-md space-y-3">
-                  <input
-                    value={joinCode}
-                    onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                    placeholder="ABC123"
-                    className="w-full rounded-2xl border border-[var(--color-border)] px-4 py-3 text-center text-base tracking-[0.25em] uppercase focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                  />
-                  <button
-                    onClick={handleJoinTeam}
-                    disabled={submitting}
-                    className="w-full rounded-xl bg-[var(--color-accent)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {submitting ? 'Joining Team…' : 'Join a Team'}
-                  </button>
+                <div className="flex flex-col items-end gap-0.5">
+                  <div className="text-3xl font-bold text-[var(--color-text)]">
+                    {solvedCount}
+                    <span className="text-lg font-medium text-[var(--color-muted)]">/{PUZZLE_WEEK_PUZZLES.length}</span>
+                  </div>
+                  <div className="text-xs font-medium text-[var(--color-muted)]">puzzles solved</div>
                 </div>
               </div>
-            )}
 
-            {entry.type === 'team' && (
-              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-accent-light)]/40 p-5">
-                <div className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">Team Members</div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {members.map(member => (
-                    <div key={member.id} className="rounded-xl bg-white px-4 py-3 text-sm text-[var(--color-text)] border border-[var(--color-border)]">
-                      {member.displayName || member.email || member.userId}
-                    </div>
-                  ))}
+              {/* Progress track */}
+              <div className="px-6 pb-5">
+                <div className="flex gap-1.5">
+                  {PUZZLE_WEEK_PUZZLES.map((puzzle, i) => {
+                    const solved = progress[puzzle.id]?.solved === true
+                    const isMeta = i === PUZZLE_WEEK_PUZZLES.length - 1
+                    return (
+                      <div
+                        key={puzzle.id}
+                        title={puzzle.title}
+                        className={`h-8 flex-1 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${
+                          solved
+                            ? isMeta
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-emerald-500 text-white'
+                            : 'bg-[var(--color-accent-light)] text-[var(--color-muted)]'
+                        }`}
+                      >
+                        {isMeta ? 'M' : i + 1}
+                      </div>
+                    )
+                  })}
                 </div>
+              </div>
+
+              {/* Team members */}
+              {entry.type === 'team' && members.length > 0 && (
+                <div className="border-t border-[var(--color-border)] px-6 py-4">
+                  <div className="flex flex-wrap gap-2">
+                    {members.map(member => (
+                      <div
+                        key={member.id}
+                        className="flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-sm text-[var(--color-text)]"
+                      >
+                        <User className="h-3.5 w-3.5 text-[var(--color-muted)]" />
+                        {member.displayName || member.email || member.userId}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Solo → join a team */}
+            {entry.type === 'solo' && (
+              <div className="rounded-3xl border border-[var(--color-border)] bg-white/60 px-6 py-4">
+                {!showJoinTeam ? (
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-[var(--color-text)]">Want to join a team?</p>
+                      <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+                        Enter a join code to move your registration onto a team.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowJoinTeam(true)}
+                      className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)]"
+                    >
+                      Join a Team
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-[var(--color-text)]">Enter the team join code</p>
+                    <div className="flex gap-2">
+                      <input
+                        value={joinCode}
+                        onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                        placeholder="ABC123"
+                        className="flex-1 rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-center text-base tracking-[0.25em] uppercase focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                      />
+                      <button
+                        onClick={handleJoinTeam}
+                        disabled={submitting}
+                        className="flex-shrink-0 rounded-xl bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-60"
+                      >
+                        {submitting ? 'Joining…' : 'Join'}
+                      </button>
+                      <button
+                        onClick={() => { setShowJoinTeam(false); setJoinCode('') }}
+                        className="flex-shrink-0 rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-muted)] transition hover:border-[var(--color-accent)]"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -326,134 +421,93 @@ export function PuzzleWeekHub() {
               </div>
             )}
 
-            <div className="rounded-2xl border border-[var(--color-border)] bg-white p-6 space-y-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-xl font-semibold text-[var(--color-text)]">Puzzle Answers</h3>
-                  <p className="mt-1 text-sm text-[var(--color-muted)]">
-                    Enter answers one puzzle at a time. Once a puzzle is correct, we’ll mark it solved and hide the input.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-accent-light)]/30 px-4 py-3 text-sm font-semibold text-[var(--color-text)]">
-                  Solved {Object.values(progress).filter(item => item.solved).length} / {PUZZLE_WEEK_PUZZLES.length}
-                </div>
+            {/* Puzzles 1–6 */}
+            <div>
+              <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+                Puzzles 1–6
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {MAIN_PUZZLES.map((puzzle, index) => (
+                  <PuzzleCard
+                    key={puzzle.id}
+                    puzzle={puzzle}
+                    index={index}
+                    solved={progress[puzzle.id]?.solved === true}
+                    answer={puzzleAnswers[puzzle.id] ?? ''}
+                    answerMessage={answerMessages[puzzle.id]}
+                    checking={checkingPuzzleId === puzzle.id}
+                    onAnswerChange={value => {
+                      setPuzzleAnswers(current => ({ ...current, [puzzle.id]: value }))
+                      setAnswerMessages(current => ({ ...current, [puzzle.id]: undefined }))
+                    }}
+                    onCheck={() => handleCheckAnswer(puzzle.id)}
+                  />
+                ))}
               </div>
+            </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                {PUZZLE_WEEK_PUZZLES.map((puzzle, index) => {
-                  const solved = progress[puzzle.id]?.solved === true
-                  const answerMessage = answerMessages[puzzle.id]
-                  return (
-                    <div key={puzzle.id} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-accent-light)]/20 p-5 space-y-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
-                            Puzzle {index + 1}
-                          </div>
-                          <div className="mt-1 text-lg font-semibold text-[var(--color-text)]">{puzzle.title}</div>
-                        </div>
-                        <div
-                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                            solved
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : 'bg-slate-100 text-[var(--color-muted)]'
-                          }`}
-                        >
-                          {solved ? 'Correct' : 'Unsolved'}
-                        </div>
-                      </div>
-
-                      {solved ? (
-                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                          This puzzle has been marked correct.
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <input
-                            value={puzzleAnswers[puzzle.id] ?? ''}
-                            onChange={e => {
-                              const value = e.target.value
-                              setPuzzleAnswers(current => ({ ...current, [puzzle.id]: value }))
-                              setAnswerMessages(current => ({ ...current, [puzzle.id]: undefined }))
-                            }}
-                            placeholder="Enter answer"
-                            className="w-full rounded-2xl border border-[var(--color-border)] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                          />
-                          <button
-                            onClick={() => handleCheckAnswer(puzzle.id)}
-                            disabled={checkingPuzzleId === puzzle.id}
-                            className="rounded-xl bg-[var(--color-accent)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {checkingPuzzleId === puzzle.id ? 'Checking…' : 'Check Answer'}
-                          </button>
-                          {answerMessage && (
-                            <div
-                              className={`rounded-xl px-4 py-3 text-sm ${
-                                answerMessage.correct
-                                  ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
-                                  : 'border border-amber-200 bg-amber-50 text-amber-800'
-                              }`}
-                            >
-                              {answerMessage.message}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+            {/* Metapuzzle */}
+            <div>
+              <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+                Metapuzzle
+              </h3>
+              <MetaPuzzleCard
+                puzzle={META_PUZZLE}
+                solved={progress[META_PUZZLE.id]?.solved === true}
+                answer={puzzleAnswers[META_PUZZLE.id] ?? ''}
+                answerMessage={answerMessages[META_PUZZLE.id]}
+                checking={checkingPuzzleId === META_PUZZLE.id}
+                mainPuzzlesSolvedCount={mainPuzzlesSolvedCount}
+                onAnswerChange={value => {
+                  setPuzzleAnswers(current => ({ ...current, [META_PUZZLE.id]: value }))
+                  setAnswerMessages(current => ({ ...current, [META_PUZZLE.id]: undefined }))
+                }}
+                onCheck={() => handleCheckAnswer(META_PUZZLE.id)}
+              />
             </div>
           </div>
         ) : (
-          <div className="mx-auto max-w-5xl space-y-6">
-            <div className="grid gap-5 lg:grid-cols-3">
+          /* Registration choice */
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-3">
               <ChoiceCard
+                icon={<User className="h-5 w-5" />}
                 title="Play Solo"
-                body="Compete on your own with one registration tied to your account. You can still join a team later."
+                body="Compete on your own. You can still join a team later."
                 active={registerMode === 'solo'}
-                onClick={() => {
-                  setRegisterMode('solo')
-                  setError(null)
-                }}
+                onClick={() => { setRegisterMode('solo'); setError(null) }}
               />
               <ChoiceCard
+                icon={<Users className="h-5 w-5" />}
                 title="Create Team"
-                body={`Start a team, get a join code, and invite teammates. Teams may have up to ${PUZZLE_WEEK_MAX_TEAM_SIZE} members.`}
+                body={`Start a team and share a join code. Up to ${PUZZLE_WEEK_MAX_TEAM_SIZE} members.`}
                 active={registerMode === 'create-team'}
-                onClick={() => {
-                  setRegisterMode('create-team')
-                  setError(null)
-                }}
+                onClick={() => { setRegisterMode('create-team'); setError(null) }}
               />
               <ChoiceCard
+                icon={<UserPlus className="h-5 w-5" />}
                 title="Join Team"
-                body={`Enter a teammate’s join code to register under the same team entry, as long as the team has fewer than ${PUZZLE_WEEK_MAX_TEAM_SIZE} members.`}
+                body="Enter a teammate's join code to register under their team."
                 active={registerMode === 'join-team'}
-                onClick={() => {
-                  setRegisterMode('join-team')
-                  setError(null)
-                }}
+                onClick={() => { setRegisterMode('join-team'); setError(null) }}
               />
             </div>
 
-            <div className="mx-auto max-w-2xl rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
+            <div className="mx-auto max-w-md rounded-3xl border border-[var(--color-border)] bg-white p-7 shadow-sm">
               {registerMode === null && (
-                <div className="text-center text-[var(--color-muted)]">
-                  Choose how you want to register for Puzzle Week.
-                </div>
+                <p className="text-center text-sm text-[var(--color-muted)]">Choose how you want to participate.</p>
               )}
 
               {registerMode === 'solo' && (
                 <div className="space-y-4 text-center">
-                  <h3 className="text-xl font-semibold text-[var(--color-text)]">Register Solo</h3>
+                  <h3 className="text-lg font-semibold text-[var(--color-text)]">Register Solo</h3>
                   <p className="text-sm text-[var(--color-muted)]">
-                    This will create one Puzzle Week entry tied just to your AbraStat account. You can still join a team later.
+                    Creates one entry tied to your account. You can join a team later.
                   </p>
                   <button
                     onClick={handleSolo}
                     disabled={submitting}
-                    className="rounded-xl bg-[var(--color-accent)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full rounded-xl bg-[var(--color-accent)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-60"
                   >
                     {submitting ? 'Registering…' : 'Confirm Solo Registration'}
                   </button>
@@ -463,9 +517,9 @@ export function PuzzleWeekHub() {
               {registerMode === 'create-team' && (
                 <div className="space-y-4">
                   <div className="text-center">
-                    <h3 className="text-xl font-semibold text-[var(--color-text)]">Create a Team</h3>
-                    <p className="mt-2 text-sm text-[var(--color-muted)]">
-                      Pick a team name. We’ll generate a join code you can share with teammates. Teams may have no more than {PUZZLE_WEEK_MAX_TEAM_SIZE} members.
+                    <h3 className="text-lg font-semibold text-[var(--color-text)]">Create a Team</h3>
+                    <p className="mt-1.5 text-sm text-[var(--color-muted)]">
+                      Pick a team name — we&apos;ll generate a join code to share with teammates.
                     </p>
                   </div>
                   <input
@@ -477,9 +531,9 @@ export function PuzzleWeekHub() {
                   <button
                     onClick={handleCreateTeam}
                     disabled={submitting}
-                    className="w-full rounded-xl bg-[var(--color-accent)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full rounded-xl bg-[var(--color-accent)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-60"
                   >
-                    {submitting ? 'Creating Team…' : 'Create Team'}
+                    {submitting ? 'Creating…' : 'Create Team'}
                   </button>
                 </div>
               )}
@@ -487,9 +541,9 @@ export function PuzzleWeekHub() {
               {registerMode === 'join-team' && (
                 <div className="space-y-4">
                   <div className="text-center">
-                    <h3 className="text-xl font-semibold text-[var(--color-text)]">Join a Team</h3>
-                    <p className="mt-2 text-sm text-[var(--color-muted)]">
-                      Enter the 6-character team code from a teammate. You can join only if the team has fewer than {PUZZLE_WEEK_MAX_TEAM_SIZE} members.
+                    <h3 className="text-lg font-semibold text-[var(--color-text)]">Join a Team</h3>
+                    <p className="mt-1.5 text-sm text-[var(--color-muted)]">
+                      Enter the 6-character join code from your teammate.
                     </p>
                   </div>
                   <input
@@ -501,9 +555,9 @@ export function PuzzleWeekHub() {
                   <button
                     onClick={handleJoinTeam}
                     disabled={submitting}
-                    className="w-full rounded-xl bg-[var(--color-accent)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full rounded-xl bg-[var(--color-accent)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-60"
                   >
-                    {submitting ? 'Joining Team…' : 'Join Team'}
+                    {submitting ? 'Joining…' : 'Join Team'}
                   </button>
                 </div>
               )}
@@ -516,17 +570,115 @@ export function PuzzleWeekHub() {
             </div>
           </div>
         )}
+
+        {/* Leaderboard */}
+        <div className="space-y-4 border-t border-[var(--color-border)] pt-8">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <Trophy className="h-5 w-5 text-[var(--color-accent)]" />
+              <h2 className="text-lg font-semibold text-[var(--color-text)]">Leaderboard</h2>
+              {!loadingLeaderboard && (
+                <span className="text-sm text-[var(--color-muted)]">
+                  {leaderboard.length} {leaderboard.length === 1 ? 'entry' : 'entries'}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={loadLeaderboard}
+              disabled={loadingLeaderboard}
+              className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] transition hover:border-[var(--color-accent)] disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loadingLeaderboard ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
+
+          <div className="rounded-3xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden">
+            {loadingLeaderboard ? (
+              <div className="flex justify-center py-8">
+                <div className="h-6 w-6 rounded-full border-2 border-[var(--color-accent)] border-t-transparent animate-spin" />
+              </div>
+            ) : leaderboard.length === 0 ? (
+              <div className="py-10 text-center text-sm text-[var(--color-muted)]">
+                No entries yet — register and start solving to appear here!
+              </div>
+            ) : (
+              leaderboard.map((lb, i) => {
+                const isMe = lb.entryId === entry?.id
+                const rank = i + 1
+                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null
+                return (
+                  <div
+                    key={lb.entryId}
+                    className={`flex items-center gap-4 border-b px-5 py-3.5 last:border-b-0 border-[var(--color-border)] transition-colors ${
+                      isMe ? 'bg-[var(--color-accent-light)]/40' : 'hover:bg-slate-50/70'
+                    }`}
+                  >
+                    <div className="w-7 flex-shrink-0 text-center">
+                      {medal ? (
+                        <span className="text-base leading-none">{medal}</span>
+                      ) : (
+                        <span className="text-sm font-semibold text-[var(--color-muted)]">{rank}</span>
+                      )}
+                    </div>
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <span className={`truncate font-semibold ${isMe ? 'text-[var(--color-accent)]' : 'text-[var(--color-text)]'}`}>
+                        {lb.name}
+                      </span>
+                      {isMe && (
+                        <span className="flex-shrink-0 rounded-full bg-[var(--color-accent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">
+                          you
+                        </span>
+                      )}
+                    </div>
+                    <span className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      lb.type === 'team'
+                        ? 'bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+                        : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {lb.type === 'team' ? 'Team' : 'Solo'}
+                    </span>
+                    <div className="hidden flex-shrink-0 gap-1 sm:flex">
+                      {PUZZLE_WEEK_PUZZLES.map((puzzle, pi) => {
+                        const isMeta = pi === PUZZLE_WEEK_PUZZLES.length - 1
+                        const solved = lb.solvedPuzzleIds.includes(puzzle.id)
+                        return (
+                          <div
+                            key={puzzle.id}
+                            title={puzzle.title}
+                            className={`h-2.5 w-2.5 rounded-full transition-colors ${
+                              solved
+                                ? isMeta ? 'bg-amber-400' : 'bg-emerald-400'
+                                : 'bg-[var(--color-border)]'
+                            }`}
+                          />
+                        )
+                      })}
+                    </div>
+                    <div className="w-10 flex-shrink-0 text-right text-sm font-semibold text-[var(--color-text)]">
+                      {lb.solvedCount}
+                      <span className="font-normal text-[var(--color-muted)]">/{PUZZLE_WEEK_PUZZLES.length}</span>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
+
       </div>
     </main>
   )
 }
 
 function ChoiceCard({
+  icon,
   title,
   body,
   active,
   onClick,
 }: {
+  icon: ReactNode
   title: string
   body: string
   active: boolean
@@ -535,23 +687,189 @@ function ChoiceCard({
   return (
     <button
       onClick={onClick}
-      className={`rounded-3xl border bg-white p-6 text-left shadow-sm transition ${
+      className={`rounded-3xl border bg-white p-6 text-left shadow-sm transition-all ${
         active
-          ? 'border-[var(--color-accent)] ring-2 ring-[var(--color-accent-light)]'
-          : 'border-[var(--color-border)] hover:border-[var(--color-accent)]'
+          ? 'border-[var(--color-accent)] ring-2 ring-[var(--color-accent)]/20 shadow-md'
+          : 'border-[var(--color-border)] hover:border-[var(--color-accent)]/60 hover:shadow-md'
       }`}
     >
-      <div className="text-xl font-semibold text-[var(--color-text)]">{title}</div>
-      <p className="mt-3 text-sm leading-6 text-[var(--color-muted)]">{body}</p>
+      <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl transition-colors ${
+        active
+          ? 'bg-[var(--color-accent)] text-white'
+          : 'bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+      }`}>
+        {icon}
+      </div>
+      <div className="text-base font-semibold text-[var(--color-text)]">{title}</div>
+      <p className="mt-2 text-sm leading-5 text-[var(--color-muted)]">{body}</p>
     </button>
   )
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function PuzzleCard({
+  puzzle,
+  index,
+  solved,
+  answer,
+  answerMessage,
+  checking,
+  onAnswerChange,
+  onCheck,
+}: {
+  puzzle: PuzzleWeekPuzzle
+  index: number
+  solved: boolean
+  answer: string
+  answerMessage: PuzzleWeekAnswerResult | undefined
+  checking: boolean
+  onAnswerChange: (value: string) => void
+  onCheck: () => void
+}) {
+  const colonIdx = puzzle.title.indexOf(': ')
+  const dayLabel = colonIdx !== -1 ? puzzle.title.slice(0, colonIdx) : null
+  const puzzleName = colonIdx !== -1 ? puzzle.title.slice(colonIdx + 2) : puzzle.title
+
   return (
-    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-accent-light)]/30 px-4 py-4">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">{label}</div>
-      <div className="mt-2 text-lg font-semibold text-[var(--color-text)] break-words">{value}</div>
+    <div className={`rounded-2xl border p-5 space-y-4 transition-colors ${
+      solved
+        ? 'border-emerald-200 bg-emerald-50'
+        : 'border-[var(--color-border)] bg-white'
+    }`}>
+      <div className="flex items-start gap-3">
+        <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors ${
+          solved
+            ? 'bg-emerald-500 text-white'
+            : 'bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+        }`}>
+          {solved ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
+        </div>
+        <div className="flex-1 min-w-0">
+          {dayLabel && (
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
+              {dayLabel}
+            </div>
+          )}
+          <div className="text-sm font-semibold leading-snug text-[var(--color-text)]">{puzzleName}</div>
+        </div>
+      </div>
+
+      {solved ? (
+        <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+          <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+          Solved
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <input
+              value={answer}
+              onChange={e => onAnswerChange(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') onCheck() }}
+              placeholder="Your answer"
+              className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+            />
+            <button
+              onClick={onCheck}
+              disabled={checking || !answer.trim()}
+              className="flex-shrink-0 rounded-xl bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {checking ? '…' : 'Check'}
+            </button>
+          </div>
+          {answerMessage && (
+            <div className={`rounded-lg px-3 py-2 text-xs ${
+              answerMessage.correct
+                ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border border-amber-200 bg-amber-50 text-amber-800'
+            }`}>
+              {answerMessage.message}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MetaPuzzleCard({
+  puzzle,
+  solved,
+  answer,
+  answerMessage,
+  checking,
+  mainPuzzlesSolvedCount,
+  onAnswerChange,
+  onCheck,
+}: {
+  puzzle: PuzzleWeekPuzzle
+  solved: boolean
+  answer: string
+  answerMessage: PuzzleWeekAnswerResult | undefined
+  checking: boolean
+  mainPuzzlesSolvedCount: number
+  onAnswerChange: (value: string) => void
+  onCheck: () => void
+}) {
+  const colonIdx = puzzle.title.indexOf(': ')
+  const puzzleName = colonIdx !== -1 ? puzzle.title.slice(colonIdx + 2) : puzzle.title
+
+  return (
+    <div className={`rounded-2xl border p-6 transition-colors ${
+      solved
+        ? 'border-amber-300 bg-amber-50'
+        : 'border-amber-200/70 bg-amber-50/40'
+    }`}>
+      <div className="flex items-start gap-4">
+        <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-base font-bold transition-colors ${
+          solved ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-600'
+        }`}>
+          {solved ? <CheckCircle2 className="h-5 w-5" /> : '★'}
+        </div>
+        <div className="flex-1">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-600">Metapuzzle</div>
+          <div className="mt-0.5 text-base font-semibold leading-snug text-[var(--color-text)]">{puzzleName}</div>
+          {!solved && mainPuzzlesSolvedCount < MAIN_PUZZLES.length && (
+            <p className="mt-1.5 text-xs text-amber-700">
+              Uses the answers from puzzles 1–6. ({mainPuzzlesSolvedCount}/{MAIN_PUZZLES.length} solved so far)
+            </p>
+          )}
+        </div>
+      </div>
+
+      {solved ? (
+        <div className="mt-4 flex items-center gap-2 text-sm font-medium text-amber-700">
+          <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+          Solved — congratulations!
+        </div>
+      ) : (
+        <div className="mt-4 space-y-2">
+          <div className="flex gap-2">
+            <input
+              value={answer}
+              onChange={e => onAnswerChange(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') onCheck() }}
+              placeholder="Your metapuzzle answer"
+              className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+            <button
+              onClick={onCheck}
+              disabled={checking || !answer.trim()}
+              className="flex-shrink-0 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
+            >
+              {checking ? '…' : 'Check'}
+            </button>
+          </div>
+          {answerMessage && (
+            <div className={`rounded-lg px-3 py-2 text-xs ${
+              answerMessage.correct
+                ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border border-amber-200 bg-amber-50 text-amber-800'
+            }`}>
+              {answerMessage.message}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

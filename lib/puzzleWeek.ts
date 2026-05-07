@@ -49,6 +49,7 @@ export interface PuzzleWeekEntry {
   name: string
   joinCode: string | null
   isLocked: boolean
+  status: 'active' | 'merged'
   createdAt: Date | null
 }
 
@@ -68,6 +69,12 @@ export interface PuzzleWeekProgress {
   eventId: string
   solved: boolean
   solvedAt: Date | null
+}
+
+interface PuzzleWeekJoinCodeRecord {
+  entryId: string
+  eventId: string
+  joinCode: string
 }
 
 export interface PuzzleWeekAnswerResult {
@@ -94,6 +101,7 @@ function mapEntry(data: Record<string, unknown>, id: string): PuzzleWeekEntry {
     name: String(data.name ?? ''),
     joinCode: typeof data.joinCode === 'string' ? data.joinCode : null,
     isLocked: Boolean(data.isLocked),
+    status: data.status === 'merged' ? 'merged' : 'active',
     createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : null,
   }
 }
@@ -120,6 +128,14 @@ function mapProgress(data: Record<string, unknown>, id: string): PuzzleWeekProgr
   }
 }
 
+function mapJoinCodeRecord(data: Record<string, unknown>): PuzzleWeekJoinCodeRecord {
+  return {
+    entryId: String(data.entryId ?? ''),
+    eventId: String(data.eventId ?? ''),
+    joinCode: String(data.joinCode ?? ''),
+  }
+}
+
 function makeJoinCode() {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   let code = ''
@@ -130,6 +146,14 @@ function makeJoinCode() {
 }
 
 async function getExistingJoinCodeEntry(eventId: string, joinCode: string) {
+  const joinCodeRef = doc(db, 'puzzleWeekJoinCodes', `${eventId}__${joinCode}`)
+  const joinCodeSnap = await getDoc(joinCodeRef)
+  if (joinCodeSnap.exists()) {
+    const joinCodeRecord = mapJoinCodeRecord(joinCodeSnap.data() as Record<string, unknown>)
+    const entry = await getEntryById(eventId, joinCodeRecord.entryId)
+    if (entry) return entry
+  }
+
   const snap = await getDocs(
     query(
       collection(db, 'puzzleWeekEntries'),
@@ -163,6 +187,31 @@ async function addMembership(entryId: string, eventId: string, user: User) {
   })
 }
 
+async function getEntryById(eventId: string, entryId: string): Promise<PuzzleWeekEntry | null> {
+  const entrySnap = await getDoc(doc(db, 'puzzleWeekEntries', entryId))
+  if (!entrySnap.exists()) return null
+  const entry = mapEntry(entrySnap.data() as Record<string, unknown>, entrySnap.id)
+  if (entry.eventId !== eventId) return null
+  return entry
+}
+
+async function getJoinCodeForEntry(eventId: string, entryId: string): Promise<string | null> {
+  const joinCodeSnap = await getDocs(
+    query(
+      collection(db, 'puzzleWeekJoinCodes'),
+      where('eventId', '==', eventId),
+      where('entryId', '==', entryId),
+      limit(1),
+    ),
+  )
+  const joinCodeDoc = joinCodeSnap.docs[0]
+  if (joinCodeDoc) {
+    return mapJoinCodeRecord(joinCodeDoc.data() as Record<string, unknown>).joinCode || null
+  }
+  const legacyEntry = await getEntryById(eventId, entryId)
+  return legacyEntry?.joinCode ?? null
+}
+
 async function getEntryMembers(eventId: string, entryId: string): Promise<PuzzleWeekMember[]> {
   const membersSnap = await getDocs(
     query(
@@ -194,6 +243,35 @@ async function getExistingMembershipDoc(eventId: string, userId: string) {
   return membershipSnap.docs[0] ?? null
 }
 
+async function getSolvedProgressMap(eventId: string, entryId: string) {
+  const progress = await getPuzzleWeekProgress(eventId, entryId)
+  return new Map(progress.filter(item => item.solved).map(item => [item.puzzleId, item] as const))
+}
+
+async function updateLeaderboardSnapshot(entry: PuzzleWeekEntry, solvedProgress: PuzzleWeekProgress[], active = true) {
+  const lastSolvedAt = solvedProgress.reduce<Date | null>((latest, item) => {
+    if (!item.solvedAt) return latest
+    if (!latest || item.solvedAt > latest) return item.solvedAt
+    return latest
+  }, null)
+
+  await setDoc(
+    doc(db, 'puzzleWeekLeaderboard', `${entry.eventId}__${entry.id}`),
+    {
+      eventId: entry.eventId,
+      entryId: entry.id,
+      name: entry.name,
+      type: entry.type,
+      solvedCount: solvedProgress.length,
+      solvedPuzzleIds: solvedProgress.map(item => item.puzzleId),
+      lastSolvedAt: lastSolvedAt ?? null,
+      active,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  )
+}
+
 export async function getPuzzleWeekRegistration(eventId: string, userId: string): Promise<{
   entry: PuzzleWeekEntry | null
   members: PuzzleWeekMember[]
@@ -204,24 +282,16 @@ export async function getPuzzleWeekRegistration(eventId: string, userId: string)
   }
 
   const membership = mapMember(membershipDoc.data() as Record<string, unknown>, membershipDoc.id)
-  const entrySnap = await getDocs(
-    query(
-      collection(db, 'puzzleWeekEntries'),
-      where('eventId', '==', eventId),
-      where('__name__', '==', membership.entryId),
-      limit(1),
-    ),
-  )
-
-  const entryDoc = entrySnap.docs[0]
-  if (!entryDoc) {
+  const entry = await getEntryById(eventId, membership.entryId)
+  if (!entry || entry.status === 'merged') {
     return { entry: null, members: [] }
   }
 
   const members = await getEntryMembers(eventId, membership.entryId)
+  const joinCode = entry.type === 'team' ? await getJoinCodeForEntry(eventId, membership.entryId) : null
 
   return {
-    entry: mapEntry(entryDoc.data() as Record<string, unknown>, entryDoc.id),
+    entry: { ...entry, joinCode },
     members,
   }
 }
@@ -237,12 +307,25 @@ export async function registerPuzzleWeekSolo(eventId: string, user: User) {
     eventId,
     type: 'solo',
     name: normalizeName(user.displayName ?? user.email ?? 'Solo Player'),
-    joinCode: null,
     isLocked: false,
+    status: 'active',
     createdAt: serverTimestamp(),
   })
 
   await addMembership(entryRef.id, eventId, user)
+  await updateLeaderboardSnapshot(
+    {
+      id: entryRef.id,
+      eventId,
+      type: 'solo',
+      name: normalizeName(user.displayName ?? user.email ?? 'Solo Player'),
+      joinCode: null,
+      isLocked: false,
+      status: 'active',
+      createdAt: null,
+    },
+    [],
+  )
 }
 
 export async function registerPuzzleWeekTeam(eventId: string, user: User, teamName: string) {
@@ -260,12 +343,32 @@ export async function registerPuzzleWeekTeam(eventId: string, user: User, teamNa
     eventId,
     type: 'team',
     name,
-    joinCode,
     isLocked: false,
+    status: 'active',
+    createdAt: serverTimestamp(),
+  })
+
+  await setDoc(doc(db, 'puzzleWeekJoinCodes', `${eventId}__${joinCode}`), {
+    eventId,
+    entryId: entryRef.id,
+    joinCode,
     createdAt: serverTimestamp(),
   })
 
   await addMembership(entryRef.id, eventId, user)
+  await updateLeaderboardSnapshot(
+    {
+      id: entryRef.id,
+      eventId,
+      type: 'team',
+      name,
+      joinCode,
+      isLocked: false,
+      status: 'active',
+      createdAt: null,
+    },
+    [],
+  )
 }
 
 export async function joinPuzzleWeekTeam(eventId: string, user: User, rawJoinCode: string) {
@@ -293,7 +396,42 @@ export async function joinPuzzleWeekTeam(eventId: string, user: User, rawJoinCod
 
   if (!membershipDoc) {
     await addMembership(entry.id, eventId, user)
+    const teamProgress = await getPuzzleWeekProgress(eventId, entry.id)
+    await updateLeaderboardSnapshot(entry, teamProgress.filter(item => item.solved), true)
     return
+  }
+
+  const oldEntry = existing.entry
+  if (oldEntry?.type === 'solo') {
+    const [soloProgressMap, teamProgressMap] = await Promise.all([
+      getSolvedProgressMap(eventId, oldEntry.id),
+      getSolvedProgressMap(eventId, entry.id),
+    ])
+
+    for (const [puzzleId, progressItem] of soloProgressMap) {
+      if (teamProgressMap.has(puzzleId)) continue
+      await setDoc(
+        doc(db, 'puzzleWeekProgress', `${eventId}__${entry.id}__${puzzleId}`),
+        {
+          eventId,
+          entryId: entry.id,
+          puzzleId,
+          solved: true,
+          solvedAt: progressItem.solvedAt ? Timestamp.fromDate(progressItem.solvedAt) : serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      )
+    }
+
+    await updateDoc(doc(db, 'puzzleWeekEntries', oldEntry.id), {
+      status: 'merged',
+      mergedIntoEntryId: entry.id,
+      updatedAt: serverTimestamp(),
+    })
+    await updateLeaderboardSnapshot({ ...oldEntry, status: 'merged' }, [], false)
+    const mergedProgress = await getPuzzleWeekProgress(eventId, entry.id)
+    await updateLeaderboardSnapshot(entry, mergedProgress.filter(item => item.solved), true)
   }
 
   await updateDoc(membershipDoc.ref, {
@@ -326,37 +464,26 @@ export interface PuzzleWeekLeaderboardEntry {
 }
 
 export async function getPuzzleWeekLeaderboard(eventId: string): Promise<PuzzleWeekLeaderboardEntry[]> {
-  const [entriesSnap, progressSnap] = await Promise.all([
-    getDocs(query(collection(db, 'puzzleWeekEntries'), where('eventId', '==', eventId))),
-    getDocs(query(collection(db, 'puzzleWeekProgress'), where('eventId', '==', eventId))),
-  ])
+  const leaderboardSnap = await getDocs(
+    query(collection(db, 'puzzleWeekLeaderboard'), where('eventId', '==', eventId)),
+  )
 
-  const progressByEntry = new Map<string, PuzzleWeekProgress[]>()
-  for (const docSnap of progressSnap.docs) {
-    const item = mapProgress(docSnap.data() as Record<string, unknown>, docSnap.id)
-    if (!item.solved) continue
-    const arr = progressByEntry.get(item.entryId) ?? []
-    arr.push(item)
-    progressByEntry.set(item.entryId, arr)
-  }
-
-  const entries: PuzzleWeekLeaderboardEntry[] = entriesSnap.docs.map(docSnap => {
-    const entry = mapEntry(docSnap.data() as Record<string, unknown>, docSnap.id)
-    const solved = progressByEntry.get(docSnap.id) ?? []
-    const lastSolvedAt = solved.reduce<Date | null>((latest, item) => {
-      if (!item.solvedAt) return latest
-      if (!latest || item.solvedAt > latest) return item.solvedAt
-      return latest
-    }, null)
-    return {
-      entryId: docSnap.id,
-      name: entry.name,
-      type: entry.type,
-      solvedCount: solved.length,
-      lastSolvedAt,
-      solvedPuzzleIds: solved.map(item => item.puzzleId),
-    }
-  })
+  const entries: PuzzleWeekLeaderboardEntry[] = leaderboardSnap.docs
+    .map(docSnap => {
+      const data = docSnap.data() as Record<string, unknown>
+      if (data.active === false) return null
+      return {
+        entryId: String(data.entryId ?? docSnap.id),
+        name: String(data.name ?? ''),
+        type: (data.type === 'team' ? 'team' : 'solo') as PuzzleWeekEntryType,
+        solvedCount: Number(data.solvedCount ?? 0),
+        lastSolvedAt: data.lastSolvedAt instanceof Timestamp ? data.lastSolvedAt.toDate() : null,
+        solvedPuzzleIds: Array.isArray(data.solvedPuzzleIds)
+          ? data.solvedPuzzleIds.filter((value): value is string => typeof value === 'string')
+          : [],
+      }
+    })
+    .filter((value): value is PuzzleWeekLeaderboardEntry => value !== null)
 
   return entries.sort((a, b) => {
     if (b.solvedCount !== a.solvedCount) return b.solvedCount - a.solvedCount
@@ -369,10 +496,11 @@ export async function getPuzzleWeekLeaderboard(eventId: string): Promise<PuzzleW
 
 export async function submitPuzzleWeekAnswer(
   eventId: string,
-  entryId: string,
+  user: User,
   puzzleId: string,
   rawAnswer: string,
 ): Promise<PuzzleWeekAnswerResult> {
+  assertPuzzleWeekEligibility(user)
   const puzzle = PUZZLE_WEEK_PUZZLES.find(item => item.id === puzzleId)
   if (!puzzle) {
     throw new Error('That puzzle could not be found.')
@@ -386,6 +514,12 @@ export async function submitPuzzleWeekAnswer(
   if (!normalizedAttempt) {
     throw new Error('Enter an answer first.')
   }
+
+  const registration = await getPuzzleWeekRegistration(eventId, user.uid)
+  if (!registration.entry) {
+    throw new Error('You need to register for Puzzle Week before submitting answers.')
+  }
+  const entryId = registration.entry.id
 
   const progressRef = doc(db, 'puzzleWeekProgress', `${eventId}__${entryId}__${puzzleId}`)
   const existing = await getDoc(progressRef)
@@ -418,6 +552,9 @@ export async function submitPuzzleWeekAnswer(
     },
     { merge: true },
   )
+
+  const solvedProgress = await getPuzzleWeekProgress(eventId, entryId)
+  await updateLeaderboardSnapshot(registration.entry, solvedProgress.filter(item => item.solved), true)
 
   return {
     correct: true,

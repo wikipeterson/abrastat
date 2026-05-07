@@ -172,13 +172,13 @@ export function PuzzleWeekHub() {
   }
 
   async function handleCheckAnswer(puzzleId: string) {
-    if (!entry) return
+    if (!entry || !user) return
     setCheckingPuzzleId(puzzleId)
     setError(null)
     try {
       const result = await submitPuzzleWeekAnswer(
         CURRENT_PUZZLE_WEEK_EVENT.id,
-        entry.id,
+        user,
         puzzleId,
         puzzleAnswers[puzzleId] ?? '',
       )

@@ -224,7 +224,7 @@ export function PuzzleWeekHub() {
         <div className="flex items-center gap-6">
           <Link href="/home" className="flex-shrink-0 select-none" aria-label="Return to AbraStat">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(160px, 20vw, 260px)', height: 'auto' }} />
+            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(220px, 26vw, 360px)', height: 'auto' }} />
           </Link>
           <div className="flex-1 text-center">
             <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--color-muted)]">
@@ -241,7 +241,7 @@ export function PuzzleWeekHub() {
               Monday, May 18 – Tuesday, May 26, 2026
             </div>
           </div>
-          <div className="flex-shrink-0" style={{ width: 'clamp(160px, 20vw, 260px)' }}>
+          <div className="flex-shrink-0" style={{ width: 'clamp(220px, 26vw, 360px)' }}>
             {user && !isGuest && (
               <div className="flex justify-end">
                 <button

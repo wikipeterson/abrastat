@@ -3,10 +3,12 @@
 import Link from 'next/link'
 import { ReactNode, useState } from 'react'
 import { Header } from '@/components/layout/Header'
+import { useAuth } from '@/components/auth/AuthProvider'
+import { canAccessPuzzleWeek } from '@/lib/featureFlags'
 
 const SIDEBAR_WIDTH_CLASS = 'md:w-48'
 
-const LIBRARY_LINKS = [
+const BASE_LIBRARY_LINKS = [
   { href: '/workspace?mode=library&section=all', label: 'Public Datasets' },
   { href: '/workspace?mode=library&section=mine', label: 'My Datasets' },
   { href: '/workspace?mode=library&section=games', label: 'Games' },
@@ -34,6 +36,10 @@ export function AppletShell({
   children: ReactNode
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { user } = useAuth()
+  const libraryLinks = canAccessPuzzleWeek(user)
+    ? [...BASE_LIBRARY_LINKS, { href: '/workspace?mode=library&section=puzzle-week', label: 'Puzzle Week' }]
+    : BASE_LIBRARY_LINKS
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
@@ -56,7 +62,7 @@ export function AppletShell({
           </div>
 
           <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
-            {LIBRARY_LINKS.map(item =>
+            {libraryLinks.map(item =>
               item.soon ? (
                 <div
                   key={item.label}

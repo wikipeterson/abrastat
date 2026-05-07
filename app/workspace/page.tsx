@@ -10,6 +10,7 @@ import { ExploreCanvas } from '@/components/explore/ExploreCanvas'
 import { SaveDatasetModal } from '@/components/library/SaveDatasetModal'
 import { ShareDatasetModal } from '@/components/library/ShareDatasetModal'
 import { DatasetCard } from '@/components/library/DatasetCard'
+import { PuzzleWeekPreview } from '@/components/library/PuzzleWeekPreview'
 import { DatasetListSkeleton } from '@/components/ui/Skeleton'
 import { GameHub } from '@/components/games/GameHub'
 import { useAuth } from '@/components/auth/AuthProvider'
@@ -19,6 +20,7 @@ import { useStore } from '@/lib/store'
 import { CardConfig } from '@/lib/exploreTypes'
 import { DatasetMeta } from '@/types'
 import { exportGridAsCsv, exportGridAsXlsx } from '@/lib/datasetExport'
+import { canAccessPuzzleWeek } from '@/lib/featureFlags'
 
 interface CardOption {
   type: CardConfig['type']
@@ -27,7 +29,7 @@ interface CardOption {
 }
 
 type WorkspaceMode = 'library' | 'lab'
-type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls'
+type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls' | 'puzzle-week'
 type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 
 const SIDEBAR_WIDTH_CLASS = 'md:w-48'
@@ -53,7 +55,7 @@ const INFERENCE_CARD_OPTIONS: CardOption[] = [
   { type: 'two-prop-randomization',  icon: '🎲', label: 'Two-Prop Randomization Test' },
 ]
 
-const LIBRARY_ITEMS: { id: LibrarySection; label: string; soon?: boolean }[] = [
+const BASE_LIBRARY_ITEMS: { id: Exclude<LibrarySection, 'puzzle-week'>; label: string; soon?: boolean }[] = [
   { id: 'all', label: 'Public Datasets' },
   { id: 'mine', label: 'My Datasets' },
   { id: 'games', label: 'Games' },
@@ -303,11 +305,13 @@ function LibrarySidebar({
   open,
   onClose,
   section,
+  items,
   onSectionChange,
 }: {
   open: boolean
   onClose: () => void
   section: LibrarySection
+  items: { id: LibrarySection; label: string; soon?: boolean }[]
   onSectionChange: (section: LibrarySection) => void
 }) {
   return (
@@ -328,7 +332,7 @@ function LibrarySidebar({
         </div>
 
         <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
-          {LIBRARY_ITEMS.map(item => (
+          {items.map(item => (
             <button
               key={item.id}
               onClick={() => {
@@ -671,7 +675,7 @@ function WorkspaceContent() {
   const initialMode = searchParams.get('mode') === 'library' ? 'library' : 'lab'
   const initialLibrarySection = (() => {
     const section = searchParams.get('section')
-    return section === 'all' || section === 'mine' || section === 'games' || section === 'applets' || section === 'polls'
+    return section === 'all' || section === 'mine' || section === 'games' || section === 'applets' || section === 'polls' || section === 'puzzle-week'
       ? section
       : 'all'
   })()
@@ -687,6 +691,17 @@ function WorkspaceContent() {
   const [gameChrome, setGameChrome] = useState<{ title: string; onBack: () => void } | null>(null)
   const { isDirty, clearGrid, activeDatasetId, activeDatasetName, addExploreCard, exploreCards, setGrid, setActiveDatasetId, setActiveDatasetName } = useStore()
   const hasOnlyDataGrid = exploreCards.every(card => card.config.type === 'data-grid')
+  const { user } = useAuth()
+  const showPuzzleWeek = canAccessPuzzleWeek(user)
+  const libraryItems: { id: LibrarySection; label: string; soon?: boolean }[] = showPuzzleWeek
+    ? [...BASE_LIBRARY_ITEMS, { id: 'puzzle-week', label: 'Puzzle Week' }]
+    : BASE_LIBRARY_ITEMS
+
+  useEffect(() => {
+    if (librarySection === 'puzzle-week' && !showPuzzleWeek) {
+      setLibrarySection('all')
+    }
+  }, [librarySection, showPuzzleWeek])
 
   useEffect(() => {
     function handleBeforeUnload(e: BeforeUnloadEvent) {
@@ -823,6 +838,9 @@ function WorkspaceContent() {
     if (librarySection === 'applets') {
       return <AppletsBrowser />
     }
+    if (librarySection === 'puzzle-week') {
+      return <PuzzleWeekPreview />
+    }
     return <PollsPlaceholder />
   }
 
@@ -878,6 +896,7 @@ function WorkspaceContent() {
             open={sidebarOpen}
             onClose={() => setSidebarOpen(false)}
             section={librarySection}
+            items={libraryItems}
             onSectionChange={setLibrarySection}
           />
         )}

@@ -10,6 +10,10 @@ import {
 
 type AuthMode = 'signin' | 'signup'
 
+interface SignInButtonProps {
+  googleOnly?: boolean
+}
+
 function formatAuthError(error: unknown): string {
   const code = typeof error === 'object' && error && 'code' in error ? String((error as { code?: unknown }).code) : ''
   switch (code) {
@@ -34,7 +38,7 @@ function formatAuthError(error: unknown): string {
   }
 }
 
-export function SignInButton() {
+export function SignInButton({ googleOnly = false }: SignInButtonProps) {
   const [mode, setMode] = useState<AuthMode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -97,65 +101,70 @@ export function SignInButton() {
 
   return (
     <div className="w-full max-w-sm rounded-2xl border border-[var(--color-border)] bg-white/90 p-4 shadow-sm">
-      <div className="mb-4 flex rounded-xl border border-[var(--color-border)] overflow-hidden">
-        <button
-          onClick={() => {
-            setMode('signin')
-            setError(null)
-            setMessage(null)
-          }}
-          className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-            mode === 'signin' ? 'bg-[var(--color-accent)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
-          }`}
-        >
-          Sign In
-        </button>
-        <button
-          onClick={() => {
-            setMode('signup')
-            setError(null)
-            setMessage(null)
-          }}
-          className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-            mode === 'signup' ? 'bg-[var(--color-accent)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
-          }`}
-        >
-          Create Account
-        </button>
-      </div>
+      {!googleOnly && (
+        <>
+          <div className="mb-4 flex rounded-xl border border-[var(--color-border)] overflow-hidden">
+            <button
+              onClick={() => {
+                setMode('signin')
+                setError(null)
+                setMessage(null)
+              }}
+              className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                mode === 'signin' ? 'bg-[var(--color-accent)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => {
+                setMode('signup')
+                setError(null)
+                setMessage(null)
+              }}
+              className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                mode === 'signup' ? 'bg-[var(--color-accent)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
+              }`}
+            >
+              Create Account
+            </button>
+          </div>
 
-      <div className="space-y-3">
-        <input
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder="Email"
-          className="w-full rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-        />
-        <input
-          type="password"
-          autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          placeholder="Password"
-          className="w-full rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-        />
+          <div className="space-y-3">
+            <input
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="Email"
+              className="w-full rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+            />
+            <input
+              type="password"
+              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+            />
 
-        <button
-          onClick={handleEmailAuth}
-          disabled={!canSubmit || submitting || googleLoading}
-          className="w-full rounded-xl bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {submitting ? 'Working…' : mode === 'signin' ? 'Sign In with Email' : 'Create Account'}
-        </button>
+            <button
+              onClick={handleEmailAuth}
+              disabled={!canSubmit || submitting || googleLoading}
+              className="w-full rounded-xl bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting ? 'Working…' : mode === 'signin' ? 'Sign In with Email' : 'Create Account'}
+            </button>
 
-        <div className="flex items-center gap-3 py-1">
-          <div className="h-px flex-1 bg-[var(--color-border)]" />
-          <span className="text-xs uppercase tracking-wide text-[var(--color-muted)]">or</span>
-          <div className="h-px flex-1 bg-[var(--color-border)]" />
-        </div>
-
+            <div className="flex items-center gap-3 py-1">
+              <div className="h-px flex-1 bg-[var(--color-border)]" />
+              <span className="text-xs uppercase tracking-wide text-[var(--color-muted)]">or</span>
+              <div className="h-px flex-1 bg-[var(--color-border)]" />
+            </div>
+          </div>
+        </>
+      )}
+      <div className={googleOnly ? 'space-y-3' : 'mt-3 space-y-3'}>
         <button
           onClick={handleGoogleSignIn}
           disabled={submitting || googleLoading}
@@ -169,7 +178,7 @@ export function SignInButton() {
           Sign in with Google
         </button>
 
-        {mode === 'signin' && (
+        {!googleOnly && mode === 'signin' && (
           <button
             onClick={handleResetPassword}
             disabled={submitting || googleLoading}

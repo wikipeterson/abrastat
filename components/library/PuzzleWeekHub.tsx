@@ -120,7 +120,7 @@ export function PuzzleWeekHub() {
         <div className="flex items-start justify-between gap-4">
           <Link href="/home" className="flex-shrink-0 select-none" aria-label="Return to AbraStat">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(110px, 14vw, 170px)', height: 'auto' }} />
+            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(145px, 18vw, 230px)', height: 'auto' }} />
           </Link>
           <div className="flex-1 space-y-3 pt-1 text-center">
           <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
@@ -132,7 +132,7 @@ export function PuzzleWeekHub() {
             or join a team with a code.
           </p>
           </div>
-          <div className="w-[clamp(110px,14vw,170px)] flex-shrink-0 flex justify-end">
+          <div className="w-[clamp(145px,18vw,230px)] flex-shrink-0 flex justify-end">
             {user && !isGuest ? (
               <button
                 onClick={handleSignOut}
@@ -151,11 +151,11 @@ export function PuzzleWeekHub() {
             <div className="mb-4 text-center">
               <h2 className="text-xl font-semibold text-[var(--color-text)]">Sign in to register</h2>
               <p className="mt-2 text-sm text-[var(--color-muted)]">
-                Use your existing AbraStat login, or create an account first.
+                Sign in with your Haverford School District Google account to register.
               </p>
             </div>
             <div className="flex justify-center">
-              <SignInButton />
+              <SignInButton googleOnly />
             </div>
           </div>
         ) : !canRegister ? (

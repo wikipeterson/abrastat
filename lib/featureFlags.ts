@@ -47,6 +47,10 @@ export function canResetPuzzleWeekRegistrationIdentity(identity: PuzzleWeekIdent
   return isPuzzleWeekPreviewIdentity(identity)
 }
 
+export function canManagePuzzleWeekIdentity(identity: PuzzleWeekIdentityLike | null | undefined): boolean {
+  return isPuzzleWeekPreviewIdentity(identity)
+}
+
 function isPuzzleWeekPreviewUser(user: User | null | undefined): boolean {
   return isPuzzleWeekPreviewIdentity(user)
 }

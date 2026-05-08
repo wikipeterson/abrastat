@@ -7,7 +7,7 @@ import { Calendar, CheckCircle2, RefreshCw, Trophy, User, UserPlus, Users } from
 import { useAuth } from '@/components/auth/AuthProvider'
 import { SignInButton } from '@/components/auth/SignInButton'
 import { signOut } from '@/lib/auth'
-import { canDownloadPuzzleWeekPacketIdentity, canRegisterForPuzzleWeek, canResetPuzzleWeekRegistrationIdentity, getPuzzleWeekEligibilityMessage, getPuzzleWeekPacketMessage } from '@/lib/featureFlags'
+import { canDownloadPuzzleWeekPacketIdentity, canManagePuzzleWeekIdentity, canRegisterForPuzzleWeek, canResetPuzzleWeekRegistrationIdentity, getPuzzleWeekEligibilityMessage, getPuzzleWeekPacketMessage } from '@/lib/featureFlags'
 import {
   CURRENT_PUZZLE_WEEK_EVENT,
   PUZZLE_WEEK_MAX_TEAM_SIZE,
@@ -78,6 +78,7 @@ export function PuzzleWeekHub() {
   const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number; started: boolean; ended: boolean } | null>(null)
   const canRegister = canRegisterForPuzzleWeek(user)
   const canDownloadPacket = canDownloadPuzzleWeekPacketIdentity(user)
+  const canManage = canManagePuzzleWeekIdentity(user)
   const canResetRegistration = canResetPuzzleWeekRegistrationIdentity(user)
   const eligibilityMessage = getPuzzleWeekEligibilityMessage()
   const packetMessage = getPuzzleWeekPacketMessage(user)
@@ -355,12 +356,22 @@ export function PuzzleWeekHub() {
               <img src="/logo.svg" alt="AbraStat" style={{ width: '150px', height: 'auto' }} />
             </Link>
             {user && !isGuest && (
-              <button
-                onClick={handleSignOut}
-                className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-slate-50"
-              >
-                Sign out
-              </button>
+              <div className="flex items-center gap-2">
+                {canManage && (
+                  <Link
+                    href="/puzzleweek/admin"
+                    className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+                  >
+                    Admin
+                  </Link>
+                )}
+                <button
+                  onClick={handleSignOut}
+                  className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+                >
+                  Sign out
+                </button>
+              </div>
             )}
           </div>
           <div className="text-center space-y-2">
@@ -402,12 +413,22 @@ export function PuzzleWeekHub() {
             </div>
           </div>
           {user && !isGuest && (
-            <button
-              onClick={handleSignOut}
-              className="relative z-10 ml-auto flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
-            >
-              Sign out
-            </button>
+            <div className="relative z-10 ml-auto flex items-center gap-2">
+              {canManage && (
+                <Link
+                  href="/puzzleweek/admin"
+                  className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+                >
+                  Admin
+                </Link>
+              )}
+              <button
+                onClick={handleSignOut}
+                className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+              >
+                Sign out
+              </button>
+            </div>
           )}
         </div>
 

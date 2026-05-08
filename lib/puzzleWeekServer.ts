@@ -3,6 +3,7 @@ import {
   CURRENT_PUZZLE_WEEK_EVENT,
   PUZZLE_WEEK_MAX_TEAM_SIZE,
   PUZZLE_WEEK_PUZZLES,
+  PuzzleWeekAdminEntry,
   PuzzleWeekAnswerResult,
   PuzzleWeekEntry,
   PuzzleWeekEntryType,
@@ -12,7 +13,7 @@ import {
   PuzzleWeekVote,
   PuzzleWeekVoteTally,
 } from './puzzleWeek'
-import { canRegisterForPuzzleWeekIdentity, canResetPuzzleWeekRegistrationIdentity, getPuzzleWeekEligibilityMessage } from './featureFlags'
+import { canManagePuzzleWeekIdentity, canRegisterForPuzzleWeekIdentity, canResetPuzzleWeekRegistrationIdentity, getPuzzleWeekEligibilityMessage } from './featureFlags'
 
 interface VerifiedPuzzleWeekUser {
   uid: string
@@ -67,6 +68,12 @@ function normalizeAnswer(value: string) {
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, '')
+}
+
+function assertPuzzleWeekAdmin(user: VerifiedPuzzleWeekUser) {
+  if (!canManagePuzzleWeekIdentity(user)) {
+    throw new Error('You do not have access to Puzzle Week admin tools.')
+  }
 }
 
 function base64UrlEncode(input: string | Buffer) {
@@ -423,6 +430,12 @@ async function deleteEntryArtifacts(eventId: string, entryId: string) {
 
   await deleteDocument('puzzleWeekLeaderboard', `${eventId}__${entryId}`)
   await deleteDocument('puzzleWeekEntries', entryId)
+}
+
+async function deleteVotesForUsers(eventId: string, userIds: string[]) {
+  for (const userId of userIds) {
+    await deleteDocument('puzzleWeekVotes', `${eventId}__${userId}`)
+  }
 }
 
 async function addMembership(entryId: string, eventId: string, user: VerifiedPuzzleWeekUser) {
@@ -799,6 +812,90 @@ export async function resetPuzzleWeekRegistrationServer(eventId: string, user: V
 
   await deleteDocument('puzzleWeekEntryMembers', membershipRecord.id)
   await deleteEntryArtifacts(eventId, entry.id)
+}
+
+export async function getPuzzleWeekAdminEntriesServer(eventId: string, user: VerifiedPuzzleWeekUser): Promise<PuzzleWeekAdminEntry[]> {
+  assertPuzzleWeekAdmin(user)
+
+  const entryRows = await queryCollection<Record<string, unknown>>('puzzleWeekEntries', [
+    { field: 'eventId', value: eventId },
+  ])
+
+  const activeEntries = entryRows
+    .map(row => mapEntry(row.data, row.id))
+    .filter(entry => entry.status !== 'merged')
+
+  const adminEntries = await Promise.all(activeEntries.map(async entry => {
+    const [members, solvedProgress, joinCode] = await Promise.all([
+      getEntryMembers(eventId, entry.id),
+      getSolvedProgress(eventId, entry.id),
+      entry.type === 'team' ? getJoinCodeForEntry(eventId, entry.id) : Promise.resolve(null),
+    ])
+
+    const lastSolvedAt = solvedProgress.reduce<Date | null>((latest, item) => {
+      if (!item.solvedAt) return latest
+      if (!latest || item.solvedAt > latest) return item.solvedAt
+      return latest
+    }, null)
+
+    return {
+      entry: { ...entry, joinCode },
+      members,
+      solvedCount: solvedProgress.length,
+      solvedPuzzleIds: solvedProgress.map(item => item.puzzleId),
+      lastSolvedAt,
+    } satisfies PuzzleWeekAdminEntry
+  }))
+
+  return adminEntries.sort((a, b) => {
+    if (a.entry.type !== b.entry.type) return a.entry.type === 'team' ? -1 : 1
+    return a.entry.name.localeCompare(b.entry.name)
+  })
+}
+
+export async function adminRenamePuzzleWeekEntryServer(
+  eventId: string,
+  user: VerifiedPuzzleWeekUser,
+  entryId: string,
+  rawName: string,
+) {
+  assertPuzzleWeekAdmin(user)
+  const name = normalizeName(rawName)
+  if (!name) throw new Error('Enter a team name.')
+
+  const entry = await getEntryById(eventId, entryId)
+  if (!entry || entry.status === 'merged') {
+    throw new Error('That registration could not be found.')
+  }
+  if (entry.type !== 'team') {
+    throw new Error('Only team names can be renamed.')
+  }
+
+  await updateDocument('puzzleWeekEntries', entryId, {
+    name,
+    updatedAt: new Date(),
+  })
+
+  const solvedProgress = await getSolvedProgress(eventId, entryId)
+  await updateLeaderboardSnapshot({ ...entry, name }, solvedProgress, true)
+}
+
+export async function adminResetPuzzleWeekEntryServer(
+  eventId: string,
+  user: VerifiedPuzzleWeekUser,
+  entryId: string,
+) {
+  assertPuzzleWeekAdmin(user)
+
+  const entry = await getEntryById(eventId, entryId)
+  if (!entry || entry.status === 'merged') {
+    throw new Error('That registration could not be found.')
+  }
+
+  const members = await getEntryMembers(eventId, entryId)
+  await Promise.all(members.map(member => deleteDocument('puzzleWeekEntryMembers', member.id)))
+  await deleteVotesForUsers(eventId, members.map(member => member.userId))
+  await deleteEntryArtifacts(eventId, entryId)
 }
 
 export async function getPuzzleWeekVotesServer(

@@ -83,6 +83,14 @@ export interface PuzzleWeekVoteTally {
   totalVoters: number
 }
 
+export interface PuzzleWeekAdminEntry {
+  entry: PuzzleWeekEntry
+  members: PuzzleWeekMember[]
+  solvedCount: number
+  solvedPuzzleIds: string[]
+  lastSolvedAt: Date | null
+}
+
 async function puzzleWeekRequest<T>(user: User, init: RequestInit & { url: string }): Promise<T> {
   const token = await user.getIdToken()
   const response = await fetch(init.url, {
@@ -147,6 +155,15 @@ function mapLeaderboard(entries: PuzzleWeekLeaderboardEntry[]) {
   return entries.map(entry => ({
     ...entry,
     lastSolvedAt: reviveDate(entry.lastSolvedAt),
+  }))
+}
+
+function mapAdminEntries(entries: PuzzleWeekAdminEntry[]) {
+  return entries.map(item => ({
+    ...item,
+    entry: mapEntry(item.entry)!,
+    members: mapMembers(item.members),
+    lastSolvedAt: reviveDate(item.lastSolvedAt),
   }))
 }
 
@@ -281,5 +298,29 @@ export async function submitPuzzleWeekVote(eventId: string, user: User, vote: Pu
     url: '/api/puzzle-week',
     method: 'POST',
     body: JSON.stringify({ action: 'submitVote', eventId, ...vote }),
+  })
+}
+
+export async function getPuzzleWeekAdminEntries(eventId: string, user: User): Promise<PuzzleWeekAdminEntry[]> {
+  const data = await puzzleWeekRequest<PuzzleWeekAdminEntry[]>(user, {
+    url: `/api/puzzle-week?action=adminEntries&eventId=${encodeURIComponent(eventId)}`,
+    method: 'GET',
+  })
+  return mapAdminEntries(data)
+}
+
+export async function adminRenamePuzzleWeekEntry(eventId: string, user: User, entryId: string, name: string): Promise<void> {
+  await puzzleWeekRequest<{ ok: true }>(user, {
+    url: '/api/puzzle-week',
+    method: 'POST',
+    body: JSON.stringify({ action: 'adminRenameEntry', eventId, entryId, name }),
+  })
+}
+
+export async function adminResetPuzzleWeekEntry(eventId: string, user: User, entryId: string): Promise<void> {
+  await puzzleWeekRequest<{ ok: true }>(user, {
+    url: '/api/puzzle-week',
+    method: 'POST',
+    body: JSON.stringify({ action: 'adminResetEntry', eventId, entryId }),
   })
 }

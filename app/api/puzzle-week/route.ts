@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
+  adminRenamePuzzleWeekEntryServer,
+  adminResetPuzzleWeekEntryServer,
+  getPuzzleWeekAdminEntriesServer,
   getPuzzleWeekLeaderboardServer,
   getPuzzleWeekProgressServer,
   getPuzzleWeekRegistrationServer,
@@ -42,6 +45,11 @@ export async function GET(request: NextRequest) {
 
     const user = await verifyPuzzleWeekRequest(request.headers.get('authorization'))
 
+    if (action === 'adminEntries') {
+      const adminEntries = await getPuzzleWeekAdminEntriesServer(eventId, user)
+      return NextResponse.json(adminEntries)
+    }
+
     if (action === 'registration') {
       const registration = await getPuzzleWeekRegistrationServer(eventId, user)
       return NextResponse.json(registration)
@@ -71,6 +79,8 @@ export async function POST(request: NextRequest) {
       action?: string
       eventId?: string
       teamName?: string
+      entryId?: string
+      name?: string
       joinCode?: string
       puzzleId?: string
       answer?: string
@@ -94,6 +104,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: true })
       case 'resetRegistration':
         await resetPuzzleWeekRegistrationServer(body.eventId, user)
+        return NextResponse.json({ ok: true })
+      case 'adminRenameEntry':
+        await adminRenamePuzzleWeekEntryServer(body.eventId, user, body.entryId ?? '', body.name ?? '')
+        return NextResponse.json({ ok: true })
+      case 'adminResetEntry':
+        await adminResetPuzzleWeekEntryServer(body.eventId, user, body.entryId ?? '')
         return NextResponse.json({ ok: true })
       case 'submitAnswer': {
         const result = await submitPuzzleWeekAnswerServer(

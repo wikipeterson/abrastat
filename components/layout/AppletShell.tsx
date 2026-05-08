@@ -16,6 +16,8 @@ const BASE_LIBRARY_LINKS = [
   { href: '/workspace?mode=library&section=polls', label: 'Polls', soon: true },
 ]
 
+const PUZZLE_WEEK_URL = 'https://puzzleweek.abrastat.com'
+
 const APPLET_LINKS = [
   { href: '/applets/dice-roller', label: 'Dice Roller' },
   { href: '/applets/coin-flipper', label: 'Coin Flipper' },
@@ -38,7 +40,7 @@ export function AppletShell({
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { user } = useAuth()
   const libraryLinks = canAccessPuzzleWeek(user)
-    ? [...BASE_LIBRARY_LINKS, { href: '/workspace?mode=library&section=puzzle-week', label: 'Puzzle Week' }]
+    ? [...BASE_LIBRARY_LINKS, { href: PUZZLE_WEEK_URL, label: 'Puzzle Week' }]
     : BASE_LIBRARY_LINKS
 
   return (

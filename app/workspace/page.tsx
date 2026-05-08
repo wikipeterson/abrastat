@@ -33,6 +33,7 @@ type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls' | 'puzzle-w
 type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 
 const SIDEBAR_WIDTH_CLASS = 'md:w-48'
+const PUZZLE_WEEK_URL = 'https://puzzleweek.abrastat.com'
 
 const EXPLORE_CARD_OPTIONS: CardOption[] = [
   { type: 'graph',      icon: '📈', label: 'Graph' },
@@ -704,6 +705,12 @@ function WorkspaceContent() {
   }, [librarySection, showPuzzleWeek])
 
   useEffect(() => {
+    if (mode === 'library' && librarySection === 'puzzle-week' && showPuzzleWeek) {
+      window.location.href = PUZZLE_WEEK_URL
+    }
+  }, [librarySection, mode, showPuzzleWeek])
+
+  useEffect(() => {
     function handleBeforeUnload(e: BeforeUnloadEvent) {
       if (isDirty) {
         e.preventDefault()
@@ -751,6 +758,14 @@ function WorkspaceContent() {
     }
     setMode(resolvedMode)
     setSidebarOpen(false)
+  }
+
+  function handleLibrarySectionChange(nextSection: LibrarySection) {
+    if (nextSection === 'puzzle-week') {
+      window.location.href = PUZZLE_WEEK_URL
+      return
+    }
+    setLibrarySection(nextSection)
   }
 
   function handleSaveClick() {
@@ -897,7 +912,7 @@ function WorkspaceContent() {
             onClose={() => setSidebarOpen(false)}
             section={librarySection}
             items={libraryItems}
-            onSectionChange={setLibrarySection}
+            onSectionChange={handleLibrarySectionChange}
           />
         )}
 

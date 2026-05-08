@@ -364,7 +364,7 @@ export function PuzzleWeekHub() {
 
         {/* Countdown — only shown before May 18 */}
         {countdown && !countdown.started && !countdown.ended && (
-          <div className="text-center pt-2 space-y-3">
+          <div className="text-center pt-4 space-y-1.5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
               Opens in
             </p>
@@ -713,9 +713,6 @@ export function PuzzleWeekHub() {
             </div>
 
             <div className="mx-auto max-w-md rounded-3xl border border-[var(--color-border)] bg-white p-7 shadow-sm">
-              {registerMode === null && (
-                <p className="text-center text-sm text-[var(--color-muted)]">Choose how you want to participate.</p>
-              )}
 
               {registerMode === 'solo' && (
                 <div className="space-y-4 text-center">

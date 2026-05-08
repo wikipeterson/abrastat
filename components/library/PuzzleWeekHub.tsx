@@ -226,18 +226,20 @@ export function PuzzleWeekHub() {
     <main className="min-h-screen px-6 py-8" style={{ background: 'var(--color-bg)' }}>
       <div className="mx-auto max-w-5xl space-y-8">
 
-        {/* Header: logo | title | sign out */}
-        <div className="flex items-center gap-6">
-          <Link href="/home" className="flex-shrink-0 select-none" aria-label="Return to AbraStat">
+        {/* Header */}
+        <div className="relative flex items-center py-2">
+          {/* Logo */}
+          <Link href="/home" className="relative z-10 flex-shrink-0 select-none" aria-label="Return to AbraStat">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(300px, 32vw, 480px)', height: 'auto' }} />
+            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(200px, 24vw, 320px)', height: 'auto' }} />
           </Link>
-          <div className="flex-1 text-center">
+          {/* Title — absolutely centered over the full row */}
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
             <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--color-muted)]">
               The Haverford High School Math Department Presents
             </p>
             <h1
-              className="mt-1 text-4xl sm:text-5xl font-semibold leading-tight text-[var(--color-text)]"
+              className="mt-1 whitespace-nowrap text-4xl sm:text-5xl font-semibold leading-tight text-[var(--color-text)]"
               style={{ fontFamily: 'var(--font-fraunces)' }}
             >
               Puzzle Week 2026
@@ -247,18 +249,15 @@ export function PuzzleWeekHub() {
               Monday, May 18 – Tuesday, May 26, 2026
             </div>
           </div>
-          <div className="flex-shrink-0" style={{ width: 'clamp(300px, 32vw, 480px)' }}>
-            {user && !isGuest && (
-              <div className="flex justify-end">
-                <button
-                  onClick={handleSignOut}
-                  className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
-                >
-                  Sign out
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Sign out — pushed to the right */}
+          {user && !isGuest && (
+            <button
+              onClick={handleSignOut}
+              className="relative z-10 ml-auto flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+            >
+              Sign out
+            </button>
+          )}
         </div>
 
         {/* Rules */}

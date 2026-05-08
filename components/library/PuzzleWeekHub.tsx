@@ -239,8 +239,8 @@ export function PuzzleWeekHub() {
           </Link>
           {/* Title — absolutely centered over the full row */}
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--color-muted)]">
-              The Haverford High School Math Department Presents
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+              HHS Math Department Presents
             </p>
             <h1
               className="mt-1 whitespace-nowrap text-4xl sm:text-5xl font-semibold leading-tight text-[var(--color-text)]"

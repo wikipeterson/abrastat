@@ -364,7 +364,10 @@ export function PuzzleWeekHub() {
 
         {/* Countdown — only shown before May 18 */}
         {countdown && !countdown.started && !countdown.ended && (
-          <div className="text-center">
+          <div className="text-center pt-2 space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+              Opens in
+            </p>
             <div className="flex items-end justify-center gap-2 sm:gap-3">
               {([
                 { value: countdown.days, label: 'days' },
@@ -382,9 +385,6 @@ export function PuzzleWeekHub() {
                 </div>
               ))}
             </div>
-            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-              Opens in
-            </p>
           </div>
         )}
 
@@ -547,6 +547,12 @@ export function PuzzleWeekHub() {
                     <input
                       value={teamName}
                       onChange={e => setTeamName(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          void handleCreateTeam()
+                        }
+                      }}
                       placeholder="Team name"
                       className="w-full rounded-2xl border border-[var(--color-border)] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                     />

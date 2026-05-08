@@ -52,6 +52,7 @@ export function PuzzleWeekHub() {
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true)
   const [showJoinTeam, setShowJoinTeam] = useState(false)
   const [downloadingPacket, setDownloadingPacket] = useState(false)
+  const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number; started: boolean; ended: boolean } | null>(null)
   const canRegister = canRegisterForPuzzleWeek(user)
   const canDownloadPacket = canDownloadPuzzleWeekPacketIdentity(user)
   const canResetRegistration = canResetPuzzleWeekRegistrationIdentity(user)
@@ -126,6 +127,29 @@ export function PuzzleWeekHub() {
   }, [entry, user])
 
   useEffect(() => { void loadLeaderboard(user) }, [user])
+
+  useEffect(() => {
+    const START = new Date('2026-05-18T00:00:00')
+    const END = new Date('2026-05-26T23:59:00')
+    function compute() {
+      const now = new Date()
+      if (now >= END) return { days: 0, hours: 0, minutes: 0, seconds: 0, started: true, ended: true }
+      const target = now < START ? START : END
+      const started = now >= START
+      const diff = target.getTime() - now.getTime()
+      return {
+        days: Math.floor(diff / 86400000),
+        hours: Math.floor((diff % 86400000) / 3600000),
+        minutes: Math.floor((diff % 3600000) / 60000),
+        seconds: Math.floor((diff % 60000) / 1000),
+        started,
+        ended: false,
+      }
+    }
+    setCountdown(compute())
+    const id = setInterval(() => setCountdown(compute()), 1000)
+    return () => clearInterval(id)
+  }, [])
 
   async function handleSolo() {
     if (!user) return
@@ -379,6 +403,32 @@ export function PuzzleWeekHub() {
           </div>
         )}
 
+        {/* Countdown */}
+        {countdown && !countdown.ended && (
+          <div className="text-center space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+              {countdown.started ? 'Closes in' : 'Opens in'}
+            </p>
+            <div className="flex items-end justify-center gap-2 sm:gap-3">
+              {([
+                { value: countdown.days, label: 'days' },
+                { value: countdown.hours, label: 'hrs' },
+                { value: countdown.minutes, label: 'min' },
+                { value: countdown.seconds, label: 'sec' },
+              ] as const).map(({ value, label }) => (
+                <div key={label} className="flex flex-col items-center">
+                  <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-bold tabular-nums text-[var(--color-text)] shadow-sm">
+                    {String(value).padStart(2, '0')}
+                  </div>
+                  <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
+                    {label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── Auth / registration states ── */}
         {!user || isGuest ? (
           <div className="mx-auto max-w-sm rounded-3xl border border-[var(--color-border)] bg-white p-8 shadow-sm text-center space-y-4">
@@ -486,7 +536,40 @@ export function PuzzleWeekHub() {
             {/* Solo → join a team */}
             {entry.type === 'solo' && (
               <div className="rounded-3xl border border-[var(--color-border)] bg-white/60 px-6 py-4">
-                {!showJoinTeam ? (
+                {registerMode === 'create-team' ? (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-[var(--color-text)]">Create a team</p>
+                      <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+                        Pick a team name and we&apos;ll move your registration onto the new team.
+                      </p>
+                    </div>
+                    <input
+                      value={teamName}
+                      onChange={e => setTeamName(e.target.value)}
+                      placeholder="Team name"
+                      className="w-full rounded-2xl border border-[var(--color-border)] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={handleCreateTeam}
+                        disabled={submitting}
+                        className="rounded-xl bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-60"
+                      >
+                        {submitting ? 'Creating…' : 'Create Team'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setRegisterMode(null)
+                          setTeamName('')
+                        }}
+                        className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-muted)] transition hover:border-[var(--color-accent)]"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : !showJoinTeam ? (
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <p className="text-sm font-medium text-[var(--color-text)]">Want to create or join a team?</p>
@@ -498,6 +581,7 @@ export function PuzzleWeekHub() {
                       <button
                         onClick={() => {
                           setRegisterMode('create-team')
+                          setShowJoinTeam(false)
                           setError(null)
                         }}
                         className="rounded-xl bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white transition hover:brightness-105"
@@ -531,7 +615,10 @@ export function PuzzleWeekHub() {
                       </button>
                     </div>
                     <button
-                      onClick={() => { setShowJoinTeam(false); setJoinCode('') }}
+                      onClick={() => {
+                        setShowJoinTeam(false)
+                        setJoinCode('')
+                      }}
                       className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-muted)] transition hover:border-[var(--color-accent)]"
                     >
                       Cancel

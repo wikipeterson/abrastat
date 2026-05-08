@@ -34,6 +34,21 @@ import {
 } from '@/lib/puzzleWeek'
 
 type RegisterMode = 'solo' | 'create-team' | 'join-team' | null
+type PuzzleBadge = 'easiest' | 'hardest' | 'favorite'
+
+const BADGE_CONFIG: Record<PuzzleBadge, { label: string; className: string }> = {
+  easiest:  { label: '😌 Easiest',  className: 'bg-sky-100 text-sky-700' },
+  hardest:  { label: '🤯 Hardest',  className: 'bg-red-100 text-red-700' },
+  favorite: { label: '⭐ Favorite', className: 'bg-amber-100 text-amber-700' },
+}
+
+function topVotedIds(tally: Record<string, number>): Set<string> {
+  const entries = Object.entries(tally)
+  if (!entries.length) return new Set()
+  const max = Math.max(...entries.map(([, n]) => n))
+  if (max === 0) return new Set()
+  return new Set(entries.filter(([, n]) => n === max).map(([id]) => id))
+}
 
 const MAIN_PUZZLES = PUZZLE_WEEK_PUZZLES.slice(0, PUZZLE_WEEK_PUZZLES.length - 1)
 const META_PUZZLE = PUZZLE_WEEK_PUZZLES[PUZZLE_WEEK_PUZZLES.length - 1]
@@ -763,49 +778,64 @@ export function PuzzleWeekHub() {
             )}
 
             {/* Puzzles 1–6 */}
-            <div>
-              <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-                Puzzles 1–6
-              </h3>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {MAIN_PUZZLES.map((puzzle, index) => (
-                  <PuzzleCard
-                    key={puzzle.id}
-                    puzzle={puzzle}
-                    index={index}
-                    solved={progress[puzzle.id]?.solved === true}
-                    answer={puzzleAnswers[puzzle.id] ?? ''}
-                    answerMessage={answerMessages[puzzle.id]}
-                    checking={checkingPuzzleId === puzzle.id}
-                    onAnswerChange={value => {
-                      setPuzzleAnswers(current => ({ ...current, [puzzle.id]: value }))
-                      setAnswerMessages(current => ({ ...current, [puzzle.id]: undefined }))
-                    }}
-                    onCheck={() => handleCheckAnswer(puzzle.id)}
-                  />
-                ))}
-              </div>
-            </div>
+            {(() => {
+              const easiestIds = voteTally ? topVotedIds(voteTally.easiest) : new Set<string>()
+              const hardestIds  = voteTally ? topVotedIds(voteTally.hardest)  : new Set<string>()
+              const favoriteIds = voteTally ? topVotedIds(voteTally.favorite) : new Set<string>()
+              const getBadges = (id: string): PuzzleBadge[] => [
+                easiestIds.has(id)  ? 'easiest'  : null,
+                hardestIds.has(id)  ? 'hardest'  : null,
+                favoriteIds.has(id) ? 'favorite' : null,
+              ].filter(Boolean) as PuzzleBadge[]
+              return (
+                <>
+                  <div>
+                    <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+                      Puzzles 1–6
+                    </h3>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {MAIN_PUZZLES.map((puzzle, index) => (
+                        <PuzzleCard
+                          key={puzzle.id}
+                          puzzle={puzzle}
+                          index={index}
+                          solved={progress[puzzle.id]?.solved === true}
+                          answer={puzzleAnswers[puzzle.id] ?? ''}
+                          answerMessage={answerMessages[puzzle.id]}
+                          checking={checkingPuzzleId === puzzle.id}
+                          badges={getBadges(puzzle.id)}
+                          onAnswerChange={value => {
+                            setPuzzleAnswers(current => ({ ...current, [puzzle.id]: value }))
+                            setAnswerMessages(current => ({ ...current, [puzzle.id]: undefined }))
+                          }}
+                          onCheck={() => handleCheckAnswer(puzzle.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
 
-            {/* Metapuzzle */}
-            <div>
-              <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-                Metapuzzle
-              </h3>
-              <MetaPuzzleCard
-                puzzle={META_PUZZLE}
-                solved={progress[META_PUZZLE.id]?.solved === true}
-                answer={puzzleAnswers[META_PUZZLE.id] ?? ''}
-                answerMessage={answerMessages[META_PUZZLE.id]}
-                checking={checkingPuzzleId === META_PUZZLE.id}
-                mainPuzzlesSolvedCount={mainPuzzlesSolvedCount}
-                onAnswerChange={value => {
-                  setPuzzleAnswers(current => ({ ...current, [META_PUZZLE.id]: value }))
-                  setAnswerMessages(current => ({ ...current, [META_PUZZLE.id]: undefined }))
-                }}
-                onCheck={() => handleCheckAnswer(META_PUZZLE.id)}
-              />
-            </div>
+                  <div>
+                    <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+                      Metapuzzle
+                    </h3>
+                    <MetaPuzzleCard
+                      puzzle={META_PUZZLE}
+                      solved={progress[META_PUZZLE.id]?.solved === true}
+                      answer={puzzleAnswers[META_PUZZLE.id] ?? ''}
+                      answerMessage={answerMessages[META_PUZZLE.id]}
+                      checking={checkingPuzzleId === META_PUZZLE.id}
+                      mainPuzzlesSolvedCount={mainPuzzlesSolvedCount}
+                      badges={getBadges(META_PUZZLE.id)}
+                      onAnswerChange={value => {
+                        setPuzzleAnswers(current => ({ ...current, [META_PUZZLE.id]: value }))
+                        setAnswerMessages(current => ({ ...current, [META_PUZZLE.id]: undefined }))
+                      }}
+                      onCheck={() => handleCheckAnswer(META_PUZZLE.id)}
+                    />
+                  </div>
+                </>
+              )
+            })()}
           </div>
         ) : (
           /* Registration choice */
@@ -1191,6 +1221,7 @@ function PuzzleCard({
   answer,
   answerMessage,
   checking,
+  badges = [],
   onAnswerChange,
   onCheck,
 }: {
@@ -1200,6 +1231,7 @@ function PuzzleCard({
   answer: string
   answerMessage: PuzzleWeekAnswerResult | undefined
   checking: boolean
+  badges?: PuzzleBadge[]
   onAnswerChange: (value: string) => void
   onCheck: () => void
 }) {
@@ -1228,6 +1260,15 @@ function PuzzleCard({
             </div>
           )}
           <div className="text-sm font-semibold leading-snug text-[var(--color-text)]">{puzzleName}</div>
+          {badges.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {badges.map(badge => (
+                <span key={badge} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${BADGE_CONFIG[badge].className}`}>
+                  {BADGE_CONFIG[badge].label}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1276,6 +1317,7 @@ function MetaPuzzleCard({
   answerMessage,
   checking,
   mainPuzzlesSolvedCount,
+  badges = [],
   onAnswerChange,
   onCheck,
 }: {
@@ -1285,6 +1327,7 @@ function MetaPuzzleCard({
   answerMessage: PuzzleWeekAnswerResult | undefined
   checking: boolean
   mainPuzzlesSolvedCount: number
+  badges?: PuzzleBadge[]
   onAnswerChange: (value: string) => void
   onCheck: () => void
 }) {
@@ -1306,6 +1349,15 @@ function MetaPuzzleCard({
         <div className="flex-1">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-600">Metapuzzle</div>
           <div className="mt-0.5 text-base font-semibold leading-snug text-[var(--color-text)]">{puzzleName}</div>
+          {badges.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {badges.map(badge => (
+                <span key={badge} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${BADGE_CONFIG[badge].className}`}>
+                  {BADGE_CONFIG[badge].label}
+                </span>
+              ))}
+            </div>
+          )}
           {!solved && mainPuzzlesSolvedCount < MAIN_PUZZLES.length && (
             <p className="mt-1.5 text-xs text-amber-700">
               Uses the answers from puzzles 1–6. ({mainPuzzlesSolvedCount}/{MAIN_PUZZLES.length} solved so far)

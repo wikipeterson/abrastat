@@ -592,12 +592,43 @@ export async function getPuzzleWeekLeaderboardServer(eventId: string): Promise<P
   const rows = await queryCollection<Record<string, unknown>>('puzzleWeekLeaderboard', [
     { field: 'eventId', value: eventId },
   ])
-  const entries = rows
+  const snapshotByEntryId = new Map<string, Record<string, unknown>>(
+    rows
+      .map(row => [String(row.data.entryId ?? row.id), row.data] as const)
+  )
+
+  const entryRows = await queryCollection<Record<string, unknown>>('puzzleWeekEntries', [
+    { field: 'eventId', value: eventId },
+  ])
+  const activeEntries = entryRows
+    .map(row => mapEntry(row.data, row.id))
+    .filter(entry => entry.status !== 'merged')
+
+  for (const entry of activeEntries) {
+    if (snapshotByEntryId.has(entry.id)) continue
+    const solvedProgress = await getSolvedProgress(eventId, entry.id)
+    await updateLeaderboardSnapshot(entry, solvedProgress, true)
+    snapshotByEntryId.set(entry.id, {
+      entryId: entry.id,
+      name: entry.name,
+      type: entry.type,
+      solvedCount: solvedProgress.length,
+      solvedPuzzleIds: solvedProgress.map(item => item.puzzleId),
+      lastSolvedAt: solvedProgress.reduce<Date | null>((latest, item) => {
+        if (!item.solvedAt) return latest
+        if (!latest || item.solvedAt > latest) return item.solvedAt
+        return latest
+      }, null),
+      active: true,
+    })
+  }
+
+  const entries = Array.from(snapshotByEntryId.values())
     .map(row => {
-      const data = row.data
+      const data = row
       if (data.active === false) return null
       return {
-        entryId: String(data.entryId ?? row.id),
+        entryId: String(data.entryId ?? ''),
         name: String(data.name ?? ''),
         type: (data.type === 'team' ? 'team' : 'solo') as PuzzleWeekEntryType,
         solvedCount: Number(data.solvedCount ?? 0),

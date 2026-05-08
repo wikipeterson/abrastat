@@ -1,5 +1,4 @@
 import { access, readFile } from 'fs/promises'
-import path from 'path'
 import { NextRequest, NextResponse } from 'next/server'
 import { getPuzzleWeekPacketMessage, canDownloadPuzzleWeekPacketIdentity } from '@/lib/featureFlags'
 import { verifyPuzzleWeekRequest } from '@/lib/puzzleWeekServer'
@@ -7,7 +6,7 @@ import { verifyPuzzleWeekRequest } from '@/lib/puzzleWeekServer'
 export const runtime = 'nodejs'
 
 const PACKET_FILENAME = 'HaverfordPuzzleWeek2026.pdf'
-const PACKET_PATH = path.join(process.cwd(), 'private', 'puzzle-week', 'puzzle-week-2026.pdf')
+const PACKET_PATH = new URL('../../../../private/puzzle-week/puzzle-week-2026.pdf', import.meta.url)
 
 function buildPlaceholderPacketPdf() {
   const lines = [

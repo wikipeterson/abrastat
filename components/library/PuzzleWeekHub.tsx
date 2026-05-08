@@ -7,7 +7,7 @@ import { Calendar, CheckCircle2, RefreshCw, Trophy, User, UserPlus, Users } from
 import { useAuth } from '@/components/auth/AuthProvider'
 import { SignInButton } from '@/components/auth/SignInButton'
 import { signOut } from '@/lib/auth'
-import { canRegisterForPuzzleWeek, getPuzzleWeekEligibilityMessage } from '@/lib/featureFlags'
+import { canDownloadPuzzleWeekPacketIdentity, canRegisterForPuzzleWeek, getPuzzleWeekEligibilityMessage, getPuzzleWeekPacketMessage } from '@/lib/featureFlags'
 import {
   CURRENT_PUZZLE_WEEK_EVENT,
   PUZZLE_WEEK_MAX_TEAM_SIZE,
@@ -18,6 +18,7 @@ import {
   PuzzleWeekMember,
   PuzzleWeekProgress,
   PuzzleWeekPuzzle,
+  downloadPuzzleWeekPacket,
   getPuzzleWeekLeaderboard,
   getPuzzleWeekProgress,
   getPuzzleWeekRegistration,
@@ -49,8 +50,11 @@ export function PuzzleWeekHub() {
   const [leaderboard, setLeaderboard] = useState<PuzzleWeekLeaderboardEntry[]>([])
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true)
   const [showJoinTeam, setShowJoinTeam] = useState(false)
+  const [downloadingPacket, setDownloadingPacket] = useState(false)
   const canRegister = canRegisterForPuzzleWeek(user)
+  const canDownloadPacket = canDownloadPuzzleWeekPacketIdentity(user)
   const eligibilityMessage = getPuzzleWeekEligibilityMessage()
+  const packetMessage = getPuzzleWeekPacketMessage(user)
   const solvedCount = Object.values(progress).filter(p => p.solved).length
 
   function getErrorMessage(err: unknown, fallback: string) {
@@ -72,11 +76,6 @@ export function PuzzleWeekHub() {
   }
 
   async function loadLeaderboard(currentUser?: NonNullable<typeof user> | null) {
-    if (!currentUser) {
-      setLeaderboard([])
-      setLoadingLeaderboard(false)
-      return
-    }
     setLoadingLeaderboard(true)
     try {
       const data = await getPuzzleWeekLeaderboard(CURRENT_PUZZLE_WEEK_EVENT.id, currentUser)
@@ -214,6 +213,22 @@ export function PuzzleWeekHub() {
     }
   }
 
+  async function handleDownloadPacket() {
+    if (!user) {
+      setError('Sign in to download the puzzle pack.')
+      return
+    }
+    setDownloadingPacket(true)
+    setError(null)
+    try {
+      await downloadPuzzleWeekPacket(user)
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not download the puzzle pack.'))
+    } finally {
+      setDownloadingPacket(false)
+    }
+  }
+
   if (loading || loadingRegistration) {
     return (
       <main className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-bg)' }}>
@@ -227,17 +242,48 @@ export function PuzzleWeekHub() {
   ).length
 
   return (
-    <main className="min-h-screen px-6 py-8" style={{ background: 'var(--color-bg)' }}>
-      <div className="mx-auto max-w-5xl space-y-8">
+    <main className="min-h-screen px-4 sm:px-6 py-6 sm:py-8" style={{ background: 'var(--color-bg)' }}>
+      <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8">
 
-        {/* Header */}
-        <div className="relative flex items-center py-2">
-          {/* Logo */}
+        {/* ── Mobile header: stacked ── */}
+        <div className="sm:hidden space-y-3">
+          <div className="flex items-center justify-between">
+            <Link href="/home" className="select-none" aria-label="Return to AbraStat">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.svg" alt="AbraStat" style={{ width: '150px', height: 'auto' }} />
+            </Link>
+            {user && !isGuest && (
+              <button
+                onClick={handleSignOut}
+                className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+              >
+                Sign out
+              </button>
+            )}
+          </div>
+          <div className="text-center space-y-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+              HHS Math Department Presents
+            </p>
+            <h1
+              className="text-3xl font-semibold leading-tight text-[var(--color-text)]"
+              style={{ fontFamily: 'var(--font-fraunces)' }}
+            >
+              Puzzle Week 2026
+            </h1>
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] shadow-sm">
+              <Calendar className="h-3 w-3" />
+              May 18 – 26, 2026
+            </div>
+          </div>
+        </div>
+
+        {/* ── Desktop header: logo | absolute-center title | sign out ── */}
+        <div className="hidden sm:flex relative items-center py-2">
           <Link href="/home" className="relative z-10 flex-shrink-0 select-none" aria-label="Return to AbraStat">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(200px, 24vw, 320px)', height: 'auto' }} />
           </Link>
-          {/* Title — absolutely centered over the full row */}
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
               HHS Math Department Presents
@@ -253,7 +299,6 @@ export function PuzzleWeekHub() {
               Monday, May 18 – Tuesday, May 26, 2026
             </div>
           </div>
-          {/* Sign out — pushed to the right */}
           {user && !isGuest && (
             <button
               onClick={handleSignOut}
@@ -264,25 +309,46 @@ export function PuzzleWeekHub() {
           )}
         </div>
 
-        {/* Rules */}
-        <div className="mx-auto max-w-3xl rounded-3xl border border-[var(--color-border)] bg-white/70 px-7 py-6 shadow-sm">
-          <ul className="space-y-3 text-sm text-[var(--color-muted)] leading-relaxed">
-            {([
-              <>This packet contains <strong className="text-[var(--color-text)]">7 puzzles</strong>. Puzzles 1–6 are independent. Puzzle 7 is a <strong className="text-[var(--color-text)]">metapuzzle</strong> that uses the answers from the first six.</>,
-              <>Each answer is a <strong className="text-[var(--color-text)]">single word, name, or short phrase</strong> in English.</>,
-              <>You may use <strong className="text-[var(--color-text)]">any resources</strong>, including the internet and AI.</>,
-              <>Compete <strong className="text-[var(--color-text)]">solo or as a team</strong> of up to {PUZZLE_WEEK_MAX_TEAM_SIZE}. Please don&apos;t share answers with other teams.</>,
-              <>Check answers individually as you go. Submit by <strong className="text-[var(--color-text)]">23:59 on Tuesday, May 26, 2026</strong>. Double-check for typos.</>,
-            ] as ReactNode[]).map((text, i) => (
-              <li key={i} className="flex gap-3">
-                <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">
-                  {i + 1}
-                </span>
-                <span>{text}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {entry && (
+          <div className="mx-auto max-w-3xl rounded-3xl border border-[var(--color-border)] bg-white/70 px-4 sm:px-7 py-5 sm:py-6 shadow-sm">
+            <ul className="space-y-3 text-sm text-[var(--color-muted)] leading-relaxed">
+              {([
+                <>
+                  <button
+                    type="button"
+                    onClick={handleDownloadPacket}
+                    disabled={!canDownloadPacket || downloadingPacket}
+                    className={`font-semibold underline underline-offset-4 transition ${
+                      canDownloadPacket
+                        ? 'text-[var(--color-accent)] hover:opacity-80'
+                        : 'cursor-not-allowed text-[var(--color-muted)] decoration-dotted'
+                    }`}
+                    title={packetMessage ?? 'Download the puzzle pack'}
+                  >
+                    {downloadingPacket ? 'Downloading puzzle pack…' : 'Download the puzzle pack here.'}
+                  </button>
+                  {packetMessage && (
+                    <span className="ml-2 text-xs text-[var(--color-muted)]">
+                      {packetMessage}
+                    </span>
+                  )}
+                </>,
+                <>This packet contains <strong className="text-[var(--color-text)]">7 puzzles</strong>. Puzzles 1–6 are independent. Puzzle 7 is a <strong className="text-[var(--color-text)]">metapuzzle</strong> that uses the answers from the first six.</>,
+                <>Each answer is a <strong className="text-[var(--color-text)]">single word, name, or short phrase</strong> in English.</>,
+                <>You may use <strong className="text-[var(--color-text)]">any resources</strong>, including the internet and AI.</>,
+                <>Compete <strong className="text-[var(--color-text)]">solo or as a team</strong> of up to {PUZZLE_WEEK_MAX_TEAM_SIZE}. Please don&apos;t share answers with other teams.</>,
+                <>Check answers individually as you go. Submit by <strong className="text-[var(--color-text)]">23:59 on Tuesday, May 26, 2026</strong>. Double-check for typos.</>,
+              ] as ReactNode[]).map((text, i) => (
+                <li key={i} className="flex gap-3">
+                  <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">
+                    {i + 1}
+                  </span>
+                  <span>{text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* ── Auth / registration states ── */}
         {!user || isGuest ? (
@@ -405,7 +471,7 @@ export function PuzzleWeekHub() {
                         value={joinCode}
                         onChange={e => setJoinCode(e.target.value.toUpperCase())}
                         placeholder="ABC123"
-                        className="flex-1 rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-center text-base tracking-[0.25em] uppercase focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                        className="flex-1 min-w-0 rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-center text-base tracking-[0.25em] uppercase focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                       />
                       <button
                         onClick={handleJoinTeam}
@@ -414,13 +480,13 @@ export function PuzzleWeekHub() {
                       >
                         {submitting ? 'Joining…' : 'Join'}
                       </button>
-                      <button
-                        onClick={() => { setShowJoinTeam(false); setJoinCode('') }}
-                        className="flex-shrink-0 rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-muted)] transition hover:border-[var(--color-accent)]"
-                      >
-                        Cancel
-                      </button>
                     </div>
+                    <button
+                      onClick={() => { setShowJoinTeam(false); setJoinCode('') }}
+                      className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-muted)] transition hover:border-[var(--color-accent)]"
+                    >
+                      Cancel
+                    </button>
                   </div>
                 )}
               </div>
@@ -480,7 +546,7 @@ export function PuzzleWeekHub() {
         ) : (
           /* Registration choice */
           <div className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-3">
               <ChoiceCard
                 icon={<User className="h-5 w-5" />}
                 title="Play Solo"
@@ -621,7 +687,7 @@ export function PuzzleWeekHub() {
                 return (
                   <div
                     key={lb.entryId}
-                    className={`flex items-center gap-4 border-b px-5 py-3.5 last:border-b-0 border-[var(--color-border)] transition-colors ${
+                    className={`flex items-center gap-2 sm:gap-4 border-b px-3 sm:px-5 py-3 sm:py-3.5 last:border-b-0 border-[var(--color-border)] transition-colors ${
                       isMe ? 'bg-[var(--color-accent-light)]/40' : 'hover:bg-slate-50/70'
                     }`}
                   >

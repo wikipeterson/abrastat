@@ -12,12 +12,18 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await verifyPuzzleWeekRequest(request.headers.get('authorization'))
     const action = request.nextUrl.searchParams.get('action')
     const eventId = request.nextUrl.searchParams.get('eventId')
     if (!eventId) {
       return NextResponse.json({ error: 'Missing eventId.' }, { status: 400 })
     }
+
+    if (action === 'leaderboard') {
+      const leaderboard = await getPuzzleWeekLeaderboardServer(eventId)
+      return NextResponse.json(leaderboard)
+    }
+
+    const user = await verifyPuzzleWeekRequest(request.headers.get('authorization'))
 
     if (action === 'registration') {
       const registration = await getPuzzleWeekRegistrationServer(eventId, user)
@@ -30,11 +36,6 @@ export async function GET(request: NextRequest) {
         ? await getPuzzleWeekProgressServer(eventId, registration.entry.id)
         : []
       return NextResponse.json(progress)
-    }
-
-    if (action === 'leaderboard') {
-      const leaderboard = await getPuzzleWeekLeaderboardServer(eventId)
-      return NextResponse.json(leaderboard)
     }
 
     return NextResponse.json({ error: 'Unknown action.' }, { status: 400 })

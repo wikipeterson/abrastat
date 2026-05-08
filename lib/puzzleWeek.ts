@@ -87,6 +87,22 @@ async function puzzleWeekRequest<T>(user: User, init: RequestInit & { url: strin
   return data as T
 }
 
+async function puzzleWeekPublicRequest<T>(init: RequestInit & { url: string }): Promise<T> {
+  const response = await fetch(init.url, {
+    ...init,
+    headers: {
+      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init.headers ?? {}),
+    },
+  })
+
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(typeof data?.error === 'string' ? data.error : 'Puzzle Week request failed.')
+  }
+  return data as T
+}
+
 function reviveDate(value: unknown) {
   return typeof value === 'string' ? new Date(value) : null
 }
@@ -166,12 +182,17 @@ export async function getPuzzleWeekProgress(eventId: string, user: User): Promis
   return mapProgress(data)
 }
 
-export async function getPuzzleWeekLeaderboard(eventId: string, user: User): Promise<PuzzleWeekLeaderboardEntry[]> {
-  const data = await puzzleWeekRequest<PuzzleWeekLeaderboardEntry[]>(user, {
-    url: `/api/puzzle-week?action=leaderboard&eventId=${encodeURIComponent(eventId)}`,
-    method: 'GET',
-  })
-  return mapLeaderboard(data)
+export async function getPuzzleWeekLeaderboard(eventId: string, user?: User | null): Promise<PuzzleWeekLeaderboardEntry[]> {
+  const requester = user
+    ? puzzleWeekRequest<PuzzleWeekLeaderboardEntry[]>(user, {
+        url: `/api/puzzle-week?action=leaderboard&eventId=${encodeURIComponent(eventId)}`,
+        method: 'GET',
+      })
+    : puzzleWeekPublicRequest<PuzzleWeekLeaderboardEntry[]>({
+        url: `/api/puzzle-week?action=leaderboard&eventId=${encodeURIComponent(eventId)}`,
+        method: 'GET',
+      })
+  return mapLeaderboard(await requester)
 }
 
 export async function submitPuzzleWeekAnswer(
@@ -190,4 +211,35 @@ export async function submitPuzzleWeekAnswer(
       answer: rawAnswer,
     }),
   })
+}
+
+function getDownloadFilename(contentDisposition: string | null) {
+  if (!contentDisposition) return 'PuzzleWeek2026.pdf'
+  const match = contentDisposition.match(/filename="?([^"]+)"?/)
+  return match?.[1] ?? 'PuzzleWeek2026.pdf'
+}
+
+export async function downloadPuzzleWeekPacket(user: User) {
+  const token = await user.getIdToken()
+  const response = await fetch('/api/puzzle-week/packet', {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}))
+    throw new Error(typeof data?.error === 'string' ? data.error : 'Could not download the puzzle pack.')
+  }
+
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = objectUrl
+  anchor.download = getDownloadFilename(response.headers.get('content-disposition'))
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(objectUrl)
 }

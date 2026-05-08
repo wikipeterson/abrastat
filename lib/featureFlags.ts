@@ -23,6 +23,7 @@ const PUZZLE_WEEK_PREVIEW_DISPLAY_NAMES = [
 ]
 
 export const PUZZLE_WEEK_ALLOWED_EMAIL_DOMAIN = '@haverfordsd.net'
+export const PUZZLE_WEEK_PACKET_RELEASE_AT = new Date('2026-05-18T00:00:00-04:00')
 
 export function isPuzzleWeekPreviewIdentity(identity: PuzzleWeekIdentityLike | null | undefined): boolean {
   if (!identity) return false
@@ -60,6 +61,30 @@ export function canRegisterForPuzzleWeekIdentity(identity: PuzzleWeekIdentityLik
 
   const email = identity.email?.toLowerCase().trim()
   return Boolean(email && email.endsWith(PUZZLE_WEEK_ALLOWED_EMAIL_DOMAIN))
+}
+
+export function isPuzzleWeekPacketReleased(now = new Date()) {
+  return now >= PUZZLE_WEEK_PACKET_RELEASE_AT
+}
+
+export function canDownloadPuzzleWeekPacketIdentity(
+  identity: PuzzleWeekIdentityLike | null | undefined,
+  now = new Date(),
+): boolean {
+  if (!canRegisterForPuzzleWeekIdentity(identity)) return false
+  if (isPuzzleWeekPreviewIdentity(identity)) return true
+  return isPuzzleWeekPacketReleased(now)
+}
+
+export function getPuzzleWeekPacketMessage(
+  identity: PuzzleWeekIdentityLike | null | undefined,
+  now = new Date(),
+) {
+  if (!canRegisterForPuzzleWeekIdentity(identity)) {
+    return getPuzzleWeekEligibilityMessage()
+  }
+  if (canDownloadPuzzleWeekPacketIdentity(identity, now)) return null
+  return 'The puzzle pack will be available on May 18, 2026.'
 }
 
 export function getPuzzleWeekEligibilityMessage() {

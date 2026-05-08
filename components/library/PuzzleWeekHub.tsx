@@ -362,6 +362,32 @@ export function PuzzleWeekHub() {
           )}
         </div>
 
+        {/* Countdown — only shown before May 18 */}
+        {countdown && !countdown.started && !countdown.ended && (
+          <div className="text-center">
+            <div className="flex items-end justify-center gap-2 sm:gap-3">
+              {([
+                { value: countdown.days, label: 'days' },
+                { value: countdown.hours, label: 'hrs' },
+                { value: countdown.minutes, label: 'min' },
+                { value: countdown.seconds, label: 'sec' },
+              ] as const).map(({ value, label }) => (
+                <div key={label} className="flex flex-col items-center">
+                  <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-bold tabular-nums text-[var(--color-text)] shadow-sm">
+                    {String(value).padStart(2, '0')}
+                  </div>
+                  <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
+                    {label}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+              Opens in
+            </p>
+          </div>
+        )}
+
         {entry && (
           <div className="mx-auto max-w-3xl rounded-3xl border border-[var(--color-border)] bg-white/70 px-4 sm:px-7 py-4 sm:py-5 shadow-sm">
             <ul className="space-y-2 text-sm text-[var(--color-muted)] leading-relaxed">
@@ -400,32 +426,6 @@ export function PuzzleWeekHub() {
                 </li>
               ))}
             </ul>
-          </div>
-        )}
-
-        {/* Countdown */}
-        {countdown && !countdown.ended && (
-          <div className="text-center">
-            <div className="flex items-end justify-center gap-2 sm:gap-3">
-              {([
-                { value: countdown.days, label: 'days' },
-                { value: countdown.hours, label: 'hrs' },
-                { value: countdown.minutes, label: 'min' },
-                { value: countdown.seconds, label: 'sec' },
-              ] as const).map(({ value, label }) => (
-                <div key={label} className="flex flex-col items-center">
-                  <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-bold tabular-nums text-[var(--color-text)] shadow-sm">
-                    {String(value).padStart(2, '0')}
-                  </div>
-                  <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
-                    {label}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-              {countdown.started ? 'Closes in' : 'Opens in'}
-            </p>
           </div>
         )}
 

@@ -9,6 +9,8 @@ import {
   PuzzleWeekLeaderboardEntry,
   PuzzleWeekMember,
   PuzzleWeekProgress,
+  PuzzleWeekVote,
+  PuzzleWeekVoteTally,
 } from './puzzleWeek'
 import { canRegisterForPuzzleWeekIdentity, canResetPuzzleWeekRegistrationIdentity, getPuzzleWeekEligibilityMessage } from './featureFlags'
 
@@ -797,6 +799,58 @@ export async function resetPuzzleWeekRegistrationServer(eventId: string, user: V
 
   await deleteDocument('puzzleWeekEntryMembers', membershipRecord.id)
   await deleteEntryArtifacts(eventId, entry.id)
+}
+
+export async function getPuzzleWeekVotesServer(
+  eventId: string,
+  userId?: string,
+): Promise<{ tally: PuzzleWeekVoteTally; myVote: PuzzleWeekVote | null }> {
+  const votes = await queryCollection<Record<string, unknown>>('puzzleWeekVotes', [
+    { field: 'eventId', value: eventId },
+  ])
+
+  const tally: PuzzleWeekVoteTally = { easiest: {}, hardest: {}, favorite: {}, totalVoters: 0 }
+  let myVote: PuzzleWeekVote | null = null
+
+  for (const { data } of votes) {
+    const hasAny = typeof data.easiest === 'string' || typeof data.hardest === 'string' || typeof data.favorite === 'string'
+    if (hasAny) tally.totalVoters++
+    if (typeof data.easiest === 'string') tally.easiest[data.easiest] = (tally.easiest[data.easiest] ?? 0) + 1
+    if (typeof data.hardest === 'string') tally.hardest[data.hardest] = (tally.hardest[data.hardest] ?? 0) + 1
+    if (typeof data.favorite === 'string') tally.favorite[data.favorite] = (tally.favorite[data.favorite] ?? 0) + 1
+    if (userId && data.userId === userId) {
+      myVote = {
+        easiest: typeof data.easiest === 'string' ? data.easiest : null,
+        hardest: typeof data.hardest === 'string' ? data.hardest : null,
+        favorite: typeof data.favorite === 'string' ? data.favorite : null,
+      }
+    }
+  }
+
+  return { tally, myVote }
+}
+
+export async function submitPuzzleWeekVoteServer(
+  eventId: string,
+  user: VerifiedPuzzleWeekUser,
+  vote: PuzzleWeekVote,
+): Promise<void> {
+  const registration = await getPuzzleWeekRegistrationServer(eventId, user)
+  if (!registration.entry) {
+    throw new Error('You need to register for Puzzle Week before voting.')
+  }
+  const validIds = new Set(PUZZLE_WEEK_PUZZLES.map(p => p.id))
+  if (vote.easiest && !validIds.has(vote.easiest)) throw new Error('Invalid easiest puzzle selection.')
+  if (vote.hardest && !validIds.has(vote.hardest)) throw new Error('Invalid hardest puzzle selection.')
+  if (vote.favorite && !validIds.has(vote.favorite)) throw new Error('Invalid favorite puzzle selection.')
+  await setDocument('puzzleWeekVotes', `${eventId}__${user.uid}`, {
+    eventId,
+    userId: user.uid,
+    easiest: vote.easiest,
+    hardest: vote.hardest,
+    favorite: vote.favorite,
+    updatedAt: new Date(),
+  })
 }
 
 export async function verifyPuzzleWeekRequest(authHeader: string | null) {

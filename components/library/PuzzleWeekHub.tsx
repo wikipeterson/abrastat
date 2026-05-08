@@ -18,15 +18,19 @@ import {
   PuzzleWeekMember,
   PuzzleWeekProgress,
   PuzzleWeekPuzzle,
+  PuzzleWeekVote,
+  PuzzleWeekVoteTally,
   downloadPuzzleWeekPacket,
   getPuzzleWeekLeaderboard,
   getPuzzleWeekProgress,
   getPuzzleWeekRegistration,
+  getPuzzleWeekVoteData,
   joinPuzzleWeekTeam,
   registerPuzzleWeekSolo,
   registerPuzzleWeekTeam,
   resetPuzzleWeekRegistration,
   submitPuzzleWeekAnswer,
+  submitPuzzleWeekVote,
 } from '@/lib/puzzleWeek'
 
 type RegisterMode = 'solo' | 'create-team' | 'join-team' | null
@@ -52,6 +56,10 @@ export function PuzzleWeekHub() {
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true)
   const [showJoinTeam, setShowJoinTeam] = useState(false)
   const [downloadingPacket, setDownloadingPacket] = useState(false)
+  const [myVote, setMyVote] = useState<PuzzleWeekVote>({ easiest: null, hardest: null, favorite: null })
+  const [voteTally, setVoteTally] = useState<PuzzleWeekVoteTally | null>(null)
+  const [savingVote, setSavingVote] = useState(false)
+  const [voteSaved, setVoteSaved] = useState(false)
   const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number; started: boolean; ended: boolean } | null>(null)
   const canRegister = canRegisterForPuzzleWeek(user)
   const canDownloadPacket = canDownloadPuzzleWeekPacketIdentity(user)
@@ -127,6 +135,32 @@ export function PuzzleWeekHub() {
   }, [entry, user])
 
   useEffect(() => { void loadLeaderboard(user) }, [user])
+
+  async function loadVotes(currentUser: typeof user) {
+    try {
+      const data = await getPuzzleWeekVoteData(CURRENT_PUZZLE_WEEK_EVENT.id, isGuest ? null : currentUser)
+      setVoteTally(data.tally)
+      if (data.myVote) setMyVote(data.myVote)
+    } catch { /* best-effort */ }
+  }
+
+  useEffect(() => { void loadVotes(user) }, [user])
+
+  async function handleSaveVote() {
+    if (!user || isGuest) return
+    setSavingVote(true)
+    setError(null)
+    try {
+      await submitPuzzleWeekVote(CURRENT_PUZZLE_WEEK_EVENT.id, user, myVote)
+      setVoteSaved(true)
+      setTimeout(() => setVoteSaved(false), 3000)
+      void loadVotes(user)
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not save your vote.'))
+    } finally {
+      setSavingVote(false)
+    }
+  }
 
   useEffect(() => {
     const START = new Date('2026-05-18T00:00:00')
@@ -787,6 +821,76 @@ export function PuzzleWeekHub() {
           </div>
         )}
 
+        {/* ── Community Poll ── */}
+        <div className="space-y-5 border-t border-[var(--color-border)] pt-8">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl leading-none">🗳️</span>
+            <h2 className="text-lg font-semibold text-[var(--color-text)]">Community Poll</h2>
+            {voteTally && voteTally.totalVoters > 0 && (
+              <span className="text-sm text-[var(--color-muted)]">
+                {voteTally.totalVoters} {voteTally.totalVoters === 1 ? 'voter' : 'voters'}
+              </span>
+            )}
+          </div>
+
+          {/* Vote form — registered users only */}
+          {entry && (
+            <div className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-4">
+              <p className="text-sm text-[var(--color-muted)]">
+                Share your take on this year&apos;s puzzles. You can change your votes at any time.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {([
+                  { key: 'easiest', label: '😌 Easiest' },
+                  { key: 'hardest', label: '🤯 Hardest' },
+                  { key: 'favorite', label: '⭐ Favorite' },
+                ] as const).map(({ key, label }) => (
+                  <div key={key} className="space-y-1.5">
+                    <label className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--color-muted)]">
+                      {label}
+                    </label>
+                    <select
+                      value={myVote[key] ?? ''}
+                      onChange={e => setMyVote(v => ({ ...v, [key]: e.target.value || null }))}
+                      className="w-full rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                    >
+                      <option value="">— no vote —</option>
+                      {PUZZLE_WEEK_PUZZLES.map(puzzle => (
+                        <option key={puzzle.id} value={puzzle.id}>{puzzle.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSaveVote}
+                  disabled={savingVote}
+                  className="rounded-xl bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-60"
+                >
+                  {savingVote ? 'Saving…' : 'Save Votes'}
+                </button>
+                {voteSaved && (
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-600">
+                    <CheckCircle2 className="h-4 w-4" /> Saved
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Results charts */}
+          {voteTally && (
+            <div className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
+              <div className="grid gap-8 sm:grid-cols-3">
+                <VoteBarChart label="😌 Easiest Puzzle" tally={voteTally.easiest} myVotedId={myVote.easiest} />
+                <VoteBarChart label="🤯 Hardest Puzzle" tally={voteTally.hardest} myVotedId={myVote.hardest} />
+                <VoteBarChart label="⭐ Favorite Puzzle" tally={voteTally.favorite} myVotedId={myVote.favorite} />
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Leaderboard */}
         <div className="space-y-4 border-t border-[var(--color-border)] pt-8">
           <div className="flex items-center justify-between gap-4">
@@ -891,6 +995,69 @@ export function PuzzleWeekHub() {
 
       </div>
     </main>
+  )
+}
+
+function VoteBarChart({
+  label,
+  tally,
+  myVotedId,
+}: {
+  label: string
+  tally: Record<string, number>
+  myVotedId: string | null
+}) {
+  const counts = PUZZLE_WEEK_PUZZLES.map(p => tally[p.id] ?? 0)
+  const maxCount = Math.max(1, ...counts)
+  const total = counts.reduce((s, n) => s + n, 0)
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-baseline gap-2">
+        <h4 className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--color-muted)]">{label}</h4>
+        {total > 0 && (
+          <span className="text-[10px] text-[var(--color-muted)]">{total} vote{total !== 1 ? 's' : ''}</span>
+        )}
+      </div>
+      <div className="space-y-1.5">
+        {PUZZLE_WEEK_PUZZLES.map((puzzle, i) => {
+          const count = tally[puzzle.id] ?? 0
+          const pct = (count / maxCount) * 100
+          const isMe = myVotedId === puzzle.id
+          const isMeta = i === PUZZLE_WEEK_PUZZLES.length - 1
+          const shortLabel = isMeta ? 'Meta' : `Day ${i + 1}`
+          return (
+            <div key={puzzle.id} className="flex items-center gap-2">
+              <div className="w-10 flex-shrink-0 text-right text-[11px] font-semibold text-[var(--color-muted)]">
+                {shortLabel}
+              </div>
+              <div className="relative flex-1 h-6 rounded-lg overflow-hidden bg-slate-100">
+                <div
+                  className="absolute inset-y-0 left-0 rounded-lg transition-all duration-700"
+                  style={{
+                    width: `${pct}%`,
+                    background: isMe
+                      ? isMeta ? 'rgb(245 158 11)' : 'var(--color-accent)'
+                      : 'var(--color-border)',
+                  }}
+                />
+                {isMe && count > 0 && (
+                  <div className="absolute inset-0 flex items-center px-2">
+                    <span className="text-[10px] font-semibold text-white leading-none">your vote</span>
+                  </div>
+                )}
+              </div>
+              <div className="w-4 flex-shrink-0 text-right text-xs font-semibold text-[var(--color-text)]">
+                {count || ''}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {total === 0 && (
+        <p className="text-center text-xs text-[var(--color-muted)]">No votes yet.</p>
+      )}
+    </div>
   )
 }
 

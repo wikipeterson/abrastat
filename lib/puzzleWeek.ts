@@ -70,6 +70,19 @@ export interface PuzzleWeekLeaderboardEntry {
   solvedPuzzleIds: string[]
 }
 
+export interface PuzzleWeekVote {
+  easiest: string | null
+  hardest: string | null
+  favorite: string | null
+}
+
+export interface PuzzleWeekVoteTally {
+  easiest: Record<string, number>
+  hardest: Record<string, number>
+  favorite: Record<string, number>
+  totalVoters: number
+}
+
 async function puzzleWeekRequest<T>(user: User, init: RequestInit & { url: string }): Promise<T> {
   const token = await user.getIdToken()
   const response = await fetch(init.url, {
@@ -251,4 +264,22 @@ export async function downloadPuzzleWeekPacket(user: User) {
   anchor.click()
   anchor.remove()
   URL.revokeObjectURL(objectUrl)
+}
+
+export async function getPuzzleWeekVoteData(
+  eventId: string,
+  user?: User | null,
+): Promise<{ tally: PuzzleWeekVoteTally; myVote: PuzzleWeekVote | null }> {
+  const url = `/api/puzzle-week?action=voteData&eventId=${encodeURIComponent(eventId)}`
+  return user
+    ? puzzleWeekRequest<{ tally: PuzzleWeekVoteTally; myVote: PuzzleWeekVote | null }>(user, { url, method: 'GET' })
+    : puzzleWeekPublicRequest<{ tally: PuzzleWeekVoteTally; myVote: PuzzleWeekVote | null }>({ url, method: 'GET' })
+}
+
+export async function submitPuzzleWeekVote(eventId: string, user: User, vote: PuzzleWeekVote): Promise<void> {
+  await puzzleWeekRequest<{ ok: true }>(user, {
+    url: '/api/puzzle-week',
+    method: 'POST',
+    body: JSON.stringify({ action: 'submitVote', eventId, ...vote }),
+  })
 }

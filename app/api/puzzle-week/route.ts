@@ -3,13 +3,16 @@ import {
   getPuzzleWeekLeaderboardServer,
   getPuzzleWeekProgressServer,
   getPuzzleWeekRegistrationServer,
+  getPuzzleWeekVotesServer,
   joinPuzzleWeekTeamServer,
   registerPuzzleWeekSoloServer,
   registerPuzzleWeekTeamServer,
   resetPuzzleWeekRegistrationServer,
   submitPuzzleWeekAnswerServer,
+  submitPuzzleWeekVoteServer,
   verifyPuzzleWeekRequest,
 } from '@/lib/puzzleWeekServer'
+import type { PuzzleWeekVote } from '@/lib/puzzleWeek'
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,6 +25,19 @@ export async function GET(request: NextRequest) {
     if (action === 'leaderboard') {
       const leaderboard = await getPuzzleWeekLeaderboardServer(eventId)
       return NextResponse.json(leaderboard)
+    }
+
+    if (action === 'voteData') {
+      let userId: string | undefined
+      const authHeader = request.headers.get('authorization')
+      if (authHeader) {
+        try {
+          const voteUser = await verifyPuzzleWeekRequest(authHeader)
+          userId = voteUser.uid
+        } catch { /* unauthenticated is fine — tally is public */ }
+      }
+      const data = await getPuzzleWeekVotesServer(eventId, userId)
+      return NextResponse.json(data)
     }
 
     const user = await verifyPuzzleWeekRequest(request.headers.get('authorization'))
@@ -58,6 +74,9 @@ export async function POST(request: NextRequest) {
       joinCode?: string
       puzzleId?: string
       answer?: string
+      easiest?: string
+      hardest?: string
+      favorite?: string
     }
     if (!body.eventId) {
       return NextResponse.json({ error: 'Missing eventId.' }, { status: 400 })
@@ -84,6 +103,15 @@ export async function POST(request: NextRequest) {
           body.answer ?? '',
         )
         return NextResponse.json(result)
+      }
+      case 'submitVote': {
+        const vote: PuzzleWeekVote = {
+          easiest: typeof body.easiest === 'string' ? body.easiest : null,
+          hardest: typeof body.hardest === 'string' ? body.hardest : null,
+          favorite: typeof body.favorite === 'string' ? body.favorite : null,
+        }
+        await submitPuzzleWeekVoteServer(body.eventId, user, vote)
+        return NextResponse.json({ ok: true })
       }
       default:
         return NextResponse.json({ error: 'Unknown action.' }, { status: 400 })

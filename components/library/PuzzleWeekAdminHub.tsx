@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, CheckCircle2, RotateCcw, Search, Shield, Users } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Download, RotateCcw, Search, Shield, Users } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { SignInButton } from '@/components/auth/SignInButton'
 import { signOut } from '@/lib/auth'
@@ -17,6 +17,27 @@ import {
 } from '@/lib/puzzleWeek'
 
 const PUZZLE_TITLE_BY_ID = new Map(PUZZLE_WEEK_PUZZLES.map(puzzle => [puzzle.id, puzzle.title]))
+
+function csvValue(value: string | number) {
+  const text = String(value ?? '')
+  if (/[",\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`
+  }
+  return text
+}
+
+function downloadCsv(rows: (string | number)[][], filename: string) {
+  const csv = rows.map(row => row.map(csvValue).join(',')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
 
 export function PuzzleWeekAdminHub() {
   const { user, loading, isGuest } = useAuth()
@@ -100,6 +121,40 @@ export function PuzzleWeekAdminHub() {
     } finally {
       setSavingEntryId(null)
     }
+  }
+
+  function handleExportCsv() {
+    const rows: (string | number)[][] = [
+      [
+        'entry_name',
+        'entry_type',
+        'join_code',
+        'participant_name',
+        'participant_email',
+        'correct_responses',
+        'solved_puzzles',
+      ],
+    ]
+
+    for (const item of filteredEntries) {
+      const solvedTitles = item.solvedPuzzleIds
+        .map(id => PUZZLE_TITLE_BY_ID.get(id) ?? id)
+        .join(' | ')
+
+      for (const member of item.members) {
+        rows.push([
+          item.entry.name,
+          item.entry.type,
+          item.entry.joinCode ?? '',
+          member.displayName || '',
+          member.email || '',
+          item.solvedCount,
+          solvedTitles,
+        ])
+      }
+    }
+
+    downloadCsv(rows, 'puzzle-week-2026-admin-export.csv')
   }
 
   return (
@@ -204,6 +259,14 @@ export function PuzzleWeekAdminHub() {
                 >
                   <RotateCcw className={`h-4 w-4 ${loadingEntries ? 'animate-spin' : ''}`} />
                   Refresh
+                </button>
+                <button
+                  onClick={handleExportCsv}
+                  disabled={filteredEntries.length === 0}
+                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)] disabled:opacity-60"
+                >
+                  <Download className="h-4 w-4" />
+                  Export CSV
                 </button>
               </div>
 

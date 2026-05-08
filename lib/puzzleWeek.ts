@@ -16,7 +16,7 @@ export interface PuzzleWeekPuzzle {
 
 export const PUZZLE_WEEK_PUZZLES: PuzzleWeekPuzzle[] = [
   { id: 'puzzle-1', title: 'Day 1: Trading Car[d]s', acceptedAnswers: ['SYDNEY'] },
-  { id: 'puzzle-2', title: 'Day 2: Its-a-me and my friends', acceptedAnswers: ['MIYAMOTO'] },
+  { id: 'puzzle-2', title: 'Day 2: It’s-a-me and My Friends', acceptedAnswers: ['MIYAMOTO'] },
   { id: 'puzzle-3', title: 'Day 3: Connect 4', acceptedAnswers: ['NICK FOLES'] },
   { id: 'puzzle-4', title: 'Day 4: Development Review Boardn', acceptedAnswers: ['BULLDOG'] },
   { id: 'puzzle-5', title: 'Day 5: Find the Math Teachers', acceptedAnswers: ['PRIME MERIDIAN'] },
@@ -64,6 +64,7 @@ export interface PuzzleWeekLeaderboardEntry {
   entryId: string
   name: string
   type: PuzzleWeekEntryType
+  memberNames: string[]
   solvedCount: number
   lastSolvedAt: Date | null
   solvedPuzzleIds: string[]

@@ -407,6 +407,7 @@ async function getSolvedProgress(eventId: string, entryId: string) {
 }
 
 async function updateLeaderboardSnapshot(entry: PuzzleWeekEntry, solvedProgress: PuzzleWeekProgress[], active = true) {
+  const members = await getEntryMembers(entry.eventId, entry.id)
   const lastSolvedAt = solvedProgress.reduce<Date | null>((latest, item) => {
     if (!item.solvedAt) return latest
     if (!latest || item.solvedAt > latest) return item.solvedAt
@@ -418,6 +419,10 @@ async function updateLeaderboardSnapshot(entry: PuzzleWeekEntry, solvedProgress:
     entryId: entry.id,
     name: entry.name,
     type: entry.type,
+    memberNames: members
+      .map(member => member.displayName.trim())
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b)),
     solvedCount: solvedProgress.length,
     solvedPuzzleIds: solvedProgress.map(item => item.puzzleId),
     lastSolvedAt,
@@ -612,6 +617,10 @@ export async function getPuzzleWeekLeaderboardServer(eventId: string): Promise<P
       entryId: entry.id,
       name: entry.name,
       type: entry.type,
+      memberNames: (await getEntryMembers(eventId, entry.id))
+        .map(member => member.displayName.trim())
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)),
       solvedCount: solvedProgress.length,
       solvedPuzzleIds: solvedProgress.map(item => item.puzzleId),
       lastSolvedAt: solvedProgress.reduce<Date | null>((latest, item) => {
@@ -631,6 +640,9 @@ export async function getPuzzleWeekLeaderboardServer(eventId: string): Promise<P
         entryId: String(data.entryId ?? ''),
         name: String(data.name ?? ''),
         type: (data.type === 'team' ? 'team' : 'solo') as PuzzleWeekEntryType,
+        memberNames: Array.isArray(data.memberNames)
+          ? data.memberNames.filter((value): value is string => typeof value === 'string')
+          : [],
         solvedCount: Number(data.solvedCount ?? 0),
         lastSolvedAt: data.lastSolvedAt instanceof Date ? data.lastSolvedAt : null,
         solvedPuzzleIds: Array.isArray(data.solvedPuzzleIds)

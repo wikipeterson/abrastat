@@ -449,19 +449,30 @@ export function PuzzleWeekHub() {
             {entry.type === 'solo' && (
               <div className="rounded-3xl border border-[var(--color-border)] bg-white/60 px-6 py-4">
                 {!showJoinTeam ? (
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                      <p className="text-sm font-medium text-[var(--color-text)]">Want to join a team?</p>
+                      <p className="text-sm font-medium text-[var(--color-text)]">Want to create or join a team?</p>
                       <p className="mt-0.5 text-xs text-[var(--color-muted)]">
-                        Enter a join code to move your registration onto a team.
+                        Start a new team and share its join code, or enter a join code to move your registration onto an existing team.
                       </p>
                     </div>
-                    <button
-                      onClick={() => setShowJoinTeam(true)}
-                      className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)]"
-                    >
-                      Join a Team
-                    </button>
+                    <div className="flex flex-shrink-0 gap-2">
+                      <button
+                        onClick={() => {
+                          setRegisterMode('create-team')
+                          setError(null)
+                        }}
+                        className="rounded-xl bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white transition hover:brightness-105"
+                      >
+                        Create Team
+                      </button>
+                      <button
+                        onClick={() => setShowJoinTeam(true)}
+                        className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)]"
+                      >
+                        Join a Team
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -698,14 +709,21 @@ export function PuzzleWeekHub() {
                         <span className="text-sm font-semibold text-[var(--color-muted)]">{rank}</span>
                       )}
                     </div>
-                    <div className="flex min-w-0 flex-1 items-center gap-2">
-                      <span className={`truncate font-semibold ${isMe ? 'text-[var(--color-accent)]' : 'text-[var(--color-text)]'}`}>
-                        {lb.name}
-                      </span>
-                      {isMe && (
-                        <span className="flex-shrink-0 rounded-full bg-[var(--color-accent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">
-                          you
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`truncate font-semibold ${isMe ? 'text-[var(--color-accent)]' : 'text-[var(--color-text)]'}`}>
+                          {lb.name}
                         </span>
+                        {isMe && (
+                          <span className="flex-shrink-0 rounded-full bg-[var(--color-accent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">
+                            you
+                          </span>
+                        )}
+                      </div>
+                      {lb.type === 'team' && lb.memberNames.length > 0 && (
+                        <div className="mt-0.5 truncate text-xs text-[var(--color-muted)]">
+                          {lb.memberNames.join(', ')}
+                        </div>
                       )}
                     </div>
                     <span className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${

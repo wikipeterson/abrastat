@@ -12,6 +12,7 @@ const PUZZLE_WEEK_PREVIEW_UIDS = new Set([
 
 const PUZZLE_WEEK_PREVIEW_EMAILS = new Set([
   'peterson.steve@gmail.com',
+  'cwalter@haverfordsd.net',
 ])
 
 const PUZZLE_WEEK_PREVIEW_EMAIL_FRAGMENTS = [

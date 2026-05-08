@@ -243,7 +243,7 @@ export function PuzzleWeekHub() {
 
   return (
     <main className="min-h-screen px-4 sm:px-6 py-6 sm:py-8" style={{ background: 'var(--color-bg)' }}>
-      <div className="mx-auto max-w-5xl space-y-4 sm:space-y-5">
+      <div className="mx-auto max-w-5xl space-y-5 sm:space-y-6">
 
         {/* ── Mobile header: stacked ── */}
         <div className="sm:hidden space-y-3">

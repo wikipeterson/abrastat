@@ -423,43 +423,131 @@ export function PuzzleWeekHub() {
         )}
 
         {entry && (
-          <div className="mx-auto max-w-3xl rounded-3xl border border-[var(--color-border)] bg-white/70 px-4 sm:px-7 py-4 sm:py-5 shadow-sm">
-            <ul className="space-y-2 text-sm text-[var(--color-muted)] leading-relaxed">
-              {([
-                <>
-                  <button
-                    type="button"
-                    onClick={handleDownloadPacket}
-                    disabled={!canDownloadPacket || downloadingPacket}
-                    className={`font-semibold underline underline-offset-4 transition ${
-                      canDownloadPacket
-                        ? 'text-[var(--color-accent)] hover:opacity-80'
-                        : 'cursor-not-allowed text-[var(--color-muted)] decoration-dotted'
-                    }`}
-                    title={packetMessage ?? 'Download the puzzle pack'}
-                  >
-                    {downloadingPacket ? 'Downloading puzzle pack…' : 'Download the puzzle pack here.'}
-                  </button>
-                  {packetMessage && (
-                    <span className="ml-2 text-xs text-[var(--color-muted)]">
-                      {packetMessage}
+          <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+
+            {/* Rules card */}
+            <div className="rounded-3xl border border-[var(--color-border)] bg-white/70 px-4 sm:px-7 py-4 sm:py-5 shadow-sm">
+              <ul className="space-y-2 text-sm text-[var(--color-muted)] leading-relaxed">
+                {([
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleDownloadPacket}
+                      disabled={!canDownloadPacket || downloadingPacket}
+                      className={`font-semibold underline underline-offset-4 transition ${
+                        canDownloadPacket
+                          ? 'text-[var(--color-accent)] hover:opacity-80'
+                          : 'cursor-not-allowed text-[var(--color-muted)] decoration-dotted'
+                      }`}
+                      title={packetMessage ?? 'Download the puzzle pack'}
+                    >
+                      {downloadingPacket ? 'Downloading puzzle pack…' : 'Download the puzzle pack here.'}
+                    </button>
+                    {packetMessage && (
+                      <span className="ml-2 text-xs text-[var(--color-muted)]">
+                        {packetMessage}
+                      </span>
+                    )}
+                  </>,
+                  <>This packet contains <strong className="text-[var(--color-text)]">7 puzzles</strong>. Puzzles 1–6 are independent. Puzzle 7 is a <strong className="text-[var(--color-text)]">metapuzzle</strong> that uses the answers from the first six.</>,
+                  <>Each answer is a <strong className="text-[var(--color-text)]">single word, name, or short phrase</strong> in English.</>,
+                  <>You may use <strong className="text-[var(--color-text)]">any resources</strong>, including the internet.</>,
+                  <>Compete <strong className="text-[var(--color-text)]">solo or as a team</strong> of up to {PUZZLE_WEEK_MAX_TEAM_SIZE}. Please don&apos;t share answers with other teams.</>,
+                  <>Check answers individually as you go. Submit by <strong className="text-[var(--color-text)]">23:59 on Tuesday, May 26, 2026</strong>. Double-check for typos.</>,
+                ] as ReactNode[]).map((text, i) => (
+                  <li key={i} className="flex gap-3">
+                    <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">
+                      {i + 1}
                     </span>
+                    <span>{text}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Scrollable leaderboard */}
+            <div className="rounded-3xl border border-[var(--color-border)] bg-white shadow-sm flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-[var(--color-accent)]" />
+                  <span className="text-sm font-semibold text-[var(--color-text)]">Leaderboard</span>
+                  {!loadingLeaderboard && leaderboard.length > 0 && (
+                    <span className="text-xs text-[var(--color-muted)]">{leaderboard.length}</span>
                   )}
-                </>,
-                <>This packet contains <strong className="text-[var(--color-text)]">7 puzzles</strong>. Puzzles 1–6 are independent. Puzzle 7 is a <strong className="text-[var(--color-text)]">metapuzzle</strong> that uses the answers from the first six.</>,
-                <>Each answer is a <strong className="text-[var(--color-text)]">single word, name, or short phrase</strong> in English.</>,
-                <>You may use <strong className="text-[var(--color-text)]">any resources</strong>, including the internet.</>,
-                <>Compete <strong className="text-[var(--color-text)]">solo or as a team</strong> of up to {PUZZLE_WEEK_MAX_TEAM_SIZE}. Please don&apos;t share answers with other teams.</>,
-                <>Check answers individually as you go. Submit by <strong className="text-[var(--color-text)]">23:59 on Tuesday, May 26, 2026</strong>. Double-check for typos.</>,
-              ] as ReactNode[]).map((text, i) => (
-                <li key={i} className="flex gap-3">
-                  <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">
-                    {i + 1}
-                  </span>
-                  <span>{text}</span>
-                </li>
-              ))}
-            </ul>
+                </div>
+                <button
+                  onClick={() => { void loadLeaderboard(user) }}
+                  disabled={loadingLeaderboard}
+                  className="rounded-lg border border-[var(--color-border)] p-1.5 text-[var(--color-muted)] transition hover:border-[var(--color-accent)] disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3 w-3 ${loadingLeaderboard ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+              <div className="overflow-y-auto" style={{ maxHeight: '420px' }}>
+                {loadingLeaderboard ? (
+                  <div className="flex justify-center py-6">
+                    <div className="h-5 w-5 rounded-full border-2 border-[var(--color-accent)] border-t-transparent animate-spin" />
+                  </div>
+                ) : leaderboard.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-[var(--color-muted)]">
+                    No entries yet.
+                  </div>
+                ) : (
+                  leaderboard.map((lb, i) => {
+                    const isMe = lb.entryId === entry.id
+                    const rank = i + 1
+                    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null
+                    return (
+                      <div
+                        key={lb.entryId}
+                        className={`flex items-center gap-2 border-b px-3 py-2.5 last:border-b-0 border-[var(--color-border)] ${
+                          isMe ? 'bg-[var(--color-accent-light)]/40' : 'hover:bg-slate-50/60'
+                        }`}
+                      >
+                        <div className="w-6 flex-shrink-0 text-center">
+                          {medal
+                            ? <span className="text-sm leading-none">{medal}</span>
+                            : <span className="text-xs font-semibold text-[var(--color-muted)]">{rank}</span>
+                          }
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`truncate text-sm font-semibold ${isMe ? 'text-[var(--color-accent)]' : 'text-[var(--color-text)]'}`}>
+                              {lb.name}
+                            </span>
+                            {isMe && (
+                              <span className="flex-shrink-0 rounded-full bg-[var(--color-accent)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">
+                                you
+                              </span>
+                            )}
+                          </div>
+                          {lb.type === 'team' && lb.memberNames.length > 0 && (
+                            <div className="truncate text-[11px] text-[var(--color-muted)]">{lb.memberNames.join(', ')}</div>
+                          )}
+                        </div>
+                        <div className="flex flex-shrink-0 gap-0.5">
+                          {PUZZLE_WEEK_PUZZLES.map((puzzle, pi) => {
+                            const isMeta = pi === PUZZLE_WEEK_PUZZLES.length - 1
+                            const solved = lb.solvedPuzzleIds.includes(puzzle.id)
+                            return (
+                              <div
+                                key={puzzle.id}
+                                title={puzzle.title}
+                                className={`h-2 w-2 rounded-full ${solved ? (isMeta ? 'bg-amber-400' : 'bg-emerald-400') : 'bg-[var(--color-border)]'}`}
+                              />
+                            )
+                          })}
+                        </div>
+                        <div className="w-8 flex-shrink-0 text-right text-xs font-bold text-[var(--color-text)]">
+                          {lb.solvedCount}<span className="font-normal text-[var(--color-muted)]">/{PUZZLE_WEEK_PUZZLES.length}</span>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -891,8 +979,8 @@ export function PuzzleWeekHub() {
           )}
         </div>
 
-        {/* Leaderboard */}
-        <div className="space-y-4 border-t border-[var(--color-border)] pt-8">
+        {/* Leaderboard — full version for non-registered users */}
+        {!entry && <div className="space-y-4 border-t border-[var(--color-border)] pt-8">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
               <Trophy className="h-5 w-5 text-[var(--color-accent)]" />
@@ -924,7 +1012,7 @@ export function PuzzleWeekHub() {
               </div>
             ) : (
               leaderboard.map((lb, i) => {
-                const isMe = lb.entryId === entry?.id
+                const isMe = false
                 const rank = i + 1
                 const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null
                 return (
@@ -991,7 +1079,7 @@ export function PuzzleWeekHub() {
               })
             )}
           </div>
-        </div>
+        </div>}
 
       </div>
     </main>

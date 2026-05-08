@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Calendar, CheckCircle2, RefreshCw, Trophy, User, UserPlus, Users } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
-import { SignInButton } from '@/components/auth/SignInButton'
 import { signOut } from '@/lib/auth'
+import { PuzzleSignIn } from '@/components/library/PuzzleSignIn'
 import { canDownloadPuzzleWeekPacketIdentity, canManagePuzzleWeekIdentity, canRegisterForPuzzleWeek, canResetPuzzleWeekRegistrationIdentity, getPuzzleWeekEligibilityMessage, getPuzzleWeekPacketMessage } from '@/lib/featureFlags'
 import {
   CURRENT_PUZZLE_WEEK_EVENT,
@@ -589,15 +589,7 @@ export function PuzzleWeekHub() {
 
         {/* ── Auth / registration states ── */}
         {!user || isGuest ? (
-          <div className="mx-auto max-w-sm rounded-3xl border border-[var(--color-border)] bg-white p-8 shadow-sm text-center space-y-4">
-            <h2 className="text-xl font-semibold text-[var(--color-text)]">Sign in to register</h2>
-            <p className="text-sm text-[var(--color-muted)]">
-              Use your Haverford School District Google account to join.
-            </p>
-            <div className="flex justify-center">
-              <SignInButton googleOnly />
-            </div>
-          </div>
+          <PuzzleSignIn />
         ) : !canRegister ? (
           <div className="mx-auto max-w-2xl rounded-3xl border border-amber-200 bg-amber-50 p-8 shadow-sm text-center space-y-3">
             <h2 className="text-xl font-semibold text-[var(--color-text)]">Registration limited</h2>

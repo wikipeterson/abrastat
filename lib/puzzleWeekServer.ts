@@ -517,9 +517,10 @@ export async function registerPuzzleWeekTeamServer(eventId: string, user: Verifi
   const name = normalizeName(teamName)
   if (!name) throw new Error('Enter a team name.')
 
-  const existing = await getPuzzleWeekRegistrationServer(eventId, user)
-  if (existing.entry) {
-    throw new Error('You are already registered for this Puzzle Week.')
+  const membershipRecord = await getExistingMembership(eventId, user.uid)
+  const existing = membershipRecord ? await getPuzzleWeekRegistrationServer(eventId, user) : { entry: null, members: [] as PuzzleWeekMember[] }
+  if (existing.entry?.type === 'team') {
+    throw new Error('You are already registered on a team for this Puzzle Week.')
   }
 
   const entryId = crypto.randomUUID()
@@ -538,7 +539,41 @@ export async function registerPuzzleWeekTeamServer(eventId: string, user: Verifi
     joinCode,
     createdAt: new Date(),
   })
-  await addMembership(entryId, eventId, user)
+
+  if (!membershipRecord) {
+    await addMembership(entryId, eventId, user)
+  } else {
+    const oldEntry = existing.entry
+    if (oldEntry?.type === 'solo') {
+      const soloProgress = await getSolvedProgress(eventId, oldEntry.id)
+      for (const progressItem of soloProgress) {
+        await setDocument('puzzleWeekProgress', `${eventId}__${entryId}__${progressItem.puzzleId}`, {
+          eventId,
+          entryId,
+          puzzleId: progressItem.puzzleId,
+          solved: true,
+          solvedAt: progressItem.solvedAt ?? new Date(),
+          updatedAt: new Date(),
+        })
+      }
+
+      await updateDocument('puzzleWeekEntries', oldEntry.id, {
+        status: 'merged',
+        mergedIntoEntryId: entryId,
+        updatedAt: new Date(),
+      })
+      await updateLeaderboardSnapshot({ ...oldEntry, status: 'merged' }, [], false)
+    }
+
+    await updateDocument('puzzleWeekEntryMembers', membershipRecord.id, {
+      entryId,
+      displayName: user.displayName ?? user.email ?? 'Participant',
+      email: user.email ?? '',
+      joinedAt: new Date(),
+    })
+  }
+
+  const teamProgress = await getSolvedProgress(eventId, entryId)
   await updateLeaderboardSnapshot({
     id: entryId,
     eventId,
@@ -548,7 +583,7 @@ export async function registerPuzzleWeekTeamServer(eventId: string, user: Verifi
     isLocked: false,
     status: 'active',
     createdAt: null,
-  }, [])
+  }, teamProgress)
 }
 
 export async function joinPuzzleWeekTeamServer(eventId: string, user: VerifiedPuzzleWeekUser, rawJoinCode: string) {

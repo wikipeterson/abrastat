@@ -1,5 +1,11 @@
 import { User } from 'firebase/auth'
 
+export interface PuzzleWeekIdentityLike {
+  uid?: string | null
+  email?: string | null
+  displayName?: string | null
+}
+
 const PUZZLE_WEEK_PREVIEW_UIDS = new Set([
   'dev-user',
 ])
@@ -16,14 +22,14 @@ const PUZZLE_WEEK_PREVIEW_DISPLAY_NAMES = [
   'chris walter',
 ]
 
-const PUZZLE_WEEK_ALLOWED_EMAIL_DOMAIN = '@haverfordsd.net'
+export const PUZZLE_WEEK_ALLOWED_EMAIL_DOMAIN = '@haverfordsd.net'
 
-function isPuzzleWeekPreviewUser(user: User | null | undefined): boolean {
-  if (!user) return false
-  if (PUZZLE_WEEK_PREVIEW_UIDS.has(user.uid)) return true
+export function isPuzzleWeekPreviewIdentity(identity: PuzzleWeekIdentityLike | null | undefined): boolean {
+  if (!identity) return false
+  if (identity.uid && PUZZLE_WEEK_PREVIEW_UIDS.has(identity.uid)) return true
 
-  const email = user.email?.toLowerCase().trim()
-  const displayName = user.displayName?.toLowerCase().trim()
+  const email = identity.email?.toLowerCase().trim()
+  const displayName = identity.displayName?.toLowerCase().trim()
 
   if (displayName && PUZZLE_WEEK_PREVIEW_DISPLAY_NAMES.includes(displayName)) {
     return true
@@ -36,15 +42,23 @@ function isPuzzleWeekPreviewUser(user: User | null | undefined): boolean {
   return PUZZLE_WEEK_PREVIEW_EMAIL_FRAGMENTS.some(fragment => email.includes(fragment))
 }
 
+function isPuzzleWeekPreviewUser(user: User | null | undefined): boolean {
+  return isPuzzleWeekPreviewIdentity(user)
+}
+
 export function canAccessPuzzleWeek(user: User | null | undefined): boolean {
   return isPuzzleWeekPreviewUser(user)
 }
 
 export function canRegisterForPuzzleWeek(user: User | null | undefined): boolean {
-  if (!user) return false
-  if (isPuzzleWeekPreviewUser(user)) return true
+  return canRegisterForPuzzleWeekIdentity(user)
+}
 
-  const email = user.email?.toLowerCase().trim()
+export function canRegisterForPuzzleWeekIdentity(identity: PuzzleWeekIdentityLike | null | undefined): boolean {
+  if (!identity) return false
+  if (isPuzzleWeekPreviewIdentity(identity)) return true
+
+  const email = identity.email?.toLowerCase().trim()
   return Boolean(email && email.endsWith(PUZZLE_WEEK_ALLOWED_EMAIL_DOMAIN))
 }
 

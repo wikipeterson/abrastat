@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
   adminRenamePuzzleWeekEntryServer,
+  adminRemovePuzzleWeekMemberServer,
   adminResetPuzzleWeekEntryServer,
   getPuzzleWeekAdminEntriesServer,
   getPuzzleWeekLeaderboardServer,
@@ -80,6 +81,7 @@ export async function POST(request: NextRequest) {
       eventId?: string
       teamName?: string
       entryId?: string
+      memberId?: string
       name?: string
       joinCode?: string
       puzzleId?: string
@@ -110,6 +112,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: true })
       case 'adminResetEntry':
         await adminResetPuzzleWeekEntryServer(body.eventId, user, body.entryId ?? '')
+        return NextResponse.json({ ok: true })
+      case 'adminRemoveMember':
+        await adminRemovePuzzleWeekMemberServer(body.eventId, user, body.memberId ?? '')
         return NextResponse.json({ ok: true })
       case 'submitAnswer': {
         const result = await submitPuzzleWeekAnswerServer(

@@ -459,7 +459,7 @@ export function PuzzleWeekHub() {
         )}
 
         {entry && (
-          <div className="grid gap-4 lg:grid-cols-[1fr_420px]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
 
             {/* Rules card */}
             <div className="rounded-3xl border border-[var(--color-border)] bg-white/70 px-4 sm:px-7 py-4 sm:py-5 shadow-sm">
@@ -558,7 +558,13 @@ export function PuzzleWeekHub() {
                             )}
                           </div>
                           {lb.type === 'team' && lb.memberNames.length > 0 && (
-                            <div className="truncate text-[11px] text-[var(--color-muted)]">{lb.memberNames.join(', ')}</div>
+                            <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] leading-snug text-[var(--color-muted)]">
+                              {lb.memberNames.map(memberName => (
+                                <span key={memberName} className="whitespace-normal break-words">
+                                  {memberName}
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </div>
                         <div className="flex flex-shrink-0 gap-0.5">

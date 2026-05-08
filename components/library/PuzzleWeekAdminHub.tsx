@@ -8,6 +8,7 @@ import { SignInButton } from '@/components/auth/SignInButton'
 import { signOut } from '@/lib/auth'
 import { canManagePuzzleWeekIdentity } from '@/lib/featureFlags'
 import {
+  adminRemovePuzzleWeekMember,
   adminRenamePuzzleWeekEntry,
   adminResetPuzzleWeekEntry,
   CURRENT_PUZZLE_WEEK_EVENT,
@@ -118,6 +119,21 @@ export function PuzzleWeekAdminHub() {
       await loadAdminEntries(user)
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message : 'Could not reset that registration.')
+    } finally {
+      setSavingEntryId(null)
+    }
+  }
+
+  async function handleRemoveMember(memberId: string, memberName: string, entryName: string) {
+    if (!user) return
+    if (!window.confirm(`Remove ${memberName} from "${entryName}"? Their vote will also be removed.`)) return
+    setSavingEntryId(memberId)
+    setError(null)
+    try {
+      await adminRemovePuzzleWeekMember(CURRENT_PUZZLE_WEEK_EVENT.id, user, memberId)
+      await loadAdminEntries(user)
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : 'Could not remove that team member.')
     } finally {
       setSavingEntryId(null)
     }
@@ -303,10 +319,23 @@ export function PuzzleWeekAdminHub() {
                               {item.members.map(member => (
                                 <div
                                   key={member.id}
-                                  className="rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-xs text-[var(--color-text)]"
+                                  className="flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-xs text-[var(--color-text)]"
                                 >
-                                  <span className="font-medium">{member.displayName || member.email || member.userId}</span>
-                                  {member.email && <span className="text-[var(--color-muted)]"> · {member.email}</span>}
+                                  <span>
+                                    <span className="font-medium">{member.displayName || member.email || member.userId}</span>
+                                    {member.email && <span className="text-[var(--color-muted)]"> · {member.email}</span>}
+                                  </span>
+                                  <button
+                                    onClick={() => void handleRemoveMember(
+                                      member.id,
+                                      member.displayName || member.email || member.userId,
+                                      item.entry.name,
+                                    )}
+                                    disabled={savingEntryId === member.id}
+                                    className="rounded-full border border-red-200 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                                  >
+                                    {savingEntryId === member.id ? 'Removing…' : 'Remove'}
+                                  </button>
                                 </div>
                               ))}
                             </div>

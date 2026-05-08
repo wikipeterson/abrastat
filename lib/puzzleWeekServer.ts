@@ -898,6 +898,47 @@ export async function adminResetPuzzleWeekEntryServer(
   await deleteEntryArtifacts(eventId, entryId)
 }
 
+export async function adminRemovePuzzleWeekMemberServer(
+  eventId: string,
+  user: VerifiedPuzzleWeekUser,
+  memberId: string,
+) {
+  assertPuzzleWeekAdmin(user)
+
+  const member = await getDocument<Record<string, unknown>>('puzzleWeekEntryMembers', memberId)
+  if (!member) {
+    throw new Error('That member could not be found.')
+  }
+  if (member.eventId !== eventId) {
+    throw new Error('That member does not belong to this Puzzle Week event.')
+  }
+
+  const entryId = String(member.entryId ?? '')
+  const entry = await getEntryById(eventId, entryId)
+  if (!entry || entry.status === 'merged') {
+    await deleteDocument('puzzleWeekEntryMembers', memberId)
+    await deleteVotesForUsers(eventId, [String(member.userId ?? '')])
+    return
+  }
+
+  const members = await getEntryMembers(eventId, entryId)
+  if (!members.some(item => item.id === memberId)) {
+    throw new Error('That member is not attached to this registration anymore.')
+  }
+
+  await deleteDocument('puzzleWeekEntryMembers', memberId)
+  await deleteVotesForUsers(eventId, [String(member.userId ?? '')])
+
+  const remainingMembers = members.filter(item => item.id !== memberId)
+  if (remainingMembers.length === 0) {
+    await deleteEntryArtifacts(eventId, entryId)
+    return
+  }
+
+  const solvedProgress = await getSolvedProgress(eventId, entryId)
+  await updateLeaderboardSnapshot(entry, solvedProgress, true)
+}
+
 export async function getPuzzleWeekVotesServer(
   eventId: string,
   userId?: string,

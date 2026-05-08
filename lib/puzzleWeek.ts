@@ -324,3 +324,11 @@ export async function adminResetPuzzleWeekEntry(eventId: string, user: User, ent
     body: JSON.stringify({ action: 'adminResetEntry', eventId, entryId }),
   })
 }
+
+export async function adminRemovePuzzleWeekMember(eventId: string, user: User, memberId: string): Promise<void> {
+  await puzzleWeekRequest<{ ok: true }>(user, {
+    url: '/api/puzzle-week',
+    method: 'POST',
+    body: JSON.stringify({ action: 'adminRemoveMember', eventId, memberId }),
+  })
+}

@@ -405,10 +405,7 @@ export function PuzzleWeekHub() {
 
         {/* Countdown */}
         {countdown && !countdown.ended && (
-          <div className="text-center space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-              {countdown.started ? 'Closes in' : 'Opens in'}
-            </p>
+          <div className="text-center">
             <div className="flex items-end justify-center gap-2 sm:gap-3">
               {([
                 { value: countdown.days, label: 'days' },
@@ -426,6 +423,9 @@ export function PuzzleWeekHub() {
                 </div>
               ))}
             </div>
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+              {countdown.started ? 'Closes in' : 'Opens in'}
+            </p>
           </div>
         )}
 

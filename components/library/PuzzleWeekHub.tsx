@@ -53,11 +53,11 @@ export function PuzzleWeekHub() {
   const eligibilityMessage = getPuzzleWeekEligibilityMessage()
   const solvedCount = Object.values(progress).filter(p => p.solved).length
 
-  async function refreshRegistration(currentUserId: string) {
+  async function refreshRegistration(currentUser: NonNullable<typeof user>) {
     setLoadingRegistration(true)
     setError(null)
     try {
-      const registration = await getPuzzleWeekRegistration(CURRENT_PUZZLE_WEEK_EVENT.id, currentUserId)
+      const registration = await getPuzzleWeekRegistration(CURRENT_PUZZLE_WEEK_EVENT.id, currentUser)
       setEntry(registration.entry)
       setMembers(registration.members)
     } catch {
@@ -67,10 +67,15 @@ export function PuzzleWeekHub() {
     }
   }
 
-  async function loadLeaderboard() {
+  async function loadLeaderboard(currentUser?: NonNullable<typeof user> | null) {
+    if (!currentUser) {
+      setLeaderboard([])
+      setLoadingLeaderboard(false)
+      return
+    }
     setLoadingLeaderboard(true)
     try {
-      const data = await getPuzzleWeekLeaderboard(CURRENT_PUZZLE_WEEK_EVENT.id)
+      const data = await getPuzzleWeekLeaderboard(CURRENT_PUZZLE_WEEK_EVENT.id, currentUser)
       setLeaderboard(data)
     } catch {
       // best-effort
@@ -88,7 +93,7 @@ export function PuzzleWeekHub() {
       setAnswerMessages({})
       return
     }
-    void refreshRegistration(user.uid)
+    void refreshRegistration(user)
   }, [user])
 
   useEffect(() => {
@@ -101,7 +106,8 @@ export function PuzzleWeekHub() {
     let cancelled = false
     async function loadProgress() {
       try {
-        const solved = await getPuzzleWeekProgress(CURRENT_PUZZLE_WEEK_EVENT.id, entryId)
+        if (!user) return
+        const solved = await getPuzzleWeekProgress(CURRENT_PUZZLE_WEEK_EVENT.id, user)
         if (cancelled) return
         const next: Record<string, PuzzleWeekProgress> = {}
         solved.forEach(item => { next[item.puzzleId] = item })
@@ -112,9 +118,9 @@ export function PuzzleWeekHub() {
     }
     void loadProgress()
     return () => { cancelled = true }
-  }, [entry])
+  }, [entry, user])
 
-  useEffect(() => { void loadLeaderboard() }, [])
+  useEffect(() => { void loadLeaderboard(user) }, [user])
 
   async function handleSolo() {
     if (!user) return
@@ -122,9 +128,9 @@ export function PuzzleWeekHub() {
     setError(null)
     try {
       await registerPuzzleWeekSolo(CURRENT_PUZZLE_WEEK_EVENT.id, user)
-      await refreshRegistration(user.uid)
+      await refreshRegistration(user)
       setRegisterMode(null)
-      void loadLeaderboard()
+      void loadLeaderboard(user)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not register solo.')
     } finally {
@@ -138,10 +144,10 @@ export function PuzzleWeekHub() {
     setError(null)
     try {
       await registerPuzzleWeekTeam(CURRENT_PUZZLE_WEEK_EVENT.id, user, teamName)
-      await refreshRegistration(user.uid)
+      await refreshRegistration(user)
       setRegisterMode(null)
       setTeamName('')
-      void loadLeaderboard()
+      void loadLeaderboard(user)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create your team.')
     } finally {
@@ -155,7 +161,7 @@ export function PuzzleWeekHub() {
     setError(null)
     try {
       await joinPuzzleWeekTeam(CURRENT_PUZZLE_WEEK_EVENT.id, user, joinCode)
-      await refreshRegistration(user.uid)
+      await refreshRegistration(user)
       setRegisterMode(null)
       setJoinCode('')
       setShowJoinTeam(false)
@@ -184,12 +190,12 @@ export function PuzzleWeekHub() {
       )
       setAnswerMessages(current => ({ ...current, [puzzleId]: result }))
       if (result.correct) {
-        const solved = await getPuzzleWeekProgress(CURRENT_PUZZLE_WEEK_EVENT.id, entry.id)
+        const solved = await getPuzzleWeekProgress(CURRENT_PUZZLE_WEEK_EVENT.id, user)
         const next: Record<string, PuzzleWeekProgress> = {}
         solved.forEach(item => { next[item.puzzleId] = item })
         setProgress(next)
         setPuzzleAnswers(current => ({ ...current, [puzzleId]: '' }))
-        void loadLeaderboard()
+        void loadLeaderboard(user)
       }
     } catch (err) {
       setAnswerMessages(current => ({
@@ -224,7 +230,7 @@ export function PuzzleWeekHub() {
         <div className="flex items-center gap-6">
           <Link href="/home" className="flex-shrink-0 select-none" aria-label="Return to AbraStat">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(220px, 26vw, 360px)', height: 'auto' }} />
+            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(300px, 32vw, 480px)', height: 'auto' }} />
           </Link>
           <div className="flex-1 text-center">
             <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--color-muted)]">
@@ -241,7 +247,7 @@ export function PuzzleWeekHub() {
               Monday, May 18 – Tuesday, May 26, 2026
             </div>
           </div>
-          <div className="flex-shrink-0" style={{ width: 'clamp(220px, 26vw, 360px)' }}>
+          <div className="flex-shrink-0" style={{ width: 'clamp(300px, 32vw, 480px)' }}>
             {user && !isGuest && (
               <div className="flex justify-end">
                 <button
@@ -586,7 +592,7 @@ export function PuzzleWeekHub() {
               )}
             </div>
             <button
-              onClick={loadLeaderboard}
+              onClick={() => { void loadLeaderboard(user) }}
               disabled={loadingLeaderboard}
               className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] transition hover:border-[var(--color-accent)] disabled:opacity-50"
             >

@@ -53,6 +53,10 @@ export function PuzzleWeekHub() {
   const eligibilityMessage = getPuzzleWeekEligibilityMessage()
   const solvedCount = Object.values(progress).filter(p => p.solved).length
 
+  function getErrorMessage(err: unknown, fallback: string) {
+    return err instanceof Error && err.message ? err.message : fallback
+  }
+
   async function refreshRegistration(currentUser: NonNullable<typeof user>) {
     setLoadingRegistration(true)
     setError(null)
@@ -60,8 +64,8 @@ export function PuzzleWeekHub() {
       const registration = await getPuzzleWeekRegistration(CURRENT_PUZZLE_WEEK_EVENT.id, currentUser)
       setEntry(registration.entry)
       setMembers(registration.members)
-    } catch {
-      setError('We couldn’t load your Puzzle Week registration right now.')
+    } catch (err) {
+      setError(getErrorMessage(err, 'We couldn’t load your Puzzle Week registration right now.'))
     } finally {
       setLoadingRegistration(false)
     }
@@ -112,8 +116,8 @@ export function PuzzleWeekHub() {
         const next: Record<string, PuzzleWeekProgress> = {}
         solved.forEach(item => { next[item.puzzleId] = item })
         setProgress(next)
-      } catch {
-        if (!cancelled) setError('We couldn’t load your puzzle progress right now.')
+      } catch (err) {
+        if (!cancelled) setError(getErrorMessage(err, 'We couldn’t load your puzzle progress right now.'))
       }
     }
     void loadProgress()
@@ -132,7 +136,7 @@ export function PuzzleWeekHub() {
       setRegisterMode(null)
       void loadLeaderboard(user)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not register solo.')
+      setError(getErrorMessage(err, 'Could not register solo.'))
     } finally {
       setSubmitting(false)
     }
@@ -149,7 +153,7 @@ export function PuzzleWeekHub() {
       setTeamName('')
       void loadLeaderboard(user)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create your team.')
+      setError(getErrorMessage(err, 'Could not create your team.'))
     } finally {
       setSubmitting(false)
     }
@@ -166,7 +170,7 @@ export function PuzzleWeekHub() {
       setJoinCode('')
       setShowJoinTeam(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not join that team.')
+      setError(getErrorMessage(err, 'Could not join that team.'))
     } finally {
       setSubmitting(false)
     }
@@ -202,7 +206,7 @@ export function PuzzleWeekHub() {
         ...current,
         [puzzleId]: {
           correct: false,
-          message: err instanceof Error ? err.message : 'Could not check that answer.',
+          message: getErrorMessage(err, 'Could not check that answer.'),
         },
       }))
     } finally {

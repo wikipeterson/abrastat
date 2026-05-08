@@ -109,7 +109,7 @@ export function PuzzleWeekAdminHub() {
           <div className="flex items-center gap-4">
             <Link href="https://puzzleweek.abrastat.com" className="shrink-0">
               <img
-                src="/abrastatlogo.png"
+                src="/logo.svg"
                 alt="AbraStat"
                 className="h-auto w-32"
               />

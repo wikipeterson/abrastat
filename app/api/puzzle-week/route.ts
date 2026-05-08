@@ -6,6 +6,7 @@ import {
   joinPuzzleWeekTeamServer,
   registerPuzzleWeekSoloServer,
   registerPuzzleWeekTeamServer,
+  resetPuzzleWeekRegistrationServer,
   submitPuzzleWeekAnswerServer,
   verifyPuzzleWeekRequest,
 } from '@/lib/puzzleWeekServer'
@@ -71,6 +72,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: true })
       case 'joinTeam':
         await joinPuzzleWeekTeamServer(body.eventId, user, body.joinCode ?? '')
+        return NextResponse.json({ ok: true })
+      case 'resetRegistration':
+        await resetPuzzleWeekRegistrationServer(body.eventId, user)
         return NextResponse.json({ ok: true })
       case 'submitAnswer': {
         const result = await submitPuzzleWeekAnswerServer(

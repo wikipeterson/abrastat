@@ -43,6 +43,10 @@ export function isPuzzleWeekPreviewIdentity(identity: PuzzleWeekIdentityLike | n
   return PUZZLE_WEEK_PREVIEW_EMAIL_FRAGMENTS.some(fragment => email.includes(fragment))
 }
 
+export function canResetPuzzleWeekRegistrationIdentity(identity: PuzzleWeekIdentityLike | null | undefined): boolean {
+  return isPuzzleWeekPreviewIdentity(identity)
+}
+
 function isPuzzleWeekPreviewUser(user: User | null | undefined): boolean {
   return isPuzzleWeekPreviewIdentity(user)
 }

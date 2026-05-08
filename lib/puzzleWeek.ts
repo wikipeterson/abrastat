@@ -175,6 +175,14 @@ export async function joinPuzzleWeekTeam(eventId: string, user: User, rawJoinCod
   })
 }
 
+export async function resetPuzzleWeekRegistration(eventId: string, user: User) {
+  await puzzleWeekRequest<{ ok: true }>(user, {
+    url: '/api/puzzle-week',
+    method: 'POST',
+    body: JSON.stringify({ action: 'resetRegistration', eventId }),
+  })
+}
+
 export async function getPuzzleWeekProgress(eventId: string, user: User): Promise<PuzzleWeekProgress[]> {
   const data = await puzzleWeekRequest<PuzzleWeekProgress[]>(user, {
     url: `/api/puzzle-week?action=progress&eventId=${encodeURIComponent(eventId)}`,

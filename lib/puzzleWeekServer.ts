@@ -10,7 +10,7 @@ import {
   PuzzleWeekMember,
   PuzzleWeekProgress,
 } from './puzzleWeek'
-import { canRegisterForPuzzleWeekIdentity, getPuzzleWeekEligibilityMessage } from './featureFlags'
+import { canRegisterForPuzzleWeekIdentity, canResetPuzzleWeekRegistrationIdentity, getPuzzleWeekEligibilityMessage } from './featureFlags'
 
 interface VerifiedPuzzleWeekUser {
   uid: string
@@ -190,6 +190,17 @@ async function setDocument(collectionName: string, docId: string, data: Record<s
     method: 'PATCH',
     body: JSON.stringify({ fields: encodeFirestoreFields(data) }),
   })
+}
+
+async function deleteDocument(collectionName: string, docId: string) {
+  try {
+    await firestoreRequest(`/${collectionName}/${docId}`, {
+      method: 'DELETE',
+    })
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('404')) return
+    throw error
+  }
 }
 
 async function updateDocument(collectionName: string, docId: string, data: Record<string, unknown>) {
@@ -387,6 +398,29 @@ async function getExistingMembership(eventId: string, userId: string) {
   ], 1)
   const row = rows[0]
   return row ? { id: row.id, member: mapMember(row.data, row.id) } : null
+}
+
+async function deleteEntryArtifacts(eventId: string, entryId: string) {
+  const [progressRows, joinCodeRows] = await Promise.all([
+    queryCollection<Record<string, unknown>>('puzzleWeekProgress', [
+      { field: 'eventId', value: eventId },
+      { field: 'entryId', value: entryId },
+    ]),
+    queryCollection<Record<string, unknown>>('puzzleWeekJoinCodes', [
+      { field: 'eventId', value: eventId },
+      { field: 'entryId', value: entryId },
+    ]),
+  ])
+
+  for (const row of progressRows) {
+    await deleteDocument('puzzleWeekProgress', row.id)
+  }
+  for (const row of joinCodeRows) {
+    await deleteDocument('puzzleWeekJoinCodes', row.id)
+  }
+
+  await deleteDocument('puzzleWeekLeaderboard', `${eventId}__${entryId}`)
+  await deleteDocument('puzzleWeekEntries', entryId)
 }
 
 async function addMembership(entryId: string, eventId: string, user: VerifiedPuzzleWeekUser) {
@@ -705,6 +739,29 @@ export async function submitPuzzleWeekAnswerServer(
   await updateLeaderboardSnapshot(registration.entry, solvedProgress, true)
 
   return { correct: true, message: 'Correct!' }
+}
+
+export async function resetPuzzleWeekRegistrationServer(eventId: string, user: VerifiedPuzzleWeekUser) {
+  if (!canResetPuzzleWeekRegistrationIdentity(user)) {
+    throw new Error('Only preview admins can reset registrations right now.')
+  }
+
+  const membershipRecord = await getExistingMembership(eventId, user.uid)
+  if (!membershipRecord) return
+
+  const entry = await getEntryById(eventId, membershipRecord.member.entryId)
+  if (!entry) {
+    await deleteDocument('puzzleWeekEntryMembers', membershipRecord.id)
+    return
+  }
+
+  const members = await getEntryMembers(eventId, entry.id)
+  if (entry.type === 'team' && members.length > 1) {
+    throw new Error('This team has other members, so it cannot be reset from this shortcut.')
+  }
+
+  await deleteDocument('puzzleWeekEntryMembers', membershipRecord.id)
+  await deleteEntryArtifacts(eventId, entry.id)
 }
 
 export async function verifyPuzzleWeekRequest(authHeader: string | null) {

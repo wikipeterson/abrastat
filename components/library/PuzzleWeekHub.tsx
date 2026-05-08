@@ -7,7 +7,7 @@ import { Calendar, CheckCircle2, RefreshCw, Trophy, User, UserPlus, Users } from
 import { useAuth } from '@/components/auth/AuthProvider'
 import { SignInButton } from '@/components/auth/SignInButton'
 import { signOut } from '@/lib/auth'
-import { canDownloadPuzzleWeekPacketIdentity, canRegisterForPuzzleWeek, getPuzzleWeekEligibilityMessage, getPuzzleWeekPacketMessage } from '@/lib/featureFlags'
+import { canDownloadPuzzleWeekPacketIdentity, canRegisterForPuzzleWeek, canResetPuzzleWeekRegistrationIdentity, getPuzzleWeekEligibilityMessage, getPuzzleWeekPacketMessage } from '@/lib/featureFlags'
 import {
   CURRENT_PUZZLE_WEEK_EVENT,
   PUZZLE_WEEK_MAX_TEAM_SIZE,
@@ -25,6 +25,7 @@ import {
   joinPuzzleWeekTeam,
   registerPuzzleWeekSolo,
   registerPuzzleWeekTeam,
+  resetPuzzleWeekRegistration,
   submitPuzzleWeekAnswer,
 } from '@/lib/puzzleWeek'
 
@@ -53,6 +54,7 @@ export function PuzzleWeekHub() {
   const [downloadingPacket, setDownloadingPacket] = useState(false)
   const canRegister = canRegisterForPuzzleWeek(user)
   const canDownloadPacket = canDownloadPuzzleWeekPacketIdentity(user)
+  const canResetRegistration = canResetPuzzleWeekRegistrationIdentity(user)
   const eligibilityMessage = getPuzzleWeekEligibilityMessage()
   const packetMessage = getPuzzleWeekPacketMessage(user)
   const solvedCount = Object.values(progress).filter(p => p.solved).length
@@ -178,6 +180,33 @@ export function PuzzleWeekHub() {
   async function handleSignOut() {
     setError(null)
     await signOut()
+  }
+
+  async function handleResetRegistration() {
+    if (!user) return
+    if (!window.confirm('Reset your current Puzzle Week registration and progress? This cannot be undone.')) {
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    try {
+      await resetPuzzleWeekRegistration(CURRENT_PUZZLE_WEEK_EVENT.id, user)
+      setEntry(null)
+      setMembers([])
+      setProgress({})
+      setPuzzleAnswers({})
+      setAnswerMessages({})
+      setRegisterMode(null)
+      setShowJoinTeam(false)
+      setTeamName('')
+      setJoinCode('')
+      await refreshRegistration(user)
+      void loadLeaderboard(user)
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not reset your registration.'))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   async function handleCheckAnswer(puzzleId: string) {
@@ -393,12 +422,21 @@ export function PuzzleWeekHub() {
                     </div>
                   )}
                 </div>
-                <div className="flex flex-col items-end gap-0.5">
+                <div className="flex flex-col items-end gap-2">
                   <div className="text-3xl font-bold text-[var(--color-text)]">
                     {solvedCount}
                     <span className="text-lg font-medium text-[var(--color-muted)]">/{PUZZLE_WEEK_PUZZLES.length}</span>
                   </div>
                   <div className="text-xs font-medium text-[var(--color-muted)]">puzzles solved</div>
+                  {canResetRegistration && (
+                    <button
+                      onClick={handleResetRegistration}
+                      disabled={submitting}
+                      className="rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+                    >
+                      Reset Registration
+                    </button>
+                  )}
                 </div>
               </div>
 

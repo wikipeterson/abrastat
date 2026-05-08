@@ -6,7 +6,7 @@ import { verifyPuzzleWeekRequest } from '@/lib/puzzleWeekServer'
 
 export const runtime = 'nodejs'
 
-const PACKET_FILENAME = 'PuzzleWeek2026.pdf'
+const PACKET_FILENAME = 'HaverfordPuzzleWeek2026.pdf'
 const PACKET_PATH = path.join(process.cwd(), 'private', 'puzzle-week', 'puzzle-week-2026.pdf')
 
 function buildPlaceholderPacketPdf() {

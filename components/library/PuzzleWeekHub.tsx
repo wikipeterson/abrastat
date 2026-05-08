@@ -448,7 +448,7 @@ export function PuzzleWeekHub() {
                 </>,
                 <>This packet contains <strong className="text-[var(--color-text)]">7 puzzles</strong>. Puzzles 1–6 are independent. Puzzle 7 is a <strong className="text-[var(--color-text)]">metapuzzle</strong> that uses the answers from the first six.</>,
                 <>Each answer is a <strong className="text-[var(--color-text)]">single word, name, or short phrase</strong> in English.</>,
-                <>You may use <strong className="text-[var(--color-text)]">any resources</strong>, including the internet and AI.</>,
+                <>You may use <strong className="text-[var(--color-text)]">any resources</strong>, including the internet.</>,
                 <>Compete <strong className="text-[var(--color-text)]">solo or as a team</strong> of up to {PUZZLE_WEEK_MAX_TEAM_SIZE}. Please don&apos;t share answers with other teams.</>,
                 <>Check answers individually as you go. Submit by <strong className="text-[var(--color-text)]">23:59 on Tuesday, May 26, 2026</strong>. Double-check for typos.</>,
               ] as ReactNode[]).map((text, i) => (

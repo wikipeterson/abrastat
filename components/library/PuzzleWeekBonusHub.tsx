@@ -129,9 +129,10 @@ function createNetwalkBoard() {
 
 function getNetwalkStatus(board: NetwalkCell[]) {
   const serverIndex = board.findIndex(cell => cell.isServer)
-  if (serverIndex === -1) return { solved: false, connectedCount: 0 }
+  const connectedIndices = new Set<number>()
+  if (serverIndex === -1) return { solved: false, connectedCount: 0, connectedIndices }
 
-  const visited = new Set<number>([serverIndex])
+  connectedIndices.add(serverIndex)
   const queue = [serverIndex]
   let looseEnds = false
 
@@ -146,16 +147,17 @@ function getNetwalkStatus(board: NetwalkCell[]) {
 
       if (hasEdge !== neighborHasEdge) looseEnds = true
 
-      if (hasEdge && neighborHasEdge && !visited.has(neighbor.index)) {
-        visited.add(neighbor.index)
+      if (hasEdge && neighborHasEdge && !connectedIndices.has(neighbor.index)) {
+        connectedIndices.add(neighbor.index)
         queue.push(neighbor.index)
       }
     }
   }
 
   return {
-    solved: !looseEnds && visited.size === board.length,
-    connectedCount: visited.size,
+    solved: !looseEnds && connectedIndices.size === board.length,
+    connectedCount: connectedIndices.size,
+    connectedIndices,
   }
 }
 
@@ -168,6 +170,7 @@ function SliderPuzzleBoard() {
   const total = SLIDER_SIZE * SLIDER_SIZE
   const solved = board.every((v, i) => (i === total - 1 ? v === 0 : v === i + 1))
   const emptyIdx = board.indexOf(0)
+  const movableTiles = new Set(solved ? [] : sliderNeighbors(emptyIdx).map(index => board[index]).filter(Boolean))
 
   function handlePress(idx: number) {
     if (solved || !sliderNeighbors(emptyIdx).includes(idx)) return
@@ -196,35 +199,48 @@ function SliderPuzzleBoard() {
       </div>
 
       <div className="flex flex-1 items-center justify-center">
-        <div
-          className="grid w-full max-w-[280px] gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-3"
-          style={{ gridTemplateColumns: `repeat(${SLIDER_SIZE}, minmax(0, 1fr))` }}
-        >
-          {board.map((value, idx) => {
-            if (value === 0) {
-              return (
+        <div className="w-full max-w-[286px] rounded-[1.65rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-3 shadow-inner">
+          <div className="relative aspect-square rounded-[1.1rem] bg-white/50">
+            <div
+              className="absolute inset-0 grid gap-2"
+              style={{ gridTemplateColumns: `repeat(${SLIDER_SIZE}, minmax(0, 1fr))` }}
+            >
+              {Array.from({ length: total }).map((_, idx) => (
                 <div
-                  key="empty"
-                  className="aspect-square rounded-xl border border-dashed border-[var(--color-border)] bg-white/40"
+                  key={`slot-${idx}`}
+                  className="rounded-[0.95rem] border border-dashed border-[var(--color-border)] bg-white/45"
                 />
+              ))}
+            </div>
+
+            {board.map((value, idx) => {
+              if (value === 0) return null
+              const row = Math.floor(idx / SLIDER_SIZE)
+              const col = idx % SLIDER_SIZE
+              const movable = movableTiles.has(value)
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => handlePress(idx)}
+                  className={`absolute flex items-center justify-center rounded-[0.95rem] border text-lg font-semibold transition-[left,top,transform,box-shadow,border-color,background-color] duration-200 ease-out ${
+                    movable
+                      ? 'cursor-pointer border-teal-300 bg-gradient-to-br from-[#f7fffe] to-[#d9f7f3] text-[var(--color-text)] shadow-[0_8px_18px_rgba(46,196,182,0.18)] hover:-translate-y-0.5 hover:border-[var(--color-accent)]'
+                      : 'cursor-default border-slate-200 bg-gradient-to-br from-white to-slate-50 text-[var(--color-text)] shadow-[0_6px_14px_rgba(15,23,42,0.08)]'
+                  }`}
+                  style={{
+                    width: 'calc((100% - 24px) / 4)',
+                    height: 'calc((100% - 24px) / 4)',
+                    left: `calc(${col} * ((100% - 24px) / 4 + 8px))`,
+                    top: `calc(${row} * ((100% - 24px) / 4 + 8px))`,
+                  }}
+                >
+                  <span className="absolute inset-x-3 top-2 h-px rounded-full bg-white/80" />
+                  <span className="relative">{value}</span>
+                </button>
               )
-            }
-            const movable = !solved && sliderNeighbors(emptyIdx).includes(idx)
-            return (
-              <button
-                key={value}
-                type="button"
-                onClick={() => handlePress(idx)}
-                className={`aspect-square rounded-xl border text-base font-semibold transition-colors ${
-                  movable
-                    ? 'cursor-pointer border-teal-300 bg-[var(--color-accent-light)] text-[var(--color-text)] hover:border-[var(--color-accent)]'
-                    : 'cursor-default border-slate-200 bg-white text-[var(--color-text)]'
-                }`}
-              >
-                {value}
-              </button>
-            )
-          })}
+            })}
+          </div>
         </div>
       </div>
 
@@ -319,8 +335,8 @@ function NetwalkBoard() {
 
   function rotateCell(index: number, amount: number) {
     setBoard(prev =>
-      prev.map((cell, cellIndex) =>
-        cellIndex === index ? { ...cell, rotation: ((cell.rotation + amount) % 4 + 4) % 4 } : cell
+      prev.map((cell, i) =>
+        i === index ? { ...cell, rotation: ((cell.rotation + amount) % 4 + 4) % 4 } : cell
       )
     )
     setMoves(m => m + 1)
@@ -328,92 +344,123 @@ function NetwalkBoard() {
 
   function handleTilePress(index: number) {
     if (status.solved) return
-
     if (pendingTap.current && pendingTap.current.index === index) {
       window.clearTimeout(pendingTap.current.timer)
       pendingTap.current = null
       rotateCell(index, -1)
       return
     }
-
     if (pendingTap.current) {
       window.clearTimeout(pendingTap.current.timer)
       pendingTap.current = null
     }
-
     const timer = window.setTimeout(() => {
       rotateCell(index, 1)
       pendingTap.current = null
     }, 220)
-
     pendingTap.current = { index, timer }
   }
 
+  const pct = Math.round((status.connectedCount / board.length) * 100)
+
   return (
-    <div className="flex h-full flex-col gap-4 p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
+    <div className="flex h-full flex-col gap-3 p-5">
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
             Netwalk
           </p>
-          <p className="mt-0.5 text-xs text-[var(--color-muted)]">
-            Tap clockwise, double tap counter-clockwise, and connect every terminal.
+          <p className="mt-1 text-[13px] leading-snug text-[var(--color-text)] font-medium">
+            Someone scrambled your network.
+          </p>
+          <p className="mt-0.5 text-xs leading-relaxed text-[var(--color-muted)]">
+            Rotate every piece so that every terminal is connected to the server with no loose ends.
+          </p>
+          <p className="mt-1.5 text-[11px] text-[var(--color-muted)]">
+            Click to rotate · double-click to rotate back
           </p>
         </div>
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-right">
+        <div className="flex-shrink-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-right">
           <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Moves</div>
           <div className="text-lg font-bold leading-tight text-[var(--color-text)]">{moves}</div>
         </div>
       </div>
 
+      {/* Board */}
       <div className="flex flex-1 items-center justify-center">
         <div
-          className="grid w-full max-w-[280px] gap-1.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-2.5"
-          style={{ gridTemplateColumns: `repeat(${NETWALK_SIZE}, minmax(0, 1fr))` }}
+          className="grid w-full max-w-[270px] overflow-hidden rounded-2xl"
+          style={{
+            gridTemplateColumns: `repeat(${NETWALK_SIZE}, minmax(0, 1fr))`,
+            gap: '1px',
+            background: 'var(--color-border)',
+            border: '1px solid var(--color-border)',
+          }}
         >
           {board.map((cell, index) => {
             const mask = rotateMask(cell.baseMask, cell.rotation)
+            const isConnected = status.connectedIndices.has(index)
+            const hasN = Boolean(mask & DIR_BITS[0])
+            const hasE = Boolean(mask & DIR_BITS[1])
+            const hasS = Boolean(mask & DIR_BITS[2])
+            const hasW = Boolean(mask & DIR_BITS[3])
+            const pipe = isConnected ? '#0EA5A0' : '#CBD5E1'
+            const node = isConnected ? '#0EA5A0' : '#94A3B8'
+
             return (
               <button
-                key={`netwalk-${index}`}
+                key={index}
                 type="button"
                 onClick={() => handleTilePress(index)}
-                className="relative aspect-square rounded-xl border border-[var(--color-border)] bg-white transition hover:border-[var(--color-accent)]"
+                className={`relative aspect-square transition-colors ${
+                  status.solved ? 'cursor-default' : 'cursor-pointer hover:brightness-95'
+                } ${isConnected ? 'bg-teal-50' : 'bg-white'}`}
                 aria-label={`Rotate network tile ${index + 1}`}
               >
-                {(mask & DIR_BITS[0]) !== 0 && (
-                  <div className="absolute left-1/2 top-[8%] h-[28%] w-[12%] -translate-x-1/2 rounded-full bg-[var(--color-accent)]" />
-                )}
-                {(mask & DIR_BITS[1]) !== 0 && (
-                  <div className="absolute right-[8%] top-1/2 h-[12%] w-[28%] -translate-y-1/2 rounded-full bg-[var(--color-accent)]" />
-                )}
-                {(mask & DIR_BITS[2]) !== 0 && (
-                  <div className="absolute bottom-[8%] left-1/2 h-[28%] w-[12%] -translate-x-1/2 rounded-full bg-[var(--color-accent)]" />
-                )}
-                {(mask & DIR_BITS[3]) !== 0 && (
-                  <div className="absolute left-[8%] top-1/2 h-[12%] w-[28%] -translate-y-1/2 rounded-full bg-[var(--color-accent)]" />
-                )}
-                <div
-                  className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ${
-                    cell.isServer
-                      ? 'h-[36%] w-[36%] border border-teal-300 bg-teal-100 shadow-[0_0_0_4px_rgba(14,165,160,0.14)]'
-                      : 'h-[24%] w-[24%] bg-[var(--color-accent)]'
-                  }`}
-                />
+                <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" style={{ overflow: 'visible' }}>
+                  {/* Pipe arms */}
+                  {hasN && <line x1="50" y1="50" x2="50" y2="0"   stroke={pipe} strokeWidth="20" strokeLinecap="butt" />}
+                  {hasE && <line x1="50" y1="50" x2="100" y2="50" stroke={pipe} strokeWidth="20" strokeLinecap="butt" />}
+                  {hasS && <line x1="50" y1="50" x2="50" y2="100" stroke={pipe} strokeWidth="20" strokeLinecap="butt" />}
+                  {hasW && <line x1="50" y1="50" x2="0"   y2="50" stroke={pipe} strokeWidth="20" strokeLinecap="butt" />}
+                  {/* Node */}
+                  {cell.isServer ? (
+                    <g>
+                      <rect x="27" y="29" width="46" height="42" rx="7" fill={node} />
+                      <rect x="33" y="37" width="28" height="7" rx="2" fill="white" opacity="0.95" />
+                      <rect x="33" y="49" width="28" height="7" rx="2" fill="white" opacity="0.95" />
+                      <circle cx="65" cy="40.5" r="2.5" fill={node} />
+                      <circle cx="65" cy="52.5" r="2.5" fill={node} />
+                    </g>
+                  ) : (
+                    <circle cx="50" cy="50" r="11" fill={node} />
+                  )}
+                </svg>
               </button>
             )
           })}
         </div>
       </div>
 
+      {/* Footer */}
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-[var(--color-text)]">
-          {status.solved ? '🎉 Network restored!' : `${status.connectedCount}/${board.length} pieces connected to the server.`}
-        </p>
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          <div className="h-2 w-20 flex-shrink-0 overflow-hidden rounded-full bg-[var(--color-border)]">
+            <div
+              className="h-full rounded-full bg-[var(--color-accent)] transition-all duration-300"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <p className="truncate text-sm font-medium text-[var(--color-text)]">
+            {status.solved ? '🎉 Network restored!' : `${status.connectedCount} / ${board.length} connected`}
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => { setBoard(createNetwalkBoard()); setMoves(0) }}
-          className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+          className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
         >
           New Board
         </button>

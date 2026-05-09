@@ -1,187 +1,225 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
-import { Calendar, ChevronRight, Puzzle, Sparkles } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { ArrowLeft, Calendar, Puzzle } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { signOut } from '@/lib/auth'
 import { canManagePuzzleWeekIdentity } from '@/lib/featureFlags'
 
-const BONUS_PUZZLES = [
-  {
-    title: 'Sudoku',
-    blurb: 'A classic number-placement grid with a clean square play area.',
-    accent: 'from-sky-100 to-cyan-50',
-  },
-  {
-    title: 'Nonogram',
-    blurb: 'Picture-logic rows and columns with room for a satisfying square grid.',
-    accent: 'from-emerald-100 to-teal-50',
-  },
-  {
-    title: 'Jigsaw Puzzle',
-    blurb: 'A square image puzzle area ready for draggable pieces and snap zones.',
-    accent: 'from-amber-100 to-orange-50',
-  },
-  {
-    title: 'Lights Out',
-    blurb: 'A tidy square board for toggle strategy and quick replay rounds.',
-    accent: 'from-fuchsia-100 to-rose-50',
-  },
-] as const
+// ---------- game constants ----------
 
 const LIGHTS_OUT_SIZE = 5
 const SLIDER_SIZE = 4
+const NETWALK_SIZE = 5
+const DIR_BITS = [1, 2, 4, 8] as const
 
-function toggleLightsOutCell(board: boolean[], row: number, col: number) {
+type NetwalkCell = {
+  baseMask: number
+  rotation: number
+  isServer: boolean
+}
+
+// ---------- Lights Out logic ----------
+
+function toggleCell(board: boolean[], row: number, col: number, size: number) {
   const next = [...board]
-  const deltas = [
-    [0, 0],
-    [-1, 0],
-    [1, 0],
-    [0, -1],
-    [0, 1],
-  ]
-
-  for (const [dr, dc] of deltas) {
-    const nr = row + dr
-    const nc = col + dc
-    if (nr < 0 || nr >= LIGHTS_OUT_SIZE || nc < 0 || nc >= LIGHTS_OUT_SIZE) continue
-    const index = nr * LIGHTS_OUT_SIZE + nc
-    next[index] = !next[index]
+  for (const [dr, dc] of [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]]) {
+    const nr = row + dr, nc = col + dc
+    if (nr < 0 || nr >= size || nc < 0 || nc >= size) continue
+    next[nr * size + nc] = !next[nr * size + nc]
   }
-
   return next
 }
 
 function createLightsOutBoard() {
-  let board = Array.from({ length: LIGHTS_OUT_SIZE * LIGHTS_OUT_SIZE }, () => false)
-  const scrambleMoves = 14 + Math.floor(Math.random() * 8)
-
-  for (let i = 0; i < scrambleMoves; i += 1) {
-    const row = Math.floor(Math.random() * LIGHTS_OUT_SIZE)
-    const col = Math.floor(Math.random() * LIGHTS_OUT_SIZE)
-    board = toggleLightsOutCell(board, row, col)
+  let board = Array<boolean>(LIGHTS_OUT_SIZE * LIGHTS_OUT_SIZE).fill(false)
+  const moves = 14 + Math.floor(Math.random() * 8)
+  for (let i = 0; i < moves; i++) {
+    const r = Math.floor(Math.random() * LIGHTS_OUT_SIZE)
+    const c = Math.floor(Math.random() * LIGHTS_OUT_SIZE)
+    board = toggleCell(board, r, c, LIGHTS_OUT_SIZE)
   }
-
-  if (board.every(cell => !cell)) {
-    return toggleLightsOutCell(board, 2, 2)
-  }
-
+  if (board.every(c => !c)) board = toggleCell(board, 2, 2, LIGHTS_OUT_SIZE)
   return board
 }
 
-function sliderNeighbors(emptyIndex: number) {
-  const row = Math.floor(emptyIndex / SLIDER_SIZE)
-  const col = emptyIndex % SLIDER_SIZE
-  const neighbors: number[] = []
-  if (row > 0) neighbors.push(emptyIndex - SLIDER_SIZE)
-  if (row < SLIDER_SIZE - 1) neighbors.push(emptyIndex + SLIDER_SIZE)
-  if (col > 0) neighbors.push(emptyIndex - 1)
-  if (col < SLIDER_SIZE - 1) neighbors.push(emptyIndex + 1)
-  return neighbors
+// ---------- Slider Puzzle logic ----------
+
+function sliderNeighbors(emptyIdx: number) {
+  const r = Math.floor(emptyIdx / SLIDER_SIZE), c = emptyIdx % SLIDER_SIZE
+  const n: number[] = []
+  if (r > 0) n.push(emptyIdx - SLIDER_SIZE)
+  if (r < SLIDER_SIZE - 1) n.push(emptyIdx + SLIDER_SIZE)
+  if (c > 0) n.push(emptyIdx - 1)
+  if (c < SLIDER_SIZE - 1) n.push(emptyIdx + 1)
+  return n
 }
 
 function createSliderBoard() {
-  let board = Array.from({ length: SLIDER_SIZE * SLIDER_SIZE }, (_, index) =>
-    index === SLIDER_SIZE * SLIDER_SIZE - 1 ? 0 : index + 1
-  )
-  let emptyIndex = board.length - 1
-  let previousEmpty = -1
+  const total = SLIDER_SIZE * SLIDER_SIZE
+  let board = Array.from({ length: total }, (_, i) => (i === total - 1 ? 0 : i + 1))
+  let e = total - 1, prev = -1
+  for (let i = 0; i < 200; i++) {
+    const choices = sliderNeighbors(e).filter(n => n !== prev)
+    const pick = choices[Math.floor(Math.random() * choices.length)]
+    board[e] = board[pick]; board[pick] = 0
+    prev = e; e = pick
+  }
+  if (board.every((v, i) => (i === total - 1 ? v === 0 : v === i + 1))) {
+    const nb = sliderNeighbors(e)[0]
+    board[e] = board[nb]; board[nb] = 0
+  }
+  return board
+}
 
-  for (let i = 0; i < 180; i += 1) {
-    const choices = sliderNeighbors(emptyIndex).filter(index => index !== previousEmpty)
-    const chosen = choices[Math.floor(Math.random() * choices.length)]
-    board[emptyIndex] = board[chosen]
-    board[chosen] = 0
-    previousEmpty = emptyIndex
-    emptyIndex = chosen
+// ---------- Netwalk logic ----------
+
+function rotateMask(mask: number, turns: number) {
+  const normalized = ((turns % 4) + 4) % 4
+  if (normalized === 0) return mask
+  return ((mask << normalized) | (mask >> (4 - normalized))) & 15
+}
+
+function netwalkNeighbors(index: number) {
+  const row = Math.floor(index / NETWALK_SIZE)
+  const col = index % NETWALK_SIZE
+  const neighbors: Array<{ index: number; dir: number; opposite: number }> = []
+  if (row > 0) neighbors.push({ index: index - NETWALK_SIZE, dir: 0, opposite: 2 })
+  if (col < NETWALK_SIZE - 1) neighbors.push({ index: index + 1, dir: 1, opposite: 3 })
+  if (row < NETWALK_SIZE - 1) neighbors.push({ index: index + NETWALK_SIZE, dir: 2, opposite: 0 })
+  if (col > 0) neighbors.push({ index: index - 1, dir: 3, opposite: 1 })
+  return neighbors
+}
+
+function createNetwalkBoard() {
+  const total = NETWALK_SIZE * NETWALK_SIZE
+  const root = Math.floor(total / 2)
+  const visited = Array.from({ length: total }, () => false)
+  const masks = Array.from({ length: total }, () => 0)
+
+  function visit(index: number) {
+    visited[index] = true
+    const shuffled = netwalkNeighbors(index).sort(() => Math.random() - 0.5)
+    for (const neighbor of shuffled) {
+      if (visited[neighbor.index]) continue
+      masks[index] |= DIR_BITS[neighbor.dir]
+      masks[neighbor.index] |= DIR_BITS[neighbor.opposite]
+      visit(neighbor.index)
+    }
   }
 
-  const solved = board.every((value, index) =>
-    index === board.length - 1 ? value === 0 : value === index + 1
-  )
+  visit(root)
 
-  if (solved) {
-    const neighbor = sliderNeighbors(emptyIndex)[0]
-    board[emptyIndex] = board[neighbor]
-    board[neighbor] = 0
+  const board = masks.map((baseMask, index) => ({
+    baseMask,
+    rotation: Math.floor(Math.random() * 4),
+    isServer: index === root,
+  }))
+
+  if (board.every(cell => cell.rotation === 0 || cell.baseMask === 15)) {
+    const rotatableIndex = board.findIndex(cell => cell.baseMask !== 15)
+    if (rotatableIndex >= 0) {
+      board[rotatableIndex] = { ...board[rotatableIndex], rotation: 1 }
+    }
   }
 
   return board
 }
+
+function getNetwalkStatus(board: NetwalkCell[]) {
+  const serverIndex = board.findIndex(cell => cell.isServer)
+  if (serverIndex === -1) return { solved: false, connectedCount: 0 }
+
+  const visited = new Set<number>([serverIndex])
+  const queue = [serverIndex]
+  let looseEnds = false
+
+  while (queue.length) {
+    const index = queue.shift()!
+    const mask = rotateMask(board[index].baseMask, board[index].rotation)
+
+    for (const neighbor of netwalkNeighbors(index)) {
+      const hasEdge = (mask & DIR_BITS[neighbor.dir]) !== 0
+      const neighborMask = rotateMask(board[neighbor.index].baseMask, board[neighbor.index].rotation)
+      const neighborHasEdge = (neighborMask & DIR_BITS[neighbor.opposite]) !== 0
+
+      if (hasEdge !== neighborHasEdge) looseEnds = true
+
+      if (hasEdge && neighborHasEdge && !visited.has(neighbor.index)) {
+        visited.add(neighbor.index)
+        queue.push(neighbor.index)
+      }
+    }
+  }
+
+  return {
+    solved: !looseEnds && visited.size === board.length,
+    connectedCount: visited.size,
+  }
+}
+
+// ---------- game components ----------
 
 function SliderPuzzleBoard() {
   const [board, setBoard] = useState<number[]>(() => createSliderBoard())
   const [moves, setMoves] = useState(0)
 
-  const solved = board.every((value, index) =>
-    index === board.length - 1 ? value === 0 : value === index + 1
-  )
+  const total = SLIDER_SIZE * SLIDER_SIZE
+  const solved = board.every((v, i) => (i === total - 1 ? v === 0 : v === i + 1))
+  const emptyIdx = board.indexOf(0)
 
-  function handlePress(index: number) {
-    const emptyIndex = board.indexOf(0)
-    if (solved || !sliderNeighbors(emptyIndex).includes(index)) return
-
-    setBoard(current => {
-      const next = [...current]
-      const currentEmpty = next.indexOf(0)
-      next[currentEmpty] = next[index]
-      next[index] = 0
+  function handlePress(idx: number) {
+    if (solved || !sliderNeighbors(emptyIdx).includes(idx)) return
+    setBoard(prev => {
+      const next = [...prev]
+      const e = next.indexOf(0)
+      next[e] = next[idx]; next[idx] = 0
       return next
     })
-    setMoves(current => current + 1)
-  }
-
-  function handleReset() {
-    setBoard(createSliderBoard())
-    setMoves(0)
+    setMoves(m => m + 1)
   }
 
   return (
-    <div className="flex h-full flex-col rounded-[1.35rem] bg-white/80 p-4 shadow-inner">
+    <div className="flex h-full flex-col gap-4 p-5">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
             Slider Puzzle
           </p>
-          <p className="mt-1 text-xs text-[var(--color-muted)]">
-            Arrange the numbered tiles from 1 to 15.
-          </p>
+          <p className="mt-0.5 text-xs text-[var(--color-muted)]">Arrange the tiles 1 – 15 in order.</p>
         </div>
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white px-3 py-1 text-right shadow-sm">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-muted)]">
-            Moves
-          </div>
-          <div className="text-lg font-semibold text-[var(--color-text)]">{moves}</div>
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-right">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Moves</div>
+          <div className="text-lg font-bold leading-tight text-[var(--color-text)]">{moves}</div>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-1 items-center justify-center">
+      <div className="flex flex-1 items-center justify-center">
         <div
-          className="grid aspect-square w-full max-w-[290px] gap-2 rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-3"
+          className="grid w-full max-w-[280px] gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-3"
           style={{ gridTemplateColumns: `repeat(${SLIDER_SIZE}, minmax(0, 1fr))` }}
         >
-          {board.map((value, index) => {
-            const movable = sliderNeighbors(board.indexOf(0)).includes(index)
+          {board.map((value, idx) => {
             if (value === 0) {
               return (
                 <div
-                  key={`empty-${index}`}
-                  className="rounded-2xl border border-dashed border-[var(--color-border)] bg-white/40"
+                  key="empty"
+                  className="aspect-square rounded-xl border border-dashed border-[var(--color-border)] bg-white/40"
                 />
               )
             }
+            const movable = !solved && sliderNeighbors(emptyIdx).includes(idx)
             return (
               <button
-                key={`${value}-${index}`}
+                key={value}
                 type="button"
-                onClick={() => handlePress(index)}
-                className={`aspect-square rounded-2xl border text-lg font-semibold transition ${
-                  movable && !solved
-                    ? 'border-teal-300 bg-[var(--color-accent-light)] text-[var(--color-text)] hover:-translate-y-0.5 hover:border-[var(--color-accent)]'
-                    : 'border-slate-200 bg-white text-[var(--color-text)]'
-                } ${solved ? 'cursor-default' : ''}`}
+                onClick={() => handlePress(idx)}
+                className={`aspect-square rounded-xl border text-base font-semibold transition-colors ${
+                  movable
+                    ? 'cursor-pointer border-teal-300 bg-[var(--color-accent-light)] text-[var(--color-text)] hover:border-[var(--color-accent)]'
+                    : 'cursor-default border-slate-200 bg-white text-[var(--color-text)]'
+                }`}
               >
                 {value}
               </button>
@@ -190,14 +228,14 @@ function SliderPuzzleBoard() {
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <div className="min-h-[1.25rem] text-sm font-medium text-[var(--color-text)]">
-          {solved ? 'Solved! Beautiful finish.' : 'Use the open space to slide tiles into place.'}
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-[var(--color-text)]">
+          {solved ? '🎉 Solved!' : 'Slide tiles into the empty space.'}
+        </p>
         <button
           type="button"
-          onClick={handleReset}
-          className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+          onClick={() => { setBoard(createSliderBoard()); setMoves(0) }}
+          className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
         >
           New Board
         </button>
@@ -210,71 +248,61 @@ function LightsOutBoard() {
   const [board, setBoard] = useState<boolean[]>(() => createLightsOutBoard())
   const [moves, setMoves] = useState(0)
 
-  const solved = board.every(cell => !cell)
+  const solved = board.every(c => !c)
 
-  function handlePress(row: number, col: number) {
+  function handlePress(r: number, c: number) {
     if (solved) return
-    setBoard(current => toggleLightsOutCell(current, row, col))
-    setMoves(current => current + 1)
-  }
-
-  function handleReset() {
-    setBoard(createLightsOutBoard())
-    setMoves(0)
+    setBoard(prev => toggleCell(prev, r, c, LIGHTS_OUT_SIZE))
+    setMoves(m => m + 1)
   }
 
   return (
-    <div className="flex h-full flex-col rounded-[1.35rem] bg-white/80 p-3 shadow-inner">
-      <div className="flex items-start justify-between gap-2">
+    <div className="flex h-full flex-col gap-4 p-5">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
             Lights Out
           </p>
-          <p className="mt-1 max-w-[11rem] text-[11px] leading-snug text-[var(--color-muted)]">
-            Turn every light off by toggling a circle and its neighbors.
-          </p>
+          <p className="mt-0.5 text-xs text-[var(--color-muted)]">Toggle a cell and its neighbors. Turn every light off.</p>
         </div>
-        <div className="rounded-xl border border-[var(--color-border)] bg-white px-2.5 py-1 text-right shadow-sm">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-muted)]">
-            Moves
-          </div>
-          <div className="text-base font-semibold text-[var(--color-text)]">{moves}</div>
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-right">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Moves</div>
+          <div className="text-lg font-bold leading-tight text-[var(--color-text)]">{moves}</div>
         </div>
       </div>
 
-      <div className="mt-3 flex flex-1 items-center justify-center">
+      <div className="flex flex-1 items-center justify-center">
         <div
-          className="grid aspect-square w-full max-w-[250px] gap-2 rounded-[1.35rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-3"
+          className="grid w-full max-w-[260px] gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-3"
           style={{ gridTemplateColumns: `repeat(${LIGHTS_OUT_SIZE}, minmax(0, 1fr))` }}
         >
-          {board.map((isOn, index) => {
-            const row = Math.floor(index / LIGHTS_OUT_SIZE)
-            const col = index % LIGHTS_OUT_SIZE
+          {board.map((isOn, idx) => {
+            const r = Math.floor(idx / LIGHTS_OUT_SIZE), c = idx % LIGHTS_OUT_SIZE
             return (
               <button
-                key={`${row}-${col}`}
+                key={idx}
                 type="button"
-                onClick={() => handlePress(row, col)}
+                onClick={() => handlePress(r, c)}
+                aria-label={`Toggle light ${r + 1}, ${c + 1}`}
                 className={`aspect-square rounded-full border transition duration-150 ${
                   isOn
-                    ? 'border-teal-300 bg-[var(--color-accent)] shadow-[0_0_0_3px_rgba(46,196,182,0.16)]'
-                    : 'border-slate-200 bg-white hover:border-[var(--color-border)]'
-                } ${solved ? 'cursor-default' : 'hover:scale-[1.03] active:scale-[0.98]'}`}
-                aria-label={`Toggle light ${row + 1}, ${col + 1}`}
+                    ? 'border-teal-300 bg-[var(--color-accent)] shadow-[0_0_0_3px_rgba(14,165,160,0.16)]'
+                    : 'border-slate-200 bg-white'
+                } ${solved ? 'cursor-default' : 'hover:scale-105 active:scale-95'}`}
               />
             )
           })}
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <div className="min-h-[1.25rem] pr-2 text-[13px] font-medium leading-snug text-[var(--color-text)]">
-          {solved ? 'Solved! Nice work.' : 'All circles need to go dark.'}
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-[var(--color-text)]">
+          {solved ? '🎉 Solved!' : 'All circles need to go dark.'}
+        </p>
         <button
           type="button"
-          onClick={handleReset}
-          className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+          onClick={() => { setBoard(createLightsOutBoard()); setMoves(0) }}
+          className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
         >
           New Board
         </button>
@@ -283,131 +311,273 @@ function LightsOutBoard() {
   )
 }
 
+function NetwalkBoard() {
+  const [board, setBoard] = useState<NetwalkCell[]>(() => createNetwalkBoard())
+  const [moves, setMoves] = useState(0)
+  const pendingTap = useRef<{ index: number; timer: number } | null>(null)
+  const status = getNetwalkStatus(board)
+
+  function rotateCell(index: number, amount: number) {
+    setBoard(prev =>
+      prev.map((cell, cellIndex) =>
+        cellIndex === index ? { ...cell, rotation: ((cell.rotation + amount) % 4 + 4) % 4 } : cell
+      )
+    )
+    setMoves(m => m + 1)
+  }
+
+  function handleTilePress(index: number) {
+    if (status.solved) return
+
+    if (pendingTap.current && pendingTap.current.index === index) {
+      window.clearTimeout(pendingTap.current.timer)
+      pendingTap.current = null
+      rotateCell(index, -1)
+      return
+    }
+
+    if (pendingTap.current) {
+      window.clearTimeout(pendingTap.current.timer)
+      pendingTap.current = null
+    }
+
+    const timer = window.setTimeout(() => {
+      rotateCell(index, 1)
+      pendingTap.current = null
+    }, 220)
+
+    pendingTap.current = { index, timer }
+  }
+
+  return (
+    <div className="flex h-full flex-col gap-4 p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+            Netwalk
+          </p>
+          <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+            Tap clockwise, double tap counter-clockwise, and connect every terminal.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-right">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Moves</div>
+          <div className="text-lg font-bold leading-tight text-[var(--color-text)]">{moves}</div>
+        </div>
+      </div>
+
+      <div className="flex flex-1 items-center justify-center">
+        <div
+          className="grid w-full max-w-[280px] gap-1.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-2.5"
+          style={{ gridTemplateColumns: `repeat(${NETWALK_SIZE}, minmax(0, 1fr))` }}
+        >
+          {board.map((cell, index) => {
+            const mask = rotateMask(cell.baseMask, cell.rotation)
+            return (
+              <button
+                key={`netwalk-${index}`}
+                type="button"
+                onClick={() => handleTilePress(index)}
+                className="relative aspect-square rounded-xl border border-[var(--color-border)] bg-white transition hover:border-[var(--color-accent)]"
+                aria-label={`Rotate network tile ${index + 1}`}
+              >
+                {(mask & DIR_BITS[0]) !== 0 && (
+                  <div className="absolute left-1/2 top-[8%] h-[28%] w-[12%] -translate-x-1/2 rounded-full bg-[var(--color-accent)]" />
+                )}
+                {(mask & DIR_BITS[1]) !== 0 && (
+                  <div className="absolute right-[8%] top-1/2 h-[12%] w-[28%] -translate-y-1/2 rounded-full bg-[var(--color-accent)]" />
+                )}
+                {(mask & DIR_BITS[2]) !== 0 && (
+                  <div className="absolute bottom-[8%] left-1/2 h-[28%] w-[12%] -translate-x-1/2 rounded-full bg-[var(--color-accent)]" />
+                )}
+                {(mask & DIR_BITS[3]) !== 0 && (
+                  <div className="absolute left-[8%] top-1/2 h-[12%] w-[28%] -translate-y-1/2 rounded-full bg-[var(--color-accent)]" />
+                )}
+                <div
+                  className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ${
+                    cell.isServer
+                      ? 'h-[36%] w-[36%] border border-teal-300 bg-teal-100 shadow-[0_0_0_4px_rgba(14,165,160,0.14)]'
+                      : 'h-[24%] w-[24%] bg-[var(--color-accent)]'
+                  }`}
+                />
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-[var(--color-text)]">
+          {status.solved ? '🎉 Network restored!' : `${status.connectedCount}/${board.length} pieces connected to the server.`}
+        </p>
+        <button
+          type="button"
+          onClick={() => { setBoard(createNetwalkBoard()); setMoves(0) }}
+          className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+        >
+          New Board
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ComingSoonCard({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="flex min-h-[320px] flex-col items-center justify-center rounded-3xl border border-dashed border-[var(--color-border)] bg-white/60 p-10 text-center shadow-sm">
+      <div className="rounded-2xl bg-[var(--color-accent-light)] p-3 text-[var(--color-accent)]">
+        <Puzzle className="h-6 w-6" />
+      </div>
+      <h3 className="mt-4 text-lg font-semibold text-[var(--color-text)]">{title}</h3>
+      <p className="mt-2 max-w-[200px] text-sm leading-relaxed text-[var(--color-muted)]">{description}</p>
+      <div className="mt-5 rounded-full bg-[var(--color-accent-light)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+        Coming Soon
+      </div>
+    </div>
+  )
+}
+
+// ---------- page ----------
+
 export function PuzzleWeekBonusHub() {
   const { user, isGuest } = useAuth()
   const canManage = canManagePuzzleWeekIdentity(user)
 
-  async function handleSignOut() {
-    await signOut()
-  }
+  const navButtons = (
+    <>
+      <Link
+        href="https://puzzleweek.abrastat.com"
+        className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+      >
+        Main Puzzles
+      </Link>
+      {canManage && (
+        <Link
+          href="/puzzleweek/admin"
+          className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+        >
+          Admin
+        </Link>
+      )}
+      {user && !isGuest && (
+        <button
+          onClick={() => void signOut()}
+          className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+        >
+          Sign out
+        </button>
+      )}
+    </>
+  )
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/home" className="shrink-0 select-none" aria-label="Return to AbraStat">
+      <div className="mx-auto max-w-5xl space-y-6">
+
+        {/* ── Mobile header ── */}
+        <div className="sm:hidden space-y-3">
+          <div className="flex items-center justify-between">
+            <Link href="https://puzzleweek.abrastat.com" className="select-none">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.svg" alt="AbraStat" className="h-auto w-32 sm:w-44" />
+              <img src="/logo.svg" alt="AbraStat" style={{ width: '140px', height: 'auto' }} />
             </Link>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)] sm:text-xs">
-                HHS Math Department Presents
-              </p>
-              <h1
-                className="mt-1 text-3xl font-semibold leading-tight text-[var(--color-text)] sm:text-5xl"
-                style={{ fontFamily: 'var(--font-fraunces)' }}
-              >
-                Bonus Puzzles
-              </h1>
-              <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] shadow-sm">
-                <Calendar className="h-3 w-3" />
-                Puzzle Week 2026 extras
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href="https://puzzleweek.abrastat.com"
-              className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
-            >
-              Main Puzzle Week
-            </Link>
-            {canManage && (
+            <div className="flex items-center gap-2">
               <Link
-                href="/puzzleweek/admin"
-                className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+                href="https://puzzleweek.abrastat.com"
+                className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-slate-50"
               >
-                Admin
+                Main Puzzles
               </Link>
-            )}
-            {user && !isGuest && (
-              <button
-                onClick={() => void handleSignOut()}
-                className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
-              >
-                Sign out
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-[var(--color-border)] bg-white/80 p-6 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="rounded-2xl bg-[var(--color-accent-light)] p-2.5 text-[var(--color-accent)]">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold text-[var(--color-text)]">Bonus puzzle arcade</h2>
-              <p className="max-w-3xl text-sm leading-relaxed text-[var(--color-muted)]">
-                This page is our home for side puzzles during Puzzle Week. Each puzzle gets its own square container so
-                the play area feels intentional and roomy. For now, these are polished placeholders so we can grow each
-                puzzle one at a time without reworking the page structure later.
-              </p>
+              {user && !isGuest && (
+                <button
+                  onClick={() => void signOut()}
+                  className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+                >
+                  Sign out
+                </button>
+              )}
             </div>
           </div>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-2">
-          {BONUS_PUZZLES.map(item => (
-            <section
-              key={item.title}
-              className="overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm"
+          <div className="text-center space-y-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+              HHS Math Department Presents
+            </p>
+            <h1
+              className="text-3xl font-semibold leading-tight text-[var(--color-text)]"
+              style={{ fontFamily: 'var(--font-fraunces)' }}
             >
-              <div className={`border-b border-[var(--color-border)] bg-gradient-to-br ${item.accent} p-5`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-xl font-semibold text-[var(--color-text)]">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-[var(--color-muted)]">{item.blurb}</p>
-                  </div>
-                  <div className="rounded-2xl bg-white/80 p-2 text-[var(--color-accent)] shadow-sm">
-                    <Puzzle className="h-5 w-5" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-5">
-                <div className="aspect-square rounded-3xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                  {item.title === 'Sudoku' ? (
-                    <SliderPuzzleBoard />
-                  ) : item.title === 'Lights Out' ? (
-                    <LightsOutBoard />
-                  ) : (
-                    <div className="flex h-full flex-col items-center justify-center rounded-[1.35rem] bg-white/80 text-center shadow-inner">
-                      <div className="rounded-full bg-[var(--color-accent-light)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
-                        Coming Soon
-                      </div>
-                      <p className="mt-4 max-w-[14rem] text-sm leading-relaxed text-[var(--color-muted)]">
-                        Square puzzle container reserved for the interactive {item.title.toLowerCase()} build.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
-          ))}
+              Bonus Puzzles
+            </h1>
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] shadow-sm">
+              <Calendar className="h-3 w-3" />
+              Puzzle Week 2026 extras
+            </div>
+          </div>
         </div>
 
-        <div className="rounded-3xl border border-[var(--color-border)] bg-white p-5 shadow-sm">
+        {/* ── Desktop header ── */}
+        <div className="hidden sm:flex relative items-center py-2">
+          <Link href="https://puzzleweek.abrastat.com" className="relative z-10 flex-shrink-0 select-none">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(200px, 24vw, 320px)', height: 'auto' }} />
+          </Link>
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+              HHS Math Department Presents
+            </p>
+            <h1
+              className="mt-1 text-4xl sm:text-5xl font-semibold leading-tight text-[var(--color-text)]"
+              style={{ fontFamily: 'var(--font-fraunces)' }}
+            >
+              Bonus Puzzles
+            </h1>
+            <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] shadow-sm">
+              <Calendar className="h-3 w-3" />
+              Puzzle Week 2026 extras
+            </div>
+          </div>
+          <div className="relative z-10 ml-auto flex flex-shrink-0 items-center gap-2">
+            {navButtons}
+          </div>
+        </div>
+
+        {/* ── Puzzle grid ── */}
+        <div className="grid gap-5 md:grid-cols-2">
+
+          <section className="rounded-3xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden">
+            <div className="h-[360px]">
+              <SliderPuzzleBoard />
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden">
+            <div className="h-[360px]">
+              <LightsOutBoard />
+            </div>
+          </section>
+
+          <ComingSoonCard
+            title="Nonogram"
+            description="Fill in the grid using row and column clues to reveal a hidden picture."
+          />
+          <section className="rounded-3xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden">
+            <div className="h-[360px]">
+              <NetwalkBoard />
+            </div>
+          </section>
+        </div>
+
+        {/* ── Back link ── */}
+        <div className="flex justify-center pb-4">
           <Link
             href="https://puzzleweek.abrastat.com"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-accent)] transition hover:opacity-80"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-muted)] transition hover:text-[var(--color-text)]"
           >
+            <ArrowLeft className="h-4 w-4" />
             Back to Puzzle Week
-            <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
+
       </div>
     </main>
   )

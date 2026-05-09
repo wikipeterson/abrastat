@@ -224,27 +224,27 @@ function LightsOutBoard() {
   }
 
   return (
-    <div className="flex h-full flex-col rounded-[1.35rem] bg-white/80 p-4 shadow-inner">
-      <div className="flex items-center justify-between gap-3">
+    <div className="flex h-full flex-col rounded-[1.35rem] bg-white/80 p-3 shadow-inner">
+      <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
             Lights Out
           </p>
-          <p className="mt-1 text-xs text-[var(--color-muted)]">
+          <p className="mt-1 max-w-[11rem] text-[11px] leading-snug text-[var(--color-muted)]">
             Turn every light off by toggling a circle and its neighbors.
           </p>
         </div>
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white px-3 py-1 text-right shadow-sm">
+        <div className="rounded-xl border border-[var(--color-border)] bg-white px-2.5 py-1 text-right shadow-sm">
           <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-muted)]">
             Moves
           </div>
-          <div className="text-lg font-semibold text-[var(--color-text)]">{moves}</div>
+          <div className="text-base font-semibold text-[var(--color-text)]">{moves}</div>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-1 items-center justify-center">
+      <div className="mt-3 flex flex-1 items-center justify-center">
         <div
-          className="grid aspect-square w-full max-w-[290px] gap-3 rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-4"
+          className="grid aspect-square w-full max-w-[250px] gap-2 rounded-[1.35rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-3"
           style={{ gridTemplateColumns: `repeat(${LIGHTS_OUT_SIZE}, minmax(0, 1fr))` }}
         >
           {board.map((isOn, index) => {
@@ -257,7 +257,7 @@ function LightsOutBoard() {
                 onClick={() => handlePress(row, col)}
                 className={`aspect-square rounded-full border transition duration-150 ${
                   isOn
-                    ? 'border-teal-300 bg-[var(--color-accent)] shadow-[0_0_0_4px_rgba(46,196,182,0.16)]'
+                    ? 'border-teal-300 bg-[var(--color-accent)] shadow-[0_0_0_3px_rgba(46,196,182,0.16)]'
                     : 'border-slate-200 bg-white hover:border-[var(--color-border)]'
                 } ${solved ? 'cursor-default' : 'hover:scale-[1.03] active:scale-[0.98]'}`}
                 aria-label={`Toggle light ${row + 1}, ${col + 1}`}
@@ -267,14 +267,14 @@ function LightsOutBoard() {
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <div className="min-h-[1.25rem] text-sm font-medium text-[var(--color-text)]">
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="min-h-[1.25rem] pr-2 text-[13px] font-medium leading-snug text-[var(--color-text)]">
           {solved ? 'Solved! Nice work.' : 'All circles need to go dark.'}
         </div>
         <button
           type="button"
           onClick={handleReset}
-          className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+          className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
         >
           New Board
         </button>

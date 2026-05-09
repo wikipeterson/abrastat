@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { Calendar, ChevronRight, Puzzle, Sparkles } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { signOut } from '@/lib/auth'
@@ -28,6 +29,123 @@ const BONUS_PUZZLES = [
     accent: 'from-fuchsia-100 to-rose-50',
   },
 ] as const
+
+const LIGHTS_OUT_SIZE = 5
+
+function toggleLightsOutCell(board: boolean[], row: number, col: number) {
+  const next = [...board]
+  const deltas = [
+    [0, 0],
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+  ]
+
+  for (const [dr, dc] of deltas) {
+    const nr = row + dr
+    const nc = col + dc
+    if (nr < 0 || nr >= LIGHTS_OUT_SIZE || nc < 0 || nc >= LIGHTS_OUT_SIZE) continue
+    const index = nr * LIGHTS_OUT_SIZE + nc
+    next[index] = !next[index]
+  }
+
+  return next
+}
+
+function createLightsOutBoard() {
+  let board = Array.from({ length: LIGHTS_OUT_SIZE * LIGHTS_OUT_SIZE }, () => false)
+  const scrambleMoves = 14 + Math.floor(Math.random() * 8)
+
+  for (let i = 0; i < scrambleMoves; i += 1) {
+    const row = Math.floor(Math.random() * LIGHTS_OUT_SIZE)
+    const col = Math.floor(Math.random() * LIGHTS_OUT_SIZE)
+    board = toggleLightsOutCell(board, row, col)
+  }
+
+  if (board.every(cell => !cell)) {
+    return toggleLightsOutCell(board, 2, 2)
+  }
+
+  return board
+}
+
+function LightsOutBoard() {
+  const [board, setBoard] = useState<boolean[]>(() => createLightsOutBoard())
+  const [moves, setMoves] = useState(0)
+
+  const solved = board.every(cell => !cell)
+
+  function handlePress(row: number, col: number) {
+    if (solved) return
+    setBoard(current => toggleLightsOutCell(current, row, col))
+    setMoves(current => current + 1)
+  }
+
+  function handleReset() {
+    setBoard(createLightsOutBoard())
+    setMoves(0)
+  }
+
+  return (
+    <div className="flex h-full flex-col rounded-[1.35rem] bg-white/80 p-4 shadow-inner">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+            Lights Out
+          </p>
+          <p className="mt-1 text-xs text-[var(--color-muted)]">
+            Turn every light off by toggling a circle and its neighbors.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-[var(--color-border)] bg-white px-3 py-1 text-right shadow-sm">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-muted)]">
+            Moves
+          </div>
+          <div className="text-lg font-semibold text-[var(--color-text)]">{moves}</div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-1 items-center justify-center">
+        <div
+          className="grid aspect-square w-full max-w-[290px] gap-3 rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-4"
+          style={{ gridTemplateColumns: `repeat(${LIGHTS_OUT_SIZE}, minmax(0, 1fr))` }}
+        >
+          {board.map((isOn, index) => {
+            const row = Math.floor(index / LIGHTS_OUT_SIZE)
+            const col = index % LIGHTS_OUT_SIZE
+            return (
+              <button
+                key={`${row}-${col}`}
+                type="button"
+                onClick={() => handlePress(row, col)}
+                className={`aspect-square rounded-full border transition duration-150 ${
+                  isOn
+                    ? 'border-teal-300 bg-[var(--color-accent)] shadow-[0_0_0_4px_rgba(46,196,182,0.16)]'
+                    : 'border-slate-200 bg-white hover:border-[var(--color-border)]'
+                } ${solved ? 'cursor-default' : 'hover:scale-[1.03] active:scale-[0.98]'}`}
+                aria-label={`Toggle light ${row + 1}, ${col + 1}`}
+              />
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="min-h-[1.25rem] text-sm font-medium text-[var(--color-text)]">
+          {solved ? 'Solved! Nice work.' : 'All circles need to go dark.'}
+        </div>
+        <button
+          type="button"
+          onClick={handleReset}
+          className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+        >
+          New Board
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export function PuzzleWeekBonusHub() {
   const { user, isGuest } = useAuth()
@@ -125,14 +243,18 @@ export function PuzzleWeekBonusHub() {
 
               <div className="p-5">
                 <div className="aspect-square rounded-3xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                  <div className="flex h-full flex-col items-center justify-center rounded-[1.35rem] bg-white/80 text-center shadow-inner">
-                    <div className="rounded-full bg-[var(--color-accent-light)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
-                      Coming Soon
+                  {item.title === 'Lights Out' ? (
+                    <LightsOutBoard />
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center rounded-[1.35rem] bg-white/80 text-center shadow-inner">
+                      <div className="rounded-full bg-[var(--color-accent-light)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+                        Coming Soon
+                      </div>
+                      <p className="mt-4 max-w-[14rem] text-sm leading-relaxed text-[var(--color-muted)]">
+                        Square puzzle container reserved for the interactive {item.title.toLowerCase()} build.
+                      </p>
                     </div>
-                    <p className="mt-4 max-w-[14rem] text-sm leading-relaxed text-[var(--color-muted)]">
-                      Square puzzle container reserved for the interactive {item.title.toLowerCase()} build.
-                    </p>
-                  </div>
+                  )}
                 </div>
               </div>
             </section>

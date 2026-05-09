@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRef, useState } from 'react'
-import { ArrowLeft, Calendar, Puzzle } from 'lucide-react'
+import { ArrowLeft, Calendar } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { signOut } from '@/lib/auth'
 import { canManagePuzzleWeekIdentity } from '@/lib/featureFlags'
@@ -466,26 +466,59 @@ function NetwalkBoard() {
   )
 }
 
-function ComingSoonCard({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="flex min-h-[460px] flex-col items-center justify-center rounded-3xl border border-dashed border-[var(--color-border)] bg-white/60 p-10 text-center shadow-sm">
-      <div className="rounded-2xl bg-[var(--color-accent-light)] p-3 text-[var(--color-accent)]">
-        <Puzzle className="h-6 w-6" />
-      </div>
-      <h3 className="mt-4 text-lg font-semibold text-[var(--color-text)]">{title}</h3>
-      <p className="mt-2 max-w-[200px] text-sm leading-relaxed text-[var(--color-muted)]">{description}</p>
-      <div className="mt-5 rounded-full bg-[var(--color-accent-light)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
-        Coming Soon
-      </div>
-    </div>
-  )
-}
+// ---------- puzzle registry ----------
+
+const PUZZLE_LIST = [
+  {
+    id: 'slider',
+    name: 'Slider Puzzle',
+    emoji: '🔢',
+    desc: 'Arrange tiles 1–15 in order',
+    live: true,
+  },
+  {
+    id: 'lightsout',
+    name: 'Lights Out',
+    emoji: '💡',
+    desc: 'Toggle cells to turn every light off',
+    live: true,
+  },
+  {
+    id: 'netwalk',
+    name: 'Netwalk',
+    emoji: '🌐',
+    desc: 'Rotate pipes to restore the network',
+    live: true,
+  },
+  {
+    id: 'coming1',
+    name: 'More Coming Soon',
+    emoji: '🧩',
+    desc: 'New puzzles dropping during Puzzle Week',
+    live: false,
+  },
+]
+
+const LIVE_PUZZLES = PUZZLE_LIST.filter(p => p.live)
 
 // ---------- page ----------
 
 export function PuzzleWeekBonusHub() {
   const { user, isGuest } = useAuth()
   const canManage = canManagePuzzleWeekIdentity(user)
+
+  const [selectedId, setSelectedId] = useState(
+    () => LIVE_PUZZLES[Math.floor(Math.random() * LIVE_PUZZLES.length)].id
+  )
+
+  function renderGame() {
+    switch (selectedId) {
+      case 'slider':    return <SliderPuzzleBoard />
+      case 'lightsout': return <LightsOutBoard />
+      case 'netwalk':   return <NetwalkBoard />
+      default:          return null
+    }
+  }
 
   const navButtons = (
     <>
@@ -516,7 +549,7 @@ export function PuzzleWeekBonusHub() {
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="mx-auto max-w-6xl space-y-6">
 
         {/* ── Mobile header ── */}
         <div className="sm:hidden space-y-3">
@@ -585,36 +618,93 @@ export function PuzzleWeekBonusHub() {
           </div>
         </div>
 
-        {/* ── Puzzle grid ── */}
-        <div className="grid gap-5 md:grid-cols-2">
+        {/* ── Mobile puzzle selector ── */}
+        <div className="sm:hidden flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+          {PUZZLE_LIST.map(p => (
+            <button
+              key={p.id}
+              type="button"
+              disabled={!p.live}
+              onClick={() => p.live && setSelectedId(p.id)}
+              className={`flex-shrink-0 flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-sm font-medium transition ${
+                selectedId === p.id
+                  ? 'border-[var(--color-accent)] bg-teal-50 text-[var(--color-accent)]'
+                  : p.live
+                    ? 'border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-slate-50'
+                    : 'border-[var(--color-border)] bg-white/60 text-[var(--color-muted)] opacity-50 cursor-default'
+              }`}
+            >
+              <span>{p.emoji}</span>
+              <span>{p.name}</span>
+            </button>
+          ))}
+        </div>
 
-          <section className="rounded-3xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden">
-            <div className="h-[460px]">
-              <SliderPuzzleBoard />
+        {/* ── Main content: sidebar + game ── */}
+        <div className="flex gap-5 items-start">
+
+          {/* Sidebar (desktop only) */}
+          <aside className="hidden sm:flex flex-col w-56 flex-shrink-0 rounded-3xl border border-[var(--color-border)] bg-white shadow-sm p-3">
+            <p className="px-3 pt-2 pb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
+              Puzzles
+            </p>
+            <div className="flex flex-col gap-1">
+              {PUZZLE_LIST.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  disabled={!p.live}
+                  onClick={() => p.live && setSelectedId(p.id)}
+                  className={`flex items-start gap-3 rounded-2xl px-3 py-3 text-left transition ${
+                    selectedId === p.id
+                      ? 'bg-teal-50'
+                      : p.live
+                        ? 'hover:bg-slate-50 cursor-pointer'
+                        : 'opacity-50 cursor-default'
+                  }`}
+                >
+                  <span className="text-xl leading-none mt-0.5 flex-shrink-0">{p.emoji}</span>
+                  <div className="min-w-0">
+                    <p className={`text-sm font-semibold leading-snug ${
+                      selectedId === p.id ? 'text-[var(--color-accent)]' : 'text-[var(--color-text)]'
+                    }`}>
+                      {p.name}
+                    </p>
+                    <p className="mt-0.5 text-xs leading-snug text-[var(--color-muted)]">
+                      {p.desc}
+                    </p>
+                    {!p.live && (
+                      <span className="mt-1.5 inline-block rounded-full bg-[var(--color-accent-light)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-accent)]">
+                        Soon
+                      </span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-auto pt-4 border-t border-[var(--color-border)] px-3 pb-2">
+              <Link
+                href="https://puzzleweek.abrastat.com"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-muted)] transition hover:text-[var(--color-text)]"
+              >
+                <ArrowLeft className="h-3 w-3" />
+                Back to Puzzle Week
+              </Link>
+            </div>
+          </aside>
+
+          {/* Game card */}
+          <section className="flex-1 min-w-0 rounded-3xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden">
+            <div className="h-[520px]">
+              {renderGame()}
             </div>
           </section>
-
-          <section className="rounded-3xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden">
-            <div className="h-[460px]">
-              <LightsOutBoard />
-            </div>
-          </section>
-
-          <section className="rounded-3xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden">
-            <div className="h-[460px]">
-              <NetwalkBoard />
-            </div>
-          </section>
-
-          <ComingSoonCard
-            title="More Coming Soon"
-            description="More bonus puzzles dropping during Puzzle Week."
-          />
 
         </div>
 
-        {/* ── Back link ── */}
-        <div className="flex justify-center pb-4">
+        {/* ── Mobile back link ── */}
+        <div className="sm:hidden flex justify-center pb-4">
           <Link
             href="https://puzzleweek.abrastat.com"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-muted)] transition hover:text-[var(--color-text)]"

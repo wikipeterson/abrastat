@@ -868,91 +868,101 @@ export function PuzzleWeekBonusHub() {
     </>
   )
 
+  // Shared sidebar list (reused across mobile/desktop)
+  const puzzleList = (
+    <div className="flex flex-col gap-1">
+      {PUZZLE_LIST.map(p => (
+        <button
+          key={p.id}
+          type="button"
+          disabled={!p.live}
+          onClick={() => p.live && setSelectedId(p.id)}
+          className={`flex items-start gap-3 rounded-2xl px-3 py-3 text-left transition ${
+            selectedId === p.id
+              ? 'bg-teal-50'
+              : p.live
+                ? 'hover:bg-slate-50 cursor-pointer'
+                : 'opacity-50 cursor-default'
+          }`}
+        >
+          <span className="text-xl leading-none mt-0.5 flex-shrink-0">{p.emoji}</span>
+          <div className="min-w-0">
+            <p className={`text-sm font-semibold leading-snug ${
+              selectedId === p.id ? 'text-[var(--color-accent)]' : 'text-[var(--color-text)]'
+            }`}>
+              {p.name}
+            </p>
+            <p className="mt-0.5 text-xs leading-snug text-[var(--color-muted)]">{p.desc}</p>
+            {p.id === 'slider' && (
+              <div className="flex items-center gap-1 mt-1.5">
+                {(['easy', 'medium', 'hard'] as SliderLevel[]).map(l => (
+                  <span
+                    key={l}
+                    title={`${SLIDER_LABELS[l]}: ${sliderMedals.has(l) ? 'earned' : 'not yet earned'}`}
+                    className={`text-sm leading-none transition-opacity ${sliderMedals.has(l) ? 'opacity-100' : 'opacity-15'}`}
+                  >
+                    {SLIDER_MEDALS[l]}
+                  </span>
+                ))}
+              </div>
+            )}
+            {!p.live && (
+              <span className="mt-1.5 inline-block rounded-full bg-[var(--color-accent-light)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-accent)]">
+                Soon
+              </span>
+            )}
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+
   return (
-    <main className="min-h-screen bg-[var(--color-bg)] px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-
-        {/* ── Mobile header ── */}
-        <div className="sm:hidden space-y-3">
-          <div className="flex items-center justify-between">
-            <Link href="https://puzzleweek.abrastat.com" className="select-none">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.svg" alt="AbraStat" style={{ width: '140px', height: 'auto' }} />
-            </Link>
-            <div className="flex items-center gap-2">
-              <Link
-                href="https://puzzleweek.abrastat.com"
-                className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-slate-50"
-              >
-                Main Puzzles
-              </Link>
-              {user && !isGuest && (
-                <button
-                  onClick={() => void signOut()}
-                  className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-slate-50"
-                >
-                  Sign out
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="text-center space-y-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-              HHS Math Department Presents
-            </p>
-            <h1
-              className="text-3xl font-semibold leading-tight text-[var(--color-text)]"
-              style={{ fontFamily: 'var(--font-fraunces)' }}
-            >
-              Bonus Puzzles
-            </h1>
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] shadow-sm">
-              <Calendar className="h-3 w-3" />
-              Puzzle Week 2026 extras
-            </div>
-          </div>
-        </div>
-
-        {/* ── Desktop header ── */}
-        <div className="hidden sm:flex relative items-center py-2">
-          <Link href="https://puzzleweek.abrastat.com" className="relative z-10 flex-shrink-0 select-none">
+    <>
+      {/* ═══════ Mobile layout — viewport-locked, no page scroll ═══════ */}
+      {/* Page scroll is disabled so it doesn't interfere with game touch gestures */}
+      <main
+        className="sm:hidden flex flex-col bg-[var(--color-bg)]"
+        style={{ height: '100dvh', overflow: 'hidden' }}
+      >
+        {/* Compact nav bar */}
+        <div className="flex flex-shrink-0 items-center justify-between gap-2 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3">
+          <Link href="https://puzzleweek.abrastat.com" className="select-none">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(200px, 24vw, 320px)', height: 'auto' }} />
+            <img src="/logo.svg" alt="AbraStat" style={{ width: '110px', height: 'auto' }} />
           </Link>
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-              HHS Math Department Presents
-            </p>
-            <h1
-              className="mt-1 text-4xl sm:text-5xl font-semibold leading-tight text-[var(--color-text)]"
-              style={{ fontFamily: 'var(--font-fraunces)' }}
+          <div className="flex items-center gap-2">
+            <Link
+              href="https://puzzleweek.abrastat.com"
+              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
             >
-              Bonus Puzzles
-            </h1>
-            <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] shadow-sm">
-              <Calendar className="h-3 w-3" />
-              Puzzle Week 2026 extras
-            </div>
-          </div>
-          <div className="relative z-10 ml-auto flex flex-shrink-0 items-center gap-2">
-            {navButtons}
+              ← Main
+            </Link>
+            {user && !isGuest && (
+              <button
+                onClick={() => void signOut()}
+                className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
+              >
+                Sign out
+              </button>
+            )}
           </div>
         </div>
 
-        {/* ── Mobile puzzle selector ── */}
-        <div className="sm:hidden flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+        {/* Horizontal puzzle tabs */}
+        <div className="flex flex-shrink-0 gap-2 overflow-x-auto px-4 py-3">
           {PUZZLE_LIST.map(p => (
             <button
               key={p.id}
               type="button"
               disabled={!p.live}
               onClick={() => p.live && setSelectedId(p.id)}
-              className={`flex-shrink-0 flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-sm font-medium transition ${
+              className={`flex flex-shrink-0 items-center gap-1.5 rounded-2xl border px-3 py-2 text-sm font-medium ${
                 selectedId === p.id
                   ? 'border-[var(--color-accent)] bg-teal-50 text-[var(--color-accent)]'
                   : p.live
-                    ? 'border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-slate-50'
-                    : 'border-[var(--color-border)] bg-white/60 text-[var(--color-muted)] opacity-50 cursor-default'
+                    ? 'border-[var(--color-border)] bg-white text-[var(--color-text)]'
+                    : 'border-[var(--color-border)] bg-white/60 text-[var(--color-muted)] opacity-50'
               }`}
             >
               <span>{p.emoji}</span>
@@ -967,94 +977,71 @@ export function PuzzleWeekBonusHub() {
           ))}
         </div>
 
-        {/* ── Main content: sidebar + game ── */}
-        <div className="flex gap-5 items-start">
+        {/* Game fills every remaining pixel */}
+        <div className="min-h-0 flex-1 px-4 pb-4">
+          <div className="h-full overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm">
+            {renderGame()}
+          </div>
+        </div>
+      </main>
 
-          {/* Sidebar (desktop only) */}
-          <aside className="hidden sm:flex flex-col w-56 flex-shrink-0 rounded-3xl border border-[var(--color-border)] bg-white shadow-sm p-3">
-            <p className="px-3 pt-2 pb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
-              Puzzles
-            </p>
-            <div className="flex flex-col gap-1">
-              {PUZZLE_LIST.map(p => (
-                <button
-                  key={p.id}
-                  type="button"
-                  disabled={!p.live}
-                  onClick={() => p.live && setSelectedId(p.id)}
-                  className={`flex items-start gap-3 rounded-2xl px-3 py-3 text-left transition ${
-                    selectedId === p.id
-                      ? 'bg-teal-50'
-                      : p.live
-                        ? 'hover:bg-slate-50 cursor-pointer'
-                        : 'opacity-50 cursor-default'
-                  }`}
-                >
-                  <span className="text-xl leading-none mt-0.5 flex-shrink-0">{p.emoji}</span>
-                  <div className="min-w-0">
-                    <p className={`text-sm font-semibold leading-snug ${
-                      selectedId === p.id ? 'text-[var(--color-accent)]' : 'text-[var(--color-text)]'
-                    }`}>
-                      {p.name}
-                    </p>
-                    <p className="mt-0.5 text-xs leading-snug text-[var(--color-muted)]">
-                      {p.desc}
-                    </p>
-                    {p.id === 'slider' && (
-                      <div className="flex items-center gap-1 mt-1.5">
-                        {(['easy', 'medium', 'hard'] as SliderLevel[]).map(l => (
-                          <span
-                            key={l}
-                            title={`${SLIDER_LABELS[l]}: ${sliderMedals.has(l) ? 'earned' : 'not yet earned'}`}
-                            className={`text-sm leading-none transition-opacity ${sliderMedals.has(l) ? 'opacity-100' : 'opacity-15'}`}
-                          >
-                            {SLIDER_MEDALS[l]}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {!p.live && (
-                      <span className="mt-1.5 inline-block rounded-full bg-[var(--color-accent-light)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-accent)]">
-                        Soon
-                      </span>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
+      {/* ═══════ Desktop layout ═══════ */}
+      <main className="hidden sm:block min-h-screen bg-[var(--color-bg)] px-6 py-8">
+        <div className="mx-auto max-w-6xl space-y-6">
 
-            <div className="mt-auto pt-4 border-t border-[var(--color-border)] px-3 pb-2">
-              <Link
-                href="https://puzzleweek.abrastat.com"
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-muted)] transition hover:text-[var(--color-text)]"
+          {/* Header */}
+          <div className="flex relative items-center py-2">
+            <Link href="https://puzzleweek.abrastat.com" className="relative z-10 flex-shrink-0 select-none">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(200px, 24vw, 320px)', height: 'auto' }} />
+            </Link>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+                HHS Math Department Presents
+              </p>
+              <h1
+                className="mt-1 text-4xl lg:text-5xl font-semibold leading-tight text-[var(--color-text)]"
+                style={{ fontFamily: 'var(--font-fraunces)' }}
               >
-                <ArrowLeft className="h-3 w-3" />
-                Back to Puzzle Week
-              </Link>
+                Bonus Puzzles
+              </h1>
+              <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] shadow-sm">
+                <Calendar className="h-3 w-3" />
+                Puzzle Week 2026 extras
+              </div>
             </div>
-          </aside>
+            <div className="relative z-10 ml-auto flex flex-shrink-0 items-center gap-2">
+              {navButtons}
+            </div>
+          </div>
 
-          {/* Game card */}
-          <section className="flex-1 min-w-0 rounded-3xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden">
-            <div className="h-[520px]">
-              {renderGame()}
-            </div>
-          </section>
+          {/* Sidebar + game */}
+          <div className="flex gap-5 items-start">
+            <aside className="flex flex-col w-56 flex-shrink-0 rounded-3xl border border-[var(--color-border)] bg-white shadow-sm p-3">
+              <p className="px-3 pt-2 pb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
+                Puzzles
+              </p>
+              {puzzleList}
+              <div className="mt-auto pt-4 border-t border-[var(--color-border)] px-3 pb-2">
+                <Link
+                  href="https://puzzleweek.abrastat.com"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-muted)] transition hover:text-[var(--color-text)]"
+                >
+                  <ArrowLeft className="h-3 w-3" />
+                  Back to Puzzle Week
+                </Link>
+              </div>
+            </aside>
+
+            <section className="flex-1 min-w-0 overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm">
+              <div className="h-[520px]">
+                {renderGame()}
+              </div>
+            </section>
+          </div>
 
         </div>
-
-        {/* ── Mobile back link ── */}
-        <div className="sm:hidden flex justify-center pb-4">
-          <Link
-            href="https://puzzleweek.abrastat.com"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-muted)] transition hover:text-[var(--color-text)]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Puzzle Week
-          </Link>
-        </div>
-
-      </div>
-    </main>
+      </main>
+    </>
   )
 }

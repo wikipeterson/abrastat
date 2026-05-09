@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Calendar } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { signOut } from '@/lib/auth'
@@ -10,15 +10,25 @@ import { canManagePuzzleWeekIdentity } from '@/lib/featureFlags'
 // ---------- game constants ----------
 
 const LIGHTS_OUT_SIZE = 5
-const SLIDER_SIZE = 4
 const NETWALK_SIZE = 5
+const GAME_2048_SIZE = 4
 const DIR_BITS = [1, 2, 4, 8] as const
+
+// ---------- slider levels ----------
+
+type SliderLevel = 'easy' | 'medium' | 'hard'
+const SLIDER_SIZES: Record<SliderLevel, number> = { easy: 3, medium: 4, hard: 5 }
+const SLIDER_LABELS: Record<SliderLevel, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' }
+const SLIDER_MEDALS: Record<SliderLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
+const SLIDER_MEDALS_KEY = 'pw-slider-medals'
 
 type NetwalkCell = {
   baseMask: number
   rotation: number
   isServer: boolean
 }
+
+type Direction2048 = 'up' | 'down' | 'left' | 'right'
 
 // ---------- Lights Out logic ----------
 
@@ -46,28 +56,28 @@ function createLightsOutBoard() {
 
 // ---------- Slider Puzzle logic ----------
 
-function sliderNeighbors(emptyIdx: number) {
-  const r = Math.floor(emptyIdx / SLIDER_SIZE), c = emptyIdx % SLIDER_SIZE
+function sliderNeighbors(emptyIdx: number, size: number) {
+  const r = Math.floor(emptyIdx / size), c = emptyIdx % size
   const n: number[] = []
-  if (r > 0) n.push(emptyIdx - SLIDER_SIZE)
-  if (r < SLIDER_SIZE - 1) n.push(emptyIdx + SLIDER_SIZE)
+  if (r > 0) n.push(emptyIdx - size)
+  if (r < size - 1) n.push(emptyIdx + size)
   if (c > 0) n.push(emptyIdx - 1)
-  if (c < SLIDER_SIZE - 1) n.push(emptyIdx + 1)
+  if (c < size - 1) n.push(emptyIdx + 1)
   return n
 }
 
-function createSliderBoard() {
-  const total = SLIDER_SIZE * SLIDER_SIZE
+function createSliderBoard(size: number) {
+  const total = size * size
   let board = Array.from({ length: total }, (_, i) => (i === total - 1 ? 0 : i + 1))
   let e = total - 1, prev = -1
   for (let i = 0; i < 200; i++) {
-    const choices = sliderNeighbors(e).filter(n => n !== prev)
+    const choices = sliderNeighbors(e, size).filter(n => n !== prev)
     const pick = choices[Math.floor(Math.random() * choices.length)]
     board[e] = board[pick]; board[pick] = 0
     prev = e; e = pick
   }
   if (board.every((v, i) => (i === total - 1 ? v === 0 : v === i + 1))) {
-    const nb = sliderNeighbors(e)[0]
+    const nb = sliderNeighbors(e, size)[0]
     board[e] = board[nb]; board[nb] = 0
   }
   return board
@@ -127,6 +137,97 @@ function createNetwalkBoard() {
   return board
 }
 
+// ---------- 2048 logic ----------
+
+function createEmpty2048Board() {
+  return Array<number>(GAME_2048_SIZE * GAME_2048_SIZE).fill(0)
+}
+
+function addRandom2048Tile(board: number[]) {
+  const empty = board
+    .map((value, index) => ({ value, index }))
+    .filter(cell => cell.value === 0)
+
+  if (!empty.length) return board
+
+  const pick = empty[Math.floor(Math.random() * empty.length)]!.index
+  const next = [...board]
+  next[pick] = Math.random() < 0.9 ? 2 : 4
+  return next
+}
+
+function create2048Board() {
+  return addRandom2048Tile(addRandom2048Tile(createEmpty2048Board()))
+}
+
+function compress2048Line(line: number[]) {
+  const compact = line.filter(Boolean)
+  const merged: number[] = []
+  let scoreGain = 0
+
+  for (let i = 0; i < compact.length; i += 1) {
+    if (compact[i] === compact[i + 1]) {
+      const value = compact[i]! * 2
+      merged.push(value)
+      scoreGain += value
+      i += 1
+    } else {
+      merged.push(compact[i]!)
+    }
+  }
+
+  while (merged.length < GAME_2048_SIZE) merged.push(0)
+  return { line: merged, scoreGain }
+}
+
+function move2048(board: number[], direction: Direction2048) {
+  const next = [...board]
+  let moved = false
+  let scoreGain = 0
+
+  const readLine = (index: number) => {
+    const line: number[] = []
+    for (let offset = 0; offset < GAME_2048_SIZE; offset += 1) {
+      const row = direction === 'left' || direction === 'right' ? index : offset
+      const col = direction === 'left' || direction === 'right' ? offset : index
+      line.push(next[row * GAME_2048_SIZE + col]!)
+    }
+    return direction === 'right' || direction === 'down' ? line.reverse() : line
+  }
+
+  const writeLine = (index: number, line: number[]) => {
+    const oriented = direction === 'right' || direction === 'down' ? [...line].reverse() : line
+    for (let offset = 0; offset < GAME_2048_SIZE; offset += 1) {
+      const row = direction === 'left' || direction === 'right' ? index : offset
+      const col = direction === 'left' || direction === 'right' ? offset : index
+      const targetIndex = row * GAME_2048_SIZE + col
+      if (next[targetIndex] !== oriented[offset]) moved = true
+      next[targetIndex] = oriented[offset]!
+    }
+  }
+
+  for (let i = 0; i < GAME_2048_SIZE; i += 1) {
+    const { line, scoreGain: gain } = compress2048Line(readLine(i))
+    scoreGain += gain
+    writeLine(i, line)
+  }
+
+  return { board: moved ? addRandom2048Tile(next) : board, moved, scoreGain }
+}
+
+function canMove2048(board: number[]) {
+  if (board.includes(0)) return true
+  for (let row = 0; row < GAME_2048_SIZE; row += 1) {
+    for (let col = 0; col < GAME_2048_SIZE; col += 1) {
+      const index = row * GAME_2048_SIZE + col
+      const value = board[index]
+      if (col < GAME_2048_SIZE - 1 && value === board[index + 1]) return true
+      if (row < GAME_2048_SIZE - 1 && value === board[index + GAME_2048_SIZE]) return true
+    }
+  }
+  return false
+}
+
 function getNetwalkStatus(board: NetwalkCell[]) {
   const serverIndex = board.findIndex(cell => cell.isServer)
   const connectedIndices = new Set<number>()
@@ -163,34 +264,57 @@ function getNetwalkStatus(board: NetwalkCell[]) {
 
 // ---------- game components ----------
 
-function SliderPuzzleBoard() {
-  const [board, setBoard] = useState<number[]>(() => createSliderBoard())
+function SliderPuzzleBoard({
+  medals,
+  onSolve,
+}: {
+  medals: Set<SliderLevel>
+  onSolve: (level: SliderLevel) => void
+}) {
+  const [level, setLevel] = useState<SliderLevel>('medium')
+  const size = SLIDER_SIZES[level]
+  const [board, setBoard] = useState<number[]>(() => createSliderBoard(SLIDER_SIZES['medium']))
   const [moves, setMoves] = useState(0)
+  const [boardKey, setBoardKey] = useState(0)
 
-  const total = SLIDER_SIZE * SLIDER_SIZE
-  const solved = board.every((v, i) => (i === total - 1 ? v === 0 : v === i + 1))
-  const emptyIdx = board.indexOf(0)
-  const movableTiles = new Set(solved ? [] : sliderNeighbors(emptyIdx).map(index => board[index]).filter(Boolean))
-
-  function handlePress(idx: number) {
-    if (solved || !sliderNeighbors(emptyIdx).includes(idx)) return
-    setBoard(prev => {
-      const next = [...prev]
-      const e = next.indexOf(0)
-      next[e] = next[idx]; next[idx] = 0
-      return next
-    })
-    setMoves(m => m + 1)
+  function switchLevel(l: SliderLevel) {
+    setLevel(l)
+    setBoard(createSliderBoard(SLIDER_SIZES[l]))
+    setMoves(0)
+    setBoardKey(k => k + 1)
   }
 
+  const total = size * size
+  const solved = board.every((v, i) => (i === total - 1 ? v === 0 : v === i + 1))
+  const emptyIdx = board.indexOf(0)
+  const movableTiles = new Set(solved ? [] : sliderNeighbors(emptyIdx, size).map(index => board[index]).filter(Boolean))
+
+  function handlePress(idx: number) {
+    if (solved || !sliderNeighbors(emptyIdx, size).includes(idx)) return
+    const next = [...board]
+    const e = next.indexOf(0)
+    next[e] = next[idx]; next[idx] = 0
+    setBoard(next)
+    setMoves(m => m + 1)
+    if (next.every((v, i) => (i === total - 1 ? v === 0 : v === i + 1))) {
+      onSolve(level)
+    }
+  }
+
+  const gap = 8
+  const totalGap = (size - 1) * gap
+  const tileFont = size === 3 ? 'text-2xl' : size === 4 ? 'text-lg' : 'text-sm'
+
   return (
-    <div className="flex h-full flex-col gap-4 p-5">
+    <div className="flex h-full flex-col gap-3 p-5">
+
+      {/* Title + moves */}
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
             Slider Puzzle
           </p>
-          <p className="mt-0.5 text-xs text-[var(--color-muted)]">Arrange the tiles 1 – 15 in order.</p>
+          <p className="mt-0.5 text-xs text-[var(--color-muted)]">Arrange the tiles in order.</p>
         </div>
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-right">
           <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Moves</div>
@@ -198,12 +322,34 @@ function SliderPuzzleBoard() {
         </div>
       </div>
 
+      {/* Level tabs */}
+      <div className="flex gap-1.5">
+        {(['easy', 'medium', 'hard'] as SliderLevel[]).map(l => (
+          <button
+            key={l}
+            type="button"
+            onClick={() => switchLevel(l)}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+              level === l
+                ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+            }`}
+          >
+            {SLIDER_LABELS[l]}
+            <span className={`leading-none transition-opacity ${medals.has(l) ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
+              {SLIDER_MEDALS[l]}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Board */}
       <div className="flex flex-1 items-center justify-center">
         <div className="w-full max-w-[286px] rounded-[1.65rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-3 shadow-inner">
-          <div className="relative aspect-square rounded-[1.1rem] bg-white/50">
+          <div key={boardKey} className="relative aspect-square rounded-[1.1rem] bg-white/50">
             <div
-              className="absolute inset-0 grid gap-2"
-              style={{ gridTemplateColumns: `repeat(${SLIDER_SIZE}, minmax(0, 1fr))` }}
+              className="absolute inset-0 grid"
+              style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`, gap: `${gap}px` }}
             >
               {Array.from({ length: total }).map((_, idx) => (
                 <div
@@ -215,24 +361,24 @@ function SliderPuzzleBoard() {
 
             {board.map((value, idx) => {
               if (value === 0) return null
-              const row = Math.floor(idx / SLIDER_SIZE)
-              const col = idx % SLIDER_SIZE
+              const row = Math.floor(idx / size)
+              const col = idx % size
               const movable = movableTiles.has(value)
               return (
                 <button
-                  key={value}
+                  key={`${level}-${value}`}
                   type="button"
                   onClick={() => handlePress(idx)}
-                  className={`absolute flex items-center justify-center rounded-[0.95rem] border text-lg font-semibold transition-[left,top,transform,box-shadow,border-color,background-color] duration-200 ease-out ${
+                  className={`absolute flex items-center justify-center rounded-[0.95rem] border font-semibold transition-[left,top,transform,box-shadow,border-color,background-color] duration-200 ease-out ${tileFont} ${
                     movable
                       ? 'cursor-pointer border-teal-300 bg-gradient-to-br from-[#f7fffe] to-[#d9f7f3] text-[var(--color-text)] shadow-[0_8px_18px_rgba(46,196,182,0.18)] hover:-translate-y-0.5 hover:border-[var(--color-accent)]'
                       : 'cursor-default border-slate-200 bg-gradient-to-br from-white to-slate-50 text-[var(--color-text)] shadow-[0_6px_14px_rgba(15,23,42,0.08)]'
                   }`}
                   style={{
-                    width: 'calc((100% - 24px) / 4)',
-                    height: 'calc((100% - 24px) / 4)',
-                    left: `calc(${col} * ((100% - 24px) / 4 + 8px))`,
-                    top: `calc(${row} * ((100% - 24px) / 4 + 8px))`,
+                    width: `calc((100% - ${totalGap}px) / ${size})`,
+                    height: `calc((100% - ${totalGap}px) / ${size})`,
+                    left: `calc(${col} * ((100% - ${totalGap}px) / ${size} + ${gap}px))`,
+                    top: `calc(${row} * ((100% - ${totalGap}px) / ${size} + ${gap}px))`,
                   }}
                 >
                   <span className="absolute inset-x-3 top-2 h-px rounded-full bg-white/80" />
@@ -244,13 +390,16 @@ function SliderPuzzleBoard() {
         </div>
       </div>
 
+      {/* Footer */}
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-medium text-[var(--color-text)]">
-          {solved ? '🎉 Solved!' : 'Slide tiles into the empty space.'}
+          {solved
+            ? `🎉 ${SLIDER_MEDALS[level]} ${SLIDER_LABELS[level]} solved!`
+            : 'Slide tiles into the empty space.'}
         </p>
         <button
           type="button"
-          onClick={() => { setBoard(createSliderBoard()); setMoves(0) }}
+          onClick={() => { setBoard(createSliderBoard(size)); setMoves(0); setBoardKey(k => k + 1) }}
           className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
         >
           New Board
@@ -466,6 +615,151 @@ function NetwalkBoard() {
   )
 }
 
+function Puzzle2048Board() {
+  const [board, setBoard] = useState<number[]>(() => create2048Board())
+  const [score, setScore] = useState(0)
+  const [bestTile, setBestTile] = useState(4)
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
+
+  const won = bestTile >= 2048
+  const stuck = !canMove2048(board)
+
+  function handleMove(direction: Direction2048) {
+    if (stuck) return
+    const result = move2048(board, direction)
+    if (!result.moved) return
+    setBoard(result.board)
+    setScore(current => current + result.scoreGain)
+    setBestTile(current => Math.max(current, ...result.board))
+  }
+
+  function handleReset() {
+    const next = create2048Board()
+    setBoard(next)
+    setScore(0)
+    setBestTile(Math.max(...next))
+  }
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const keyMap: Record<string, Direction2048> = {
+        ArrowUp: 'up',
+        ArrowDown: 'down',
+        ArrowLeft: 'left',
+        ArrowRight: 'right',
+      }
+      const direction = keyMap[event.key]
+      if (!direction) return
+      event.preventDefault()
+      handleMove(direction)
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  })
+
+  const colorClasses: Record<number, string> = {
+    0: 'bg-white/45 text-transparent',
+    2: 'bg-[#f5f6ff] text-slate-700',
+    4: 'bg-[#e8f7f5] text-teal-700',
+    8: 'bg-[#d7f5ef] text-teal-800',
+    16: 'bg-[#c6efe8] text-teal-900',
+    32: 'bg-[#ffe2ba] text-orange-900',
+    64: 'bg-[#ffd19d] text-orange-900',
+    128: 'bg-[#ffc37f] text-orange-950',
+    256: 'bg-[#ffb560] text-orange-950',
+    512: 'bg-[#ffa43f] text-white',
+    1024: 'bg-[#f58e2b] text-white',
+    2048: 'bg-[#f3c84b] text-slate-900',
+  }
+
+  return (
+    <div className="flex h-full flex-col gap-4 p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+            2048
+          </p>
+          <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+            Combine matching tiles. Arrow keys work too.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-right">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Score</div>
+            <div className="text-lg font-bold leading-tight text-[var(--color-text)]">{score}</div>
+          </div>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-right">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Best</div>
+            <div className="text-lg font-bold leading-tight text-[var(--color-text)]">{bestTile}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-1 items-center justify-center">
+        <div
+          className="w-full max-w-[320px] rounded-[1.6rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-3 shadow-inner"
+          onTouchStart={(event) => {
+            const touch = event.touches[0]
+            if (!touch) return
+            touchStart.current = { x: touch.clientX, y: touch.clientY }
+          }}
+          onTouchEnd={(event) => {
+            const start = touchStart.current
+            const touch = event.changedTouches[0]
+            touchStart.current = null
+            if (!start || !touch) return
+            const dx = touch.clientX - start.x
+            const dy = touch.clientY - start.y
+            if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return
+            handleMove(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'))
+          }}
+        >
+          <div className="grid grid-cols-4 gap-2">
+            {board.map((value, index) => (
+              <button
+                key={`2048-${index}`}
+                type="button"
+                onClick={() => {}}
+                className={`aspect-square rounded-2xl border border-white/50 text-lg font-bold shadow-sm transition-colors sm:text-xl ${
+                  colorClasses[value] ?? 'bg-[#f28f3b] text-white'
+                }`}
+              >
+                {value === 0 ? '' : value}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-[var(--color-text)]">
+          {stuck ? 'No more moves. Try again?' : won ? '🎉 You made 2048!' : 'Swipe or use arrow keys to merge tiles.'}
+        </p>
+        <div className="flex gap-2">
+          {(['left', 'up', 'down', 'right'] as Direction2048[]).map(direction => (
+            <button
+              key={direction}
+              type="button"
+              onClick={() => handleMove(direction)}
+              className="rounded-xl border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-[11px] font-semibold uppercase text-[var(--color-text)] transition hover:bg-slate-50"
+            >
+              {direction === 'left' ? '←' : direction === 'right' ? '→' : direction === 'up' ? '↑' : '↓'}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={handleReset}
+            className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+          >
+            New Board
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ---------- puzzle registry ----------
 
 const PUZZLE_LIST = [
@@ -491,6 +785,13 @@ const PUZZLE_LIST = [
     live: true,
   },
   {
+    id: '2048',
+    name: '2048',
+    emoji: '🔲',
+    desc: 'Merge matching tiles to reach 2048',
+    live: true,
+  },
+  {
     id: 'coming1',
     name: 'More Coming Soon',
     emoji: '🧩',
@@ -511,11 +812,31 @@ export function PuzzleWeekBonusHub() {
     () => LIVE_PUZZLES[Math.floor(Math.random() * LIVE_PUZZLES.length)].id
   )
 
+  const [sliderMedals, setSliderMedals] = useState<Set<SliderLevel>>(new Set())
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SLIDER_MEDALS_KEY)
+      if (stored) setSliderMedals(new Set(JSON.parse(stored) as SliderLevel[]))
+    } catch {}
+  }, [])
+
+  function awardSliderMedal(level: SliderLevel) {
+    setSliderMedals(prev => {
+      if (prev.has(level)) return prev
+      const next = new Set(prev)
+      next.add(level)
+      try { localStorage.setItem(SLIDER_MEDALS_KEY, JSON.stringify([...next])) } catch {}
+      return next
+    })
+  }
+
   function renderGame() {
     switch (selectedId) {
-      case 'slider':    return <SliderPuzzleBoard />
+      case 'slider':    return <SliderPuzzleBoard medals={sliderMedals} onSolve={awardSliderMedal} />
       case 'lightsout': return <LightsOutBoard />
       case 'netwalk':   return <NetwalkBoard />
+      case '2048':      return <Puzzle2048Board />
       default:          return null
     }
   }
@@ -636,6 +957,12 @@ export function PuzzleWeekBonusHub() {
             >
               <span>{p.emoji}</span>
               <span>{p.name}</span>
+              {p.id === 'slider' && (
+                sliderMedals.has('hard') ? <span>🥇</span>
+                : sliderMedals.has('medium') ? <span>🥈</span>
+                : sliderMedals.has('easy') ? <span>🥉</span>
+                : null
+              )}
             </button>
           ))}
         </div>
@@ -673,6 +1000,19 @@ export function PuzzleWeekBonusHub() {
                     <p className="mt-0.5 text-xs leading-snug text-[var(--color-muted)]">
                       {p.desc}
                     </p>
+                    {p.id === 'slider' && (
+                      <div className="flex items-center gap-1 mt-1.5">
+                        {(['easy', 'medium', 'hard'] as SliderLevel[]).map(l => (
+                          <span
+                            key={l}
+                            title={`${SLIDER_LABELS[l]}: ${sliderMedals.has(l) ? 'earned' : 'not yet earned'}`}
+                            className={`text-sm leading-none transition-opacity ${sliderMedals.has(l) ? 'opacity-100' : 'opacity-15'}`}
+                          >
+                            {SLIDER_MEDALS[l]}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {!p.live && (
                       <span className="mt-1.5 inline-block rounded-full bg-[var(--color-accent-light)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-accent)]">
                         Soon

@@ -367,18 +367,15 @@ function NetwalkBoard() {
     <div className="flex h-full flex-col gap-3 p-5">
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
             Netwalk
           </p>
-          <p className="mt-1 text-[13px] leading-snug text-[var(--color-text)] font-medium">
-            Someone scrambled your network.
+          <p className="mt-0.5 text-xs text-[var(--color-muted)] leading-relaxed">
+            You are a network administrator and someone has scrambled your network. Rotate every piece to connect all terminals to the server — no loose ends.
           </p>
-          <p className="mt-0.5 text-xs leading-relaxed text-[var(--color-muted)]">
-            Rotate every piece so that every terminal is connected to the server with no loose ends.
-          </p>
-          <p className="mt-1.5 text-[11px] text-[var(--color-muted)]">
+          <p className="mt-1 text-[10px] text-[var(--color-muted)] opacity-70">
             Click to rotate · double-click to rotate back
           </p>
         </div>

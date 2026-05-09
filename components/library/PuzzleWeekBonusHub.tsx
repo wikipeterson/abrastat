@@ -354,7 +354,7 @@ function SliderPuzzleBoard({
               {Array.from({ length: total }).map((_, idx) => (
                 <div
                   key={`slot-${idx}`}
-                  className="rounded-[0.95rem] border border-dashed border-[var(--color-border)] bg-white/45"
+                  className="rounded-[0.95rem] border border-dashed border-slate-200 bg-white/80"
                 />
               ))}
             </div>

@@ -31,6 +31,7 @@ const BONUS_PUZZLES = [
 ] as const
 
 const LIGHTS_OUT_SIZE = 5
+const SLIDER_SIZE = 4
 
 function toggleLightsOutCell(board: boolean[], row: number, col: number) {
   const next = [...board]
@@ -68,6 +69,141 @@ function createLightsOutBoard() {
   }
 
   return board
+}
+
+function sliderNeighbors(emptyIndex: number) {
+  const row = Math.floor(emptyIndex / SLIDER_SIZE)
+  const col = emptyIndex % SLIDER_SIZE
+  const neighbors: number[] = []
+  if (row > 0) neighbors.push(emptyIndex - SLIDER_SIZE)
+  if (row < SLIDER_SIZE - 1) neighbors.push(emptyIndex + SLIDER_SIZE)
+  if (col > 0) neighbors.push(emptyIndex - 1)
+  if (col < SLIDER_SIZE - 1) neighbors.push(emptyIndex + 1)
+  return neighbors
+}
+
+function createSliderBoard() {
+  let board = Array.from({ length: SLIDER_SIZE * SLIDER_SIZE }, (_, index) =>
+    index === SLIDER_SIZE * SLIDER_SIZE - 1 ? 0 : index + 1
+  )
+  let emptyIndex = board.length - 1
+  let previousEmpty = -1
+
+  for (let i = 0; i < 180; i += 1) {
+    const choices = sliderNeighbors(emptyIndex).filter(index => index !== previousEmpty)
+    const chosen = choices[Math.floor(Math.random() * choices.length)]
+    board[emptyIndex] = board[chosen]
+    board[chosen] = 0
+    previousEmpty = emptyIndex
+    emptyIndex = chosen
+  }
+
+  const solved = board.every((value, index) =>
+    index === board.length - 1 ? value === 0 : value === index + 1
+  )
+
+  if (solved) {
+    const neighbor = sliderNeighbors(emptyIndex)[0]
+    board[emptyIndex] = board[neighbor]
+    board[neighbor] = 0
+  }
+
+  return board
+}
+
+function SliderPuzzleBoard() {
+  const [board, setBoard] = useState<number[]>(() => createSliderBoard())
+  const [moves, setMoves] = useState(0)
+
+  const solved = board.every((value, index) =>
+    index === board.length - 1 ? value === 0 : value === index + 1
+  )
+
+  function handlePress(index: number) {
+    const emptyIndex = board.indexOf(0)
+    if (solved || !sliderNeighbors(emptyIndex).includes(index)) return
+
+    setBoard(current => {
+      const next = [...current]
+      const currentEmpty = next.indexOf(0)
+      next[currentEmpty] = next[index]
+      next[index] = 0
+      return next
+    })
+    setMoves(current => current + 1)
+  }
+
+  function handleReset() {
+    setBoard(createSliderBoard())
+    setMoves(0)
+  }
+
+  return (
+    <div className="flex h-full flex-col rounded-[1.35rem] bg-white/80 p-4 shadow-inner">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+            Slider Puzzle
+          </p>
+          <p className="mt-1 text-xs text-[var(--color-muted)]">
+            Arrange the numbered tiles from 1 to 15.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-[var(--color-border)] bg-white px-3 py-1 text-right shadow-sm">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-muted)]">
+            Moves
+          </div>
+          <div className="text-lg font-semibold text-[var(--color-text)]">{moves}</div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-1 items-center justify-center">
+        <div
+          className="grid aspect-square w-full max-w-[290px] gap-2 rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-3"
+          style={{ gridTemplateColumns: `repeat(${SLIDER_SIZE}, minmax(0, 1fr))` }}
+        >
+          {board.map((value, index) => {
+            const movable = sliderNeighbors(board.indexOf(0)).includes(index)
+            if (value === 0) {
+              return (
+                <div
+                  key={`empty-${index}`}
+                  className="rounded-2xl border border-dashed border-[var(--color-border)] bg-white/40"
+                />
+              )
+            }
+            return (
+              <button
+                key={`${value}-${index}`}
+                type="button"
+                onClick={() => handlePress(index)}
+                className={`aspect-square rounded-2xl border text-lg font-semibold transition ${
+                  movable && !solved
+                    ? 'border-teal-300 bg-[var(--color-accent-light)] text-[var(--color-text)] hover:-translate-y-0.5 hover:border-[var(--color-accent)]'
+                    : 'border-slate-200 bg-white text-[var(--color-text)]'
+                } ${solved ? 'cursor-default' : ''}`}
+              >
+                {value}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="min-h-[1.25rem] text-sm font-medium text-[var(--color-text)]">
+          {solved ? 'Solved! Beautiful finish.' : 'Use the open space to slide tiles into place.'}
+        </div>
+        <button
+          type="button"
+          onClick={handleReset}
+          className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+        >
+          New Board
+        </button>
+      </div>
+    </div>
+  )
 }
 
 function LightsOutBoard() {
@@ -243,7 +379,9 @@ export function PuzzleWeekBonusHub() {
 
               <div className="p-5">
                 <div className="aspect-square rounded-3xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                  {item.title === 'Lights Out' ? (
+                  {item.title === 'Sudoku' ? (
+                    <SliderPuzzleBoard />
+                  ) : item.title === 'Lights Out' ? (
                     <LightsOutBoard />
                   ) : (
                     <div className="flex h-full flex-col items-center justify-center rounded-[1.35rem] bg-white/80 text-center shadow-inner">

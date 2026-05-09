@@ -556,15 +556,17 @@ export function PuzzleWeekBonusHub() {
             </div>
           </section>
 
-          <ComingSoonCard
-            title="Nonogram"
-            description="Fill in the grid using row and column clues to reveal a hidden picture."
-          />
           <section className="rounded-3xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden">
             <div className="h-[360px]">
               <NetwalkBoard />
             </div>
           </section>
+
+          <ComingSoonCard
+            title="More Coming Soon"
+            description="More bonus puzzles dropping during Puzzle Week."
+          />
+
         </div>
 
         {/* ── Back link ── */}

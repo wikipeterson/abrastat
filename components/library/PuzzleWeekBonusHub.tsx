@@ -424,7 +424,7 @@ function NetwalkBoard() {
 
 function ComingSoonCard({ title, description }: { title: string; description: string }) {
   return (
-    <div className="flex min-h-[320px] flex-col items-center justify-center rounded-3xl border border-dashed border-[var(--color-border)] bg-white/60 p-10 text-center shadow-sm">
+    <div className="flex min-h-[460px] flex-col items-center justify-center rounded-3xl border border-dashed border-[var(--color-border)] bg-white/60 p-10 text-center shadow-sm">
       <div className="rounded-2xl bg-[var(--color-accent-light)] p-3 text-[var(--color-accent)]">
         <Puzzle className="h-6 w-6" />
       </div>
@@ -545,19 +545,19 @@ export function PuzzleWeekBonusHub() {
         <div className="grid gap-5 md:grid-cols-2">
 
           <section className="rounded-3xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden">
-            <div className="h-[360px]">
+            <div className="h-[460px]">
               <SliderPuzzleBoard />
             </div>
           </section>
 
           <section className="rounded-3xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden">
-            <div className="h-[360px]">
+            <div className="h-[460px]">
               <LightsOutBoard />
             </div>
           </section>
 
           <section className="rounded-3xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden">
-            <div className="h-[360px]">
+            <div className="h-[460px]">
               <NetwalkBoard />
             </div>
           </section>

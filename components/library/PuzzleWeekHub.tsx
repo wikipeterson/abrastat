@@ -365,6 +365,12 @@ export function PuzzleWeekHub() {
                     Admin
                   </Link>
                 )}
+                <Link
+                  href="/puzzleweek/bonus"
+                  className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+                >
+                  Bonus Puzzles
+                </Link>
                 <button
                   onClick={handleSignOut}
                   className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-slate-50"
@@ -422,6 +428,12 @@ export function PuzzleWeekHub() {
                   Admin
                 </Link>
               )}
+              <Link
+                href="/puzzleweek/bonus"
+                className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+              >
+                Bonus Puzzles
+              </Link>
               <button
                 onClick={handleSignOut}
                 className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
@@ -490,6 +502,13 @@ export function PuzzleWeekHub() {
                   <>You may use <strong className="text-[var(--color-text)]">any resources</strong>, including the internet.</>,
                   <>Compete <strong className="text-[var(--color-text)]">solo or as a team</strong> of up to {PUZZLE_WEEK_MAX_TEAM_SIZE}. Please don&apos;t share answers with other teams.</>,
                   <>Check answers individually as you go. Submit by <strong className="text-[var(--color-text)]">23:59 on Tuesday, May 26, 2026</strong>. Double-check for typos.</>,
+                  <>
+                    Looking for extra challenges?{' '}
+                    <Link href="/puzzleweek/bonus" className="font-semibold text-[var(--color-accent)] underline underline-offset-4">
+                      Visit the Bonus Puzzles page
+                    </Link>
+                    .
+                  </>,
                 ] as ReactNode[]).map((text, i) => (
                   <li key={i} className="flex gap-3">
                     <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">

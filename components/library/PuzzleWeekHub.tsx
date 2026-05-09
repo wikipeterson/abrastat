@@ -576,9 +576,9 @@ export function PuzzleWeekHub() {
                               </span>
                             )}
                           </div>
-                          {lb.type === 'team' && lb.memberNames.length > 0 && (
+                          {lb.type === 'team' && (lb.memberNames?.length ?? 0) > 0 && (
                             <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] leading-snug text-[var(--color-muted)]">
-                              {lb.memberNames.map(memberName => (
+                              {(lb.memberNames ?? []).map(memberName => (
                                 <span key={memberName} className="whitespace-normal break-words">
                                   {memberName}
                                 </span>
@@ -1108,9 +1108,9 @@ export function PuzzleWeekHub() {
                           </span>
                         )}
                       </div>
-                      {lb.type === 'team' && lb.memberNames.length > 0 && (
+                      {lb.type === 'team' && (lb.memberNames?.length ?? 0) > 0 && (
                         <div className="mt-0.5 truncate text-xs text-[var(--color-muted)]">
-                          {lb.memberNames.join(', ')}
+                          {(lb.memberNames ?? []).join(', ')}
                         </div>
                       )}
                     </div>

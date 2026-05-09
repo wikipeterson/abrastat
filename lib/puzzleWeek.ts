@@ -154,6 +154,8 @@ function mapProgress(progress: PuzzleWeekProgress[]) {
 function mapLeaderboard(entries: PuzzleWeekLeaderboardEntry[]) {
   return entries.map(entry => ({
     ...entry,
+    memberNames: Array.isArray(entry.memberNames) ? entry.memberNames : [],
+    solvedPuzzleIds: Array.isArray(entry.solvedPuzzleIds) ? entry.solvedPuzzleIds : [],
     lastSolvedAt: reviveDate(entry.lastSolvedAt),
   }))
 }

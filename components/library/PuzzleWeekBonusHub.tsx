@@ -952,6 +952,7 @@ const PUZZLE_LIST = [
 ]
 
 const LIVE_PUZZLES = PUZZLE_LIST.filter(p => p.live)
+const LAST_PUZZLE_KEY = 'pw-last-puzzle'
 
 type BonusMedalState = {
   slider: Set<SliderLevel>
@@ -1080,9 +1081,18 @@ export function PuzzleWeekBonusHub() {
     }
   }, [])
 
-  const [selectedId, setSelectedId] = useState(
-    () => LIVE_PUZZLES[Math.floor(Math.random() * LIVE_PUZZLES.length)].id
-  )
+  const [selectedId, setSelectedId] = useState(() => {
+    try {
+      const stored = localStorage.getItem(LAST_PUZZLE_KEY)
+      if (stored && LIVE_PUZZLES.some(p => p.id === stored)) return stored
+    } catch {}
+    return LIVE_PUZZLES[0].id
+  })
+
+  function selectPuzzle(id: string) {
+    setSelectedId(id)
+    try { localStorage.setItem(LAST_PUZZLE_KEY, id) } catch {}
+  }
 
   const [sliderMedals, setSliderMedals] = useState<Set<SliderLevel>>(new Set())
   const [lightsOutMedals, setLightsOutMedals] = useState<Set<SliderLevel>>(new Set())
@@ -1238,7 +1248,7 @@ export function PuzzleWeekBonusHub() {
           key={p.id}
           type="button"
           disabled={!p.live}
-          onClick={() => p.live && setSelectedId(p.id)}
+          onClick={() => p.live && selectPuzzle(p.id)}
           className={`flex items-start gap-3 rounded-2xl px-3 py-3 text-left transition ${
             selectedId === p.id
               ? 'bg-teal-50'
@@ -1357,7 +1367,7 @@ export function PuzzleWeekBonusHub() {
               key={p.id}
               type="button"
               disabled={!p.live}
-              onClick={() => p.live && setSelectedId(p.id)}
+              onClick={() => p.live && selectPuzzle(p.id)}
               className={`flex flex-shrink-0 items-center gap-1.5 rounded-2xl border px-3 py-2 text-sm font-medium ${
                 selectedId === p.id
                   ? 'border-[var(--color-accent)] bg-teal-50 text-[var(--color-accent)]'

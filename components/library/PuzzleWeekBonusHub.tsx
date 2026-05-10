@@ -20,6 +20,9 @@ const SLIDER_LABELS: Record<SliderLevel, string> = { easy: 'Easy', medium: 'Medi
 const SLIDER_MEDALS: Record<SliderLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
 const SLIDER_MEDALS_KEY = 'pw-slider-medals'
 const LIGHTS_OUT_SIZES: Record<SliderLevel, number> = { easy: 3, medium: 4, hard: 5 }
+const LIGHTS_OUT_LABELS: Record<SliderLevel, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' }
+const LIGHTS_OUT_MEDALS: Record<SliderLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
+const LIGHTS_OUT_MEDALS_KEY = 'pw-lightsout-medals'
 
 // ---------- netwalk levels ----------
 
@@ -426,7 +429,13 @@ function SliderPuzzleBoard({
   )
 }
 
-function LightsOutBoard() {
+function LightsOutBoard({
+  medals,
+  onSolve,
+}: {
+  medals: Set<SliderLevel>
+  onSolve: (level: SliderLevel) => void
+}) {
   const [level, setLevel] = useState<SliderLevel>('medium')
   const size = LIGHTS_OUT_SIZES[level]
   const [board, setBoard] = useState<boolean[]>(() => createLightsOutBoard(LIGHTS_OUT_SIZES.medium))
@@ -442,8 +451,12 @@ function LightsOutBoard() {
 
   function handlePress(r: number, c: number) {
     if (solved) return
-    setBoard(prev => toggleCell(prev, r, c, size))
+    const next = toggleCell(board, r, c, size)
+    setBoard(next)
     setMoves(m => m + 1)
+    if (next.every(cell => !cell)) {
+      onSolve(level)
+    }
   }
 
   return (
@@ -467,13 +480,16 @@ function LightsOutBoard() {
             key={l}
             type="button"
             onClick={() => switchLevel(l)}
-            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
               level === l
                 ? 'bg-[var(--color-accent)] text-white shadow-sm'
                 : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
             }`}
           >
-            {SLIDER_LABELS[l]}
+            {LIGHTS_OUT_LABELS[l]}
+            <span className={`leading-none transition-opacity ${medals.has(l) ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
+              {LIGHTS_OUT_MEDALS[l]}
+            </span>
           </button>
         ))}
       </div>
@@ -504,7 +520,7 @@ function LightsOutBoard() {
 
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-medium text-[var(--color-text)]">
-          {solved ? '🎉 Solved!' : 'All circles need to go dark.'}
+          {solved ? `🎉 ${LIGHTS_OUT_MEDALS[level]} ${LIGHTS_OUT_LABELS[level]} solved!` : 'All circles need to go dark.'}
         </p>
         <button
           type="button"
@@ -927,6 +943,7 @@ export function PuzzleWeekBonusHub() {
   )
 
   const [sliderMedals, setSliderMedals] = useState<Set<SliderLevel>>(new Set())
+  const [lightsOutMedals, setLightsOutMedals] = useState<Set<SliderLevel>>(new Set())
   const [game2048Medals, setGame2048Medals] = useState<Set<Game2048Medal>>(new Set())
 
   const [netwalkMedals, setNetwalkMedals] = useState<Set<NetwalkLevel>>(new Set())
@@ -935,6 +952,10 @@ export function PuzzleWeekBonusHub() {
     try {
       const stored = localStorage.getItem(SLIDER_MEDALS_KEY)
       if (stored) setSliderMedals(new Set(JSON.parse(stored) as SliderLevel[]))
+    } catch {}
+    try {
+      const storedLights = localStorage.getItem(LIGHTS_OUT_MEDALS_KEY)
+      if (storedLights) setLightsOutMedals(new Set(JSON.parse(storedLights) as SliderLevel[]))
     } catch {}
     try {
       const stored2048 = localStorage.getItem(GAME_2048_MEDALS_KEY)
@@ -952,6 +973,16 @@ export function PuzzleWeekBonusHub() {
       const next = new Set(prev)
       next.add(level)
       try { localStorage.setItem(SLIDER_MEDALS_KEY, JSON.stringify([...next])) } catch {}
+      return next
+    })
+  }
+
+  function awardLightsOutMedal(level: SliderLevel) {
+    setLightsOutMedals(prev => {
+      if (prev.has(level)) return prev
+      const next = new Set(prev)
+      next.add(level)
+      try { localStorage.setItem(LIGHTS_OUT_MEDALS_KEY, JSON.stringify([...next])) } catch {}
       return next
     })
   }
@@ -979,7 +1010,7 @@ export function PuzzleWeekBonusHub() {
   function renderGame() {
     switch (selectedId) {
       case 'slider':    return <SliderPuzzleBoard medals={sliderMedals} onSolve={awardSliderMedal} />
-      case 'lightsout': return <LightsOutBoard />
+      case 'lightsout': return <LightsOutBoard medals={lightsOutMedals} onSolve={awardLightsOutMedal} />
       case 'netwalk':   return <NetwalkBoard medals={netwalkMedals} onSolve={awardNetwalkMedal} />
       case '2048':      return <Puzzle2048Board medals={game2048Medals} onAwardMedal={award2048Medal} />
       default:          return null
@@ -1047,6 +1078,19 @@ export function PuzzleWeekBonusHub() {
                     className={`text-sm leading-none transition-opacity ${sliderMedals.has(l) ? 'opacity-100' : 'opacity-15'}`}
                   >
                     {SLIDER_MEDALS[l]}
+                  </span>
+                ))}
+              </div>
+            )}
+            {p.id === 'lightsout' && (
+              <div className="flex items-center gap-1 mt-1.5">
+                {(['easy', 'medium', 'hard'] as SliderLevel[]).map(l => (
+                  <span
+                    key={l}
+                    title={`${LIGHTS_OUT_LABELS[l]}: ${lightsOutMedals.has(l) ? 'earned' : 'not yet earned'}`}
+                    className={`text-sm leading-none transition-opacity ${lightsOutMedals.has(l) ? 'opacity-100' : 'opacity-15'}`}
+                  >
+                    {LIGHTS_OUT_MEDALS[l]}
                   </span>
                 ))}
               </div>
@@ -1129,6 +1173,12 @@ export function PuzzleWeekBonusHub() {
                 sliderMedals.has('hard') ? <span>🥇</span>
                 : sliderMedals.has('medium') ? <span>🥈</span>
                 : sliderMedals.has('easy') ? <span>🥉</span>
+                : null
+              )}
+              {p.id === 'lightsout' && (
+                lightsOutMedals.has('hard') ? <span>🥇</span>
+                : lightsOutMedals.has('medium') ? <span>🥈</span>
+                : lightsOutMedals.has('easy') ? <span>🥉</span>
                 : null
               )}
               {p.id === 'netwalk' && (

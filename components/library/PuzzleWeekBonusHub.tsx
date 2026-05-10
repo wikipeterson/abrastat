@@ -1219,7 +1219,8 @@ export function PuzzleWeekBonusHub() {
         </div>
 
         {/* Game fills every remaining pixel */}
-        <div className="min-h-0 flex-1 px-4 pb-4">
+        {/* touch-action:none tells iOS Safari not to pan/rubber-band this area */}
+        <div className="min-h-0 flex-1 px-4 pb-4" style={{ touchAction: 'none' }}>
           <div className="h-full overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm">
             {renderGame()}
           </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowLeft, Calendar } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { signOut } from '@/lib/auth'
@@ -298,6 +298,65 @@ function getNetwalkStatus(board: NetwalkCell[], size: number) {
 
 // ---------- game components ----------
 
+function BonusGameLayout({
+  board,
+  sidebar,
+}: {
+  board: ReactNode
+  sidebar: ReactNode
+}) {
+  return (
+    <div className="flex h-full flex-col gap-5 p-5 lg:flex-row lg:items-stretch">
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        <div className="aspect-square w-full max-w-[420px] lg:h-full lg:w-auto lg:max-w-none">
+          {board}
+        </div>
+      </div>
+      <div className="flex w-full flex-col gap-4 lg:w-[360px] lg:flex-shrink-0">
+        {sidebar}
+      </div>
+    </div>
+  )
+}
+
+function BonusInfoCard({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-muted)]">
+        {label}
+      </p>
+      <div className="mt-1.5 text-sm leading-relaxed text-[var(--color-text)]">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function BonusStatTile({
+  label,
+  value,
+}: {
+  label: string
+  value: ReactNode
+}) {
+  return (
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">
+        {label}
+      </div>
+      <div className="mt-1 text-2xl font-bold leading-none text-[var(--color-text)]">
+        {value}
+      </div>
+    </div>
+  )
+}
+
 function SliderPuzzleBoard({
   medals,
   onSolve,
@@ -340,47 +399,10 @@ function SliderPuzzleBoard({
   const tileFont = size === 3 ? 'text-2xl' : size === 4 ? 'text-lg' : 'text-sm'
 
   return (
-    <div className="flex h-full flex-col gap-3 p-5">
-
-      {/* Title + moves */}
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
-            Slider Puzzle
-          </p>
-          <p className="mt-0.5 text-xs text-[var(--color-muted)]">Arrange the tiles in order.</p>
-        </div>
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-right">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Moves</div>
-          <div className="text-lg font-bold leading-tight text-[var(--color-text)]">{moves}</div>
-        </div>
-      </div>
-
-      {/* Level tabs */}
-      <div className="flex gap-1.5">
-        {(['easy', 'medium', 'hard'] as SliderLevel[]).map(l => (
-          <button
-            key={l}
-            type="button"
-            onClick={() => switchLevel(l)}
-            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
-              level === l
-                ? 'bg-[var(--color-accent)] text-white shadow-sm'
-                : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
-            }`}
-          >
-            {SLIDER_LABELS[l]}
-            <span className={`leading-none transition-opacity ${medals.has(l) ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
-              {SLIDER_MEDALS[l]}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* Board */}
-      <div className="flex flex-1 items-center justify-center">
-        <div className="w-full max-w-[286px] rounded-[1.65rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-3 shadow-inner">
-          <div key={boardKey} className="relative aspect-square rounded-[1.1rem] bg-white/50">
+    <BonusGameLayout
+      board={
+        <div className="h-full w-full rounded-[1.65rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-3 shadow-inner">
+          <div key={boardKey} className="relative h-full w-full rounded-[1.1rem] bg-white/50">
             <div
               className="absolute inset-0 grid"
               style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`, gap: `${gap}px` }}
@@ -422,24 +444,63 @@ function SliderPuzzleBoard({
             })}
           </div>
         </div>
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-[var(--color-text)]">
-          {solved
-            ? `🎉 ${SLIDER_MEDALS[level]} ${SLIDER_LABELS[level]} solved!`
-            : 'Slide tiles into the empty space.'}
-        </p>
-        <button
-          type="button"
-          onClick={() => { setBoard(createSliderBoard(size)); setMoves(0); setBoardKey(k => k + 1) }}
-          className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
-        >
-          New Board
-        </button>
-      </div>
-    </div>
+      }
+      sidebar={
+        <>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+              Slider Puzzle
+            </p>
+            <h2 className="mt-1 text-3xl font-semibold leading-tight text-[var(--color-text)]">
+              Put the tiles in order.
+            </h2>
+          </div>
+          <BonusInfoCard label="Goal">
+            Arrange the numbered tiles from <strong>1</strong> up to the final tile so the empty space ends in the bottom-right corner.
+          </BonusInfoCard>
+          <BonusInfoCard label="How It Works">
+            Only tiles touching the empty space can move. Click or tap an adjacent tile to slide it into the gap.
+          </BonusInfoCard>
+          <div className="flex flex-wrap gap-2">
+            {(['easy', 'medium', 'hard'] as SliderLevel[]).map(l => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => switchLevel(l)}
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                  level === l
+                    ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                    : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                }`}
+              >
+                {SLIDER_LABELS[l]}
+                <span className={`leading-none transition-opacity ${medals.has(l) ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
+                  {SLIDER_MEDALS[l]}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <BonusStatTile label="Moves" value={moves} />
+            <BonusStatTile label="Size" value={`${size}×${size}`} />
+          </div>
+          <div className="mt-auto flex items-center justify-between gap-3">
+            <p className="text-sm font-medium text-[var(--color-text)]">
+              {solved
+                ? `🎉 ${SLIDER_MEDALS[level]} ${SLIDER_LABELS[level]} solved!`
+                : 'Slide adjacent tiles into the empty space.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => { setBoard(createSliderBoard(size)); setMoves(0); setBoardKey(k => k + 1) }}
+              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+            >
+              New Board
+            </button>
+          </div>
+        </>
+      }
+    />
   )
 }
 
@@ -474,43 +535,10 @@ function LightsOutBoard({
   }
 
   return (
-    <div className="flex h-full flex-col gap-4 p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
-            Lights Out
-          </p>
-          <p className="mt-0.5 text-xs text-[var(--color-muted)]">Toggle a cell and its neighbors. Turn every light off.</p>
-        </div>
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-right">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Moves</div>
-          <div className="text-lg font-bold leading-tight text-[var(--color-text)]">{moves}</div>
-        </div>
-      </div>
-
-      <div className="flex gap-1.5">
-        {(['easy', 'medium', 'hard'] as SliderLevel[]).map(l => (
-          <button
-            key={l}
-            type="button"
-            onClick={() => switchLevel(l)}
-            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
-              level === l
-                ? 'bg-[var(--color-accent)] text-white shadow-sm'
-                : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
-            }`}
-          >
-            {LIGHTS_OUT_LABELS[l]}
-            <span className={`leading-none transition-opacity ${medals.has(l) ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
-              {LIGHTS_OUT_MEDALS[l]}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-1 items-center justify-center">
+    <BonusGameLayout
+      board={
         <div
-          className="grid w-full max-w-[260px] gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-3"
+          className="grid h-full w-full gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-3"
           style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))` }}
         >
           {board.map((isOn, idx) => {
@@ -530,21 +558,61 @@ function LightsOutBoard({
             )
           })}
         </div>
-      </div>
-
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-[var(--color-text)]">
-          {solved ? `🎉 ${LIGHTS_OUT_MEDALS[level]} ${LIGHTS_OUT_LABELS[level]} solved!` : 'All circles need to go dark.'}
-        </p>
-        <button
-          type="button"
-          onClick={() => { setBoard(createLightsOutBoard(size)); setMoves(0) }}
-          className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
-        >
-          New Board
-        </button>
-      </div>
-    </div>
+      }
+      sidebar={
+        <>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+              Lights Out
+            </p>
+            <h2 className="mt-1 text-3xl font-semibold leading-tight text-[var(--color-text)]">
+              Turn every light off.
+            </h2>
+          </div>
+          <BonusInfoCard label="Goal">
+            Make every circle go dark. When the whole board is dark, you’ve solved the puzzle and earned the medal for that difficulty.
+          </BonusInfoCard>
+          <BonusInfoCard label="How It Works">
+            Clicking a circle flips that circle and its up, down, left, and right neighbors. Plan a few moves ahead because every click affects a cluster.
+          </BonusInfoCard>
+          <div className="flex flex-wrap gap-2">
+            {(['easy', 'medium', 'hard'] as SliderLevel[]).map(l => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => switchLevel(l)}
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                  level === l
+                    ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                    : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                }`}
+              >
+                {LIGHTS_OUT_LABELS[l]}
+                <span className={`leading-none transition-opacity ${medals.has(l) ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
+                  {LIGHTS_OUT_MEDALS[l]}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <BonusStatTile label="Moves" value={moves} />
+            <BonusStatTile label="Size" value={`${size}×${size}`} />
+          </div>
+          <div className="mt-auto flex items-center justify-between gap-3">
+            <p className="text-sm font-medium text-[var(--color-text)]">
+              {solved ? `🎉 ${LIGHTS_OUT_MEDALS[level]} ${LIGHTS_OUT_LABELS[level]} solved!` : 'All circles need to go dark.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => { setBoard(createLightsOutBoard(size)); setMoves(0) }}
+              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+            >
+              New Board
+            </button>
+          </div>
+        </>
+      }
+    />
   )
 }
 
@@ -612,57 +680,13 @@ function NetwalkBoard({
   }
 
   const pct = Math.round((status.connectedCount / board.length) * 100)
-  const boardMaxWidth = 150 + size * 28
 
   return (
-    <div className="flex h-full flex-col gap-3 p-5">
-
-      {/* Title + moves */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
-            Netwalk
-          </p>
-          <p className="mt-0.5 text-xs text-[var(--color-muted)] leading-relaxed">
-            Rotate every piece to connect all terminals to the server — no loose ends.
-          </p>
-          <p className="mt-1 text-[10px] text-[var(--color-muted)] opacity-70">
-            Click to rotate · double-click to rotate back
-          </p>
-        </div>
-        <div className="flex-shrink-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-right">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Moves</div>
-          <div className="text-lg font-bold leading-tight text-[var(--color-text)]">{moves}</div>
-        </div>
-      </div>
-
-      {/* Level tabs */}
-      <div className="flex gap-1.5">
-        {(['easy', 'medium', 'hard'] as NetwalkLevel[]).map(l => (
-          <button
-            key={l}
-            type="button"
-            onClick={() => switchLevel(l)}
-            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
-              level === l
-                ? 'bg-[var(--color-accent)] text-white shadow-sm'
-                : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
-            }`}
-          >
-            {NETWALK_LABELS[l]}
-            <span className={`leading-none transition-opacity ${medals.has(l) ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
-              {NETWALK_MEDALS[l]}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* Board */}
-      <div className="flex flex-1 items-center justify-center">
+    <BonusGameLayout
+      board={
         <div
-          className="grid w-full overflow-hidden rounded-2xl"
+          className="grid h-full w-full overflow-hidden rounded-2xl"
           style={{
-            maxWidth: `${boardMaxWidth}px`,
             gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
             gap: '1px',
             background: 'var(--color-border)',
@@ -710,32 +734,71 @@ function NetwalkBoard({
             )
           })}
         </div>
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-1 items-center gap-2.5">
-          <div className="h-2 w-20 flex-shrink-0 overflow-hidden rounded-full bg-[var(--color-border)]">
-            <div
-              className="h-full rounded-full bg-[var(--color-accent)] transition-all duration-300"
-              style={{ width: `${pct}%` }}
-            />
+      }
+      sidebar={
+        <>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+              Netwalk
+            </p>
+            <h2 className="mt-1 text-3xl font-semibold leading-tight text-[var(--color-text)]">
+              Restore the network.
+            </h2>
           </div>
-          <p className="truncate text-sm font-medium text-[var(--color-text)]">
-            {status.solved
-              ? `🎉 ${NETWALK_MEDALS[level]} ${NETWALK_LABELS[level]} restored!`
-              : `${status.connectedCount} / ${board.length} connected`}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => { setBoard(createNetwalkBoard(size)); setMoves(0); solvedAwardedRef.current = false }}
-          className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
-        >
-          New Board
-        </button>
-      </div>
-    </div>
+          <BonusInfoCard label="Goal">
+            Rotate the pieces until every terminal is connected to the server and there are no loose wire ends anywhere in the network.
+          </BonusInfoCard>
+          <BonusInfoCard label="How It Works">
+            Click once to rotate a tile clockwise. Double-click the same tile to rotate it counter-clockwise.
+          </BonusInfoCard>
+          <div className="flex flex-wrap gap-2">
+            {(['easy', 'medium', 'hard'] as NetwalkLevel[]).map(l => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => switchLevel(l)}
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                  level === l
+                    ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                    : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                }`}
+              >
+                {NETWALK_LABELS[l]}
+                <span className={`leading-none transition-opacity ${medals.has(l) ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
+                  {NETWALK_MEDALS[l]}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <BonusStatTile label="Moves" value={moves} />
+            <BonusStatTile label="Connected" value={`${status.connectedCount}/${board.length}`} />
+          </div>
+          <div className="mt-auto flex items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5">
+              <div className="h-2 w-20 flex-shrink-0 overflow-hidden rounded-full bg-[var(--color-border)]">
+                <div
+                  className="h-full rounded-full bg-[var(--color-accent)] transition-all duration-300"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <p className="truncate text-sm font-medium text-[var(--color-text)]">
+                {status.solved
+                  ? `🎉 ${NETWALK_MEDALS[level]} ${NETWALK_LABELS[level]} restored!`
+                  : `${status.connectedCount} / ${board.length} connected`}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setBoard(createNetwalkBoard(size)); setMoves(0); solvedAwardedRef.current = false }}
+              className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+            >
+              New Board
+            </button>
+          </div>
+        </>
+      }
+    />
   )
 }
 
@@ -811,37 +874,10 @@ function Puzzle2048Board({
   }
 
   return (
-    <div className="flex h-full flex-col gap-4 p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
-            2048
-          </p>
-          <p className="mt-0.5 text-xs text-[var(--color-muted)]">
-            Combine matching tiles. Arrow keys work too.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {highestMedal && (
-            <div className="rounded-2xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-center">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Medal</div>
-              <div className="text-lg leading-tight">{GAME_2048_MEDALS[highestMedal].emoji}</div>
-            </div>
-          )}
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-right">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Score</div>
-            <div className="text-lg font-bold leading-tight text-[var(--color-text)]">{score}</div>
-          </div>
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-right">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Best</div>
-            <div className="text-lg font-bold leading-tight text-[var(--color-text)]">{bestTile}</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-1 items-center justify-center">
+    <BonusGameLayout
+      board={
         <div
-          className="w-full max-w-[320px] rounded-[1.6rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-3 shadow-inner"
+          className="h-full w-full rounded-[1.6rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-3 shadow-inner"
           onTouchStart={(event) => {
             const touch = event.touches[0]
             if (!touch) return
@@ -858,7 +894,7 @@ function Puzzle2048Board({
             handleMove(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'))
           }}
         >
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid h-full grid-cols-4 gap-2">
             {board.map((value, index) => (
               <button
                 key={`2048-${index}`}
@@ -873,41 +909,65 @@ function Puzzle2048Board({
             ))}
           </div>
         </div>
-      </div>
-
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-[var(--color-text)]">
-          {stuck
-            ? 'No more moves. Try again?'
-            : bestTile >= GAME_2048_MEDALS.gold.threshold
-              ? `🎉 ${GAME_2048_MEDALS.gold.emoji} Gold earned at 4096!`
-              : won
-                ? `🎉 ${GAME_2048_MEDALS.silver.emoji} Silver earned at 2048!`
-                : bestTile >= GAME_2048_MEDALS.bronze.threshold
-                  ? `Nice run — ${GAME_2048_MEDALS.bronze.emoji} bronze earned at 1024.`
-                  : 'Swipe or use arrow keys to merge tiles.'}
-        </p>
-        <div className="flex gap-2">
-          {(['left', 'up', 'down', 'right'] as Direction2048[]).map(direction => (
+      }
+      sidebar={
+        <>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+              2048
+            </p>
+            <h2 className="mt-1 text-3xl font-semibold leading-tight text-[var(--color-text)]">
+              Merge your way upward.
+            </h2>
+          </div>
+          <BonusInfoCard label="Goal">
+            Combine equal tiles to build larger values. Reach <strong>1024</strong> for bronze, <strong>2048</strong> for silver, and <strong>4096</strong> for gold.
+          </BonusInfoCard>
+          <BonusInfoCard label="How It Works">
+            Swipe or use the arrow buttons to slide all tiles at once. Matching numbers merge when they collide.
+          </BonusInfoCard>
+          <div className="grid grid-cols-3 gap-3">
+            {highestMedal && (
+              <BonusStatTile label="Medal" value={GAME_2048_MEDALS[highestMedal].emoji} />
+            )}
+            <BonusStatTile label="Score" value={score} />
+            <BonusStatTile label="Best" value={bestTile} />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(['left', 'up', 'down', 'right'] as Direction2048[]).map(direction => (
+              <button
+                key={direction}
+                type="button"
+                onClick={() => handleMove(direction)}
+                className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold uppercase text-[var(--color-text)] transition hover:bg-slate-50"
+              >
+                {direction === 'left' ? '←' : direction === 'right' ? '→' : direction === 'up' ? '↑' : '↓'}
+              </button>
+            ))}
+          </div>
+          <div className="mt-auto flex items-center justify-between gap-3">
+            <p className="text-sm font-medium text-[var(--color-text)]">
+              {stuck
+                ? 'No more moves. Try again?'
+                : bestTile >= GAME_2048_MEDALS.gold.threshold
+                  ? `🎉 ${GAME_2048_MEDALS.gold.emoji} Gold earned at 4096!`
+                  : won
+                    ? `🎉 ${GAME_2048_MEDALS.silver.emoji} Silver earned at 2048!`
+                    : bestTile >= GAME_2048_MEDALS.bronze.threshold
+                      ? `Nice run — ${GAME_2048_MEDALS.bronze.emoji} bronze earned at 1024.`
+                      : 'Swipe or use arrow keys to merge tiles.'}
+            </p>
             <button
-              key={direction}
               type="button"
-              onClick={() => handleMove(direction)}
-              className="rounded-xl border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-[11px] font-semibold uppercase text-[var(--color-text)] transition hover:bg-slate-50"
+              onClick={handleReset}
+              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
             >
-              {direction === 'left' ? '←' : direction === 'right' ? '→' : direction === 'up' ? '↑' : '↓'}
+              New Board
             </button>
-          ))}
-          <button
-            type="button"
-            onClick={handleReset}
-            className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
-          >
-            New Board
-          </button>
-        </div>
-      </div>
-    </div>
+          </div>
+        </>
+      }
+    />
   )
 }
 
@@ -1455,12 +1515,12 @@ export function PuzzleWeekBonusHub() {
           </div>
 
           {/* Sidebar + game */}
-          <div className="flex min-h-0 flex-1 gap-5 items-stretch">
-            <aside className="flex min-h-0 w-56 flex-shrink-0 flex-col overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm p-3">
+          <div className="flex min-h-0 flex-1 gap-5 items-stretch overflow-hidden">
+            <aside className="flex h-full min-h-0 w-56 flex-shrink-0 self-stretch flex-col overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm p-3">
               <p className="px-3 pt-2 pb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
                 Puzzles
               </p>
-              <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <div className="h-full min-h-0 flex-1 overflow-y-auto pr-1">
                 {puzzleList}
               </div>
               <div className="mt-auto pt-4 border-t border-[var(--color-border)] px-3 pb-2">
@@ -1474,7 +1534,7 @@ export function PuzzleWeekBonusHub() {
               </div>
             </aside>
 
-            <section className="flex-1 min-w-0 overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm">
+            <section className="flex h-full min-h-0 flex-1 min-w-0 self-stretch overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm">
               <div className="h-full min-h-0">
                 {renderGame()}
               </div>

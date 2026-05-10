@@ -6,7 +6,7 @@ function isPuzzleWeekHost(hostHeader: string | null): boolean {
   return host === 'puzzleweek.abrastat.com' || host === 'puzzleweek.localhost'
 }
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (isPuzzleWeekHost(request.headers.get('host')) && pathname === '/') {

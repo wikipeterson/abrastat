@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Queens — AbraStat Puzzle Week</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #E8FAF8;
+    --surface: #FFFFFF;
+    --text: #0D4F49;
+    --muted: #1A8C80;
+    --accent: #2EC4B6;
+    --accent-light: #D6F5F2;
+    --border: #7FD9D3;
+    --region-colors: #FF6B6B, #FFA94D, #FFD43B, #69DB7C, #4DABF7, #9775FA, #F783AC, #A9E34B, #66D9E8;
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    touch-action: manipulation;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 12px 16px;
+    gap: 10px;
+  }
+
+  /* ── header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .logo { height: 36px; width: auto; }
+  .back-btn {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    text-decoration: none;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 5px 12px;
+    background: white;
+    white-space: nowrap;
+  }
+
+  /* ── title row ── */
+  .title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .game-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .difficulty-group {
+    display: flex;
+    gap: 4px;
+  }
+  .diff-btn {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: white;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .diff-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  /* ── status bar ── */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+  .progress-text { font-weight: 600; color: var(--text); }
+  .hint-text { color: var(--muted); font-size: 12px; }
+
+  /* ── board ── */
+  .board-wrap {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #board {
+    display: grid;
+    /* columns set dynamically */
+    aspect-ratio: 1;
+    width: 100%;
+    max-width: min(calc(100dvh - 280px), 100%);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--border);
+    gap: 1.5px;
+    padding: 1.5px;
+    user-select: none;
+    touch-action: none;
+  }
+  .cell {
+    position: relative;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: filter 0.1s, transform 0.08s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cell:active { transform: scale(0.92); }
+  .cell.conflict { filter: brightness(0.7) saturate(1.6); }
+  .cell.queen::after {
+    content: '♛';
+    font-size: clamp(14px, 4vw, 26px);
+    color: rgba(0,0,0,0.75);
+    pointer-events: none;
+    line-height: 1;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  }
+  .cell.solved-queen::after {
+    color: #1A5C1A;
+    text-shadow: 0 0 8px rgba(46, 196, 182, 0.7);
+    animation: pop 0.3s ease;
+  }
+  @keyframes pop {
+    0%   { transform: scale(0.4); }
+    60%  { transform: scale(1.25); }
+    100% { transform: scale(1); }
+  }
+
+  /* ── buttons ── */
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .btn {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 0;
+    border-radius: 14px;
+    border: 1.5px solid var(--border);
+    background: white;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .btn:hover { background: var(--accent-light); }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  .btn.primary:hover { filter: brightness(1.08); }
+
+  /* ── success overlay ── */
+  #success-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(232,250,248,0.92);
+    z-index: 100;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    text-align: center;
+    padding: 32px;
+  }
+  #success-overlay.show { display: flex; }
+  .success-icon { font-size: 56px; animation: bounce 0.5s ease; }
+  @keyframes bounce {
+    0%   { transform: scale(0); }
+    50%  { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  .success-title { font-size: 28px; font-weight: 800; color: var(--text); }
+  .success-sub { font-size: 15px; color: var(--muted); }
+  .success-moves { font-size: 17px; font-weight: 700; color: var(--accent); }
+
+  /* ── description ── */
+  .description {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+    flex-shrink: 0;
+    text-align: center;
+  }
+
+  /* generating spinner */
+  .spinner {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    padding: 16px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <img src="/logo.svg" alt="AbraStat" class="logo" onerror="this.style.display='none'">
+    <a href="https://puzzleweek.abrastat.com" class="back-btn">← Main</a>
+  </div>
+
+  <div class="title-row">
+    <span class="game-title">👑 Queens</span>
+    <div class="difficulty-group">
+      <button class="diff-btn active" data-diff="easy">Easy</button>
+      <button class="diff-btn" data-diff="medium">Medium</button>
+      <button class="diff-btn" data-diff="hard">Hard</button>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <span class="progress-text" id="progress-text">0 / 0 queens placed</span>
+    <span class="hint-text" id="hint-text">Tap a cell to place a queen</span>
+  </div>
+
+  <div class="board-wrap">
+    <div id="board"></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn" id="show-solution-btn">Show Solution</button>
+    <button class="btn primary" id="new-puzzle-btn">New Puzzle</button>
+  </div>
+
+  <div class="description">
+    Place one queen in each row, column, and colored region.<br>
+    No two queens may touch — not even diagonally.
+  </div>
+</div>
+
+<div id="success-overlay">
+  <div class="success-icon">👑</div>
+  <div class="success-title">You solved it!</div>
+  <div class="success-sub">All queens placed correctly.</div>
+  <div class="success-moves" id="success-moves"></div>
+  <button class="btn primary" style="width:200px; margin-top:8px" id="success-new-btn">New Puzzle</button>
+</div>
+
+<script>
+'use strict';
+
+// ── palette ──────────────────────────────────────────────────────────
+const REGION_COLORS = [
+  '#FFADAD','#FFD6A5','#FDFFB6','#CAFFBF',
+  '#9BF6FF','#BDB2FF','#FFC6FF','#A8DADC',
+  '#F1C0E8','#C8F7C5','#FFEAA7',
+];
+
+// ── difficulty config ─────────────────────────────────────────────────
+const DIFFICULTY = {
+  easy:   { n: 6,  blobiness: 0.80 },
+  medium: { n: 7,  blobiness: 0.60 },
+  hard:   { n: 9,  blobiness: 0.40 },
+};
+
+// ── state ─────────────────────────────────────────────────────────────
+let N = 6;
+let regions = [];     // regions[cell] = region index (0..N-1)
+let queens = [];      // queens[cell] = true/false
+let solution = [];    // solution[cell] = true/false (canonical answer)
+let conflicts = new Set();
+let moves = 0;
+let solved = false;
+let currentDiff = 'easy';
+let showingSolution = false;
+
+// ── generation ────────────────────────────────────────────────────────
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/** Place N queens, one per row, one per col, no diagonal adjacency */
+function placeQueens(n) {
+  const cols = shuffle([...Array(n).keys()]);
+  // Try random queen placements via backtracking
+  const used_cols = new Set();
+  const result = new Array(n).fill(-1);
+
+  function bt(row) {
+    if (row === n) return true;
+    const order = shuffle([...Array(n).keys()]);
+    for (const col of order) {
+      if (used_cols.has(col)) continue;
+      // Check diagonal adjacency with all placed queens
+      let ok = true;
+      for (let r = 0; r < row; r++) {
+        const c = result[r];
+        if (Math.abs(r - row) === 1 && Math.abs(c - col) === 1) { ok = false; break; }
+      }
+      if (!ok) continue;
+      result[row] = col;
+      used_cols.add(col);
+      if (bt(row + 1)) return true;
+      result[row] = -1;
+      used_cols.delete(col);
+    }
+    return false;
+  }
+
+  return bt(0) ? result : null;
+}
+
+/** BFS flood-fill to grow a region around a seed cell */
+function growRegion(grid, seed, targetSize, blobiness, n) {
+  const total = n * n;
+  const region = [seed];
+  grid[seed] = true; // marked
+  const frontier = [seed];
+
+  while (region.length < targetSize && frontier.length > 0) {
+    // Pick random cell from frontier
+    const fi = Math.floor(Math.random() * frontier.length);
+    const cell = frontier[fi];
+    const row = Math.floor(cell / n), col = cell % n;
+
+    // Gather unassigned neighbors
+    const neighbors = [];
+    if (row > 0 && !grid[cell - n]) neighbors.push(cell - n);
+    if (row < n - 1 && !grid[cell + n]) neighbors.push(cell + n);
+    if (col > 0 && !grid[cell - 1]) neighbors.push(cell - 1);
+    if (col < n - 1 && !grid[cell + 1]) neighbors.push(cell + 1);
+
+    if (neighbors.length === 0) {
+      frontier.splice(fi, 1);
+      continue;
+    }
+
+    if (Math.random() < blobiness) {
+      const pick = neighbors[Math.floor(Math.random() * neighbors.length)];
+      grid[pick] = true;
+      region.push(pick);
+      frontier.push(pick);
+    } else {
+      frontier.splice(fi, 1);
+    }
+  }
+  return region;
+}
+
+/** Generate puzzle: returns { regions, solution } or null on failure */
+function generatePuzzle(n, blobiness) {
+  const MAX_ATTEMPTS = 200;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    // 1. Place queens
+    const queenCols = placeQueens(n);
+    if (!queenCols) continue;
+
+    // Queen positions as flat indices
+    const queenCells = queenCols.map((col, row) => row * n + col);
+
+    // 2. Assign each queen to one region (region i has queen i)
+    //    Grow regions outward from queen cells
+    const regionMap = new Array(n * n).fill(-1);
+    const marked = new Array(n * n).fill(false);
+
+    // Each queen seeds its own region
+    for (let i = 0; i < n; i++) {
+      regionMap[queenCells[i]] = i;
+      marked[queenCells[i]] = true;
+    }
+
+    // Grow N regions via BFS, maintaining one queen per region
+    // We use a competitive growing strategy
+    const queues = queenCells.map(c => [c]);
+    const regionSizes = new Array(n).fill(1);
+    const target = n; // each region should have about n cells
+
+    let progress = true;
+    while (progress) {
+      progress = false;
+      for (let ri = 0; ri < n; ri++) {
+        if (queues[ri].length === 0) continue;
+        const qi = Math.floor(Math.random() * queues[ri].length);
+        const cell = queues[ri][qi];
+        const row = Math.floor(cell / n), col = cell % n;
+
+        const neighbors = [];
+        if (row > 0 && !marked[cell - n]) neighbors.push(cell - n);
+        if (row < n - 1 && !marked[cell + n]) neighbors.push(cell + n);
+        if (col > 0 && !marked[cell - 1]) neighbors.push(cell - 1);
+        if (col < n - 1 && !marked[cell + 1]) neighbors.push(cell + 1);
+
+        if (neighbors.length === 0) {
+          queues[ri].splice(qi, 1);
+          continue;
+        }
+
+        if (Math.random() < blobiness || regionSizes[ri] < target) {
+          const pick = neighbors[Math.floor(Math.random() * neighbors.length)];
+          marked[pick] = true;
+          regionMap[pick] = ri;
+          regionSizes[ri]++;
+          queues[ri].push(pick);
+          progress = true;
+        } else {
+          queues[ri].splice(qi, 1);
+        }
+      }
+    }
+
+    // Fill any unassigned cells by nearest assigned neighbor
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (let c = 0; c < n * n; c++) {
+        if (regionMap[c] !== -1) continue;
+        const row = Math.floor(c / n), col = c % n;
+        const nbrs = [];
+        if (row > 0 && regionMap[c - n] !== -1) nbrs.push(regionMap[c - n]);
+        if (row < n-1 && regionMap[c + n] !== -1) nbrs.push(regionMap[c + n]);
+        if (col > 0 && regionMap[c - 1] !== -1) nbrs.push(regionMap[c - 1]);
+        if (col < n-1 && regionMap[c + 1] !== -1) nbrs.push(regionMap[c + 1]);
+        if (nbrs.length > 0) {
+          regionMap[c] = nbrs[Math.floor(Math.random() * nbrs.length)];
+          changed = true;
+        }
+      }
+    }
+
+    // Verify all cells assigned
+    if (regionMap.includes(-1)) continue;
+
+    // 3. Verify each region contains exactly one queen
+    const queensPerRegion = new Array(n).fill(0);
+    for (let i = 0; i < n; i++) queensPerRegion[regionMap[queenCells[i]]]++;
+    if (queensPerRegion.some(c => c !== 1)) continue;
+
+    // 4. Build solution array
+    const solutionArr = new Array(n * n).fill(false);
+    for (const qc of queenCells) solutionArr[qc] = true;
+
+    // 5. Uniqueness check via backtracking solver
+    if (!isUniqueSolution(regionMap, solutionArr, n)) continue;
+
+    return { regions: regionMap, solution: solutionArr };
+  }
+
+  return null; // failed — caller should retry
+}
+
+/** Returns true if the given solution is the ONLY valid solution */
+function isUniqueSolution(regionMap, solutionArr, n) {
+  let count = 0;
+
+  function solve(row, usedCols, usedRegions) {
+    if (count > 1) return; // already found 2 — short circuit
+    if (row === n) { count++; return; }
+
+    for (let col = 0; col < n; col++) {
+      if (usedCols.has(col)) continue;
+      const ri = regionMap[row * n + col];
+      if (usedRegions.has(ri)) continue;
+
+      // Diagonal adjacency check with last placed queen
+      // We need to check ALL placed queens, not just the previous row.
+      // Track placed positions.
+      let diag = false;
+      for (let r = 0; r < row; r++) {
+        // We don't have a row->col map here yet — need to pass it
+        // Handled via placed array below
+      }
+      // Actually, track placed array via closure:
+      // Restart with placed array
+    }
+  }
+
+  // Proper uniqueness check with full state:
+  let solutions = 0;
+  const placed = new Array(n).fill(-1); // placed[row] = col
+
+  function bt(row) {
+    if (solutions > 1) return;
+    if (row === n) { solutions++; return; }
+
+    for (let col = 0; col < n; col++) {
+      // Check column
+      let ok = true;
+      for (let r = 0; r < row; r++) {
+        if (placed[r] === col) { ok = false; break; }
+      }
+      if (!ok) continue;
+
+      // Check region
+      const ri = regionMap[row * n + col];
+      for (let r = 0; r < row; r++) {
+        if (regionMap[r * n + placed[r]] === ri) { ok = false; break; }
+      }
+      if (!ok) continue;
+
+      // Check diagonal adjacency (no two queens may touch diagonally OR orthogonally for adjacency)
+      for (let r = 0; r < row; r++) {
+        const dr = Math.abs(r - row), dc = Math.abs(placed[r] - col);
+        if (dr === 1 && dc === 1) { ok = false; break; }
+        // Note: orthogonal adjacency is covered by row/col uniqueness,
+        // only diagonal needs extra check
+      }
+      if (!ok) continue;
+
+      placed[row] = col;
+      bt(row + 1);
+      placed[row] = -1;
+    }
+  }
+
+  bt(0);
+  return solutions === 1;
+}
+
+// ── conflict detection ────────────────────────────────────────────────
+
+function computeConflicts() {
+  const placedCells = [];
+  for (let c = 0; c < N * N; c++) {
+    if (queens[c]) placedCells.push(c);
+  }
+
+  const newConflicts = new Set();
+
+  for (let i = 0; i < placedCells.length; i++) {
+    for (let j = i + 1; j < placedCells.length; j++) {
+      const a = placedCells[i], b = placedCells[j];
+      const ar = Math.floor(a / N), ac = a % N;
+      const br = Math.floor(b / N), bc = b % N;
+
+      let conflicted = false;
+
+      // Same row
+      if (ar === br) conflicted = true;
+      // Same column
+      if (ac === bc) conflicted = true;
+      // Same region
+      if (regions[a] === regions[b]) conflicted = true;
+      // Diagonal adjacency (touching)
+      if (Math.abs(ar - br) === 1 && Math.abs(ac - bc) === 1) conflicted = true;
+
+      if (conflicted) {
+        newConflicts.add(a);
+        newConflicts.add(b);
+      }
+    }
+  }
+
+  return newConflicts;
+}
+
+function checkSolved() {
+  if (queens.filter(Boolean).length !== N) return false;
+  if (conflicts.size > 0) return false;
+
+  // Verify one per row, col, region
+  const rows = new Set(), cols = new Set(), regs = new Set();
+  for (let c = 0; c < N * N; c++) {
+    if (!queens[c]) continue;
+    const r = Math.floor(c / N), col = c % N, reg = regions[c];
+    if (rows.has(r) || cols.has(col) || regs.has(reg)) return false;
+    rows.add(r); cols.add(col); regs.add(reg);
+  }
+  return true;
+}
+
+// ── rendering ─────────────────────────────────────────────────────────
+
+function renderBoard() {
+  const board = document.getElementById('board');
+  board.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+  board.innerHTML = '';
+
+  for (let c = 0; c < N * N; c++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.dataset.cell = c;
+
+    const ri = regions[c];
+    cell.style.background = REGION_COLORS[ri % REGION_COLORS.length];
+
+    if (queens[c]) {
+      cell.classList.add(solved ? 'solved-queen queen' : 'queen');
+    }
+    if (conflicts.has(c)) {
+      cell.classList.add('conflict');
+    }
+
+    board.appendChild(cell);
+  }
+}
+
+function updateStatus() {
+  const placed = queens.filter(Boolean).length;
+  document.getElementById('progress-text').textContent =
+    `${placed} / ${N} queen${placed !== 1 ? 's' : ''} placed`;
+
+  if (solved) {
+    document.getElementById('hint-text').textContent = '✓ Solved!';
+  } else if (conflicts.size > 0) {
+    document.getElementById('hint-text').textContent = 'Conflict — adjust placement';
+  } else if (placed === N) {
+    document.getElementById('hint-text').textContent = 'Almost — check your placement';
+  } else {
+    document.getElementById('hint-text').textContent = 'One queen per row, column & color';
+  }
+}
+
+function showSuccess() {
+  const overlay = document.getElementById('success-overlay');
+  document.getElementById('success-moves').textContent =
+    `${moves} move${moves !== 1 ? 's' : ''}`;
+  overlay.classList.add('show');
+}
+
+// ── interaction ───────────────────────────────────────────────────────
+
+document.getElementById('board').addEventListener('click', e => {
+  if (solved || showingSolution) return;
+  const cell = e.target.closest('.cell');
+  if (!cell) return;
+  const c = parseInt(cell.dataset.cell, 10);
+
+  queens[c] = !queens[c];
+  if (queens[c]) moves++;
+
+  conflicts = computeConflicts();
+
+  if (checkSolved()) {
+    solved = true;
+    conflicts = new Set();
+    renderBoard();
+    updateStatus();
+    setTimeout(showSuccess, 500);
+  } else {
+    renderBoard();
+    updateStatus();
+  }
+});
+
+document.getElementById('show-solution-btn').addEventListener('click', () => {
+  if (showingSolution) {
+    // Toggle off
+    showingSolution = false;
+    document.getElementById('show-solution-btn').textContent = 'Show Solution';
+    renderBoard();
+    updateStatus();
+    return;
+  }
+  showingSolution = true;
+  document.getElementById('show-solution-btn').textContent = 'Hide Solution';
+  // Display solution
+  const board = document.getElementById('board');
+  const cells = board.querySelectorAll('.cell');
+  cells.forEach((cell, c) => {
+    cell.classList.remove('queen', 'solved-queen', 'conflict');
+    if (solution[c]) cell.classList.add('solved-queen', 'queen');
+  });
+  document.getElementById('hint-text').textContent = 'This is the unique solution';
+});
+
+function startNewPuzzle() {
+  document.getElementById('success-overlay').classList.remove('show');
+  document.getElementById('show-solution-btn').textContent = 'Show Solution';
+  showingSolution = false;
+  solved = false;
+  moves = 0;
+
+  const { n, blobiness } = DIFFICULTY[currentDiff];
+  N = n;
+
+  document.getElementById('board').innerHTML =
+    `<div class="spinner">Generating puzzle…</div>`;
+  document.getElementById('hint-text').textContent = 'Generating…';
+
+  // Generate in a microtask so the spinner renders first
+  setTimeout(() => {
+    let result = null;
+    for (let t = 0; t < 5 && !result; t++) {
+      result = generatePuzzle(N, blobiness);
+    }
+    if (!result) {
+      // Very rare fallback — just try again with a different blobiness
+      result = generatePuzzle(N, 0.7);
+    }
+
+    regions = result ? result.regions : Array(N*N).fill(0).map((_, i) => i % N);
+    solution = result ? result.solution : Array(N*N).fill(false);
+    queens = new Array(N * N).fill(false);
+    conflicts = new Set();
+
+    renderBoard();
+    updateStatus();
+  }, 20);
+}
+
+document.getElementById('new-puzzle-btn').addEventListener('click', startNewPuzzle);
+document.getElementById('success-new-btn').addEventListener('click', startNewPuzzle);
+
+// Difficulty buttons
+document.querySelectorAll('.diff-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.diff === currentDiff) return;
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentDiff = btn.dataset.diff;
+    startNewPuzzle();
+  });
+});
+
+// ── init ──────────────────────────────────────────────────────────────
+startNewPuzzle();
+</script>
+</body>
+</html>

@@ -928,6 +928,13 @@ const PUZZLE_LIST = [
     desc: 'Merge matching tiles to reach 2048',
     live: true,
   },
+  {
+    id: 'queens',
+    name: 'Queens',
+    emoji: '👑',
+    desc: 'One queen per row, column & color region',
+    live: true,
+  },
 ]
 
 const LIVE_PUZZLES = PUZZLE_LIST.filter(p => p.live)
@@ -938,11 +945,17 @@ export function PuzzleWeekBonusHub() {
   const { user, isGuest } = useAuth()
   const canManage = canManagePuzzleWeekIdentity(user)
 
-  // Disable pull-to-refresh on mobile so swipe-down gestures don't reload the page
+  // Disable pull-to-refresh on mobile so swipe-down gestures don't reload the page.
+  // Must target both html AND body — iOS Safari only respects the html element.
   useEffect(() => {
-    const prev = document.body.style.overscrollBehavior
+    const prevBody = document.body.style.overscrollBehavior
+    const prevHtml = document.documentElement.style.overscrollBehavior
     document.body.style.overscrollBehavior = 'none'
-    return () => { document.body.style.overscrollBehavior = prev }
+    document.documentElement.style.overscrollBehavior = 'none'
+    return () => {
+      document.body.style.overscrollBehavior = prevBody
+      document.documentElement.style.overscrollBehavior = prevHtml
+    }
   }, [])
 
   const [selectedId, setSelectedId] = useState(
@@ -1020,6 +1033,7 @@ export function PuzzleWeekBonusHub() {
       case 'lightsout': return <LightsOutBoard medals={lightsOutMedals} onSolve={awardLightsOutMedal} />
       case 'netwalk':   return <NetwalkBoard medals={netwalkMedals} onSolve={awardNetwalkMedal} />
       case '2048':      return <Puzzle2048Board medals={game2048Medals} onAwardMedal={award2048Medal} />
+      case 'queens':    return <iframe src="/queens.html" className="h-full w-full border-0" title="Queens Puzzle" />
       default:          return null
     }
   }
@@ -1132,7 +1146,7 @@ export function PuzzleWeekBonusHub() {
       {/* Page scroll is disabled so it doesn't interfere with game touch gestures */}
       <main
         className="sm:hidden flex flex-col bg-[var(--color-bg)]"
-        style={{ height: '100dvh', overflow: 'hidden' }}
+        style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none' }}
       >
         {/* Compact nav bar */}
         <div className="flex flex-shrink-0 items-center justify-between gap-2 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3">

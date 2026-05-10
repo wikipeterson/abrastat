@@ -517,8 +517,8 @@ function LightsOutBoard({
                 aria-label={`Toggle light ${r + 1}, ${c + 1}`}
                 className={`aspect-square rounded-full border transition duration-150 ${
                   isOn
-                    ? 'border-teal-300 bg-[var(--color-accent)] shadow-[0_0_0_3px_rgba(14,165,160,0.16)]'
-                    : 'border-slate-200 bg-white'
+                    ? 'border-[#d6eef3] bg-white shadow-[0_0_0_4px_rgba(255,255,255,0.92),0_0_20px_rgba(115,221,221,0.22)]'
+                    : 'border-teal-300 bg-[var(--color-accent)] shadow-[inset_0_2px_0_rgba(255,255,255,0.18),0_0_0_3px_rgba(14,165,160,0.16)]'
                 } ${solved ? 'cursor-default' : 'hover:scale-105 active:scale-95'}`}
               />
             )

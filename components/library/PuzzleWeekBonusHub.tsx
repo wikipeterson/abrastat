@@ -1422,8 +1422,11 @@ export function PuzzleWeekBonusHub() {
       </main>
 
       {/* ═══════ Desktop layout ═══════ */}
-      <main className="hidden sm:block min-h-screen bg-[var(--color-bg)] px-6 py-8">
-        <div className="mx-auto max-w-6xl space-y-6">
+      <main
+        className="hidden sm:block bg-[var(--color-bg)] px-6 py-8"
+        style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none' }}
+      >
+        <div className="mx-auto flex h-full max-w-6xl flex-col gap-6">
 
           {/* Header */}
           <div className="flex relative items-center py-2">
@@ -1452,12 +1455,14 @@ export function PuzzleWeekBonusHub() {
           </div>
 
           {/* Sidebar + game */}
-          <div className="flex gap-5 items-start">
-            <aside className="flex flex-col w-56 flex-shrink-0 rounded-3xl border border-[var(--color-border)] bg-white shadow-sm p-3">
+          <div className="flex min-h-0 flex-1 gap-5 items-stretch">
+            <aside className="flex min-h-0 w-56 flex-shrink-0 flex-col overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm p-3">
               <p className="px-3 pt-2 pb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
                 Puzzles
               </p>
-              {puzzleList}
+              <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                {puzzleList}
+              </div>
               <div className="mt-auto pt-4 border-t border-[var(--color-border)] px-3 pb-2">
                 <Link
                   href="https://puzzleweek.abrastat.com"
@@ -1470,7 +1475,7 @@ export function PuzzleWeekBonusHub() {
             </aside>
 
             <section className="flex-1 min-w-0 overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm">
-              <div className="h-[520px]">
+              <div className="h-full min-h-0">
                 {renderGame()}
               </div>
             </section>

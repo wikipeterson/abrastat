@@ -406,6 +406,30 @@ function BonusHowToPlay({ children }: { children: ReactNode }) {
   )
 }
 
+function lerpChannel(a: number, b: number, t: number) {
+  return Math.round(a + (b - a) * t)
+}
+
+function getSliderTileColors(value: number, total: number) {
+  // t: 0 = lowest tile (1), 1 = highest tile (total-1)
+  const t = (value - 1) / Math.max(total - 2, 1)
+  let r: number, g: number, b: number
+  if (t <= 0.5) {
+    // teal (#9be8e3) → white
+    const s = t * 2
+    r = lerpChannel(155, 255, s); g = lerpChannel(232, 255, s); b = lerpChannel(227, 255, s)
+  } else {
+    // white → amber (#f8c478)
+    const s = (t - 0.5) * 2
+    r = lerpChannel(255, 248, s); g = lerpChannel(255, 196, s); b = lerpChannel(255, 120, s)
+  }
+  return {
+    bg: `rgb(${r},${g},${b})`,
+    text: t < 0.28 ? '#0d504e' : t > 0.72 ? '#7a3200' : '#334155',
+    border: `rgb(${Math.round(r * 0.88)},${Math.round(g * 0.88)},${Math.round(b * 0.9)})`,
+  }
+}
+
 function SliderPuzzleBoard({
   medals,
   onSolve,
@@ -470,24 +494,29 @@ function SliderPuzzleBoard({
               const row = Math.floor(idx / size)
               const col = idx % size
               const movable = movableTiles.has(value)
+              const colors = getSliderTileColors(value, total)
               return (
                 <button
                   key={`${level}-${value}`}
                   type="button"
                   onClick={() => handlePress(idx)}
-                  className={`absolute flex items-center justify-center rounded-[0.95rem] border font-semibold transition-[left,top,transform,box-shadow,border-color,background-color] duration-200 ease-out ${tileFont} ${
-                    movable
-                      ? 'cursor-pointer border-teal-300 bg-gradient-to-br from-[#f7fffe] to-[#d9f7f3] text-[var(--color-text)] shadow-[0_8px_18px_rgba(46,196,182,0.18)] hover:-translate-y-0.5 hover:border-[var(--color-accent)]'
-                      : 'cursor-default border-slate-200 bg-gradient-to-br from-white to-slate-50 text-[var(--color-text)] shadow-[0_6px_14px_rgba(15,23,42,0.08)]'
+                  className={`absolute flex items-center justify-center rounded-[0.95rem] border font-semibold transition-[left,top,transform,box-shadow,border-color,background] duration-200 ease-out ${tileFont} ${
+                    movable ? 'cursor-pointer hover:-translate-y-0.5' : 'cursor-default'
                   }`}
                   style={{
                     width: `calc((100% - ${totalGap}px) / ${size})`,
                     height: `calc((100% - ${totalGap}px) / ${size})`,
                     left: `calc(${col} * ((100% - ${totalGap}px) / ${size} + ${gap}px))`,
                     top: `calc(${row} * ((100% - ${totalGap}px) / ${size} + ${gap}px))`,
+                    background: colors.bg,
+                    color: colors.text,
+                    borderColor: movable ? '#5eead4' : colors.border,
+                    boxShadow: movable
+                      ? '0 6px 18px rgba(14,165,160,0.22), 0 1px 3px rgba(14,165,160,0.1)'
+                      : '0 2px 8px rgba(15,23,42,0.07)',
                   }}
                 >
-                  <span className="absolute inset-x-3 top-2 h-px rounded-full bg-white/80" />
+                  <span className="absolute inset-x-3 top-2 h-px rounded-full bg-white/60" />
                   <span className="relative">{value}</span>
                 </button>
               )

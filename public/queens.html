@@ -27,19 +27,45 @@ html, body {
 }
 
 #app {
+  height: 100dvh;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 12px 14px;
+}
+
+.game-shell {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
-  max-width: 520px;
-  margin: 0 auto;
-  padding: 10px 14px;
-  gap: 6px;
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+}
+
+.board-panel,
+.side-panel {
+  background: rgba(255,255,255,0.7);
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+}
+
+.board-panel {
+  flex: 1;
+  min-height: 0;
+  padding: 10px;
+  display: flex;
+}
+
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
 }
 
 .title-row {
   display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
 }
-.game-title { font-size: 18px; font-weight: 700; }
+.game-title { font-size: clamp(20px, 2vw, 26px); font-weight: 800; }
 
 .diff-group { display: flex; gap: 4px; }
 .diff-btn {
@@ -83,8 +109,10 @@ html, body {
 }
 #board {
   display: grid;
-  width: min(calc(100vw - 28px), calc(100dvh - 190px));
+  width: min(100%, calc(100dvh - 44px));
   aspect-ratio: 1;
+  max-width: 100%;
+  max-height: 100%;
   border-radius: 10px; overflow: hidden;
   user-select: none; touch-action: none; cursor: pointer;
 }
@@ -112,6 +140,44 @@ html, body {
 .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
 .btn.primary:hover { filter: brightness(1.06); }
 
+.rules-card {
+  background: rgba(214,245,242,0.56);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rules-title {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.rules-copy {
+  font-size: clamp(13px, 1.4vw, 16px);
+  line-height: 1.42;
+}
+
+.meta-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta-pill {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: white;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+}
 
 #overlay {
   display: none; position: fixed; inset: 0; background: rgba(232,250,248,0.94); z-index: 50;
@@ -125,44 +191,111 @@ html, body {
 .ov-sub   { color: var(--muted); font-size: 14px; }
 .ov-moves { font-weight: 700; color: var(--accent); font-size: 15px; }
 
+@media (min-width: 860px) {
+  #app {
+    padding: 20px;
+  }
+
+  .game-shell {
+    flex-direction: row;
+    gap: 16px;
+  }
+
+  .board-panel {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .side-panel {
+    flex: 0 0 clamp(320px, 31vw, 390px);
+    min-height: 0;
+  }
+
+  #board {
+    width: min(100%, calc(100dvh - 60px));
+  }
+}
+
 @media (max-width: 640px) {
+  #app {
+    padding: 10px 12px;
+  }
+
+  .board-panel,
+  .side-panel {
+    border-radius: 16px;
+  }
+
+  .side-panel {
+    gap: 8px;
+    padding: 10px;
+  }
+
   .mark {
     font-size: clamp(18px, 6vw, 32px);
   }
   .mark-x {
     font-size: clamp(16px, 5vw, 26px);
   }
+
+  #board {
+    width: min(100%, calc(100dvh - 228px));
+  }
+
+  .rules-copy {
+    font-size: 13px;
+  }
 }
 </style>
 </head>
 <body>
 <div id="app">
-  <div class="title-row">
-    <span class="game-title">👑 Queens</span>
-    <div class="diff-group">
-      <button class="diff-btn active" data-diff="easy">Easy</button>
-      <button class="diff-btn"        data-diff="medium">Medium</button>
-      <button class="diff-btn"        data-diff="hard">Hard</button>
-    </div>
+  <div class="game-shell">
+    <section class="board-panel">
+      <div class="board-wrap"><div id="board"></div></div>
+    </section>
+
+    <section class="side-panel">
+      <div class="title-row">
+        <span class="game-title">👑 Queens</span>
+        <div class="diff-group">
+          <button class="diff-btn active" data-diff="easy">Easy</button>
+          <button class="diff-btn"        data-diff="medium">Medium</button>
+          <button class="diff-btn"        data-diff="hard">Hard</button>
+        </div>
+      </div>
+
+      <div class="selector-row">
+        <label for="puzzle-select">Puzzle</label>
+        <select id="puzzle-select"></select>
+      </div>
+
+      <div class="status-bar">
+        <span id="status-msg">Tap a cell to begin</span>
+        <span id="status-count"></span>
+      </div>
+
+      <div class="rules-card">
+        <div class="rules-title">Goal</div>
+        <div class="rules-copy">Place exactly one queen in every row, every column, and every colored region.</div>
+      </div>
+
+      <div class="rules-card">
+        <div class="rules-title">How It Works</div>
+        <div class="rules-copy">Tap a square to cycle through blank, X, and queen. Queens also cannot touch diagonally, even at a corner.</div>
+      </div>
+
+      <div class="meta-row">
+        <span class="meta-pill">10 puzzles per level</span>
+        <span class="meta-pill">Solved puzzles stay checked off</span>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn"         id="btn-solution">Show Solution</button>
+        <button class="btn primary" id="btn-new">Restart</button>
+      </div>
+    </section>
   </div>
-
-  <div class="selector-row">
-    <label for="puzzle-select">Puzzle</label>
-    <select id="puzzle-select"></select>
-  </div>
-
-  <div class="status-bar">
-    <span id="status-msg">Tap a cell to begin</span>
-    <span id="status-count"></span>
-  </div>
-
-  <div class="board-wrap"><div id="board"></div></div>
-
-  <div class="btn-row">
-    <button class="btn"         id="btn-solution">Show Solution</button>
-    <button class="btn primary" id="btn-new">Restart</button>
-  </div>
-
 </div>
 
 <div id="overlay">

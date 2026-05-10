@@ -448,10 +448,10 @@ function SliderPuzzleBoard({
       sidebar={
         <div className="flex h-full min-h-0 flex-col gap-3 lg:gap-2.5">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+            <p className="text-[clamp(1.45rem,1.9vw,2.25rem)] font-bold leading-[1.05] text-[var(--color-text)]">
               Slider Puzzle
             </p>
-            <h2 className="mt-1 text-[clamp(1.7rem,2.25vw,2.8rem)] font-semibold leading-[1.02] text-[var(--color-text)]">
+            <h2 className="mt-2 text-[clamp(1rem,1.2vw,1.24rem)] font-medium leading-[1.28] text-[var(--color-muted)]">
               Put the tiles in order.
             </h2>
           </div>
@@ -562,10 +562,10 @@ function LightsOutBoard({
       sidebar={
         <div className="flex h-full min-h-0 flex-col gap-3 lg:gap-2.5">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+            <p className="text-[clamp(1.45rem,1.9vw,2.25rem)] font-bold leading-[1.05] text-[var(--color-text)]">
               Lights Out
             </p>
-            <h2 className="mt-1 text-[clamp(1.7rem,2.25vw,2.8rem)] font-semibold leading-[1.02] text-[var(--color-text)]">
+            <h2 className="mt-2 text-[clamp(1rem,1.2vw,1.24rem)] font-medium leading-[1.28] text-[var(--color-muted)]">
               Turn every light off.
             </h2>
           </div>
@@ -738,10 +738,10 @@ function NetwalkBoard({
       sidebar={
         <div className="flex h-full min-h-0 flex-col gap-3 lg:gap-2.5">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+            <p className="text-[clamp(1.45rem,1.9vw,2.25rem)] font-bold leading-[1.05] text-[var(--color-text)]">
               Netwalk
             </p>
-            <h2 className="mt-1 text-[clamp(1.7rem,2.25vw,2.8rem)] font-semibold leading-[1.02] text-[var(--color-text)]">
+            <h2 className="mt-2 text-[clamp(1rem,1.2vw,1.24rem)] font-medium leading-[1.28] text-[var(--color-muted)]">
               Restore the network.
             </h2>
           </div>
@@ -913,10 +913,10 @@ function Puzzle2048Board({
       sidebar={
         <div className="flex h-full min-h-0 flex-col gap-3 lg:gap-2.5">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+            <p className="text-[clamp(1.45rem,1.9vw,2.25rem)] font-bold leading-[1.05] text-[var(--color-text)]">
               2048
             </p>
-            <h2 className="mt-1 text-[clamp(1.7rem,2.25vw,2.8rem)] font-semibold leading-[1.02] text-[var(--color-text)]">
+            <h2 className="mt-2 text-[clamp(1rem,1.2vw,1.24rem)] font-medium leading-[1.28] text-[var(--color-muted)]">
               Merge your way upward.
             </h2>
           </div>

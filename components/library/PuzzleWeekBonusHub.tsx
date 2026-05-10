@@ -446,8 +446,8 @@ function SliderPuzzleBoard({
         </div>
       }
       sidebar={
-        <div className="flex h-full min-h-0 flex-col gap-3 lg:gap-2.5">
-          <div>
+        <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden lg:gap-2.5">
+          <div className="flex-shrink-0">
             <p className="text-[clamp(1.45rem,1.9vw,2.25rem)] font-bold leading-[1.05] text-[var(--color-text)]">
               Slider Puzzle
             </p>
@@ -455,13 +455,7 @@ function SliderPuzzleBoard({
               Put the tiles in order.
             </h2>
           </div>
-          <BonusInfoCard label="Goal">
-            Arrange the numbered tiles from <strong>1</strong> up to the final tile so the empty space ends in the bottom-right corner.
-          </BonusInfoCard>
-          <BonusInfoCard label="How It Works">
-            Only tiles touching the empty space can move. Click or tap an adjacent tile to slide it into the gap.
-          </BonusInfoCard>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-shrink-0 flex-wrap gap-2">
             {(['easy', 'medium', 'hard'] as SliderLevel[]).map(l => (
               <button
                 key={l}
@@ -480,23 +474,35 @@ function SliderPuzzleBoard({
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid flex-shrink-0 grid-cols-2 gap-3">
             <BonusStatTile label="Moves" value={moves} />
-            <BonusStatTile label="Size" value={`${size}×${size}`} />
-          </div>
-          <div className="mt-auto flex items-center justify-between gap-3">
-            <p className="text-xs font-medium text-[var(--color-text)] lg:text-sm">
-              {solved
-                ? `🎉 ${SLIDER_MEDALS[level]} ${SLIDER_LABELS[level]} solved!`
-                : 'Slide adjacent tiles into the empty space.'}
-            </p>
             <button
               type="button"
               onClick={() => { setBoard(createSliderBoard(size)); setMoves(0); setBoardKey(k => k + 1) }}
-              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50 lg:text-sm"
+              className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-slate-50"
             >
-              New Board
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">
+                Board
+              </div>
+              <div className="mt-1 text-[clamp(1.15rem,1.55vw,1.55rem)] font-bold leading-none text-[var(--color-text)]">
+                New Board
+              </div>
             </button>
+          </div>
+          {solved && (
+            <div className="flex-shrink-0 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+              🎉 {SLIDER_MEDALS[level]} {SLIDER_LABELS[level]} solved!
+            </div>
+          )}
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            <div className="flex flex-col gap-3 pb-1 lg:gap-2.5">
+              <BonusInfoCard label="Goal">
+                Arrange the numbered tiles from <strong>1</strong> up to the final tile so the empty space ends in the bottom-right corner.
+              </BonusInfoCard>
+              <BonusInfoCard label="How It Works">
+                Only tiles touching the empty space can move. Click or tap an adjacent tile to slide it into the gap.
+              </BonusInfoCard>
+            </div>
           </div>
         </div>
       }

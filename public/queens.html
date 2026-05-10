@@ -28,15 +28,15 @@ html, body {
 
 #app {
   height: 100dvh;
-  max-width: 1080px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 12px 14px;
+  padding: 0;
 }
 
 .game-shell {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
   height: 100%;
   min-height: 0;
 }
@@ -51,15 +51,15 @@ html, body {
 .board-panel {
   flex: 1;
   min-height: 0;
-  padding: 10px;
+  padding: 12px;
   display: flex;
 }
 
 .side-panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px;
+  gap: 12px;
+  padding: 14px;
   min-height: 0;
   overflow: hidden;
 }
@@ -67,7 +67,7 @@ html, body {
 .side-top {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   flex-shrink: 0;
 }
 
@@ -90,25 +90,27 @@ html, body {
   color: var(--muted);
 }
 
-.diff-group { display: flex; gap: 4px; }
+.diff-group { display: flex; gap: 8px; flex-wrap: wrap; }
 .diff-btn {
-  font-size: 11px; font-weight: 600; padding: 4px 11px;
-  border-radius: 20px; border: 1.5px solid var(--border);
+  font-size: 13px; font-weight: 700; padding: 9px 16px;
+  border-radius: 16px; border: 1.5px solid var(--border);
   background: white; color: var(--muted); cursor: pointer; transition: all 0.14s;
 }
 .diff-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
 
 .selector-row {
-  display: flex; align-items: center; gap: 7px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
 }
 .selector-row label {
-  font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap;
+  font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
 }
 .selector-row select {
   flex: 1;
-  font-size: 13px; font-weight: 600;
-  padding: 5px 28px 5px 12px;
-  border-radius: 12px; border: 1.5px solid var(--border);
+  font-size: 14px; font-weight: 700;
+  padding: 10px 36px 10px 14px;
+  border-radius: 14px; border: 1.5px solid var(--border);
   background: white; color: var(--text);
   cursor: pointer; appearance: none; -webkit-appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231A8C80' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
@@ -117,14 +119,14 @@ html, body {
 }
 
 .status-bar {
-  flex-shrink: 0; background: white; border: 1px solid var(--border);
-  border-radius: 14px; padding: 6px 14px; font-size: 13px;
+  flex-shrink: 0; background: rgba(214,245,242,0.56); border: 1px solid var(--border);
+  border-radius: 18px; padding: 12px 14px; font-size: 13px;
   display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px;
 }
-#status-msg { font-weight: 600; }
+#status-msg { font-weight: 700; }
 #status-msg.conflict { color: #B22222; }
 #status-msg.solved   { color: #1A7A4A; }
-#status-count { color: var(--muted); font-size: 12px; white-space: nowrap; flex-shrink: 0; }
+#status-count { color: var(--muted); font-size: 12px; white-space: nowrap; flex-shrink: 0; font-weight: 700; }
 
 .board-wrap {
   flex: 1; min-height: 0;
@@ -153,9 +155,9 @@ html, body {
 .mark-solved   { color: #1A7A4A; text-shadow: 0 0 8px rgba(46,196,182,0.55); animation: pop 0.28s ease; }
 @keyframes pop { 0%{transform:scale(0.25)} 65%{transform:scale(1.18)} 100%{transform:scale(1)} }
 
-.btn-row { display: flex; gap: 8px; flex-shrink: 0; }
+.btn-row { display: flex; gap: 10px; flex-shrink: 0; }
 .btn {
-  flex: 1; font-size: 13px; font-weight: 600; padding: 9px 0; border-radius: 12px;
+  flex: 1; font-size: 14px; font-weight: 700; padding: 11px 0; border-radius: 16px;
   border: 1.5px solid var(--border); background: white; color: var(--text);
   cursor: pointer; transition: background 0.14s;
 }
@@ -230,7 +232,7 @@ html, body {
 
 @media (min-width: 720px) {
   #app {
-    padding: 20px;
+    padding: 0;
   }
 
   .game-shell {
@@ -244,7 +246,7 @@ html, body {
   }
 
   .side-panel {
-    flex: 0 0 clamp(290px, 28vw, 350px);
+    flex: 0 0 clamp(330px, 30vw, 420px);
     min-height: 0;
   }
 
@@ -255,7 +257,7 @@ html, body {
 
 @media (max-width: 640px) {
   #app {
-    padding: 10px 12px;
+    padding: 0;
   }
 
   .board-panel,

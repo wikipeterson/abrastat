@@ -13,6 +13,7 @@ import {
   PUZZLE_WEEK_MAX_TEAM_SIZE,
   PUZZLE_WEEK_PUZZLES,
   PuzzleWeekAnswerResult,
+  PuzzleWeekBonusMedals,
   PuzzleWeekEntry,
   PuzzleWeekLeaderboardEntry,
   PuzzleWeekMember,
@@ -21,6 +22,7 @@ import {
   PuzzleWeekVote,
   PuzzleWeekVoteTally,
   downloadPuzzleWeekPacket,
+  getPuzzleWeekBonusMedals,
   getPuzzleWeekLeaderboard,
   getPuzzleWeekProgress,
   getPuzzleWeekRegistration,
@@ -52,6 +54,17 @@ function topVotedIds(tally: Record<string, number>): Set<string> {
 
 const MAIN_PUZZLES = PUZZLE_WEEK_PUZZLES.slice(0, PUZZLE_WEEK_PUZZLES.length - 1)
 const META_PUZZLE = PUZZLE_WEEK_PUZZLES[PUZZLE_WEEK_PUZZLES.length - 1]
+const TOTAL_BONUS_MEDALS = 15
+
+function countBonusMedals(medals: PuzzleWeekBonusMedals) {
+  return (
+    medals.slider.length +
+    medals.lightsOut.length +
+    medals.netwalk.length +
+    medals.game2048.length +
+    medals.queens.length
+  )
+}
 
 export function PuzzleWeekHub() {
   const { user, loading, isGuest } = useAuth()
@@ -76,6 +89,7 @@ export function PuzzleWeekHub() {
   const [savingVote, setSavingVote] = useState(false)
   const [voteSaved, setVoteSaved] = useState(false)
   const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number; started: boolean; ended: boolean } | null>(null)
+  const [bonusMedalCount, setBonusMedalCount] = useState(0)
   const canRegister = canRegisterForPuzzleWeek(user)
   const canDownloadPacket = canDownloadPuzzleWeekPacketIdentity(user)
   const canManage = canManagePuzzleWeekIdentity(user)
@@ -161,6 +175,23 @@ export function PuzzleWeekHub() {
   }
 
   useEffect(() => { void loadVotes(user) }, [user])
+
+  useEffect(() => {
+    if (!user || isGuest) {
+      setBonusMedalCount(0)
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      try {
+        const medals = await getPuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, user)
+        if (!cancelled) setBonusMedalCount(countBonusMedals(medals))
+      } catch {
+        if (!cancelled) setBonusMedalCount(0)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [user, isGuest])
 
   async function handleSaveVote() {
     if (!user || isGuest) return
@@ -371,12 +402,6 @@ export function PuzzleWeekHub() {
                     Admin
                   </Link>
                 )}
-                <Link
-                  href="/puzzleweek/bonus"
-                  className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-slate-50"
-                >
-                  Bonus Puzzles
-                </Link>
                 <button
                   onClick={handleSignOut}
                   className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-slate-50"
@@ -434,12 +459,6 @@ export function PuzzleWeekHub() {
                   Admin
                 </Link>
               )}
-              <Link
-                href="/puzzleweek/bonus"
-                className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
-              >
-                Bonus Puzzles
-              </Link>
               <button
                 onClick={handleSignOut}
                 className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
@@ -450,31 +469,57 @@ export function PuzzleWeekHub() {
           )}
         </div>
 
-        {/* Countdown — only shown before May 18 */}
-        {countdown && !countdown.started && !countdown.ended && (
-          <div className="text-center pt-4 space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-              Opens in
-            </p>
-            <div className="flex items-end justify-center gap-2 sm:gap-3">
-              {([
-                { value: countdown.days, label: 'days' },
-                { value: countdown.hours, label: 'hrs' },
-                { value: countdown.minutes, label: 'min' },
-                { value: countdown.seconds, label: 'sec' },
-              ] as const).map(({ value, label }) => (
-                <div key={label} className="flex flex-col items-center">
-                  <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-bold tabular-nums text-[var(--color-text)] shadow-sm">
-                    {String(value).padStart(2, '0')}
+        <div className={`grid gap-4 ${countdown && !countdown.started && !countdown.ended ? 'lg:grid-cols-[minmax(0,1fr)_360px]' : ''}`}>
+          {countdown && !countdown.started && !countdown.ended && (
+            <div className="text-center pt-4 space-y-1.5">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+                Opens in
+              </p>
+              <div className="flex items-end justify-center gap-2 sm:gap-3">
+                {([
+                  { value: countdown.days, label: 'days' },
+                  { value: countdown.hours, label: 'hrs' },
+                  { value: countdown.minutes, label: 'min' },
+                  { value: countdown.seconds, label: 'sec' },
+                ] as const).map(({ value, label }) => (
+                  <div key={label} className="flex flex-col items-center">
+                    <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-bold tabular-nums text-[var(--color-text)] shadow-sm">
+                      {String(value).padStart(2, '0')}
+                    </div>
+                    <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
+                      {label}
+                    </div>
                   </div>
-                  <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
-                    {label}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-3xl border border-[var(--color-border)] bg-white/80 px-4 sm:px-5 py-4 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[var(--color-text)]">
+                  Try to earn all {TOTAL_BONUS_MEDALS} medals
+                </p>
+                <p className="mt-1 text-xs text-[var(--color-muted)]">
+                  {bonusMedalCount} of {TOTAL_BONUS_MEDALS} earned across the bonus puzzles.
+                </p>
+              </div>
+              <Link
+                href="/puzzleweek/bonus"
+                className="inline-flex flex-shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+              >
+                Bonus Puzzles
+              </Link>
+            </div>
+            <div className="mt-3 h-3 overflow-hidden rounded-full bg-[var(--color-accent-light)]">
+              <div
+                className="h-full rounded-full bg-[var(--color-accent)] transition-all duration-300"
+                style={{ width: `${(bonusMedalCount / TOTAL_BONUS_MEDALS) * 100}%` }}
+              />
             </div>
           </div>
-        )}
+        </div>
 
         {entry && (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
@@ -508,13 +553,6 @@ export function PuzzleWeekHub() {
                   <>You may use <strong className="text-[var(--color-text)]">any resources</strong>, including the internet.</>,
                   <>Compete <strong className="text-[var(--color-text)]">solo or as a team</strong> of up to {PUZZLE_WEEK_MAX_TEAM_SIZE}. Please don&apos;t share answers with other teams.</>,
                   <>Check answers individually as you go. Submit by <strong className="text-[var(--color-text)]">23:59 on Tuesday, May 26, 2026</strong>. Double-check for typos.</>,
-                  <>
-                    Looking for extra challenges?{' '}
-                    <Link href="/puzzleweek/bonus" className="font-semibold text-[var(--color-accent)] underline underline-offset-4">
-                      Visit the Bonus Puzzles page
-                    </Link>
-                    .
-                  </>,
                 ] as ReactNode[]).map((text, i) => (
                   <li key={i} className="flex gap-3">
                     <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">

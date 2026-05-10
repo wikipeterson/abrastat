@@ -308,7 +308,7 @@ function BonusGameLayout({
   return (
     <div className="flex h-full flex-col gap-4 p-4 lg:flex-row lg:items-stretch lg:gap-4 lg:p-5">
       <div className="flex min-h-0 flex-1 items-center justify-center">
-        <div className="aspect-square w-full max-w-[420px] lg:h-full lg:w-auto lg:max-w-none">
+        <div className="aspect-square w-full max-w-[420px] max-h-full lg:h-full lg:w-auto lg:max-w-none">
           {board}
         </div>
       </div>
@@ -568,6 +568,7 @@ function LightsOutBoard({
   const size = LIGHTS_OUT_SIZES[level]
   const [board, setBoard] = useState<boolean[]>(() => createLightsOutBoard(LIGHTS_OUT_SIZES.medium))
   const [moves, setMoves] = useState(0)
+  const [howToPlayOpen, setHowToPlayOpen] = useState(false)
 
   const solved = board.every(c => !c)
 
@@ -641,6 +642,7 @@ function LightsOutBoard({
               </button>
             ))}
           </div>
+
           <div className="grid flex-shrink-0 grid-cols-2 gap-3">
             <BonusStatTile label="Moves" value={moves} />
             <button
@@ -656,15 +658,17 @@ function LightsOutBoard({
               </div>
             </button>
           </div>
+
           {solved && (
             <div className="flex-shrink-0 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
               🎉 {LIGHTS_OUT_MEDALS[level]} {LIGHTS_OUT_LABELS[level]} solved!
             </div>
           )}
+
           <BonusHowToPlay>
-            <BonusInfoCard label="Goal">
-              Make every circle go dark. When the whole board is dark, you’ve solved the puzzle and earned the medal for that difficulty.
-            </BonusInfoCard>
+              <BonusInfoCard label="Goal">
+                Make every circle go dark. When the whole board is dark, you've solved the puzzle and earned the medal for that difficulty.
+              </BonusInfoCard>
             <BonusInfoCard label="How It Works">
               Clicking a circle flips that circle and its up, down, left, and right neighbors. Plan a few moves ahead because every click affects a cluster.
             </BonusInfoCard>

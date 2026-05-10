@@ -906,9 +906,6 @@ function Puzzle2048Board({
     setBestTile(Math.max(...next))
   }
 
-  const highestMedal: Game2048Medal | null =
-    medals.has('gold') ? 'gold' : medals.has('silver') ? 'silver' : medals.has('bronze') ? 'bronze' : null
-
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       const keyMap: Record<string, Direction2048> = {
@@ -989,14 +986,11 @@ function Puzzle2048Board({
               Merge your way upward.
             </h2>
           </div>
-          <div className={`grid flex-shrink-0 gap-3 ${highestMedal ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            {highestMedal && (
-              <BonusStatTile label="Medal" value={GAME_2048_MEDALS[highestMedal].emoji} />
-            )}
+          <div className="grid flex-shrink-0 grid-cols-2 gap-3">
             <BonusStatTile label="Score" value={score} />
             <BonusStatTile label="Best" value={bestTile} />
           </div>
-          <div className="flex flex-shrink-0 flex-wrap gap-2">
+          <div className="hidden flex-shrink-0 flex-wrap gap-2 lg:flex">
             {(['left', 'up', 'down', 'right'] as Direction2048[]).map(direction => (
               <button
                 key={direction}

@@ -16,7 +16,7 @@ export function BuildStamp() {
 
   return (
     <div
-      className="fixed left-3 bottom-3 z-50 pointer-events-none"
+      className="fixed left-3 bottom-3 z-50 pointer-events-none hidden sm:block"
       title="Deployment build stamp"
     >
       <div className="rounded-md border border-slate-200 bg-white/90 px-2 py-1 text-[11px] text-slate-500 shadow-sm backdrop-blur-sm">

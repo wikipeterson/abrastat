@@ -4,6 +4,7 @@ import {
   PuzzleWeek2048MedalLevel,
   PUZZLE_WEEK_MAX_TEAM_SIZE,
   PuzzleWeekBonusMedals,
+  PuzzleWeekQueensSolvedBoards,
   PuzzleWeekBonusTier,
   PUZZLE_WEEK_PUZZLES,
   PuzzleWeekAdminEntry,
@@ -55,6 +56,7 @@ function emptyBonusMedals(): PuzzleWeekBonusMedals {
     netwalk: [],
     game2048: [],
     queens: [],
+    queensSolved: { easy: [], medium: [], hard: [] },
   }
 }
 
@@ -69,6 +71,26 @@ function sanitizeStringArray<T extends string>(value: unknown, allowed: readonly
   return [...seen]
 }
 
+function sanitizeNumberArray(value: unknown): number[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<number>()
+  for (const item of value) {
+    const numberValue = typeof item === 'number' ? item : Number(item)
+    if (!Number.isInteger(numberValue) || numberValue < 0) continue
+    seen.add(numberValue)
+  }
+  return [...seen].sort((a, b) => a - b)
+}
+
+function sanitizeQueensSolvedBoards(value: unknown): PuzzleWeekQueensSolvedBoards {
+  const candidate = (value && typeof value === 'object') ? value as Record<string, unknown> : {}
+  return {
+    easy: sanitizeNumberArray(candidate.easy),
+    medium: sanitizeNumberArray(candidate.medium),
+    hard: sanitizeNumberArray(candidate.hard),
+  }
+}
+
 function sanitizeBonusMedals(data: Record<string, unknown> | PuzzleWeekBonusMedals | null | undefined): PuzzleWeekBonusMedals {
   return {
     slider: sanitizeStringArray(data?.slider, BONUS_TIER_VALUES),
@@ -76,6 +98,7 @@ function sanitizeBonusMedals(data: Record<string, unknown> | PuzzleWeekBonusMeda
     netwalk: sanitizeStringArray(data?.netwalk, BONUS_TIER_VALUES),
     game2048: sanitizeStringArray(data?.game2048, BONUS_2048_VALUES),
     queens: sanitizeStringArray(data?.queens, BONUS_TIER_VALUES),
+    queensSolved: sanitizeQueensSolvedBoards(data?.queensSolved),
   }
 }
 

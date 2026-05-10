@@ -556,23 +556,53 @@ const PUZZLES = { easy: EASY_PUZZLES, medium: MEDIUM_PUZZLES, hard: HARD_PUZZLES
 
 // ── Solved-puzzle tracking ────────────────────────────────────────────
 const SOLVED_KEYS = { easy: 'pw-queens-solved-easy', medium: 'pw-queens-solved-medium', hard: 'pw-queens-solved-hard' };
+const DIFFICULTIES = ['easy', 'medium', 'hard'];
 const solvedSets = { easy: new Set(), medium: new Set(), hard: new Set() };
 
+function normalizeSolvedIndexes(value) {
+  return Array.isArray(value)
+    ? value
+        .map(item => Number(item))
+        .filter(item => Number.isInteger(item) && item >= 0)
+    : [];
+}
+
+function persistSolvedSet(diff) {
+  try { localStorage.setItem(SOLVED_KEYS[diff], JSON.stringify([...solvedSets[diff]].sort((a, b) => a - b))) } catch {}
+}
+
 function loadSolvedSets() {
-  for (const diff of ['easy', 'medium', 'hard']) {
+  for (const diff of DIFFICULTIES) {
     try {
       const stored = localStorage.getItem(SOLVED_KEYS[diff]);
       if (stored) {
         const parsed = JSON.parse(stored);
-        const normalized = Array.isArray(parsed)
-          ? parsed
-              .map(value => Number(value))
-              .filter(value => Number.isInteger(value) && value >= 0)
-          : [];
-        solvedSets[diff] = new Set(normalized);
-        localStorage.setItem(SOLVED_KEYS[diff], JSON.stringify([...solvedSets[diff]].sort((a, b) => a - b)));
+        solvedSets[diff] = new Set(normalizeSolvedIndexes(parsed));
+        persistSolvedSet(diff);
       }
     } catch {}
+  }
+}
+
+function mergeSolvedSetsFromSync(payload) {
+  if (!payload || typeof payload !== 'object') return;
+  let changed = false;
+  for (const diff of DIFFICULTIES) {
+    const next = new Set([
+      ...solvedSets[diff],
+      ...normalizeSolvedIndexes(payload[diff]),
+    ]);
+    if (next.size !== solvedSets[diff].size || [...next].some(value => !solvedSets[diff].has(value))) {
+      solvedSets[diff] = next;
+      persistSolvedSet(diff);
+      changed = true;
+    }
+  }
+  if (changed) {
+    refreshPicker();
+    if (document.getElementById('puzzle-modal-overlay').classList.contains('open')) {
+      buildPickerGrid();
+    }
   }
 }
 
@@ -583,7 +613,8 @@ function markSolved(diff, idx) {
       .filter(value => Number.isInteger(value) && value >= 0)
   );
   solvedSets[diff].add(idx);
-  try { localStorage.setItem(SOLVED_KEYS[diff], JSON.stringify([...solvedSets[diff]].sort((a, b) => a - b))) } catch {}
+  persistSolvedSet(diff);
+  try { window.parent.postMessage({ type: 'queens-solved-board', difficulty: diff, index: idx }, '*'); } catch {}
 }
 
 // ── Game state ────────────────────────────────────────────────────────
@@ -826,8 +857,15 @@ document.querySelectorAll('.diff-btn').forEach(btn => {
   });
 });
 
+window.addEventListener('message', e => {
+  if (e.data?.type === 'queens-sync' && e.data?.solvedBoards) {
+    mergeSolvedSetsFromSync(e.data.solvedBoards);
+  }
+});
+
 // ── Init ──────────────────────────────────────────────────────────────
 loadSolvedSets();
+try { window.parent.postMessage({ type: 'queens-request-sync' }, '*'); } catch {}
 loadPuzzle('easy', 0);
 
 // ── How to play modal ─────────────────────────────────────────────────

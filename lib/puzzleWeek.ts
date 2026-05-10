@@ -86,12 +86,19 @@ export interface PuzzleWeekVoteTally {
 export type PuzzleWeekBonusTier = 'easy' | 'medium' | 'hard'
 export type PuzzleWeek2048MedalLevel = 'bronze' | 'silver' | 'gold'
 
+export interface PuzzleWeekQueensSolvedBoards {
+  easy: number[]
+  medium: number[]
+  hard: number[]
+}
+
 export interface PuzzleWeekBonusMedals {
   slider: PuzzleWeekBonusTier[]
   lightsOut: PuzzleWeekBonusTier[]
   netwalk: PuzzleWeekBonusTier[]
   game2048: PuzzleWeek2048MedalLevel[]
   queens: PuzzleWeekBonusTier[]
+  queensSolved: PuzzleWeekQueensSolvedBoards
 }
 
 export interface PuzzleWeekAdminEntry {

@@ -149,6 +149,7 @@ export async function POST(request: NextRequest) {
           netwalk: [],
           game2048: [],
           queens: [],
+          queensSolved: { easy: [], medium: [], hard: [] },
         })
         return NextResponse.json({ ok: true })
       default:

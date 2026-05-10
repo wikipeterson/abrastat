@@ -11,6 +11,7 @@ import {
   getPuzzleWeekBonusMedals,
   savePuzzleWeekBonusMedals,
   type PuzzleWeekBonusMedals,
+  type PuzzleWeekQueensSolvedBoards,
 } from '@/lib/puzzleWeek'
 
 // ---------- game constants ----------
@@ -44,6 +45,11 @@ type QueensLevel = 'easy' | 'medium' | 'hard'
 const QUEENS_LABELS: Record<QueensLevel, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' }
 const QUEENS_MEDALS: Record<QueensLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
 const QUEENS_MEDALS_KEY = 'pw-queens-medals'
+const QUEENS_SOLVED_KEYS: Record<QueensLevel, string> = {
+  easy: 'pw-queens-solved-easy',
+  medium: 'pw-queens-solved-medium',
+  hard: 'pw-queens-solved-hard',
+}
 
 type Game2048Medal = 'bronze' | 'silver' | 'gold'
 const GAME_2048_MEDALS: Record<Game2048Medal, { threshold: number; emoji: string; label: string }> = {
@@ -1361,6 +1367,8 @@ type BonusMedalState = {
   queens: Set<QueensLevel>
 }
 
+type QueensSolvedBoardState = Record<QueensLevel, Set<number>>
+
 function createEmptyBonusMedalState(): BonusMedalState {
   return {
     slider: new Set(),
@@ -1368,6 +1376,14 @@ function createEmptyBonusMedalState(): BonusMedalState {
     netwalk: new Set(),
     game2048: new Set(),
     queens: new Set(),
+  }
+}
+
+function createEmptyQueensSolvedBoardState(): QueensSolvedBoardState {
+  return {
+    easy: new Set(),
+    medium: new Set(),
+    hard: new Set(),
   }
 }
 
@@ -1390,12 +1406,42 @@ function readLocalBonusMedalState(): BonusMedalState {
   }
 }
 
+function readStoredNumberSet(key: string) {
+  try {
+    const stored = localStorage.getItem(key)
+    const parsed = stored ? JSON.parse(stored) : []
+    return new Set(
+      Array.isArray(parsed)
+        ? parsed
+            .map(value => Number(value))
+            .filter(value => Number.isInteger(value) && value >= 0)
+        : [],
+    )
+  } catch {
+    return new Set<number>()
+  }
+}
+
+function readLocalQueensSolvedBoardState(): QueensSolvedBoardState {
+  return {
+    easy: readStoredNumberSet(QUEENS_SOLVED_KEYS.easy),
+    medium: readStoredNumberSet(QUEENS_SOLVED_KEYS.medium),
+    hard: readStoredNumberSet(QUEENS_SOLVED_KEYS.hard),
+  }
+}
+
 function writeLocalBonusMedalState(state: BonusMedalState) {
   try { localStorage.setItem(SLIDER_MEDALS_KEY, JSON.stringify([...state.slider])) } catch {}
   try { localStorage.setItem(LIGHTS_OUT_MEDALS_KEY, JSON.stringify([...state.lightsOut])) } catch {}
   try { localStorage.setItem(NETWALK_MEDALS_KEY, JSON.stringify([...state.netwalk])) } catch {}
   try { localStorage.setItem(GAME_2048_MEDALS_KEY, JSON.stringify([...state.game2048])) } catch {}
   try { localStorage.setItem(QUEENS_MEDALS_KEY, JSON.stringify([...state.queens])) } catch {}
+}
+
+function writeLocalQueensSolvedBoardState(state: QueensSolvedBoardState) {
+  try { localStorage.setItem(QUEENS_SOLVED_KEYS.easy, JSON.stringify([...state.easy].sort((a, b) => a - b))) } catch {}
+  try { localStorage.setItem(QUEENS_SOLVED_KEYS.medium, JSON.stringify([...state.medium].sort((a, b) => a - b))) } catch {}
+  try { localStorage.setItem(QUEENS_SOLVED_KEYS.hard, JSON.stringify([...state.hard].sort((a, b) => a - b))) } catch {}
 }
 
 function bonusMedalsFromProfile(profile: PuzzleWeekBonusMedals): BonusMedalState {
@@ -1408,13 +1454,30 @@ function bonusMedalsFromProfile(profile: PuzzleWeekBonusMedals): BonusMedalState
   }
 }
 
-function bonusMedalsToProfile(state: BonusMedalState): PuzzleWeekBonusMedals {
+function queensSolvedBoardsFromProfile(profile: PuzzleWeekBonusMedals): QueensSolvedBoardState {
+  return {
+    easy: new Set(profile.queensSolved.easy),
+    medium: new Set(profile.queensSolved.medium),
+    hard: new Set(profile.queensSolved.hard),
+  }
+}
+
+function queensSolvedBoardsToProfile(state: QueensSolvedBoardState): PuzzleWeekQueensSolvedBoards {
+  return {
+    easy: [...state.easy].sort((a, b) => a - b),
+    medium: [...state.medium].sort((a, b) => a - b),
+    hard: [...state.hard].sort((a, b) => a - b),
+  }
+}
+
+function bonusMedalsToProfile(state: BonusMedalState, queensSolved: QueensSolvedBoardState): PuzzleWeekBonusMedals {
   return {
     slider: [...state.slider],
     lightsOut: [...state.lightsOut],
     netwalk: [...state.netwalk],
     game2048: [...state.game2048],
     queens: [...state.queens],
+    queensSolved: queensSolvedBoardsToProfile(queensSolved),
   }
 }
 
@@ -1429,6 +1492,14 @@ function unionBonusMedalStates(a: BonusMedalState, b: BonusMedalState): BonusMed
     netwalk: unionSets(a.netwalk, b.netwalk),
     game2048: unionSets(a.game2048, b.game2048),
     queens: unionSets(a.queens, b.queens),
+  }
+}
+
+function unionQueensSolvedBoardStates(a: QueensSolvedBoardState, b: QueensSolvedBoardState): QueensSolvedBoardState {
+  return {
+    easy: unionSets(a.easy, b.easy),
+    medium: unionSets(a.medium, b.medium),
+    hard: unionSets(a.hard, b.hard),
   }
 }
 
@@ -1450,6 +1521,14 @@ function bonusMedalStatesEqual(a: BonusMedalState, b: BonusMedalState) {
   )
 }
 
+function queensSolvedBoardStatesEqual(a: QueensSolvedBoardState, b: QueensSolvedBoardState) {
+  return (
+    setsEqual(a.easy, b.easy) &&
+    setsEqual(a.medium, b.medium) &&
+    setsEqual(a.hard, b.hard)
+  )
+}
+
 function cloneBonusMedalState(state: BonusMedalState): BonusMedalState {
   return {
     slider: new Set(state.slider),
@@ -1457,6 +1536,14 @@ function cloneBonusMedalState(state: BonusMedalState): BonusMedalState {
     netwalk: new Set(state.netwalk),
     game2048: new Set(state.game2048),
     queens: new Set(state.queens),
+  }
+}
+
+function cloneQueensSolvedBoardState(state: QueensSolvedBoardState): QueensSolvedBoardState {
+  return {
+    easy: new Set(state.easy),
+    medium: new Set(state.medium),
+    hard: new Set(state.hard),
   }
 }
 
@@ -1502,6 +1589,9 @@ export function PuzzleWeekBonusHub() {
   const [netwalkMedals, setNetwalkMedals] = useState<Set<NetwalkLevel>>(new Set())
   const [queensMedals, setQueensMedals] = useState<Set<QueensLevel>>(new Set())
   const bonusMedalStateRef = useRef<BonusMedalState>(createEmptyBonusMedalState())
+  const [queensSolvedBoards, setQueensSolvedBoards] = useState<QueensSolvedBoardState>(createEmptyQueensSolvedBoardState())
+  const queensSolvedBoardsRef = useRef<QueensSolvedBoardState>(createEmptyQueensSolvedBoardState())
+  const queensFrameRef = useRef<HTMLIFrameElement | null>(null)
 
   function getCurrentBonusMedalState(): BonusMedalState {
     return {
@@ -1511,6 +1601,10 @@ export function PuzzleWeekBonusHub() {
       game2048: new Set(bonusMedalStateRef.current.game2048),
       queens: new Set(bonusMedalStateRef.current.queens),
     }
+  }
+
+  function getCurrentQueensSolvedBoardState(): QueensSolvedBoardState {
+    return cloneQueensSolvedBoardState(queensSolvedBoardsRef.current)
   }
 
   function applyBonusMedalState(next: BonusMedalState) {
@@ -1523,16 +1617,37 @@ export function PuzzleWeekBonusHub() {
     writeLocalBonusMedalState(next)
   }
 
-  function syncBonusMedalState(next: BonusMedalState) {
-    applyBonusMedalState(next)
+  function applyQueensSolvedBoardState(next: QueensSolvedBoardState) {
+    queensSolvedBoardsRef.current = cloneQueensSolvedBoardState(next)
+    setQueensSolvedBoards(cloneQueensSolvedBoardState(next))
+    writeLocalQueensSolvedBoardState(next)
+  }
+
+  function postQueensSync(next: QueensSolvedBoardState = getCurrentQueensSolvedBoardState()) {
+    queensFrameRef.current?.contentWindow?.postMessage({
+      type: 'queens-sync',
+      solvedBoards: queensSolvedBoardsToProfile(next),
+    }, '*')
+  }
+
+  function syncBonusProfile(nextMedals: BonusMedalState, nextQueensSolvedBoards: QueensSolvedBoardState) {
+    applyBonusMedalState(nextMedals)
+    applyQueensSolvedBoardState(nextQueensSolvedBoards)
+    postQueensSync(nextQueensSolvedBoards)
     if (user && !isGuest) {
-      void savePuzzleWeekBonusMedals(puzzleWeekEventId, user, bonusMedalsToProfile(next)).catch(() => {})
+      void savePuzzleWeekBonusMedals(
+        puzzleWeekEventId,
+        user,
+        bonusMedalsToProfile(nextMedals, nextQueensSolvedBoards),
+      ).catch(() => {})
     }
   }
 
   useEffect(() => {
     const localState = readLocalBonusMedalState()
     applyBonusMedalState(localState)
+    const localQueensState = readLocalQueensSolvedBoardState()
+    applyQueensSolvedBoardState(localQueensState)
 
     if (!user || isGuest) return
 
@@ -1542,10 +1657,20 @@ export function PuzzleWeekBonusHub() {
         const remoteProfile = await getPuzzleWeekBonusMedals(puzzleWeekEventId, user)
         if (cancelled) return
         const remoteState = bonusMedalsFromProfile(remoteProfile)
+        const remoteQueensState = queensSolvedBoardsFromProfile(remoteProfile)
         const mergedState = unionBonusMedalStates(getCurrentBonusMedalState(), remoteState)
+        const mergedQueensState = unionQueensSolvedBoardStates(getCurrentQueensSolvedBoardState(), remoteQueensState)
         applyBonusMedalState(mergedState)
-        if (!bonusMedalStatesEqual(remoteState, mergedState)) {
-          await savePuzzleWeekBonusMedals(puzzleWeekEventId, user, bonusMedalsToProfile(mergedState))
+        applyQueensSolvedBoardState(mergedQueensState)
+        if (
+          !bonusMedalStatesEqual(remoteState, mergedState) ||
+          !queensSolvedBoardStatesEqual(remoteQueensState, mergedQueensState)
+        ) {
+          await savePuzzleWeekBonusMedals(
+            puzzleWeekEventId,
+            user,
+            bonusMedalsToProfile(mergedState, mergedQueensState),
+          )
         }
       } catch {
         // Keep local medals if the account sync fails.
@@ -1561,47 +1686,68 @@ export function PuzzleWeekBonusHub() {
     const current = getCurrentBonusMedalState()
     if (current.slider.has(level)) return
     const next = { ...current, slider: new Set(current.slider).add(level) }
-    syncBonusMedalState(next)
+    syncBonusProfile(next, getCurrentQueensSolvedBoardState())
   }
 
   function awardLightsOutMedal(level: SliderLevel) {
     const current = getCurrentBonusMedalState()
     if (current.lightsOut.has(level)) return
     const next = { ...current, lightsOut: new Set(current.lightsOut).add(level) }
-    syncBonusMedalState(next)
+    syncBonusProfile(next, getCurrentQueensSolvedBoardState())
   }
 
   function awardNetwalkMedal(level: NetwalkLevel) {
     const current = getCurrentBonusMedalState()
     if (current.netwalk.has(level)) return
     const next = { ...current, netwalk: new Set(current.netwalk).add(level) }
-    syncBonusMedalState(next)
+    syncBonusProfile(next, getCurrentQueensSolvedBoardState())
   }
 
   function award2048Medal(medal: Game2048Medal) {
     const current = getCurrentBonusMedalState()
     if (current.game2048.has(medal)) return
     const next = { ...current, game2048: new Set(current.game2048).add(medal) }
-    syncBonusMedalState(next)
+    syncBonusProfile(next, getCurrentQueensSolvedBoardState())
   }
 
   function awardQueensMedal(level: QueensLevel) {
     const current = getCurrentBonusMedalState()
     if (current.queens.has(level)) return
     const next = { ...current, queens: new Set(current.queens).add(level) }
-    syncBonusMedalState(next)
+    syncBonusProfile(next, getCurrentQueensSolvedBoardState())
   }
 
   // Listen for solve messages posted by the Queens iframe
   useEffect(() => {
     function onMessage(e: MessageEvent) {
+      if (e.data?.type === 'queens-request-sync') {
+        postQueensSync()
+        return
+      }
+      if (e.data?.type === 'queens-solved-board' && e.data?.difficulty && Number.isInteger(e.data?.index)) {
+        const difficulty = e.data.difficulty as QueensLevel
+        const index = Number(e.data.index)
+        if (!['easy', 'medium', 'hard'].includes(difficulty) || index < 0) return
+        const currentBoards = getCurrentQueensSolvedBoardState()
+        if (currentBoards[difficulty].has(index)) return
+        const nextBoards = cloneQueensSolvedBoardState(currentBoards)
+        nextBoards[difficulty].add(index)
+        syncBonusProfile(getCurrentBonusMedalState(), nextBoards)
+        return
+      }
       if (e.data?.type === 'queens-solved' && e.data?.difficulty) {
         awardQueensMedal(e.data.difficulty as QueensLevel)
       }
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
-  }, [])
+  }, [user, isGuest, puzzleWeekEventId])
+
+  useEffect(() => {
+    if (selectedId === 'queens') {
+      postQueensSync(queensSolvedBoards)
+    }
+  }, [selectedId, queensSolvedBoards])
 
   function renderGame() {
     switch (selectedId) {
@@ -1609,7 +1755,15 @@ export function PuzzleWeekBonusHub() {
       case 'lightsout': return <LightsOutBoard medals={lightsOutMedals} onSolve={awardLightsOutMedal} />
       case 'netwalk':   return <NetwalkBoard medals={netwalkMedals} onSolve={awardNetwalkMedal} />
       case '2048':      return <Puzzle2048Board medals={game2048Medals} onAwardMedal={award2048Medal} />
-      case 'queens':    return <iframe src="/queens.html" className="h-full w-full border-0" title="Queens Puzzle" />
+      case 'queens':    return (
+        <iframe
+          ref={queensFrameRef}
+          src="/queens.html"
+          className="h-full w-full border-0"
+          title="Queens Puzzle"
+          onLoad={() => postQueensSync()}
+        />
+      )
       default:          return null
     }
   }

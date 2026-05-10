@@ -44,7 +44,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(DEV_USER)
       return
     }
+    let settled = false
+    const timeoutId = window.setTimeout(() => {
+      if (settled) return
+      settled = true
+      setLocalUser(null)
+      setUser(null)
+      setIsGuest(false)
+      setLoading(false)
+    }, 8000)
+
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      settled = true
+      window.clearTimeout(timeoutId)
       setLocalUser(firebaseUser)
       setUser(firebaseUser)
       setIsGuest(!!firebaseUser?.isAnonymous)
@@ -53,7 +65,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setLoading(false)
     })
-    return unsub
+    return () => {
+      settled = true
+      window.clearTimeout(timeoutId)
+      unsub()
+    }
   }, [setUser])
 
   async function continueAsGuest() {

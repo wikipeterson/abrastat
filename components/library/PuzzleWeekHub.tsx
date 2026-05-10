@@ -334,8 +334,14 @@ export function PuzzleWeekHub() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-bg)' }}>
-        <div className="h-10 w-10 rounded-full border-4 border-[var(--color-accent)] border-t-transparent animate-spin" />
+      <main className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--color-bg)' }}>
+        <div className="mx-auto max-w-md rounded-3xl border border-[var(--color-border)] bg-white p-8 shadow-sm text-center space-y-4">
+          <div className="mx-auto h-10 w-10 rounded-full border-4 border-[var(--color-accent)] border-t-transparent animate-spin" />
+          <h2 className="text-xl font-semibold text-[var(--color-text)]">Loading Puzzle Week</h2>
+          <p className="text-sm text-[var(--color-muted)]">
+            We’re checking your sign-in and getting everything ready.
+          </p>
+        </div>
       </main>
     )
   }

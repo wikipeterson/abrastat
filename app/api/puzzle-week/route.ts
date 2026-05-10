@@ -18,6 +18,7 @@ import {
   submitPuzzleWeekVoteServer,
   verifyPuzzleWeekRequest,
 } from '@/lib/puzzleWeekServer'
+import { PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION } from '@/lib/puzzleWeek'
 import type { PuzzleWeekBonusMedals, PuzzleWeekVote } from '@/lib/puzzleWeek'
 
 export async function GET(request: NextRequest) {
@@ -150,6 +151,7 @@ export async function POST(request: NextRequest) {
           game2048: [],
           queens: [],
           queensSolved: { easy: [], medium: [], hard: [] },
+          queensSolvedOrderVersion: PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION,
         })
         return NextResponse.json({ ok: true })
       default:

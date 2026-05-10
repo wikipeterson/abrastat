@@ -514,16 +514,16 @@ const COLORS = [
 
 // ── Puzzle banks ──────────────────────────────────────────────────────
 const EASY_PUZZLES = [
-  { n: 6, regions: [1,1,0,0,0,0,1,1,0,2,0,0,1,1,0,2,2,0,4,1,0,3,3,3,4,4,0,5,3,3,4,4,4,5,5,5], solution: [false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false,false,false,false,true,false] },
-  { n: 6, regions: [3,0,0,1,1,1,3,3,0,1,1,1,3,3,1,1,1,2,3,3,3,1,2,2,3,5,3,1,4,4,3,5,5,5,5,4], solution: [false,true,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false] },
-  { n: 6, regions: [1,1,0,0,2,2,1,3,0,0,2,2,3,3,0,4,2,4,3,3,5,4,4,4,3,5,5,4,4,4,3,5,5,4,4,4], solution: [false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false] },
-  { n: 6, regions: [3,1,1,0,0,0,3,1,1,1,0,2,3,1,3,3,0,2,3,3,3,3,2,2,5,5,3,3,4,4,5,5,3,3,3,4], solution: [false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false] },
-  { n: 6, regions: [2,2,0,0,3,3,2,2,0,1,1,3,2,2,2,4,1,3,2,2,4,4,4,3,5,4,4,5,4,4,5,5,5,5,4,4], solution: [false,false,true,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false,false,false,true,false,false] },
-  { n: 6, regions: [3,3,0,0,1,1,3,3,0,0,4,1,5,3,2,2,4,4,5,3,2,4,4,4,5,5,4,4,4,4,5,5,5,4,4,4], solution: [false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false] },
+  { n: 6, regions: [1,0,0,0,0,0,1,1,1,0,0,0,2,1,1,0,0,0,2,2,1,3,3,3,5,3,3,3,3,4,5,5,5,4,4,4], solution: [false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,false,true,false,false,false,false] },
   { n: 6, regions: [0,0,1,1,1,1,0,1,1,1,1,1,0,0,1,2,2,1,3,0,0,2,2,1,3,3,5,2,4,4,3,3,5,5,5,4], solution: [false,true,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false] },
   { n: 6, regions: [0,0,0,0,0,0,1,0,0,0,2,0,1,1,0,2,2,0,1,1,3,4,4,0,5,5,3,3,4,4,5,5,3,3,4,4], solution: [false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,true,false,true,false,false,false,false] },
-  { n: 6, regions: [1,0,0,0,0,0,1,1,1,0,0,0,2,1,1,0,0,0,2,2,1,3,3,3,5,3,3,3,3,4,5,5,5,4,4,4], solution: [false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,false,true,false,false,false,false] },
+  { n: 6, regions: [3,0,0,1,1,1,3,3,0,1,1,1,3,3,1,1,1,2,3,3,3,1,2,2,3,5,3,1,4,4,3,5,5,5,5,4], solution: [false,true,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false] },
+  { n: 6, regions: [1,1,0,0,0,0,1,1,0,2,0,0,1,1,0,2,2,0,4,1,0,3,3,3,4,4,0,5,3,3,4,4,4,5,5,5], solution: [false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false,false,false,false,true,false] },
+  { n: 6, regions: [3,1,1,0,0,0,3,1,1,1,0,2,3,1,3,3,0,2,3,3,3,3,2,2,5,5,3,3,4,4,5,5,3,3,3,4], solution: [false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false] },
+  { n: 6, regions: [2,2,0,0,3,3,2,2,0,1,1,3,2,2,2,4,1,3,2,2,4,4,4,3,5,4,4,5,4,4,5,5,5,5,4,4], solution: [false,false,true,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false,false,false,true,false,false] },
   { n: 6, regions: [1,1,1,0,0,4,1,3,1,2,0,4,3,3,2,2,0,4,3,3,4,4,4,4,5,3,4,4,4,4,5,5,5,4,4,4], solution: [false,false,false,false,true,false,true,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false] },
+  { n: 6, regions: [3,3,0,0,1,1,3,3,0,0,4,1,5,3,2,2,4,4,5,3,2,4,4,4,5,5,4,4,4,4,5,5,5,4,4,4], solution: [false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false] },
+  { n: 6, regions: [1,1,0,0,2,2,1,3,0,0,2,2,3,3,0,4,2,4,3,3,5,4,4,4,3,5,5,4,4,4,3,5,5,4,4,4], solution: [false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false] },
 ];
 
 const MEDIUM_PUZZLES = [
@@ -556,6 +556,9 @@ const PUZZLES = { easy: EASY_PUZZLES, medium: MEDIUM_PUZZLES, hard: HARD_PUZZLES
 
 // ── Solved-puzzle tracking ────────────────────────────────────────────
 const SOLVED_KEYS = { easy: 'pw-queens-solved-easy', medium: 'pw-queens-solved-medium', hard: 'pw-queens-solved-hard' };
+const SOLVED_ORDER_VERSION_KEY = 'pw-queens-solved-order-version';
+const SOLVED_ORDER_VERSION = 2;
+const EASY_OLD_TO_NEW = [4, 3, 9, 5, 6, 8, 1, 2, 0, 7];
 const DIFFICULTIES = ['easy', 'medium', 'hard'];
 const solvedSets = { easy: new Set(), medium: new Set(), hard: new Set() };
 
@@ -571,6 +574,18 @@ function persistSolvedSet(diff) {
   try { localStorage.setItem(SOLVED_KEYS[diff], JSON.stringify([...solvedSets[diff]].sort((a, b) => a - b))) } catch {}
 }
 
+function persistSolvedOrderVersion() {
+  try { localStorage.setItem(SOLVED_ORDER_VERSION_KEY, String(SOLVED_ORDER_VERSION)) } catch {}
+}
+
+function remapEasySolvedSet(set) {
+  return new Set(
+    [...set]
+      .map(index => EASY_OLD_TO_NEW[index] ?? index)
+      .filter(index => Number.isInteger(index) && index >= 0)
+  );
+}
+
 function loadSolvedSets() {
   for (const diff of DIFFICULTIES) {
     try {
@@ -582,15 +597,40 @@ function loadSolvedSets() {
       }
     } catch {}
   }
+  let version = SOLVED_ORDER_VERSION;
+  try {
+    const storedVersion = localStorage.getItem(SOLVED_ORDER_VERSION_KEY);
+    if (storedVersion != null) {
+      const parsed = Number(storedVersion);
+      if (Number.isInteger(parsed) && parsed >= 1) version = parsed;
+    } else {
+      const hasAny = DIFFICULTIES.some(diff => solvedSets[diff].size > 0);
+      version = hasAny ? 1 : SOLVED_ORDER_VERSION;
+    }
+  } catch {
+    const hasAny = DIFFICULTIES.some(diff => solvedSets[diff].size > 0);
+    version = hasAny ? 1 : SOLVED_ORDER_VERSION;
+  }
+  if (version < SOLVED_ORDER_VERSION) {
+    solvedSets.easy = remapEasySolvedSet(solvedSets.easy);
+    persistSolvedSet('easy');
+  }
+  persistSolvedOrderVersion();
 }
 
 function mergeSolvedSetsFromSync(payload) {
   if (!payload || typeof payload !== 'object') return;
+  const syncVersion = Number.isInteger(Number(payload.version)) ? Number(payload.version) : 1;
   let changed = false;
   for (const diff of DIFFICULTIES) {
+    const incoming = normalizeSolvedIndexes(payload[diff]);
+    const normalizedIncoming =
+      diff === 'easy' && syncVersion < SOLVED_ORDER_VERSION
+        ? [...remapEasySolvedSet(new Set(incoming))]
+        : incoming;
     const next = new Set([
       ...solvedSets[diff],
-      ...normalizeSolvedIndexes(payload[diff]),
+      ...normalizedIncoming,
     ]);
     if (next.size !== solvedSets[diff].size || [...next].some(value => !solvedSets[diff].has(value))) {
       solvedSets[diff] = next;
@@ -598,6 +638,7 @@ function mergeSolvedSetsFromSync(payload) {
       changed = true;
     }
   }
+  persistSolvedOrderVersion();
   if (changed) {
     refreshPicker();
     if (document.getElementById('puzzle-modal-overlay').classList.contains('open')) {

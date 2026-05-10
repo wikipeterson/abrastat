@@ -9,6 +9,7 @@ import { canManagePuzzleWeekIdentity } from '@/lib/featureFlags'
 import {
   CURRENT_PUZZLE_WEEK_EVENT,
   getPuzzleWeekBonusMedals,
+  PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION,
   savePuzzleWeekBonusMedals,
   type PuzzleWeekBonusMedals,
   type PuzzleWeekQueensSolvedBoards,
@@ -45,6 +46,8 @@ type QueensLevel = 'easy' | 'medium' | 'hard'
 const QUEENS_LABELS: Record<QueensLevel, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' }
 const QUEENS_MEDALS: Record<QueensLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
 const QUEENS_MEDALS_KEY = 'pw-queens-medals'
+const QUEENS_SOLVED_ORDER_VERSION_KEY = 'pw-queens-solved-order-version'
+const QUEENS_EASY_OLD_TO_NEW = [4, 3, 9, 5, 6, 8, 1, 2, 0, 7] as const
 const QUEENS_SOLVED_KEYS: Record<QueensLevel, string> = {
   easy: 'pw-queens-solved-easy',
   medium: 'pw-queens-solved-medium',
@@ -1387,6 +1390,18 @@ function createEmptyQueensSolvedBoardState(): QueensSolvedBoardState {
   }
 }
 
+function remapEasyQueensSolvedSet(set: Set<number>) {
+  return new Set(
+    [...set]
+      .map(index => (
+        index >= 0 && index < QUEENS_EASY_OLD_TO_NEW.length
+          ? QUEENS_EASY_OLD_TO_NEW[index]
+          : index
+      ))
+      .filter(index => Number.isInteger(index) && index >= 0),
+  )
+}
+
 function readStoredSet<T extends string>(key: string) {
   try {
     const stored = localStorage.getItem(key)
@@ -1423,11 +1438,30 @@ function readStoredNumberSet(key: string) {
 }
 
 function readLocalQueensSolvedBoardState(): QueensSolvedBoardState {
-  return {
+  const state = {
     easy: readStoredNumberSet(QUEENS_SOLVED_KEYS.easy),
     medium: readStoredNumberSet(QUEENS_SOLVED_KEYS.medium),
     hard: readStoredNumberSet(QUEENS_SOLVED_KEYS.hard),
   }
+  let version = PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION
+  try {
+    const storedVersion = localStorage.getItem(QUEENS_SOLVED_ORDER_VERSION_KEY)
+    if (storedVersion != null) {
+      const parsed = Number(storedVersion)
+      if (Number.isInteger(parsed) && parsed >= 1) version = parsed
+    } else {
+      const hasAny = state.easy.size > 0 || state.medium.size > 0 || state.hard.size > 0
+      version = hasAny ? 1 : PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION
+    }
+  } catch {
+    const hasAny = state.easy.size > 0 || state.medium.size > 0 || state.hard.size > 0
+    version = hasAny ? 1 : PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION
+  }
+  if (version < PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION) {
+    state.easy = remapEasyQueensSolvedSet(state.easy)
+    writeLocalQueensSolvedBoardState(state)
+  }
+  return state
 }
 
 function writeLocalBonusMedalState(state: BonusMedalState) {
@@ -1442,6 +1476,7 @@ function writeLocalQueensSolvedBoardState(state: QueensSolvedBoardState) {
   try { localStorage.setItem(QUEENS_SOLVED_KEYS.easy, JSON.stringify([...state.easy].sort((a, b) => a - b))) } catch {}
   try { localStorage.setItem(QUEENS_SOLVED_KEYS.medium, JSON.stringify([...state.medium].sort((a, b) => a - b))) } catch {}
   try { localStorage.setItem(QUEENS_SOLVED_KEYS.hard, JSON.stringify([...state.hard].sort((a, b) => a - b))) } catch {}
+  try { localStorage.setItem(QUEENS_SOLVED_ORDER_VERSION_KEY, String(PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION)) } catch {}
 }
 
 function bonusMedalsFromProfile(profile: PuzzleWeekBonusMedals): BonusMedalState {
@@ -1455,11 +1490,15 @@ function bonusMedalsFromProfile(profile: PuzzleWeekBonusMedals): BonusMedalState
 }
 
 function queensSolvedBoardsFromProfile(profile: PuzzleWeekBonusMedals): QueensSolvedBoardState {
-  return {
+  const state = {
     easy: new Set(profile.queensSolved.easy),
     medium: new Set(profile.queensSolved.medium),
     hard: new Set(profile.queensSolved.hard),
   }
+  if ((profile.queensSolvedOrderVersion ?? 1) < PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION) {
+    state.easy = remapEasyQueensSolvedSet(state.easy)
+  }
+  return state
 }
 
 function queensSolvedBoardsToProfile(state: QueensSolvedBoardState): PuzzleWeekQueensSolvedBoards {
@@ -1478,6 +1517,7 @@ function bonusMedalsToProfile(state: BonusMedalState, queensSolved: QueensSolved
     game2048: [...state.game2048],
     queens: [...state.queens],
     queensSolved: queensSolvedBoardsToProfile(queensSolved),
+    queensSolvedOrderVersion: PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION,
   }
 }
 
@@ -1626,7 +1666,10 @@ export function PuzzleWeekBonusHub() {
   function postQueensSync(next: QueensSolvedBoardState = getCurrentQueensSolvedBoardState()) {
     queensFrameRef.current?.contentWindow?.postMessage({
       type: 'queens-sync',
-      solvedBoards: queensSolvedBoardsToProfile(next),
+      solvedBoards: {
+        ...queensSolvedBoardsToProfile(next),
+        version: PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION,
+      },
     }, '*')
   }
 

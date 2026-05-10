@@ -332,7 +332,7 @@ export function PuzzleWeekHub() {
     }
   }
 
-  if (loading || loadingRegistration) {
+  if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-bg)' }}>
         <div className="h-10 w-10 rounded-full border-4 border-[var(--color-accent)] border-t-transparent animate-spin" />
@@ -612,9 +612,21 @@ export function PuzzleWeekHub() {
           </div>
         )}
 
+        {user && !entry && loadingRegistration && (
+          <div className="mx-auto max-w-2xl rounded-3xl border border-[var(--color-border)] bg-white p-8 shadow-sm text-center space-y-3">
+            <div className="mx-auto h-8 w-8 rounded-full border-4 border-[var(--color-accent)] border-t-transparent animate-spin" />
+            <h2 className="text-xl font-semibold text-[var(--color-text)]">Loading your registration</h2>
+            <p className="text-sm text-[var(--color-muted)]">
+              We’re checking your Puzzle Week entry now.
+            </p>
+          </div>
+        )}
+
         {/* ── Auth / registration states ── */}
         {!user || isGuest ? (
           <PuzzleSignIn />
+        ) : loadingRegistration && !entry ? (
+          null
         ) : !canRegister ? (
           <div className="mx-auto max-w-2xl rounded-3xl border border-amber-200 bg-amber-50 p-8 shadow-sm text-center space-y-3">
             <h2 className="text-xl font-semibold text-[var(--color-text)]">Registration limited</h2>

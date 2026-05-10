@@ -104,14 +104,27 @@ export interface PuzzleWeekAdminEntry {
 
 async function puzzleWeekRequest<T>(user: User, init: RequestInit & { url: string }): Promise<T> {
   const token = await user.getIdToken()
-  const response = await fetch(init.url, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(init.headers ?? {}),
-    },
-  })
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), 12000)
+  let response: Response
+  try {
+    response = await fetch(init.url, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(init.headers ?? {}),
+      },
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Puzzle Week is taking too long to respond. Please try again.')
+    }
+    throw error
+  } finally {
+    window.clearTimeout(timeout)
+  }
 
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
@@ -121,13 +134,26 @@ async function puzzleWeekRequest<T>(user: User, init: RequestInit & { url: strin
 }
 
 async function puzzleWeekPublicRequest<T>(init: RequestInit & { url: string }): Promise<T> {
-  const response = await fetch(init.url, {
-    ...init,
-    headers: {
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(init.headers ?? {}),
-    },
-  })
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), 12000)
+  let response: Response
+  try {
+    response = await fetch(init.url, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(init.headers ?? {}),
+      },
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Puzzle Week is taking too long to respond. Please try again.')
+    }
+    throw error
+  } finally {
+    window.clearTimeout(timeout)
+  }
 
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {

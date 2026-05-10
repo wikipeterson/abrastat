@@ -1222,9 +1222,11 @@ export function PuzzleWeekBonusHub() {
     } catch {}
     return LIVE_PUZZLES[0].id
   })
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   function selectPuzzle(id: string) {
     setSelectedId(id)
+    setDrawerOpen(false)
     try { localStorage.setItem(LAST_PUZZLE_KEY, id) } catch {}
   }
 
@@ -1465,18 +1467,30 @@ export function PuzzleWeekBonusHub() {
   return (
     <>
       {/* ═══════ Mobile layout — viewport-locked, no page scroll ═══════ */}
-      {/* Page scroll is disabled so it doesn't interfere with game touch gestures */}
       <main
         className="sm:hidden flex flex-col bg-[var(--color-bg)]"
         style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none' }}
       >
-        {/* Compact nav bar */}
+        {/* Nav bar */}
         <div className="flex flex-shrink-0 items-center justify-between gap-2 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3">
-          <Link href="https://puzzleweek.abrastat.com" className="select-none">
+          <Link href="https://puzzleweek.abrastat.com" className="select-none flex-shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="AbraStat" style={{ width: '110px', height: 'auto' }} />
+            <img src="/logo.svg" alt="AbraStat" style={{ width: '100px', height: 'auto' }} />
           </Link>
-          <div className="flex items-center gap-2">
+
+          <div className="flex min-w-0 flex-1 items-center justify-center px-2">
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--color-text)] transition active:bg-slate-50"
+            >
+              <span>{PUZZLE_LIST.find(p => p.id === selectedId)?.emoji}</span>
+              <span className="truncate">{PUZZLE_LIST.find(p => p.id === selectedId)?.name}</span>
+              <span className="text-[var(--color-muted)]">▾</span>
+            </button>
+          </div>
+
+          <div className="flex flex-shrink-0 items-center gap-2">
             <Link
               href="https://puzzleweek.abrastat.com"
               className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
@@ -1494,65 +1508,37 @@ export function PuzzleWeekBonusHub() {
           </div>
         </div>
 
-        {/* Horizontal puzzle tabs */}
-        <div className="flex flex-shrink-0 gap-2 overflow-x-auto px-4 py-3">
-          {PUZZLE_LIST.map(p => (
-            <button
-              key={p.id}
-              type="button"
-              disabled={!p.live}
-              onClick={() => p.live && selectPuzzle(p.id)}
-              className={`flex flex-shrink-0 items-center gap-1.5 rounded-2xl border px-3 py-2 text-sm font-medium ${
-                selectedId === p.id
-                  ? 'border-[var(--color-accent)] bg-teal-50 text-[var(--color-accent)]'
-                  : p.live
-                    ? 'border-[var(--color-border)] bg-white text-[var(--color-text)]'
-                    : 'border-[var(--color-border)] bg-white/60 text-[var(--color-muted)] opacity-50'
-              }`}
-            >
-              <span>{p.emoji}</span>
-              <span>{p.name}</span>
-              {p.id === 'slider' && (
-                sliderMedals.has('hard') ? <span>🥇</span>
-                : sliderMedals.has('medium') ? <span>🥈</span>
-                : sliderMedals.has('easy') ? <span>🥉</span>
-                : null
-              )}
-              {p.id === 'lightsout' && (
-                lightsOutMedals.has('hard') ? <span>🥇</span>
-                : lightsOutMedals.has('medium') ? <span>🥈</span>
-                : lightsOutMedals.has('easy') ? <span>🥉</span>
-                : null
-              )}
-              {p.id === 'netwalk' && (
-                netwalkMedals.has('hard') ? <span>🥇</span>
-                : netwalkMedals.has('medium') ? <span>🥈</span>
-                : netwalkMedals.has('easy') ? <span>🥉</span>
-                : null
-              )}
-              {p.id === '2048' && (
-                game2048Medals.has('gold') ? <span>🥇</span>
-                : game2048Medals.has('silver') ? <span>🥈</span>
-                : game2048Medals.has('bronze') ? <span>🥉</span>
-                : null
-              )}
-              {p.id === 'queens' && (
-                queensMedals.has('hard') ? <span>🥇</span>
-                : queensMedals.has('medium') ? <span>🥈</span>
-                : queensMedals.has('easy') ? <span>🥉</span>
-                : null
-              )}
-            </button>
-          ))}
-        </div>
-
         {/* Game fills every remaining pixel */}
-        {/* touch-action:none tells iOS Safari not to pan/rubber-band this area */}
         <div className="min-h-0 flex-1 px-4 pb-4" style={{ touchAction: 'none' }}>
           <div className="h-full overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm">
             {renderGame()}
           </div>
         </div>
+
+        {/* Puzzle picker drawer */}
+        {drawerOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
+            onClick={() => setDrawerOpen(false)}
+          >
+            <div
+              className="flex w-full max-w-lg flex-col rounded-t-3xl bg-white px-4 pb-8 pt-5 shadow-xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-sm font-semibold text-[var(--color-text)]">Select Puzzle</p>
+                <button
+                  type="button"
+                  onClick={() => setDrawerOpen(false)}
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-slate-50"
+                >
+                  ✕
+                </button>
+              </div>
+              {puzzleList}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* ═══════ Desktop layout ═══════ */}

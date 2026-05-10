@@ -357,6 +357,55 @@ function BonusStatTile({
   )
 }
 
+function BonusHowToPlay({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <div className="hidden lg:flex lg:flex-col lg:gap-2.5">
+        {children}
+      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-slate-50 lg:hidden"
+      >
+        How to play
+        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">?</span>
+      </button>
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 lg:hidden"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="flex w-full max-w-lg flex-col gap-3 rounded-t-3xl bg-white px-5 pb-8 pt-5 shadow-xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-[var(--color-text)]">How to Play</p>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-slate-50"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex flex-col gap-3">{children}</div>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="mt-1 w-full rounded-xl bg-[var(--color-accent)] py-3 text-sm font-semibold text-white transition hover:brightness-105"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 function SliderPuzzleBoard({
   medals,
   onSolve,
@@ -494,16 +543,14 @@ function SliderPuzzleBoard({
               🎉 {SLIDER_MEDALS[level]} {SLIDER_LABELS[level]} solved!
             </div>
           )}
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-            <div className="flex flex-col gap-3 pb-1 lg:gap-2.5">
-              <BonusInfoCard label="Goal">
-                Arrange the numbered tiles from <strong>1</strong> up to the final tile so the empty space ends in the bottom-right corner.
-              </BonusInfoCard>
-              <BonusInfoCard label="How It Works">
-                Only tiles touching the empty space can move. Click or tap an adjacent tile to slide it into the gap.
-              </BonusInfoCard>
-            </div>
-          </div>
+          <BonusHowToPlay>
+            <BonusInfoCard label="Goal">
+              Arrange the numbered tiles from <strong>1</strong> up to the final tile so the empty space ends in the bottom-right corner.
+            </BonusInfoCard>
+            <BonusInfoCard label="How It Works">
+              Only tiles touching the empty space can move. Click or tap an adjacent tile to slide it into the gap.
+            </BonusInfoCard>
+          </BonusHowToPlay>
         </div>
       }
     />
@@ -614,16 +661,14 @@ function LightsOutBoard({
               🎉 {LIGHTS_OUT_MEDALS[level]} {LIGHTS_OUT_LABELS[level]} solved!
             </div>
           )}
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-            <div className="flex flex-col gap-3 pb-1 lg:gap-2.5">
-              <BonusInfoCard label="Goal">
-                Make every circle go dark. When the whole board is dark, you’ve solved the puzzle and earned the medal for that difficulty.
-              </BonusInfoCard>
-              <BonusInfoCard label="How It Works">
-                Clicking a circle flips that circle and its up, down, left, and right neighbors. Plan a few moves ahead because every click affects a cluster.
-              </BonusInfoCard>
-            </div>
-          </div>
+          <BonusHowToPlay>
+            <BonusInfoCard label="Goal">
+              Make every circle go dark. When the whole board is dark, you’ve solved the puzzle and earned the medal for that difficulty.
+            </BonusInfoCard>
+            <BonusInfoCard label="How It Works">
+              Clicking a circle flips that circle and its up, down, left, and right neighbors. Plan a few moves ahead because every click affects a cluster.
+            </BonusInfoCard>
+          </BonusHowToPlay>
         </div>
       }
     />
@@ -812,16 +857,14 @@ function NetwalkBoard({
               🎉 {NETWALK_MEDALS[level]} {NETWALK_LABELS[level]} restored!
             </div>
           )}
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-            <div className="flex flex-col gap-3 pb-1 lg:gap-2.5">
-              <BonusInfoCard label="Goal">
-                Rotate the pieces until every terminal is connected to the server and there are no loose wire ends anywhere in the network.
-              </BonusInfoCard>
-              <BonusInfoCard label="How It Works">
-                Click once to rotate a tile clockwise. Double-click the same tile to rotate it counter-clockwise.
-              </BonusInfoCard>
-            </div>
-          </div>
+          <BonusHowToPlay>
+            <BonusInfoCard label="Goal">
+              Rotate the pieces until every terminal is connected to the server and there are no loose wire ends anywhere in the network.
+            </BonusInfoCard>
+            <BonusInfoCard label="How It Works">
+              Click once to rotate a tile clockwise. Double-click the same tile to rotate it counter-clockwise.
+            </BonusInfoCard>
+          </BonusHowToPlay>
         </div>
       }
     />
@@ -994,16 +1037,14 @@ function Puzzle2048Board({
               </div>
             )}
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-            <div className="flex flex-col gap-3 pb-1 lg:gap-2.5">
-              <BonusInfoCard label="Goal">
-                Combine equal tiles to build larger values. Reach <strong>1024</strong> for bronze, <strong>2048</strong> for silver, and <strong>4096</strong> for gold.
-              </BonusInfoCard>
-              <BonusInfoCard label="How It Works">
-                Swipe or use the arrow buttons to slide all tiles at once. Matching numbers merge when they collide.
-              </BonusInfoCard>
-            </div>
-          </div>
+          <BonusHowToPlay>
+            <BonusInfoCard label="Goal">
+              Combine equal tiles to build larger values. Reach <strong>1024</strong> for bronze, <strong>2048</strong> for silver, and <strong>4096</strong> for gold.
+            </BonusInfoCard>
+            <BonusInfoCard label="How It Works">
+              Swipe or use the arrow buttons to slide all tiles at once. Matching numbers merge when they collide.
+            </BonusInfoCard>
+          </BonusHowToPlay>
         </div>
       }
     />

@@ -277,13 +277,99 @@ html, body {
   }
 
   #board {
-    width: min(100%, calc(100dvh - 228px));
+    width: min(100%, calc(100dvh - 200px));
   }
 
   .rules-copy {
     font-size: 13px;
   }
 }
+
+@media (max-width: 719px) {
+  .side-scroll { display: none; }
+  .info-btn { display: flex; }
+}
+
+.info-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1.5px solid var(--border);
+  background: white;
+  border-radius: 14px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.14s;
+  flex-shrink: 0;
+  width: 100%;
+}
+.info-btn:hover { background: var(--accent-light); }
+.info-badge {
+  display: flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.info-modal-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(0,0,0,0.4);
+  align-items: flex-end;
+  justify-content: center;
+}
+.info-modal-overlay.open { display: flex; }
+.info-modal {
+  background: white;
+  border-radius: 24px 24px 0 0;
+  padding: 20px 20px 32px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 80dvh;
+  overflow-y: auto;
+  box-shadow: 0 -4px 32px rgba(0,0,0,0.15);
+}
+.info-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.info-modal-title { font-size: 15px; font-weight: 700; }
+.info-modal-close {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: white;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.14s;
+}
+.info-modal-close:hover { background: #f8fafc; }
+.info-modal-body { display: flex; flex-direction: column; gap: 12px; }
+.info-modal-got-it {
+  margin-top: 8px;
+  width: 100%;
+  background: var(--accent);
+  border: none;
+  border-radius: 14px;
+  padding: 12px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  cursor: pointer;
+  transition: filter 0.14s;
+}
+.info-modal-got-it:hover { filter: brightness(1.06); }
 </style>
 </head>
 <body>
@@ -319,6 +405,11 @@ html, body {
           <button class="btn"         id="btn-solution">Show Solution</button>
           <button class="btn primary" id="btn-new">Restart</button>
         </div>
+
+        <button class="info-btn" id="btn-info">
+          How to play
+          <span class="info-badge">?</span>
+        </button>
       </div>
 
       <div class="side-scroll">
@@ -349,6 +440,30 @@ html, body {
   <div class="ov-sub">All queens placed correctly.</div>
   <div class="ov-moves" id="ov-moves"></div>
   <button class="btn primary" style="width:180px;margin-top:6px" id="btn-ov-new">Play Again</button>
+</div>
+
+<div class="info-modal-overlay" id="info-modal-overlay">
+  <div class="info-modal" id="info-modal">
+    <div class="info-modal-header">
+      <span class="info-modal-title">How to Play</span>
+      <button class="info-modal-close" id="info-modal-close">✕</button>
+    </div>
+    <div class="info-modal-body">
+      <div class="rules-card">
+        <div class="rules-title">Goal</div>
+        <div class="rules-copy">Place exactly one queen in every row, every column, and every colored region.</div>
+      </div>
+      <div class="rules-card">
+        <div class="rules-title">How It Works</div>
+        <div class="rules-copy">Tap a square to cycle through blank, X, and queen. Queens also cannot touch diagonally, even at a corner.</div>
+      </div>
+      <div class="meta-row">
+        <span class="meta-pill">10 puzzles per level</span>
+        <span class="meta-pill">Solved puzzles stay checked off</span>
+      </div>
+    </div>
+    <button class="info-modal-got-it" id="info-modal-got-it">Got it</button>
+  </div>
 </div>
 
 <script>
@@ -627,6 +742,16 @@ document.querySelectorAll('.diff-btn').forEach(btn => {
 loadSolvedSets();
 refreshDropdown();
 loadPuzzle('easy', 0);
+
+// ── How to play modal ─────────────────────────────────────────────────
+const infoOverlay = document.getElementById('info-modal-overlay');
+const infoModal = document.getElementById('info-modal');
+function openInfoModal() { infoOverlay.classList.add('open'); }
+function closeInfoModal() { infoOverlay.classList.remove('open'); }
+document.getElementById('btn-info').addEventListener('click', openInfoModal);
+document.getElementById('info-modal-close').addEventListener('click', closeInfoModal);
+document.getElementById('info-modal-got-it').addEventListener('click', closeInfoModal);
+infoOverlay.addEventListener('click', e => { if (e.target === infoOverlay) closeInfoModal(); });
 </script>
 </body>
 </html>

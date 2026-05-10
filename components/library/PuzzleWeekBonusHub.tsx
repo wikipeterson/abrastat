@@ -9,7 +9,6 @@ import { canManagePuzzleWeekIdentity } from '@/lib/featureFlags'
 
 // ---------- game constants ----------
 
-const NETWALK_SIZE = 5
 const GAME_2048_SIZE = 4
 const DIR_BITS = [1, 2, 4, 8] as const
 
@@ -21,6 +20,14 @@ const SLIDER_LABELS: Record<SliderLevel, string> = { easy: 'Easy', medium: 'Medi
 const SLIDER_MEDALS: Record<SliderLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
 const SLIDER_MEDALS_KEY = 'pw-slider-medals'
 const LIGHTS_OUT_SIZES: Record<SliderLevel, number> = { easy: 3, medium: 4, hard: 5 }
+
+// ---------- netwalk levels ----------
+
+type NetwalkLevel = 'easy' | 'medium' | 'hard'
+const NETWALK_SIZES: Record<NetwalkLevel, number> = { easy: 3, medium: 5, hard: 7 }
+const NETWALK_LABELS: Record<NetwalkLevel, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' }
+const NETWALK_MEDALS: Record<NetwalkLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
+const NETWALK_MEDALS_KEY = 'pw-netwalk-medals'
 type Game2048Medal = 'bronze' | 'silver' | 'gold'
 const GAME_2048_MEDALS: Record<Game2048Medal, { threshold: number; emoji: string; label: string }> = {
   bronze: { threshold: 1024, emoji: '🥉', label: 'Bronze' },
@@ -101,26 +108,26 @@ function rotateMask(mask: number, turns: number) {
   return ((mask << normalized) | (mask >> (4 - normalized))) & 15
 }
 
-function netwalkNeighbors(index: number) {
-  const row = Math.floor(index / NETWALK_SIZE)
-  const col = index % NETWALK_SIZE
+function netwalkNeighbors(index: number, size: number) {
+  const row = Math.floor(index / size)
+  const col = index % size
   const neighbors: Array<{ index: number; dir: number; opposite: number }> = []
-  if (row > 0) neighbors.push({ index: index - NETWALK_SIZE, dir: 0, opposite: 2 })
-  if (col < NETWALK_SIZE - 1) neighbors.push({ index: index + 1, dir: 1, opposite: 3 })
-  if (row < NETWALK_SIZE - 1) neighbors.push({ index: index + NETWALK_SIZE, dir: 2, opposite: 0 })
+  if (row > 0) neighbors.push({ index: index - size, dir: 0, opposite: 2 })
+  if (col < size - 1) neighbors.push({ index: index + 1, dir: 1, opposite: 3 })
+  if (row < size - 1) neighbors.push({ index: index + size, dir: 2, opposite: 0 })
   if (col > 0) neighbors.push({ index: index - 1, dir: 3, opposite: 1 })
   return neighbors
 }
 
-function createNetwalkBoard() {
-  const total = NETWALK_SIZE * NETWALK_SIZE
+function createNetwalkBoard(size: number) {
+  const total = size * size
   const root = Math.floor(total / 2)
   const visited = Array.from({ length: total }, () => false)
   const masks = Array.from({ length: total }, () => 0)
 
   function visit(index: number) {
     visited[index] = true
-    const shuffled = netwalkNeighbors(index).sort(() => Math.random() - 0.5)
+    const shuffled = netwalkNeighbors(index, size).sort(() => Math.random() - 0.5)
     for (const neighbor of shuffled) {
       if (visited[neighbor.index]) continue
       masks[index] |= DIR_BITS[neighbor.dir]
@@ -238,7 +245,7 @@ function canMove2048(board: number[]) {
   return false
 }
 
-function getNetwalkStatus(board: NetwalkCell[]) {
+function getNetwalkStatus(board: NetwalkCell[], size: number) {
   const serverIndex = board.findIndex(cell => cell.isServer)
   const connectedIndices = new Set<number>()
   if (serverIndex === -1) return { solved: false, connectedCount: 0, connectedIndices }
@@ -251,7 +258,7 @@ function getNetwalkStatus(board: NetwalkCell[]) {
     const index = queue.shift()!
     const mask = rotateMask(board[index].baseMask, board[index].rotation)
 
-    for (const neighbor of netwalkNeighbors(index)) {
+    for (const neighbor of netwalkNeighbors(index, size)) {
       const hasEdge = (mask & DIR_BITS[neighbor.dir]) !== 0
       const neighborMask = rotateMask(board[neighbor.index].baseMask, board[neighbor.index].rotation)
       const neighborHasEdge = (neighborMask & DIR_BITS[neighbor.opposite]) !== 0
@@ -511,11 +518,40 @@ function LightsOutBoard() {
   )
 }
 
-function NetwalkBoard() {
-  const [board, setBoard] = useState<NetwalkCell[]>(() => createNetwalkBoard())
+function NetwalkBoard({
+  medals,
+  onSolve,
+}: {
+  medals: Set<NetwalkLevel>
+  onSolve: (level: NetwalkLevel) => void
+}) {
+  const [level, setLevel] = useState<NetwalkLevel>('medium')
+  const size = NETWALK_SIZES[level]
+  const [board, setBoard] = useState<NetwalkCell[]>(() => createNetwalkBoard(NETWALK_SIZES['medium']))
   const [moves, setMoves] = useState(0)
   const pendingTap = useRef<{ index: number; timer: number } | null>(null)
-  const status = getNetwalkStatus(board)
+  const solvedAwardedRef = useRef(false)
+  const status = getNetwalkStatus(board, size)
+
+  function switchLevel(l: NetwalkLevel) {
+    setLevel(l)
+    setBoard(createNetwalkBoard(NETWALK_SIZES[l]))
+    setMoves(0)
+    solvedAwardedRef.current = false
+    if (pendingTap.current) {
+      window.clearTimeout(pendingTap.current.timer)
+      pendingTap.current = null
+    }
+  }
+
+  // Detect solve
+  useEffect(() => {
+    if (!status.solved) { solvedAwardedRef.current = false; return }
+    if (!solvedAwardedRef.current) {
+      solvedAwardedRef.current = true
+      onSolve(level)
+    }
+  }, [status.solved, level, onSolve])
 
   function rotateCell(index: number, amount: number) {
     setBoard(prev =>
@@ -546,18 +582,19 @@ function NetwalkBoard() {
   }
 
   const pct = Math.round((status.connectedCount / board.length) * 100)
+  const boardMaxWidth = 150 + size * 28
 
   return (
     <div className="flex h-full flex-col gap-3 p-5">
 
-      {/* Header */}
+      {/* Title + moves */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
             Netwalk
           </p>
           <p className="mt-0.5 text-xs text-[var(--color-muted)] leading-relaxed">
-            You are a network administrator and someone has scrambled your network. Rotate every piece to connect all terminals to the server — no loose ends.
+            Rotate every piece to connect all terminals to the server — no loose ends.
           </p>
           <p className="mt-1 text-[10px] text-[var(--color-muted)] opacity-70">
             Click to rotate · double-click to rotate back
@@ -569,12 +606,34 @@ function NetwalkBoard() {
         </div>
       </div>
 
+      {/* Level tabs */}
+      <div className="flex gap-1.5">
+        {(['easy', 'medium', 'hard'] as NetwalkLevel[]).map(l => (
+          <button
+            key={l}
+            type="button"
+            onClick={() => switchLevel(l)}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+              level === l
+                ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+            }`}
+          >
+            {NETWALK_LABELS[l]}
+            <span className={`leading-none transition-opacity ${medals.has(l) ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
+              {NETWALK_MEDALS[l]}
+            </span>
+          </button>
+        ))}
+      </div>
+
       {/* Board */}
       <div className="flex flex-1 items-center justify-center">
         <div
-          className="grid w-full max-w-[270px] overflow-hidden rounded-2xl"
+          className="grid w-full overflow-hidden rounded-2xl"
           style={{
-            gridTemplateColumns: `repeat(${NETWALK_SIZE}, minmax(0, 1fr))`,
+            maxWidth: `${boardMaxWidth}px`,
+            gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
             gap: '1px',
             background: 'var(--color-border)',
             border: '1px solid var(--color-border)',
@@ -592,7 +651,7 @@ function NetwalkBoard() {
 
             return (
               <button
-                key={index}
+                key={`${level}-${index}`}
                 type="button"
                 onClick={() => handleTilePress(index)}
                 className={`relative aspect-square transition-colors ${
@@ -601,12 +660,10 @@ function NetwalkBoard() {
                 aria-label={`Rotate network tile ${index + 1}`}
               >
                 <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" style={{ overflow: 'visible' }}>
-                  {/* Pipe arms */}
                   {hasN && <line x1="50" y1="50" x2="50" y2="0"   stroke={pipe} strokeWidth="20" strokeLinecap="butt" />}
                   {hasE && <line x1="50" y1="50" x2="100" y2="50" stroke={pipe} strokeWidth="20" strokeLinecap="butt" />}
                   {hasS && <line x1="50" y1="50" x2="50" y2="100" stroke={pipe} strokeWidth="20" strokeLinecap="butt" />}
                   {hasW && <line x1="50" y1="50" x2="0"   y2="50" stroke={pipe} strokeWidth="20" strokeLinecap="butt" />}
-                  {/* Node */}
                   {cell.isServer ? (
                     <g>
                       <rect x="27" y="29" width="46" height="42" rx="7" fill={node} />
@@ -635,12 +692,14 @@ function NetwalkBoard() {
             />
           </div>
           <p className="truncate text-sm font-medium text-[var(--color-text)]">
-            {status.solved ? '🎉 Network restored!' : `${status.connectedCount} / ${board.length} connected`}
+            {status.solved
+              ? `🎉 ${NETWALK_MEDALS[level]} ${NETWALK_LABELS[level]} restored!`
+              : `${status.connectedCount} / ${board.length} connected`}
           </p>
         </div>
         <button
           type="button"
-          onClick={() => { setBoard(createNetwalkBoard()); setMoves(0) }}
+          onClick={() => { setBoard(createNetwalkBoard(size)); setMoves(0); solvedAwardedRef.current = false }}
           className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
         >
           New Board
@@ -877,6 +936,8 @@ export function PuzzleWeekBonusHub() {
   const [sliderMedals, setSliderMedals] = useState<Set<SliderLevel>>(new Set())
   const [game2048Medals, setGame2048Medals] = useState<Set<Game2048Medal>>(new Set())
 
+  const [netwalkMedals, setNetwalkMedals] = useState<Set<NetwalkLevel>>(new Set())
+
   useEffect(() => {
     try {
       const stored = localStorage.getItem(SLIDER_MEDALS_KEY)
@@ -886,6 +947,10 @@ export function PuzzleWeekBonusHub() {
       const stored2048 = localStorage.getItem(GAME_2048_MEDALS_KEY)
       if (stored2048) setGame2048Medals(new Set(JSON.parse(stored2048) as Game2048Medal[]))
     } catch {}
+    try {
+      const storedNW = localStorage.getItem(NETWALK_MEDALS_KEY)
+      if (storedNW) setNetwalkMedals(new Set(JSON.parse(storedNW) as NetwalkLevel[]))
+    } catch {}
   }, [])
 
   function awardSliderMedal(level: SliderLevel) {
@@ -894,6 +959,16 @@ export function PuzzleWeekBonusHub() {
       const next = new Set(prev)
       next.add(level)
       try { localStorage.setItem(SLIDER_MEDALS_KEY, JSON.stringify([...next])) } catch {}
+      return next
+    })
+  }
+
+  function awardNetwalkMedal(level: NetwalkLevel) {
+    setNetwalkMedals(prev => {
+      if (prev.has(level)) return prev
+      const next = new Set(prev)
+      next.add(level)
+      try { localStorage.setItem(NETWALK_MEDALS_KEY, JSON.stringify([...next])) } catch {}
       return next
     })
   }
@@ -912,7 +987,7 @@ export function PuzzleWeekBonusHub() {
     switch (selectedId) {
       case 'slider':    return <SliderPuzzleBoard medals={sliderMedals} onSolve={awardSliderMedal} />
       case 'lightsout': return <LightsOutBoard />
-      case 'netwalk':   return <NetwalkBoard />
+      case 'netwalk':   return <NetwalkBoard medals={netwalkMedals} onSolve={awardNetwalkMedal} />
       case '2048':      return <Puzzle2048Board medals={game2048Medals} onAwardMedal={award2048Medal} />
       default:          return null
     }
@@ -983,6 +1058,19 @@ export function PuzzleWeekBonusHub() {
                 ))}
               </div>
             )}
+            {p.id === 'netwalk' && (
+              <div className="flex items-center gap-1 mt-1.5">
+                {(['easy', 'medium', 'hard'] as NetwalkLevel[]).map(l => (
+                  <span
+                    key={l}
+                    title={`${NETWALK_LABELS[l]}: ${netwalkMedals.has(l) ? 'earned' : 'not yet earned'}`}
+                    className={`text-sm leading-none transition-opacity ${netwalkMedals.has(l) ? 'opacity-100' : 'opacity-15'}`}
+                  >
+                    {NETWALK_MEDALS[l]}
+                  </span>
+                ))}
+              </div>
+            )}
             {!p.live && (
               <span className="mt-1.5 inline-block rounded-full bg-[var(--color-accent-light)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-accent)]">
                 Soon
@@ -1048,6 +1136,12 @@ export function PuzzleWeekBonusHub() {
                 sliderMedals.has('hard') ? <span>🥇</span>
                 : sliderMedals.has('medium') ? <span>🥈</span>
                 : sliderMedals.has('easy') ? <span>🥉</span>
+                : null
+              )}
+              {p.id === 'netwalk' && (
+                netwalkMedals.has('hard') ? <span>🥇</span>
+                : netwalkMedals.has('medium') ? <span>🥈</span>
+                : netwalkMedals.has('easy') ? <span>🥉</span>
                 : null
               )}
               {p.id === '2048' && (

@@ -440,6 +440,31 @@ export function PuzzleWeekHub() {
           )}
         </div>
 
+        {countdown && !countdown.started && !countdown.ended && (
+          <div className="text-center pt-1 space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+              Puzzle Week begins in
+            </p>
+            <div className="flex items-end justify-center gap-2 sm:gap-3">
+              {([
+                { value: countdown.days, label: 'days' },
+                { value: countdown.hours, label: 'hrs' },
+                { value: countdown.minutes, label: 'min' },
+                { value: countdown.seconds, label: 'sec' },
+              ] as const).map(({ value, label }) => (
+                <div key={label} className="flex flex-col items-center">
+                  <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-bold tabular-nums text-[var(--color-text)] shadow-sm">
+                    {String(value).padStart(2, '0')}
+                  </div>
+                  <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
+                    {label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className={`grid gap-4 ${entry ? 'lg:grid-cols-2' : ''}`}>
           <div className="rounded-3xl border border-[var(--color-border)] bg-white/80 px-4 sm:px-5 py-4 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -508,31 +533,6 @@ export function PuzzleWeekHub() {
             </div>
           )}
         </div>
-
-        {countdown && !countdown.started && !countdown.ended && (
-          <div className="text-center pt-1 space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-              Opens in
-            </p>
-            <div className="flex items-end justify-center gap-2 sm:gap-3">
-              {([
-                { value: countdown.days, label: 'days' },
-                { value: countdown.hours, label: 'hrs' },
-                { value: countdown.minutes, label: 'min' },
-                { value: countdown.seconds, label: 'sec' },
-              ] as const).map(({ value, label }) => (
-                <div key={label} className="flex flex-col items-center">
-                  <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-bold tabular-nums text-[var(--color-text)] shadow-sm">
-                    {String(value).padStart(2, '0')}
-                  </div>
-                  <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
-                    {label}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {entry && (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
@@ -856,8 +856,8 @@ export function PuzzleWeekHub() {
               return (
                 <>
                   <div>
-                    <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-                      Puzzles 1–6
+                    <h3 className="mb-4 text-lg sm:text-xl font-semibold tracking-[0.08em] text-[var(--color-muted)]">
+                      Submit your answers here
                     </h3>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       {MAIN_PUZZLES.map((puzzle, index) => (

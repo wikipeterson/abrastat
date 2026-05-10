@@ -420,8 +420,8 @@ html, body {
           <button class="diff-btn"        data-diff="hard">Hard</button>
         </div>
 
-        <div class="status-bar">
-          <span id="status-msg">Tap a cell to begin</span>
+        <div class="status-bar" id="status-bar">
+          <span id="status-msg"></span>
           <span id="status-count"></span>
         </div>
 
@@ -697,6 +697,7 @@ function renderBoard() {
 
 
 function updateStatus(msgs = []) {
+  const barEl   = document.getElementById('status-bar');
   const msgEl   = document.getElementById('status-msg');
   const countEl = document.getElementById('status-count');
   const placed  = cellState.filter(v => v === 2).length;
@@ -705,26 +706,30 @@ function updateStatus(msgs = []) {
     msgEl.className = 'status-msg solved';
     msgEl.textContent = '✓ Puzzle solved!';
     countEl.textContent = '';
+    barEl.style.display = 'flex';
     return;
   }
   if (showingSol) {
     msgEl.className = 'status-msg';
     msgEl.textContent = 'This is the unique solution';
     countEl.textContent = '';
+    barEl.style.display = 'flex';
     return;
   }
   if (msgs.length > 0) {
     msgEl.className = 'status-msg conflict';
     msgEl.textContent = msgs[0];
+    barEl.style.display = 'flex';
   } else if (placed === 0) {
-    msgEl.className = 'status-msg';
-    msgEl.textContent = '';
+    barEl.style.display = 'none';
   } else if (placed === N) {
     msgEl.className = 'status-msg';
     msgEl.textContent = 'Almost — check your placement';
+    barEl.style.display = 'flex';
   } else {
     msgEl.className = 'status-msg';
     msgEl.textContent = `${placed} of ${N} queens placed`;
+    barEl.style.display = 'flex';
   }
 }
 

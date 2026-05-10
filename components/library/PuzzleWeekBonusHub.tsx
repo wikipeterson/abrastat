@@ -1479,6 +1479,15 @@ export function PuzzleWeekBonusHub() {
           </Link>
 
           <div className="flex min-w-0 flex-1 items-center justify-center px-2">
+            <Link
+              href="https://puzzleweek.abrastat.com"
+              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
+            >
+              ← Main
+            </Link>
+          </div>
+
+          <div className="flex flex-shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
@@ -1488,15 +1497,6 @@ export function PuzzleWeekBonusHub() {
               <span className="truncate">{PUZZLE_LIST.find(p => p.id === selectedId)?.name}</span>
               <span className="text-[var(--color-muted)]">▾</span>
             </button>
-          </div>
-
-          <div className="flex flex-shrink-0 items-center gap-2">
-            <Link
-              href="https://puzzleweek.abrastat.com"
-              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
-            >
-              ← Main
-            </Link>
             {user && !isGuest && (
               <button
                 onClick={() => void signOut()}
@@ -1509,10 +1509,8 @@ export function PuzzleWeekBonusHub() {
         </div>
 
         {/* Game fills every remaining pixel */}
-        <div className="min-h-0 flex-1 px-4 pb-4" style={{ touchAction: 'none' }}>
-          <div className="h-full overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm">
-            {renderGame()}
-          </div>
+        <div className="min-h-0 flex-1" style={{ touchAction: 'none' }}>
+          {renderGame()}
         </div>
 
         {/* Puzzle picker drawer */}

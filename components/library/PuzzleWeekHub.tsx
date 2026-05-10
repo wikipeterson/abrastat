@@ -7,7 +7,7 @@ import { Calendar, CheckCircle2, RefreshCw, Trophy, User, UserPlus, Users } from
 import { useAuth } from '@/components/auth/AuthProvider'
 import { signOut } from '@/lib/auth'
 import { PuzzleSignIn } from '@/components/library/PuzzleSignIn'
-import { canDownloadPuzzleWeekPacketIdentity, canManagePuzzleWeekIdentity, canRegisterForPuzzleWeek, canResetPuzzleWeekRegistrationIdentity, getPuzzleWeekEligibilityMessage, getPuzzleWeekPacketMessage } from '@/lib/featureFlags'
+import { canDownloadPuzzleWeekPacketIdentity, canManagePuzzleWeekIdentity, canRegisterForPuzzleWeek, getPuzzleWeekEligibilityMessage, getPuzzleWeekPacketMessage } from '@/lib/featureFlags'
 import {
   CURRENT_PUZZLE_WEEK_EVENT,
   PUZZLE_WEEK_MAX_TEAM_SIZE,
@@ -30,7 +30,6 @@ import {
   joinPuzzleWeekTeam,
   registerPuzzleWeekSolo,
   registerPuzzleWeekTeam,
-  resetPuzzleWeekRegistration,
   submitPuzzleWeekAnswer,
   submitPuzzleWeekVote,
 } from '@/lib/puzzleWeek'
@@ -93,7 +92,6 @@ export function PuzzleWeekHub() {
   const canRegister = canRegisterForPuzzleWeek(user)
   const canDownloadPacket = canDownloadPuzzleWeekPacketIdentity(user)
   const canManage = canManagePuzzleWeekIdentity(user)
-  const canResetRegistration = canResetPuzzleWeekRegistrationIdentity(user)
   const eligibilityMessage = getPuzzleWeekEligibilityMessage()
   const packetMessage = getPuzzleWeekPacketMessage(user)
   const solvedCount = Object.values(progress).filter(p => p.solved).length
@@ -287,33 +285,6 @@ export function PuzzleWeekHub() {
     await signOut()
   }
 
-  async function handleResetRegistration() {
-    if (!user) return
-    if (!window.confirm('Reset your current Puzzle Week registration and progress? This cannot be undone.')) {
-      return
-    }
-    setSubmitting(true)
-    setError(null)
-    try {
-      await resetPuzzleWeekRegistration(CURRENT_PUZZLE_WEEK_EVENT.id, user)
-      setEntry(null)
-      setMembers([])
-      setProgress({})
-      setPuzzleAnswers({})
-      setAnswerMessages({})
-      setRegisterMode(null)
-      setShowJoinTeam(false)
-      setTeamName('')
-      setJoinCode('')
-      await refreshRegistration(user)
-      void loadLeaderboard(user)
-    } catch (err) {
-      setError(getErrorMessage(err, 'Could not reset your registration.'))
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   async function handleCheckAnswer(puzzleId: string) {
     if (!entry || !user) return
     setCheckingPuzzleId(puzzleId)
@@ -469,32 +440,7 @@ export function PuzzleWeekHub() {
           )}
         </div>
 
-        <div className={`grid gap-4 ${countdown && !countdown.started && !countdown.ended ? 'lg:grid-cols-[minmax(0,1fr)_360px]' : ''}`}>
-          {countdown && !countdown.started && !countdown.ended && (
-            <div className="text-center pt-4 space-y-1.5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-                Opens in
-              </p>
-              <div className="flex items-end justify-center gap-2 sm:gap-3">
-                {([
-                  { value: countdown.days, label: 'days' },
-                  { value: countdown.hours, label: 'hrs' },
-                  { value: countdown.minutes, label: 'min' },
-                  { value: countdown.seconds, label: 'sec' },
-                ] as const).map(({ value, label }) => (
-                  <div key={label} className="flex flex-col items-center">
-                    <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-bold tabular-nums text-[var(--color-text)] shadow-sm">
-                      {String(value).padStart(2, '0')}
-                    </div>
-                    <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
-                      {label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
+        <div className={`grid gap-4 ${entry ? 'lg:grid-cols-2' : ''}`}>
           <div className="rounded-3xl border border-[var(--color-border)] bg-white/80 px-4 sm:px-5 py-4 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
@@ -519,7 +465,74 @@ export function PuzzleWeekHub() {
               />
             </div>
           </div>
+
+          {entry && (
+            <div className="rounded-3xl border border-[var(--color-border)] bg-white/80 px-4 sm:px-5 py-4 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[var(--color-text)]">
+                    Puzzle Week progress
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--color-muted)]">
+                    {solvedCount} of {PUZZLE_WEEK_PUZZLES.length} puzzles solved so far.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-[var(--color-text)]">
+                    {solvedCount}
+                    <span className="text-base font-medium text-[var(--color-muted)]">/{PUZZLE_WEEK_PUZZLES.length}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 flex gap-1.5">
+                {PUZZLE_WEEK_PUZZLES.map((puzzle, i) => {
+                  const solved = progress[puzzle.id]?.solved === true
+                  const isMeta = i === PUZZLE_WEEK_PUZZLES.length - 1
+                  return (
+                    <div
+                      key={`summary-${puzzle.id}`}
+                      title={puzzle.title}
+                      className={`h-8 flex-1 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${
+                        solved
+                          ? isMeta
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-emerald-500 text-white'
+                          : 'bg-[var(--color-accent-light)] text-[var(--color-muted)]'
+                      }`}
+                    >
+                      {isMeta ? 'M' : i + 1}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
+
+        {countdown && !countdown.started && !countdown.ended && (
+          <div className="text-center pt-1 space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+              Opens in
+            </p>
+            <div className="flex items-end justify-center gap-2 sm:gap-3">
+              {([
+                { value: countdown.days, label: 'days' },
+                { value: countdown.hours, label: 'hrs' },
+                { value: countdown.minutes, label: 'min' },
+                { value: countdown.seconds, label: 'sec' },
+              ] as const).map(({ value, label }) => (
+                <div key={label} className="flex flex-col items-center">
+                  <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-bold tabular-nums text-[var(--color-text)] shadow-sm">
+                    {String(value).padStart(2, '0')}
+                  </div>
+                  <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
+                    {label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {entry && (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
@@ -688,7 +701,7 @@ export function PuzzleWeekHub() {
 
             {/* Entry header card */}
             <div className="rounded-3xl border border-[var(--color-border)] bg-white shadow-sm overflow-hidden">
-              <div className="flex flex-wrap items-start justify-between gap-4 px-6 pt-6 pb-5">
+              <div className="px-6 pt-6 pb-5">
                 <div>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
                     {entry.type === 'team' ? 'Team Entry' : 'Solo Entry'}
@@ -702,47 +715,6 @@ export function PuzzleWeekHub() {
                       </code>
                     </div>
                   )}
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <div className="text-3xl font-bold text-[var(--color-text)]">
-                    {solvedCount}
-                    <span className="text-lg font-medium text-[var(--color-muted)]">/{PUZZLE_WEEK_PUZZLES.length}</span>
-                  </div>
-                  <div className="text-xs font-medium text-[var(--color-muted)]">puzzles solved</div>
-                  {canResetRegistration && (
-                    <button
-                      onClick={handleResetRegistration}
-                      disabled={submitting}
-                      className="rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-60"
-                    >
-                      Reset Registration
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Progress track */}
-              <div className="px-6 pb-5">
-                <div className="flex gap-1.5">
-                  {PUZZLE_WEEK_PUZZLES.map((puzzle, i) => {
-                    const solved = progress[puzzle.id]?.solved === true
-                    const isMeta = i === PUZZLE_WEEK_PUZZLES.length - 1
-                    return (
-                      <div
-                        key={puzzle.id}
-                        title={puzzle.title}
-                        className={`h-8 flex-1 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${
-                          solved
-                            ? isMeta
-                              ? 'bg-amber-500 text-white'
-                              : 'bg-emerald-500 text-white'
-                            : 'bg-[var(--color-accent-light)] text-[var(--color-muted)]'
-                        }`}
-                      >
-                        {isMeta ? 'M' : i + 1}
-                      </div>
-                    )
-                  })}
                 </div>
               </div>
 

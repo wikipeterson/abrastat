@@ -9,7 +9,6 @@ import { canManagePuzzleWeekIdentity } from '@/lib/featureFlags'
 
 // ---------- game constants ----------
 
-const LIGHTS_OUT_SIZE = 5
 const NETWALK_SIZE = 5
 const GAME_2048_SIZE = 4
 const DIR_BITS = [1, 2, 4, 8] as const
@@ -21,6 +20,7 @@ const SLIDER_SIZES: Record<SliderLevel, number> = { easy: 3, medium: 4, hard: 5 
 const SLIDER_LABELS: Record<SliderLevel, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' }
 const SLIDER_MEDALS: Record<SliderLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
 const SLIDER_MEDALS_KEY = 'pw-slider-medals'
+const LIGHTS_OUT_SIZES: Record<SliderLevel, number> = { easy: 3, medium: 4, hard: 5 }
 type Game2048Medal = 'bronze' | 'silver' | 'gold'
 const GAME_2048_MEDALS: Record<Game2048Medal, { threshold: number; emoji: string; label: string }> = {
   bronze: { threshold: 1024, emoji: '🥉', label: 'Bronze' },
@@ -49,15 +49,18 @@ function toggleCell(board: boolean[], row: number, col: number, size: number) {
   return next
 }
 
-function createLightsOutBoard() {
-  let board = Array<boolean>(LIGHTS_OUT_SIZE * LIGHTS_OUT_SIZE).fill(false)
-  const moves = 14 + Math.floor(Math.random() * 8)
+function createLightsOutBoard(size: number) {
+  let board = Array<boolean>(size * size).fill(false)
+  const moves = size === 3 ? 8 + Math.floor(Math.random() * 4) : size === 4 ? 11 + Math.floor(Math.random() * 5) : 14 + Math.floor(Math.random() * 8)
   for (let i = 0; i < moves; i++) {
-    const r = Math.floor(Math.random() * LIGHTS_OUT_SIZE)
-    const c = Math.floor(Math.random() * LIGHTS_OUT_SIZE)
-    board = toggleCell(board, r, c, LIGHTS_OUT_SIZE)
+    const r = Math.floor(Math.random() * size)
+    const c = Math.floor(Math.random() * size)
+    board = toggleCell(board, r, c, size)
   }
-  if (board.every(c => !c)) board = toggleCell(board, 2, 2, LIGHTS_OUT_SIZE)
+  if (board.every(c => !c)) {
+    const middle = Math.floor(size / 2)
+    board = toggleCell(board, middle, middle, size)
+  }
   return board
 }
 
@@ -417,14 +420,22 @@ function SliderPuzzleBoard({
 }
 
 function LightsOutBoard() {
-  const [board, setBoard] = useState<boolean[]>(() => createLightsOutBoard())
+  const [level, setLevel] = useState<SliderLevel>('medium')
+  const size = LIGHTS_OUT_SIZES[level]
+  const [board, setBoard] = useState<boolean[]>(() => createLightsOutBoard(LIGHTS_OUT_SIZES.medium))
   const [moves, setMoves] = useState(0)
 
   const solved = board.every(c => !c)
 
+  function switchLevel(nextLevel: SliderLevel) {
+    setLevel(nextLevel)
+    setBoard(createLightsOutBoard(LIGHTS_OUT_SIZES[nextLevel]))
+    setMoves(0)
+  }
+
   function handlePress(r: number, c: number) {
     if (solved) return
-    setBoard(prev => toggleCell(prev, r, c, LIGHTS_OUT_SIZE))
+    setBoard(prev => toggleCell(prev, r, c, size))
     setMoves(m => m + 1)
   }
 
@@ -443,13 +454,30 @@ function LightsOutBoard() {
         </div>
       </div>
 
+      <div className="flex gap-1.5">
+        {(['easy', 'medium', 'hard'] as SliderLevel[]).map(l => (
+          <button
+            key={l}
+            type="button"
+            onClick={() => switchLevel(l)}
+            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+              level === l
+                ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+            }`}
+          >
+            {SLIDER_LABELS[l]}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-1 items-center justify-center">
         <div
           className="grid w-full max-w-[260px] gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-3"
-          style={{ gridTemplateColumns: `repeat(${LIGHTS_OUT_SIZE}, minmax(0, 1fr))` }}
+          style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))` }}
         >
           {board.map((isOn, idx) => {
-            const r = Math.floor(idx / LIGHTS_OUT_SIZE), c = idx % LIGHTS_OUT_SIZE
+            const r = Math.floor(idx / size), c = idx % size
             return (
               <button
                 key={idx}
@@ -473,7 +501,7 @@ function LightsOutBoard() {
         </p>
         <button
           type="button"
-          onClick={() => { setBoard(createLightsOutBoard()); setMoves(0) }}
+          onClick={() => { setBoard(createLightsOutBoard(size)); setMoves(0) }}
           className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
         >
           New Board

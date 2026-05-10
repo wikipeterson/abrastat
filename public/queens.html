@@ -158,13 +158,13 @@ const COLORS = [
   '#FFF1A8','#C9F1B0','#FFCFA8',
 ];
 
-// ── Difficulty: grid size and Voronoi noise level ─────────────────────
-// noise=0 → compact Voronoi blobs (easy to read)
-// noise=5 → heavily randomised, snaking shapes (hard)
+// ── Difficulty config ─────────────────────────────────────────────────
+// noise: Voronoi randomness (higher = more irregular regions)
+// maxRefine: max refinement iterations per fresh start
 const DIFF = {
-  easy:   { n: 6, noise: 0.4 },
-  medium: { n: 7, noise: 2.0 },
-  hard:   { n: 9, noise: 4.5 },
+  easy:   { n: 6, noise: 100, maxRefine:  60 },
+  medium: { n: 7, noise: 500, maxRefine: 100 },
+  hard:   { n: 9, noise: 100, maxRefine: 400 },
 };
 
 // ── Game state ────────────────────────────────────────────────────────
@@ -204,17 +204,13 @@ function placeQueens(n) {
   return null; // extremely rare
 }
 
-// ── Step 2: Assign cells to regions (Voronoi with noise) ─────────────
-// Each queen seeds its own region. Every other cell goes to the nearest
-// queen by Manhattan distance, with Gaussian-like noise added to break
-// ties and vary shape difficulty. Higher noise → more irregular regions.
+// ── Step 2: Voronoi region assignment ────────────────────────────────
+// Each cell goes to the nearest queen by Manhattan distance plus random
+// noise. High noise produces irregular shapes; low noise gives compact
+// blobs. Queen cells are always locked to their own region.
 function buildRegions(n, queenCols, noise) {
   const reg = new Array(n * n).fill(-1);
-
-  // Seeds: queen positions are locked to their own region
   for (let row = 0; row < n; row++) reg[row * n + queenCols[row]] = row;
-
-  // Assign remaining cells
   for (let c = 0; c < n * n; c++) {
     if (reg[c] !== -1) continue;
     const r = Math.floor(c / n), col = c % n;
@@ -226,8 +222,41 @@ function buildRegions(n, queenCols, noise) {
     }
     reg[c] = chosen;
   }
-
   return reg;
+}
+
+// ── Step 2b: find the first alternative placement ────────────────────
+// Returns the first valid queen column permutation that differs from
+// queenCols, or null if queenCols is the unique solution.
+function findAlternative(reg, n, queenCols) {
+  const placed   = new Array(n).fill(-1);
+  const usedCols = new Set();
+  const usedRegs = new Set();
+  let alt = null;
+
+  function bt(row) {
+    if (alt) return;
+    if (row === n) {
+      if (!placed.every((c, r) => c === queenCols[r])) alt = [...placed];
+      return;
+    }
+    for (let col = 0; col < n; col++) {
+      if (usedCols.has(col)) continue;
+      if (usedRegs.has(reg[row * n + col])) continue;
+      if (row > 0 && Math.abs(placed[row - 1] - col) === 1) continue;
+      placed[row] = col;
+      usedCols.add(col);
+      usedRegs.add(reg[row * n + col]);
+      bt(row + 1);
+      placed[row] = -1;
+      usedCols.delete(col);
+      usedRegs.delete(reg[row * n + col]);
+      if (alt) return;
+    }
+  }
+
+  bt(0);
+  return alt;
 }
 
 // ── Step 3: Validate region shapes ───────────────────────────────────
@@ -283,34 +312,68 @@ function isUnique(reg, n) {
   return nodes <= 150000 && count === 1;
 }
 
-// ── Async generation ──────────────────────────────────────────────────
-// Processes CHUNK attempts per tick so the UI never freezes.
-// Returns a puzzle via onDone(result) or onDone(null) on failure.
+// ── Async generation with iterative refinement ───────────────────────
+// Strategy: start with Voronoi regions, then iteratively fix alternatives
+// (move one alternative-queen cell into another alternative-queen cell's
+// region, forcing a collision that blocks that alternative). Repeats until
+// the puzzle is unique. Uses a 14ms time budget per tick so the UI never
+// freezes, even for n=9.
 function generateAsync(difficulty, myGenId, onDone) {
-  const { n, noise } = DIFF[difficulty];
-  const MAX   = 4000;
-  const CHUNK = 40;
-  let attempt = 0;
+  const { n, noise, maxRefine } = DIFF[difficulty];
+  const MAX_OUTER = 300; // max fresh starts before giving up
+  let outerAttempt = 0;
+  let curReg = null;    // current region array being refined
+  let curCols = null;   // current queen column placement
+  let innerIter = 0;   // refinement steps taken on curReg
 
   function tick() {
     if (genId !== myGenId) return; // cancelled by a newer startNew()
 
-    for (let i = 0; i < CHUNK; i++) {
-      if (++attempt > MAX) { onDone(null); return; }
+    const deadline = Date.now() + 14; // 14 ms budget per tick
 
-      const queenCols = placeQueens(n);
-      if (!queenCols) continue;
+    while (Date.now() < deadline) {
+      // Need a fresh start?
+      if (!curReg || innerIter >= maxRefine) {
+        if (outerAttempt++ >= MAX_OUTER) { onDone(null); return; }
+        curCols = placeQueens(n);
+        if (!curCols) { curReg = null; continue; }
+        curReg = buildRegions(n, curCols, noise);
+        innerIter = 0;
+      }
 
-      const reg = buildRegions(n, queenCols, noise);
+      // Check if current regions already give a unique solution
+      if (isUnique(curReg, n)) {
+        if (validateRegions(curReg, n)) {
+          const sol = new Array(n * n).fill(false);
+          for (let row = 0; row < n; row++) sol[row * n + curCols[row]] = true;
+          onDone({ n, regions: curReg, solution: sol });
+          return;
+        }
+        curReg = null; // shape invalid — try fresh start
+        continue;
+      }
 
-      if (!validateRegions(reg, n)) continue;
-      if (!isUnique(reg, n)) continue;
+      // Find an alternative and fix it: move one of its non-queen cells
+      // into another alternative-queen cell's region to force a collision.
+      const alt = findAlternative(curReg, n, curCols);
+      if (!alt) { curReg = null; continue; } // shouldn't happen
 
-      const sol = new Array(n * n).fill(false);
-      for (let row = 0; row < n; row++) sol[row * n + queenCols[row]] = true;
-
-      onDone({ n, regions: reg, solution: sol });
-      return;
+      const diffRows = [];
+      for (let r = 0; r < n; r++) {
+        if (alt[r] !== curCols[r]) diffRows.push(r);
+      }
+      if (diffRows.length >= 2) {
+        const ri = diffRows[Math.floor(Math.random() * diffRows.length)];
+        const rj = diffRows[Math.floor(Math.random() * diffRows.length)];
+        if (ri !== rj) {
+          const ci = ri * n + alt[ri];
+          const cj = rj * n + alt[rj];
+          // Only move non-queen cells (queen cells are fixed in their regions)
+          if (alt[ri] !== curCols[ri]) curReg[ci] = curReg[cj];
+          else if (alt[rj] !== curCols[rj]) curReg[cj] = curReg[ci];
+        }
+      }
+      innerIter++;
     }
 
     setTimeout(tick, 0); // yield to browser, then continue

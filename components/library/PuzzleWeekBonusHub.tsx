@@ -912,13 +912,6 @@ const PUZZLE_LIST = [
     desc: 'Merge matching tiles to reach 2048',
     live: true,
   },
-  {
-    id: 'coming1',
-    name: 'More Coming Soon',
-    emoji: '🧩',
-    desc: 'New puzzles dropping during Puzzle Week',
-    live: false,
-  },
 ]
 
 const LIVE_PUZZLES = PUZZLE_LIST.filter(p => p.live)

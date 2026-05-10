@@ -36,76 +36,47 @@ html, body {
   gap: 7px;
 }
 
-/* ── Title / difficulty ── */
 .title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
 }
 .game-title { font-size: 18px; font-weight: 700; }
 .diff-group { display: flex; gap: 4px; }
 .diff-btn {
-  font-size: 11px; font-weight: 600;
-  padding: 4px 11px;
-  border-radius: 20px;
-  border: 1.5px solid var(--border);
-  background: white; color: var(--muted);
-  cursor: pointer; transition: all 0.14s;
+  font-size: 11px; font-weight: 600; padding: 4px 11px;
+  border-radius: 20px; border: 1.5px solid var(--border);
+  background: white; color: var(--muted); cursor: pointer; transition: all 0.14s;
 }
 .diff-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
 
-/* ── Status bar ── */
 .status-bar {
-  flex-shrink: 0;
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 6px 14px;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 34px;
+  flex-shrink: 0; background: white; border: 1px solid var(--border);
+  border-radius: 14px; padding: 6px 14px; font-size: 13px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px;
 }
 #status-msg { font-weight: 600; }
 #status-msg.conflict { color: #B22222; }
 #status-msg.solved   { color: #1A7A4A; }
 #status-count { color: var(--muted); font-size: 12px; white-space: nowrap; flex-shrink: 0; }
 
-/* ── Board ── */
 .board-wrap {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  flex: 1; min-height: 0;
+  display: flex; align-items: center; justify-content: center;
 }
 #board {
   display: grid;
-  /* Size: the smaller of viewport width (minus padding) or remaining height */
   width: min(calc(100vw - 28px), calc(100dvh - 198px));
   aspect-ratio: 1;
-  border-radius: 10px;
-  overflow: hidden;
-  user-select: none;
-  touch-action: none;
-  cursor: pointer;
+  border-radius: 10px; overflow: hidden;
+  user-select: none; touch-action: none; cursor: pointer;
 }
-.cell {
-  position: relative;
-  transition: filter 0.08s;
-}
+.cell { position: relative; transition: filter 0.08s; }
 .cell:active { filter: brightness(0.85); }
 
-/* Marks sit absolutely so they never affect cell dimensions */
+/* Marks are absolutely positioned so they never resize cells */
 .mark {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: clamp(10px, 3.4vw, 22px);
-  pointer-events: none;
-  line-height: 1;
+  font-size: clamp(10px, 3.4vw, 22px); pointer-events: none; line-height: 1;
 }
 .mark-x        { color: rgba(0,0,0,0.28); font-weight: 700; font-size: clamp(9px, 2.8vw, 18px); }
 .mark-queen    { color: rgba(0,0,0,0.70); text-shadow: 0 1px 3px rgba(0,0,0,0.18); }
@@ -113,42 +84,30 @@ html, body {
 .mark-solved   { color: #1A7A4A; text-shadow: 0 0 8px rgba(46,196,182,0.55); animation: pop 0.28s ease; }
 @keyframes pop { 0%{transform:scale(0.25)} 65%{transform:scale(1.18)} 100%{transform:scale(1)} }
 
-/* ── Buttons ── */
 .btn-row { display: flex; gap: 8px; flex-shrink: 0; }
 .btn {
-  flex: 1; font-size: 13px; font-weight: 600;
-  padding: 9px 0; border-radius: 12px;
-  border: 1.5px solid var(--border);
-  background: white; color: var(--text);
+  flex: 1; font-size: 13px; font-weight: 600; padding: 9px 0; border-radius: 12px;
+  border: 1.5px solid var(--border); background: white; color: var(--text);
   cursor: pointer; transition: background 0.14s;
 }
 .btn:hover { background: var(--accent-light); }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
 .btn.primary:hover { filter: brightness(1.06); }
 
-/* ── Legend ── */
 .legend {
-  flex-shrink: 0;
-  display: flex; flex-wrap: wrap; gap: 3px 10px;
-  max-height: 44px; overflow: hidden;
-  font-size: 11px; color: var(--muted);
-  padding: 0 2px;
+  flex-shrink: 0; display: flex; flex-wrap: wrap; gap: 3px 10px;
+  max-height: 44px; overflow: hidden; font-size: 11px; color: var(--muted); padding: 0 2px;
 }
 .legend-item { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
-.legend-swatch {
-  width: 10px; height: 10px; border-radius: 3px;
-  border: 1px solid rgba(0,0,0,0.18); flex-shrink: 0;
-}
+.legend-swatch { width: 10px; height: 10px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.18); flex-shrink: 0; }
 
-/* ── Success overlay ── */
 #overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(232,250,248,0.94); z-index: 50;
+  display: none; position: fixed; inset: 0; background: rgba(232,250,248,0.94); z-index: 50;
   flex-direction: column; align-items: center; justify-content: center;
   gap: 10px; text-align: center; padding: 24px;
 }
 #overlay.show { display: flex; }
-.ov-icon { font-size: 52px; animation: bounce 0.45s ease; }
+.ov-icon  { font-size: 52px; animation: bounce 0.45s ease; }
 @keyframes bounce { 0%{transform:scale(0)} 55%{transform:scale(1.22)} 100%{transform:scale(1)} }
 .ov-title { font-size: 26px; font-weight: 800; }
 .ov-sub   { color: var(--muted); font-size: 14px; }
@@ -157,7 +116,6 @@ html, body {
 </head>
 <body>
 <div id="app">
-
   <div class="title-row">
     <span class="game-title">👑 Queens</span>
     <div class="diff-group">
@@ -172,9 +130,7 @@ html, body {
     <span id="status-count"></span>
   </div>
 
-  <div class="board-wrap">
-    <div id="board"></div>
-  </div>
+  <div class="board-wrap"><div id="board"></div></div>
 
   <div class="btn-row">
     <button class="btn"         id="btn-solution">Show Solution</button>
@@ -182,7 +138,6 @@ html, body {
   </div>
 
   <div class="legend" id="legend"></div>
-
 </div>
 
 <div id="overlay">
@@ -196,26 +151,33 @@ html, body {
 <script>
 'use strict';
 
-// ── Region color palette (11 accessible pastels) ──────────────────────
+// ── Color palette ─────────────────────────────────────────────────────
 const COLORS = [
   '#FFBDBD','#FFDBA8','#FEFDB5','#C6F7C6',
   '#AEE0FF','#D5B9FF','#FFB9E9','#A8EEE8',
   '#FFF1A8','#C9F1B0','#FFCFA8',
 ];
 
-// ── Difficulty ────────────────────────────────────────────────────────
-const DIFF = { easy: { n: 6 }, medium: { n: 7 }, hard: { n: 9 } };
+// ── Difficulty: grid size and Voronoi noise level ─────────────────────
+// noise=0 → compact Voronoi blobs (easy to read)
+// noise=5 → heavily randomised, snaking shapes (hard)
+const DIFF = {
+  easy:   { n: 6, noise: 0.4 },
+  medium: { n: 7, noise: 2.0 },
+  hard:   { n: 9, noise: 4.5 },
+};
 
 // ── Game state ────────────────────────────────────────────────────────
 let N = 6;
-let regions   = [];   // regions[cell] = region index 0..N-1
-let solution  = [];   // solution[cell] = true if queen belongs here
-let cellState = [];   // 0 = blank, 1 = X marker, 2 = queen
+let regions   = [];   // regions[cell] = 0..N-1
+let solution  = [];   // solution[cell] = true at queen positions
+let cellState = [];   // 0=blank  1=X-marker  2=queen
 let conflicts = new Set();
-let solved    = false;
-let showingSol = false;
-let currentDiff = 'easy';
+let solved       = false;
+let showingSol   = false;
+let currentDiff  = 'easy';
 let placementCount = 0;
+let genId = 0;        // cancels stale async generation runs
 
 // ── Utilities ─────────────────────────────────────────────────────────
 
@@ -227,90 +189,51 @@ function shuffle(a) {
   return a;
 }
 
-// Orthogonal (4-connected) neighbors of cell c in an n×n grid
-function nbrs4(c, n) {
-  const r = Math.floor(c / n), col = c % n, out = [];
-  if (r > 0)     out.push(c - n);
-  if (r < n - 1) out.push(c + n);
-  if (col > 0)   out.push(c - 1);
-  if (col < n-1) out.push(c + 1);
-  return out;
-}
-
-// ── Step 1-2: Random queen placement ─────────────────────────────────
-// One queen per row and column (permutation), no diagonal adjacency
-// between any two queens (|Δrow|=1 and |Δcol|=1 is forbidden).
+// ── Step 1: Place N queens (one per row, one per column) ──────────────
+// Shuffles a column permutation and rejects any that have diagonally
+// adjacent queens (|Δrow|=1 AND |Δcol|=1 between consecutive rows).
 function placeQueens(n) {
-  for (let attempt = 0; attempt < 400; attempt++) {
+  for (let attempt = 0; attempt < 500; attempt++) {
     const cols = shuffle([...Array(n).keys()]);
     let ok = true;
-    // Only consecutive rows can be diagonally adjacent (|Δrow|=1 requires Δrow=±1)
     for (let r = 0; r < n - 1; r++) {
       if (Math.abs(cols[r] - cols[r + 1]) === 1) { ok = false; break; }
     }
     if (ok) return cols;
   }
-  return null;
+  return null; // extremely rare
 }
 
-// ── Step 3-4: Flood-fill regions from queen seeds ────────────────────
-// Each queen seeds its own region; cells expand BFS-style.
-// Easy:   FIFO frontier + greedy (join region with most neighbors → blobs)
-// Medium: random frontier + greedy (irregular shapes)
-// Hard:   random frontier + random region (snaking, interleaved shapes)
-function floodFill(n, queenCols, difficulty) {
-  const total = n * n;
-  const reg = new Array(total).fill(-1);
+// ── Step 2: Assign cells to regions (Voronoi with noise) ─────────────
+// Each queen seeds its own region. Every other cell goes to the nearest
+// queen by Manhattan distance, with Gaussian-like noise added to break
+// ties and vary shape difficulty. Higher noise → more irregular regions.
+function buildRegions(n, queenCols, noise) {
+  const reg = new Array(n * n).fill(-1);
 
-  // Plant seeds at queen positions
+  // Seeds: queen positions are locked to their own region
   for (let row = 0; row < n; row++) reg[row * n + queenCols[row]] = row;
 
-  // Initial frontier: all unassigned cells adjacent to a seed
-  const inQ = new Array(total).fill(false);
-  const queue = [];
-  for (let c = 0; c < total; c++) {
-    if (reg[c] !== -1) {
-      for (const nb of nbrs4(c, n)) {
-        if (reg[nb] === -1 && !inQ[nb]) { queue.push(nb); inQ[nb] = true; }
-      }
+  // Assign remaining cells
+  for (let c = 0; c < n * n; c++) {
+    if (reg[c] !== -1) continue;
+    const r = Math.floor(c / n), col = c % n;
+    let best = Infinity, chosen = 0;
+    for (let qi = 0; qi < n; qi++) {
+      const dist = Math.abs(r - qi) + Math.abs(col - queenCols[qi])
+                   + Math.random() * noise;
+      if (dist < best) { best = dist; chosen = qi; }
     }
-  }
-
-  while (queue.length > 0) {
-    // Cell selection strategy
-    const idx = (difficulty === 'easy') ? 0 : Math.floor(Math.random() * queue.length);
-    const c = queue.splice(idx, 1)[0];
-    inQ[c] = false;
-
-    const assignedNbrs = nbrs4(c, n).filter(nb => reg[nb] !== -1);
-    if (assignedNbrs.length === 0) continue;
-
-    let chosen;
-    if (difficulty === 'hard') {
-      // Random: any neighboring region
-      chosen = reg[assignedNbrs[Math.floor(Math.random() * assignedNbrs.length)]];
-    } else {
-      // Greedy: join region with most adjacent already-assigned cells
-      const cnt = {};
-      for (const nb of assignedNbrs) cnt[reg[nb]] = (cnt[reg[nb]] || 0) + 1;
-      chosen = +Object.entries(cnt).sort((a, b) => b[1] - a[1])[0][0];
-    }
-
     reg[c] = chosen;
-
-    for (const nb of nbrs4(c, n)) {
-      if (reg[nb] === -1 && !inQ[nb]) { queue.push(nb); inQ[nb] = true; }
-    }
   }
 
-  return reg.includes(-1) ? null : reg;
+  return reg;
 }
 
-// ── Step 5: Region shape validation ──────────────────────────────────
-// Reject grids where any region is confined to a single row or column.
-// Such regions make the region constraint identical to row/column constraint
-// and produce hundreds of solutions (the "stripe bug").
-// Every region must span at least 2 rows AND at least 2 columns.
+// ── Step 3: Validate region shapes ───────────────────────────────────
+// Reject any region confined to a single row or column. Such regions
+// make the region constraint identical to row/column uniqueness, which
+// produces many solutions (the "stripe bug").
 function validateRegions(reg, n) {
   for (let ri = 0; ri < n; ri++) {
     let rowMin = n, rowMax = -1, colMin = n, colMax = -1;
@@ -322,31 +245,30 @@ function validateRegions(reg, n) {
       if (col < colMin) colMin = col;
       if (col > colMax) colMax = col;
     }
-    // Must span at least 2 rows AND 2 columns
     if (rowMax - rowMin < 1 || colMax - colMin < 1) return false;
   }
   return true;
 }
 
-// ── Step 6: Uniqueness check (backtracking) ───────────────────────────
-// Count all valid solutions. Return true iff exactly 1 exists.
-// Places queens row by row; checks column, region, and diagonal-adjacency.
+// ── Step 4: Uniqueness check (backtracking solver) ────────────────────
+// Places queens row-by-row, enforcing one per column, one per region,
+// and no diagonal adjacency between consecutive rows. Counts solutions;
+// returns true iff exactly 1 exists. Node cap prevents runaway searches.
 function isUnique(reg, n) {
   let count = 0;
-  const placed    = new Array(n).fill(-1);
-  const usedCols  = new Set();
-  const usedRegs  = new Set();
+  let nodes = 0;
+  const placed   = new Array(n).fill(-1);
+  const usedCols = new Set();
+  const usedRegs = new Set();
 
   function bt(row) {
-    if (count > 1) return; // early exit once we know it's non-unique
+    if (count > 1 || nodes > 150000) return;
     if (row === n) { count++; return; }
-
     for (let col = 0; col < n; col++) {
       if (usedCols.has(col)) continue;
       if (usedRegs.has(reg[row * n + col])) continue;
-      // No diagonal adjacency with the queen placed in the immediately preceding row
       if (row > 0 && Math.abs(placed[row - 1] - col) === 1) continue;
-
+      nodes++;
       placed[row] = col;
       usedCols.add(col);
       usedRegs.add(reg[row * n + col]);
@@ -358,41 +280,51 @@ function isUnique(reg, n) {
   }
 
   bt(0);
-  return count === 1;
+  return nodes <= 150000 && count === 1;
 }
 
-// ── Main generation entry point ───────────────────────────────────────
-function generate(difficulty) {
-  const n = DIFF[difficulty].n;
+// ── Async generation ──────────────────────────────────────────────────
+// Processes CHUNK attempts per tick so the UI never freezes.
+// Returns a puzzle via onDone(result) or onDone(null) on failure.
+function generateAsync(difficulty, myGenId, onDone) {
+  const { n, noise } = DIFF[difficulty];
+  const MAX   = 4000;
+  const CHUNK = 40;
+  let attempt = 0;
 
-  for (let attempt = 0; attempt < 700; attempt++) {
-    const queenCols = placeQueens(n);
-    if (!queenCols) continue;
+  function tick() {
+    if (genId !== myGenId) return; // cancelled by a newer startNew()
 
-    const reg = floodFill(n, queenCols, difficulty);
-    if (!reg) continue;
+    for (let i = 0; i < CHUNK; i++) {
+      if (++attempt > MAX) { onDone(null); return; }
 
-    // Reject stripe-pattern grids (step 5)
-    if (!validateRegions(reg, n)) continue;
+      const queenCols = placeQueens(n);
+      if (!queenCols) continue;
 
-    // Reject puzzles with multiple solutions (step 6)
-    if (!isUnique(reg, n)) continue;
+      const reg = buildRegions(n, queenCols, noise);
 
-    const sol = new Array(n * n).fill(false);
-    for (let row = 0; row < n; row++) sol[row * n + queenCols[row]] = true;
+      if (!validateRegions(reg, n)) continue;
+      if (!isUnique(reg, n)) continue;
 
-    return { n, regions: reg, solution: sol };
+      const sol = new Array(n * n).fill(false);
+      for (let row = 0; row < n; row++) sol[row * n + queenCols[row]] = true;
+
+      onDone({ n, regions: reg, solution: sol });
+      return;
+    }
+
+    setTimeout(tick, 0); // yield to browser, then continue
   }
-  return null;
+
+  setTimeout(tick, 0);
 }
 
 // ── Conflict detection ────────────────────────────────────────────────
-// Returns the set of conflicting queen cells and specific error messages.
 function detectConflicts() {
   const placed = [];
   for (let c = 0; c < N * N; c++) if (cellState[c] === 2) placed.push(c);
 
-  const bad  = new Set();
+  const bad = new Set();
   const msgs = [];
 
   for (let i = 0; i < placed.length; i++) {
@@ -401,22 +333,15 @@ function detectConflicts() {
       const ar = Math.floor(a / N), ac = a % N;
       const br = Math.floor(b / N), bc = b % N;
 
-      if (ar === br) {
+      function flag(msg) {
         bad.add(a); bad.add(b);
-        if (!msgs.includes('Two queens in the same row')) msgs.push('Two queens in the same row');
+        if (!msgs.includes(msg)) msgs.push(msg);
       }
-      if (ac === bc) {
-        bad.add(a); bad.add(b);
-        if (!msgs.includes('Two queens in the same column')) msgs.push('Two queens in the same column');
-      }
-      if (regions[a] === regions[b]) {
-        bad.add(a); bad.add(b);
-        if (!msgs.includes('Two queens in the same region')) msgs.push('Two queens in the same region');
-      }
-      if (Math.abs(ar - br) === 1 && Math.abs(ac - bc) === 1) {
-        bad.add(a); bad.add(b);
-        if (!msgs.includes('Two queens are touching diagonally')) msgs.push('Two queens are touching diagonally');
-      }
+
+      if (ar === br)                                               flag('Two queens in the same row');
+      if (ac === bc)                                               flag('Two queens in the same column');
+      if (regions[a] === regions[b])                               flag('Two queens in the same region');
+      if (Math.abs(ar-br) === 1 && Math.abs(ac-bc) === 1)         flag('Two queens are touching diagonally');
     }
   }
 
@@ -442,26 +367,23 @@ function renderBoard() {
   el.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
   el.innerHTML = '';
 
-  // Border styles: thick at region boundaries, thin within a region
   const THICK = '2px solid rgba(25,25,25,0.48)';
   const THIN  = '1px solid rgba(0,0,0,0.09)';
 
   for (let c = 0; c < N * N; c++) {
-    const row = Math.floor(c / N), col = c % N;
-    const ri = regions[c];
+    const row = Math.floor(c / N), col = c % N, ri = regions[c];
 
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.dataset.cell = String(c);
     cell.style.background = COLORS[ri % COLORS.length];
 
-    // Draw thick borders between different regions; thin borders within
+    // Thick border where region changes; thin border within same region
     cell.style.borderTop    = (row === 0     || regions[c - N] !== ri) ? THICK : THIN;
     cell.style.borderLeft   = (col === 0     || regions[c - 1] !== ri) ? THICK : THIN;
     cell.style.borderRight  = (col === N - 1 || regions[c + 1] !== ri) ? THICK : THIN;
     cell.style.borderBottom = (row === N - 1 || regions[c + N] !== ri) ? THICK : THIN;
 
-    // Overlay mark (never affects cell dimensions — absolutely positioned)
     const state = cellState[c];
     if (state > 0) {
       const mark = document.createElement('div');
@@ -469,11 +391,10 @@ function renderBoard() {
         mark.className = 'mark mark-x';
         mark.textContent = '✕';
       } else {
-        const inConflict = conflicts.has(c);
         mark.className = 'mark ' + (
-          solved       ? 'mark-solved'   :
-          inConflict   ? 'mark-conflict' :
-                         'mark-queen'
+          solved             ? 'mark-solved'   :
+          conflicts.has(c)   ? 'mark-conflict' :
+                               'mark-queen'
         );
         mark.textContent = '♛';
       }
@@ -490,16 +411,16 @@ function renderLegend() {
   for (let ri = 0; ri < N; ri++) {
     const item = document.createElement('div');
     item.className = 'legend-item';
-    const swatch = document.createElement('div');
-    swatch.className = 'legend-swatch';
-    swatch.style.background = COLORS[ri % COLORS.length];
-    item.appendChild(swatch);
+    const sw = document.createElement('div');
+    sw.className = 'legend-swatch';
+    sw.style.background = COLORS[ri % COLORS.length];
+    item.appendChild(sw);
     item.appendChild(document.createTextNode('Region ' + (ri + 1)));
     el.appendChild(item);
   }
 }
 
-function updateStatus(conflictMsgs = []) {
+function updateStatus(msgs = []) {
   const msgEl   = document.getElementById('status-msg');
   const countEl = document.getElementById('status-count');
   const placed  = cellState.filter(v => v === 2).length;
@@ -518,9 +439,9 @@ function updateStatus(conflictMsgs = []) {
     countEl.textContent = '';
     return;
   }
-  if (conflictMsgs.length > 0) {
+  if (msgs.length > 0) {
     msgEl.className = 'status-msg conflict';
-    msgEl.textContent = conflictMsgs[0];
+    msgEl.textContent = msgs[0];
   } else if (placed === 0) {
     msgEl.className = 'status-msg';
     msgEl.textContent = 'Tap a cell to begin';
@@ -547,7 +468,8 @@ document.getElementById('board').addEventListener('click', e => {
   const { bad, msgs } = detectConflicts();
   conflicts = bad;
 
-  if (cellState.filter(v => v === 2).length === N && conflicts.size === 0 && isSolved()) {
+  const queenCount = cellState.filter(v => v === 2).length;
+  if (queenCount === N && conflicts.size === 0 && isSolved()) {
     solved = true;
     conflicts = new Set();
     renderBoard();
@@ -574,15 +496,13 @@ document.getElementById('btn-solution').addEventListener('click', () => {
   }
   showingSol = true;
   document.getElementById('btn-solution').textContent = 'Hide Solution';
-  // Temporarily render solution state (do not mutate saved state)
-  const savedState = [...cellState];
-  const savedSolved = solved;
+  // Render solution without mutating player state
+  const saved = [...cellState];
+  const wasSolved = solved;
   cellState = solution.map(v => v ? 2 : 0);
-  solved = true;
-  conflicts = new Set();
+  solved = true; conflicts = new Set();
   renderBoard();
-  solved = savedSolved;
-  cellState = savedState;
+  solved = wasSolved; cellState = saved;
   updateStatus();
 });
 
@@ -594,32 +514,31 @@ function startNew() {
   conflicts = new Set();
   placementCount = 0;
 
+  const myId = ++genId; // invalidates any in-progress generation
   N = DIFF[currentDiff].n;
 
-  // Show spinner while generating (generation can take a moment for n=9)
   document.getElementById('board').innerHTML =
     `<div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;
-      color:var(--muted);font-size:13px;padding:32px">Generating puzzle…</div>`;
-  document.getElementById('status-msg').textContent = 'Generating…';
-  document.getElementById('status-msg').className = 'status-msg';
+      color:var(--muted);font-size:13px;padding:32px">Generating…</div>`;
+  const msgEl = document.getElementById('status-msg');
+  msgEl.className = 'status-msg';
+  msgEl.textContent = 'Generating puzzle…';
   document.getElementById('status-count').textContent = '';
 
-  setTimeout(() => {
-    const result = generate(currentDiff);
+  generateAsync(currentDiff, myId, result => {
+    if (genId !== myId) return; // another startNew fired while we were computing
     if (!result) {
-      document.getElementById('status-msg').textContent = 'Generation failed — tap New Puzzle to retry';
+      msgEl.textContent = 'Tap "New Puzzle" to try again';
       return;
     }
-
     N        = result.n;
     regions  = result.regions;
     solution = result.solution;
     cellState = new Array(N * N).fill(0);
-
     renderBoard();
     renderLegend();
     updateStatus();
-  }, 25);
+  });
 }
 
 document.getElementById('btn-new').addEventListener('click', startNew);
@@ -635,7 +554,6 @@ document.querySelectorAll('.diff-btn').forEach(btn => {
   });
 });
 
-// ── Init ──────────────────────────────────────────────────────────────
 startNew();
 </script>
 </body>

@@ -306,13 +306,13 @@ function BonusGameLayout({
   sidebar: ReactNode
 }) {
   return (
-    <div className="flex h-full flex-col gap-5 p-5 lg:flex-row lg:items-stretch">
+    <div className="flex h-full flex-col gap-4 p-4 lg:flex-row lg:items-stretch lg:gap-4 lg:p-5">
       <div className="flex min-h-0 flex-1 items-center justify-center">
         <div className="aspect-square w-full max-w-[420px] lg:h-full lg:w-auto lg:max-w-none">
           {board}
         </div>
       </div>
-      <div className="flex w-full flex-col gap-4 lg:w-[360px] lg:flex-shrink-0">
+      <div className="flex min-h-0 w-full flex-col gap-3 overflow-hidden lg:w-[clamp(290px,28vw,350px)] lg:flex-shrink-0 lg:gap-2.5">
         {sidebar}
       </div>
     </div>
@@ -327,11 +327,11 @@ function BonusInfoCard({
   children: ReactNode
 }) {
   return (
-    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3 lg:px-4 lg:py-3">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-muted)]">
         {label}
       </p>
-      <div className="mt-1.5 text-sm leading-relaxed text-[var(--color-text)]">
+      <div className="mt-1.5 text-[clamp(0.98rem,1.05vw,1.14rem)] leading-[1.45] text-[var(--color-text)]">
         {children}
       </div>
     </div>
@@ -350,7 +350,7 @@ function BonusStatTile({
       <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">
         {label}
       </div>
-      <div className="mt-1 text-2xl font-bold leading-none text-[var(--color-text)]">
+      <div className="mt-1 text-[clamp(1.45rem,1.8vw,2rem)] font-bold leading-none text-[var(--color-text)]">
         {value}
       </div>
     </div>
@@ -446,12 +446,12 @@ function SliderPuzzleBoard({
         </div>
       }
       sidebar={
-        <>
+        <div className="flex h-full min-h-0 flex-col gap-3 lg:gap-2.5">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
               Slider Puzzle
             </p>
-            <h2 className="mt-1 text-3xl font-semibold leading-tight text-[var(--color-text)]">
+            <h2 className="mt-1 text-[clamp(1.7rem,2.25vw,2.8rem)] font-semibold leading-[1.02] text-[var(--color-text)]">
               Put the tiles in order.
             </h2>
           </div>
@@ -467,7 +467,7 @@ function SliderPuzzleBoard({
                 key={l}
                 type="button"
                 onClick={() => switchLevel(l)}
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition lg:text-sm ${
                   level === l
                     ? 'bg-[var(--color-accent)] text-white shadow-sm'
                     : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
@@ -485,7 +485,7 @@ function SliderPuzzleBoard({
             <BonusStatTile label="Size" value={`${size}×${size}`} />
           </div>
           <div className="mt-auto flex items-center justify-between gap-3">
-            <p className="text-sm font-medium text-[var(--color-text)]">
+            <p className="text-xs font-medium text-[var(--color-text)] lg:text-sm">
               {solved
                 ? `🎉 ${SLIDER_MEDALS[level]} ${SLIDER_LABELS[level]} solved!`
                 : 'Slide adjacent tiles into the empty space.'}
@@ -493,12 +493,12 @@ function SliderPuzzleBoard({
             <button
               type="button"
               onClick={() => { setBoard(createSliderBoard(size)); setMoves(0); setBoardKey(k => k + 1) }}
-              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50 lg:text-sm"
             >
               New Board
             </button>
           </div>
-        </>
+        </div>
       }
     />
   )
@@ -560,12 +560,12 @@ function LightsOutBoard({
         </div>
       }
       sidebar={
-        <>
+        <div className="flex h-full min-h-0 flex-col gap-3 lg:gap-2.5">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
               Lights Out
             </p>
-            <h2 className="mt-1 text-3xl font-semibold leading-tight text-[var(--color-text)]">
+            <h2 className="mt-1 text-[clamp(1.7rem,2.25vw,2.8rem)] font-semibold leading-[1.02] text-[var(--color-text)]">
               Turn every light off.
             </h2>
           </div>
@@ -581,7 +581,7 @@ function LightsOutBoard({
                 key={l}
                 type="button"
                 onClick={() => switchLevel(l)}
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition lg:text-sm ${
                   level === l
                     ? 'bg-[var(--color-accent)] text-white shadow-sm'
                     : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
@@ -599,18 +599,18 @@ function LightsOutBoard({
             <BonusStatTile label="Size" value={`${size}×${size}`} />
           </div>
           <div className="mt-auto flex items-center justify-between gap-3">
-            <p className="text-sm font-medium text-[var(--color-text)]">
+            <p className="text-xs font-medium text-[var(--color-text)] lg:text-sm">
               {solved ? `🎉 ${LIGHTS_OUT_MEDALS[level]} ${LIGHTS_OUT_LABELS[level]} solved!` : 'All circles need to go dark.'}
             </p>
             <button
               type="button"
               onClick={() => { setBoard(createLightsOutBoard(size)); setMoves(0) }}
-              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50 lg:text-sm"
             >
               New Board
             </button>
           </div>
-        </>
+        </div>
       }
     />
   )
@@ -736,12 +736,12 @@ function NetwalkBoard({
         </div>
       }
       sidebar={
-        <>
+        <div className="flex h-full min-h-0 flex-col gap-3 lg:gap-2.5">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
               Netwalk
             </p>
-            <h2 className="mt-1 text-3xl font-semibold leading-tight text-[var(--color-text)]">
+            <h2 className="mt-1 text-[clamp(1.7rem,2.25vw,2.8rem)] font-semibold leading-[1.02] text-[var(--color-text)]">
               Restore the network.
             </h2>
           </div>
@@ -757,7 +757,7 @@ function NetwalkBoard({
                 key={l}
                 type="button"
                 onClick={() => switchLevel(l)}
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition lg:text-sm ${
                   level === l
                     ? 'bg-[var(--color-accent)] text-white shadow-sm'
                     : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
@@ -782,7 +782,7 @@ function NetwalkBoard({
                   style={{ width: `${pct}%` }}
                 />
               </div>
-              <p className="truncate text-sm font-medium text-[var(--color-text)]">
+              <p className="truncate text-xs font-medium text-[var(--color-text)] lg:text-sm">
                 {status.solved
                   ? `🎉 ${NETWALK_MEDALS[level]} ${NETWALK_LABELS[level]} restored!`
                   : `${status.connectedCount} / ${board.length} connected`}
@@ -791,12 +791,12 @@ function NetwalkBoard({
             <button
               type="button"
               onClick={() => { setBoard(createNetwalkBoard(size)); setMoves(0); solvedAwardedRef.current = false }}
-              className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+              className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50 lg:text-sm"
             >
               New Board
             </button>
           </div>
-        </>
+        </div>
       }
     />
   )
@@ -911,12 +911,12 @@ function Puzzle2048Board({
         </div>
       }
       sidebar={
-        <>
+        <div className="flex h-full min-h-0 flex-col gap-3 lg:gap-2.5">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
               2048
             </p>
-            <h2 className="mt-1 text-3xl font-semibold leading-tight text-[var(--color-text)]">
+            <h2 className="mt-1 text-[clamp(1.7rem,2.25vw,2.8rem)] font-semibold leading-[1.02] text-[var(--color-text)]">
               Merge your way upward.
             </h2>
           </div>
@@ -926,7 +926,7 @@ function Puzzle2048Board({
           <BonusInfoCard label="How It Works">
             Swipe or use the arrow buttons to slide all tiles at once. Matching numbers merge when they collide.
           </BonusInfoCard>
-          <div className="grid grid-cols-3 gap-3">
+          <div className={`grid gap-3 ${highestMedal ? 'grid-cols-3' : 'grid-cols-2'}`}>
             {highestMedal && (
               <BonusStatTile label="Medal" value={GAME_2048_MEDALS[highestMedal].emoji} />
             )}
@@ -939,14 +939,14 @@ function Puzzle2048Board({
                 key={direction}
                 type="button"
                 onClick={() => handleMove(direction)}
-                className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold uppercase text-[var(--color-text)] transition hover:bg-slate-50"
+                className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold uppercase text-[var(--color-text)] transition hover:bg-slate-50 lg:text-sm"
               >
                 {direction === 'left' ? '←' : direction === 'right' ? '→' : direction === 'up' ? '↑' : '↓'}
               </button>
             ))}
           </div>
           <div className="mt-auto flex items-center justify-between gap-3">
-            <p className="text-sm font-medium text-[var(--color-text)]">
+            <p className="text-xs font-medium text-[var(--color-text)] lg:text-sm">
               {stuck
                 ? 'No more moves. Try again?'
                 : bestTile >= GAME_2048_MEDALS.gold.threshold
@@ -960,12 +960,12 @@ function Puzzle2048Board({
             <button
               type="button"
               onClick={handleReset}
-              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50 lg:text-sm"
             >
               New Board
             </button>
           </div>
-        </>
+        </div>
       }
     />
   )

@@ -938,6 +938,13 @@ export function PuzzleWeekBonusHub() {
   const { user, isGuest } = useAuth()
   const canManage = canManagePuzzleWeekIdentity(user)
 
+  // Disable pull-to-refresh on mobile so swipe-down gestures don't reload the page
+  useEffect(() => {
+    const prev = document.body.style.overscrollBehavior
+    document.body.style.overscrollBehavior = 'none'
+    return () => { document.body.style.overscrollBehavior = prev }
+  }, [])
+
   const [selectedId, setSelectedId] = useState(
     () => LIVE_PUZZLES[Math.floor(Math.random() * LIVE_PUZZLES.length)].id
   )

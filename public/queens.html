@@ -83,7 +83,7 @@ html, body {
 }
 #board {
   display: grid;
-  width: min(calc(100vw - 28px), calc(100dvh - 228px));
+  width: min(calc(100vw - 28px), calc(100dvh - 190px));
   aspect-ratio: 1;
   border-radius: 10px; overflow: hidden;
   user-select: none; touch-action: none; cursor: pointer;
@@ -112,12 +112,6 @@ html, body {
 .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
 .btn.primary:hover { filter: brightness(1.06); }
 
-.legend {
-  flex-shrink: 0; display: flex; flex-wrap: wrap; gap: 3px 10px;
-  max-height: 44px; overflow: hidden; font-size: 11px; color: var(--muted); padding: 0 2px;
-}
-.legend-item { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
-.legend-swatch { width: 10px; height: 10px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.18); flex-shrink: 0; }
 
 #overlay {
   display: none; position: fixed; inset: 0; background: rgba(232,250,248,0.94); z-index: 50;
@@ -159,7 +153,6 @@ html, body {
     <button class="btn primary" id="btn-new">Restart</button>
   </div>
 
-  <div class="legend" id="legend"></div>
 </div>
 
 <div id="overlay">
@@ -320,20 +313,6 @@ function renderBoard() {
   }
 }
 
-function renderLegend() {
-  const el = document.getElementById('legend');
-  el.innerHTML = '';
-  for (let ri = 0; ri < N; ri++) {
-    const item = document.createElement('div');
-    item.className = 'legend-item';
-    const sw = document.createElement('div');
-    sw.className = 'legend-swatch';
-    sw.style.background = COLORS[ri % COLORS.length];
-    item.appendChild(sw);
-    item.appendChild(document.createTextNode('Region ' + (ri + 1)));
-    el.appendChild(item);
-  }
-}
 
 function updateStatus(msgs = []) {
   const msgEl   = document.getElementById('status-msg');
@@ -422,7 +401,7 @@ function loadPuzzle(diff, idx) {
   const puzzle = PUZZLES[diff][idx];
   N = puzzle.n; regions = puzzle.regions; solution = puzzle.solution;
   cellState = new Array(N * N).fill(0);
-  renderBoard(); renderLegend(); updateStatus();
+  renderBoard(); updateStatus();
 }
 
 document.getElementById('btn-new').addEventListener('click', () => loadPuzzle(currentDiff, currentIdx));

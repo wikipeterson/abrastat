@@ -64,10 +64,31 @@ html, body {
   overflow: hidden;
 }
 
-.title-row {
-  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+.side-top {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
 }
-.game-title { font-size: clamp(20px, 2vw, 26px); font-weight: 800; }
+
+.title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.game-title {
+  font-size: clamp(28px, 3vw, 44px);
+  line-height: 0.98;
+  font-weight: 800;
+}
+
+.game-subtitle {
+  font-size: clamp(16px, 1.35vw, 22px);
+  line-height: 1.2;
+  font-weight: 500;
+  color: var(--muted);
+}
 
 .diff-group { display: flex; gap: 4px; }
 .diff-btn {
@@ -181,6 +202,20 @@ html, body {
   padding: 5px 10px;
 }
 
+.side-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.side-scroll-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 2px;
+}
+
 #overlay {
   display: none; position: fixed; inset: 0; background: rgba(232,250,248,0.94); z-index: 50;
   flex-direction: column; align-items: center; justify-content: center;
@@ -258,43 +293,50 @@ html, body {
     </section>
 
     <section class="side-panel">
-      <div class="title-row">
-        <span class="game-title">👑 Queens</span>
+      <div class="side-top">
+        <div class="title-block">
+          <span class="game-title">Queens</span>
+          <span class="game-subtitle">Place one queen in every row, column, and region.</span>
+        </div>
         <div class="diff-group">
           <button class="diff-btn active" data-diff="easy">Easy</button>
           <button class="diff-btn"        data-diff="medium">Medium</button>
           <button class="diff-btn"        data-diff="hard">Hard</button>
         </div>
+
+        <div class="selector-row">
+          <label for="puzzle-select">Puzzle</label>
+          <select id="puzzle-select"></select>
+        </div>
+
+        <div class="status-bar">
+          <span id="status-msg">Tap a cell to begin</span>
+          <span id="status-count"></span>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn"         id="btn-solution">Show Solution</button>
+          <button class="btn primary" id="btn-new">Restart</button>
+        </div>
       </div>
 
-      <div class="selector-row">
-        <label for="puzzle-select">Puzzle</label>
-        <select id="puzzle-select"></select>
-      </div>
+      <div class="side-scroll">
+        <div class="side-scroll-inner">
+          <div class="rules-card">
+            <div class="rules-title">Goal</div>
+            <div class="rules-copy">Place exactly one queen in every row, every column, and every colored region.</div>
+          </div>
 
-      <div class="status-bar">
-        <span id="status-msg">Tap a cell to begin</span>
-        <span id="status-count"></span>
-      </div>
+          <div class="rules-card">
+            <div class="rules-title">How It Works</div>
+            <div class="rules-copy">Tap a square to cycle through blank, X, and queen. Queens also cannot touch diagonally, even at a corner.</div>
+          </div>
 
-      <div class="rules-card">
-        <div class="rules-title">Goal</div>
-        <div class="rules-copy">Place exactly one queen in every row, every column, and every colored region.</div>
-      </div>
-
-      <div class="rules-card">
-        <div class="rules-title">How It Works</div>
-        <div class="rules-copy">Tap a square to cycle through blank, X, and queen. Queens also cannot touch diagonally, even at a corner.</div>
-      </div>
-
-      <div class="meta-row">
-        <span class="meta-pill">10 puzzles per level</span>
-        <span class="meta-pill">Solved puzzles stay checked off</span>
-      </div>
-
-      <div class="btn-row">
-        <button class="btn"         id="btn-solution">Show Solution</button>
-        <button class="btn primary" id="btn-new">Restart</button>
+          <div class="meta-row">
+            <span class="meta-pill">10 puzzles per level</span>
+            <span class="meta-pill">Solved puzzles stay checked off</span>
+          </div>
+        </div>
       </div>
     </section>
   </div>

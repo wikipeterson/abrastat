@@ -750,8 +750,8 @@ function NetwalkBoard({
         </div>
       }
       sidebar={
-        <div className="flex h-full min-h-0 flex-col gap-3 lg:gap-2.5">
-          <div>
+        <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden lg:gap-2.5">
+          <div className="flex-shrink-0">
             <p className="text-[clamp(1.45rem,1.9vw,2.25rem)] font-bold leading-[1.05] text-[var(--color-text)]">
               Netwalk
             </p>
@@ -759,13 +759,7 @@ function NetwalkBoard({
               Restore the network.
             </h2>
           </div>
-          <BonusInfoCard label="Goal">
-            Rotate the pieces until every terminal is connected to the server and there are no loose wire ends anywhere in the network.
-          </BonusInfoCard>
-          <BonusInfoCard label="How It Works">
-            Click once to rotate a tile clockwise. Double-click the same tile to rotate it counter-clockwise.
-          </BonusInfoCard>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-shrink-0 flex-wrap gap-2">
             {(['easy', 'medium', 'hard'] as NetwalkLevel[]).map(l => (
               <button
                 key={l}
@@ -784,12 +778,12 @@ function NetwalkBoard({
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid flex-shrink-0 grid-cols-2 gap-3">
             <BonusStatTile label="Moves" value={moves} />
             <BonusStatTile label="Connected" value={`${status.connectedCount}/${board.length}`} />
           </div>
-          <div className="mt-auto flex items-center justify-between gap-3">
-            <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          <div className="flex flex-shrink-0 flex-col gap-3">
+            <div className="flex min-w-0 items-center gap-2.5">
               <div className="h-2 w-20 flex-shrink-0 overflow-hidden rounded-full bg-[var(--color-border)]">
                 <div
                   className="h-full rounded-full bg-[var(--color-accent)] transition-all duration-300"
@@ -797,18 +791,36 @@ function NetwalkBoard({
                 />
               </div>
               <p className="truncate text-xs font-medium text-[var(--color-text)] lg:text-sm">
-                {status.solved
-                  ? `🎉 ${NETWALK_MEDALS[level]} ${NETWALK_LABELS[level]} restored!`
-                  : `${status.connectedCount} / ${board.length} connected`}
+                {status.connectedCount} / {board.length} connected
               </p>
             </div>
             <button
               type="button"
               onClick={() => { setBoard(createNetwalkBoard(size)); setMoves(0); solvedAwardedRef.current = false }}
-              className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50 lg:text-sm"
+              className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-slate-50"
             >
-              New Board
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">
+                Board
+              </div>
+              <div className="mt-1 text-[clamp(1.15rem,1.55vw,1.55rem)] font-bold leading-none text-[var(--color-text)]">
+                New Board
+              </div>
             </button>
+          </div>
+          {status.solved && (
+            <div className="flex-shrink-0 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+              🎉 {NETWALK_MEDALS[level]} {NETWALK_LABELS[level]} restored!
+            </div>
+          )}
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            <div className="flex flex-col gap-3 pb-1 lg:gap-2.5">
+              <BonusInfoCard label="Goal">
+                Rotate the pieces until every terminal is connected to the server and there are no loose wire ends anywhere in the network.
+              </BonusInfoCard>
+              <BonusInfoCard label="How It Works">
+                Click once to rotate a tile clockwise. Double-click the same tile to rotate it counter-clockwise.
+              </BonusInfoCard>
+            </div>
           </div>
         </div>
       }
@@ -925,8 +937,8 @@ function Puzzle2048Board({
         </div>
       }
       sidebar={
-        <div className="flex h-full min-h-0 flex-col gap-3 lg:gap-2.5">
-          <div>
+        <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden lg:gap-2.5">
+          <div className="flex-shrink-0">
             <p className="text-[clamp(1.45rem,1.9vw,2.25rem)] font-bold leading-[1.05] text-[var(--color-text)]">
               2048
             </p>
@@ -934,20 +946,14 @@ function Puzzle2048Board({
               Merge your way upward.
             </h2>
           </div>
-          <BonusInfoCard label="Goal">
-            Combine equal tiles to build larger values. Reach <strong>1024</strong> for bronze, <strong>2048</strong> for silver, and <strong>4096</strong> for gold.
-          </BonusInfoCard>
-          <BonusInfoCard label="How It Works">
-            Swipe or use the arrow buttons to slide all tiles at once. Matching numbers merge when they collide.
-          </BonusInfoCard>
-          <div className={`grid gap-3 ${highestMedal ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          <div className={`grid flex-shrink-0 gap-3 ${highestMedal ? 'grid-cols-3' : 'grid-cols-2'}`}>
             {highestMedal && (
               <BonusStatTile label="Medal" value={GAME_2048_MEDALS[highestMedal].emoji} />
             )}
             <BonusStatTile label="Score" value={score} />
             <BonusStatTile label="Best" value={bestTile} />
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-shrink-0 flex-wrap gap-2">
             {(['left', 'up', 'down', 'right'] as Direction2048[]).map(direction => (
               <button
                 key={direction}
@@ -959,25 +965,44 @@ function Puzzle2048Board({
               </button>
             ))}
           </div>
-          <div className="mt-auto flex items-center justify-between gap-3">
-            <p className="text-xs font-medium text-[var(--color-text)] lg:text-sm">
-              {stuck
-                ? 'No more moves. Try again?'
-                : bestTile >= GAME_2048_MEDALS.gold.threshold
-                  ? `🎉 ${GAME_2048_MEDALS.gold.emoji} Gold earned at 4096!`
-                  : won
-                    ? `🎉 ${GAME_2048_MEDALS.silver.emoji} Silver earned at 2048!`
-                    : bestTile >= GAME_2048_MEDALS.bronze.threshold
-                      ? `Nice run — ${GAME_2048_MEDALS.bronze.emoji} bronze earned at 1024.`
-                      : 'Swipe or use arrow keys to merge tiles.'}
-            </p>
+          <div className="flex flex-shrink-0 flex-col gap-3">
             <button
               type="button"
               onClick={handleReset}
-              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-50 lg:text-sm"
+              className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-slate-50"
             >
-              New Board
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">
+                Board
+              </div>
+              <div className="mt-1 text-[clamp(1.15rem,1.55vw,1.55rem)] font-bold leading-none text-[var(--color-text)]">
+                New Board
+              </div>
             </button>
+            {(stuck || bestTile >= GAME_2048_MEDALS.bronze.threshold) && (
+              <div className={`rounded-2xl px-4 py-3 text-sm font-medium ${
+                stuck
+                  ? 'border border-amber-200 bg-amber-50 text-amber-700'
+                  : 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+              }`}>
+                {stuck
+                  ? 'No more moves. Start a new board and try another run.'
+                  : bestTile >= GAME_2048_MEDALS.gold.threshold
+                    ? `🎉 ${GAME_2048_MEDALS.gold.emoji} Gold earned at 4096!`
+                    : won
+                      ? `🎉 ${GAME_2048_MEDALS.silver.emoji} Silver earned at 2048!`
+                      : `🎉 ${GAME_2048_MEDALS.bronze.emoji} Bronze earned at 1024!`}
+              </div>
+            )}
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            <div className="flex flex-col gap-3 pb-1 lg:gap-2.5">
+              <BonusInfoCard label="Goal">
+                Combine equal tiles to build larger values. Reach <strong>1024</strong> for bronze, <strong>2048</strong> for silver, and <strong>4096</strong> for gold.
+              </BonusInfoCard>
+              <BonusInfoCard label="How It Works">
+                Swipe or use the arrow buttons to slide all tiles at once. Matching numbers merge when they collide.
+              </BonusInfoCard>
+            </div>
           </div>
         </div>
       }

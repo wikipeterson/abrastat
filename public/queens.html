@@ -40,13 +40,23 @@ html, body {
   display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
 }
 .game-title { font-size: 18px; font-weight: 700; }
-.diff-group { display: flex; gap: 4px; }
-.diff-btn {
-  font-size: 11px; font-weight: 600; padding: 4px 11px;
-  border-radius: 20px; border: 1.5px solid var(--border);
-  background: white; color: var(--muted); cursor: pointer; transition: all 0.14s;
+
+.puzzle-selector {
+  display: flex; align-items: center; gap: 7px;
 }
-.diff-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+.puzzle-selector label {
+  font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap;
+}
+.puzzle-selector select {
+  font-size: 13px; font-weight: 600;
+  padding: 4px 28px 4px 11px;
+  border-radius: 20px; border: 1.5px solid var(--border);
+  background: white; color: var(--text);
+  cursor: pointer; appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231A8C80' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
 
 .status-bar {
   flex-shrink: 0; background: white; border: 1px solid var(--border);
@@ -118,10 +128,20 @@ html, body {
 <div id="app">
   <div class="title-row">
     <span class="game-title">👑 Queens</span>
-    <div class="diff-group">
-      <button class="diff-btn active" data-diff="easy">Easy</button>
-      <button class="diff-btn"        data-diff="medium">Medium</button>
-      <button class="diff-btn"        data-diff="hard">Hard</button>
+    <div class="puzzle-selector">
+      <label for="puzzle-select">Puzzle</label>
+      <select id="puzzle-select">
+        <option value="0">#1</option>
+        <option value="1">#2</option>
+        <option value="2">#3</option>
+        <option value="3">#4</option>
+        <option value="4">#5</option>
+        <option value="5">#6</option>
+        <option value="6">#7</option>
+        <option value="7">#8</option>
+        <option value="8">#9</option>
+        <option value="9">#10</option>
+      </select>
     </div>
   </div>
 
@@ -134,7 +154,7 @@ html, body {
 
   <div class="btn-row">
     <button class="btn"         id="btn-solution">Show Solution</button>
-    <button class="btn primary" id="btn-new">New Puzzle</button>
+    <button class="btn primary" id="btn-new">Restart</button>
   </div>
 
   <div class="legend" id="legend"></div>
@@ -145,7 +165,7 @@ html, body {
   <div class="ov-title">Puzzle solved!</div>
   <div class="ov-sub">All queens placed correctly.</div>
   <div class="ov-moves" id="ov-moves"></div>
-  <button class="btn primary" style="width:180px;margin-top:6px" id="btn-ov-new">New Puzzle</button>
+  <button class="btn primary" style="width:180px;margin-top:6px" id="btn-ov-new">Play Again</button>
 </div>
 
 <script>
@@ -158,14 +178,19 @@ const COLORS = [
   '#FFF1A8','#C9F1B0','#FFCFA8',
 ];
 
-// ── Difficulty config ─────────────────────────────────────────────────
-// noise: Voronoi randomness (higher = more irregular regions)
-// maxRefine: max refinement iterations per fresh start
-const DIFF = {
-  easy:   { n: 6, noise: 100, maxRefine:  60 },
-  medium: { n: 7, noise: 500, maxRefine: 100 },
-  hard:   { n: 9, noise: 100, maxRefine: 400 },
-};
+// ── Pre-generated easy puzzles (6×6, unique solution) ─────────────────
+const EASY_PUZZLES = [
+  { n: 6, regions: [1,1,0,0,0,0,1,1,0,2,0,0,1,1,0,2,2,0,4,1,0,3,3,3,4,4,0,5,3,3,4,4,4,5,5,5], solution: [false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false,false,false,false,true,false] },
+  { n: 6, regions: [3,0,0,1,1,1,3,3,0,1,1,1,3,3,1,1,1,2,3,3,3,1,2,2,3,5,3,1,4,4,3,5,5,5,5,4], solution: [false,true,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false] },
+  { n: 6, regions: [1,1,0,0,2,2,1,3,0,0,2,2,3,3,0,4,2,4,3,3,5,4,4,4,3,5,5,4,4,4,3,5,5,4,4,4], solution: [false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false] },
+  { n: 6, regions: [3,1,1,0,0,0,3,1,1,1,0,2,3,1,3,3,0,2,3,3,3,3,2,2,5,5,3,3,4,4,5,5,3,3,3,4], solution: [false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false] },
+  { n: 6, regions: [2,2,0,0,3,3,2,2,0,1,1,3,2,2,2,4,1,3,2,2,4,4,4,3,5,4,4,5,4,4,5,5,5,5,4,4], solution: [false,false,true,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false,false,false,true,false,false] },
+  { n: 6, regions: [3,3,0,0,1,1,3,3,0,0,4,1,5,3,2,2,4,4,5,3,2,4,4,4,5,5,4,4,4,4,5,5,5,4,4,4], solution: [false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false] },
+  { n: 6, regions: [0,0,1,1,1,1,0,1,1,1,1,1,0,0,1,2,2,1,3,0,0,2,2,1,3,3,5,2,4,4,3,3,5,5,5,4], solution: [false,true,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false] },
+  { n: 6, regions: [0,0,0,0,0,0,1,0,0,0,2,0,1,1,0,2,2,0,1,1,3,4,4,0,5,5,3,3,4,4,5,5,3,3,4,4], solution: [false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,true,false,true,false,false,false,false] },
+  { n: 6, regions: [1,0,0,0,0,0,1,1,1,0,0,0,2,1,1,0,0,0,2,2,1,3,3,3,5,3,3,3,3,4,5,5,5,4,4,4], solution: [false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,false,true,false,false,false,false] },
+  { n: 6, regions: [1,1,1,0,0,4,1,3,1,2,0,4,3,3,2,2,0,4,3,3,4,4,4,4,5,3,4,4,4,4,5,5,5,4,4,4], solution: [false,false,false,false,true,false,true,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false] },
+];
 
 // ── Game state ────────────────────────────────────────────────────────
 let N = 6;
@@ -175,291 +200,8 @@ let cellState = [];   // 0=blank  1=X-marker  2=queen
 let conflicts = new Set();
 let solved       = false;
 let showingSol   = false;
-let currentDiff  = 'easy';
+let currentPuzzleIdx = 0;
 let placementCount = 0;
-let genId = 0;        // cancels stale async generation runs
-
-// ── Utilities ─────────────────────────────────────────────────────────
-
-function shuffle(a) {
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-// ── Step 1: Place N queens (one per row, one per column) ──────────────
-// Shuffles a column permutation and rejects any that have diagonally
-// adjacent queens (|Δrow|=1 AND |Δcol|=1 between consecutive rows).
-function placeQueens(n) {
-  for (let attempt = 0; attempt < 500; attempt++) {
-    const cols = shuffle([...Array(n).keys()]);
-    let ok = true;
-    for (let r = 0; r < n - 1; r++) {
-      if (Math.abs(cols[r] - cols[r + 1]) === 1) { ok = false; break; }
-    }
-    if (ok) return cols;
-  }
-  return null; // extremely rare
-}
-
-// ── Step 2: Connected region assignment ──────────────────────────────
-// Grows regions from queen seeds via randomized BFS (Prim's-style).
-// Each frontier cell gets a random priority in [0, noise); the cell
-// with the lowest priority is claimed next. High noise → irregular
-// shapes; low noise → compact blobs. Because every cell is claimed by
-// expanding from an already-claimed neighbor, ALL regions are
-// guaranteed to be single connected islands.
-function buildConnectedRegions(n, queenCols, noise) {
-  const reg = new Array(n * n).fill(-1);
-  const heap = []; // entries: [priority, cell, region]
-
-  const tryPush = (cell, region) => {
-    if (reg[cell] !== -1) return;
-    heap.push([Math.random() * noise, cell, region]);
-  };
-
-  for (let row = 0; row < n; row++) {
-    const seed = row * n + queenCols[row];
-    reg[seed] = row;
-    const r = row, c = queenCols[row];
-    if (r > 0)     tryPush(seed - n, row);
-    if (r < n - 1) tryPush(seed + n, row);
-    if (c > 0)     tryPush(seed - 1, row);
-    if (c < n - 1) tryPush(seed + 1, row);
-  }
-
-  while (heap.length > 0) {
-    // Linear min-scan is fine for n ≤ 9 (heap stays tiny)
-    let minIdx = 0;
-    for (let i = 1; i < heap.length; i++) {
-      if (heap[i][0] < heap[minIdx][0]) minIdx = i;
-    }
-    const [, cell, region] = heap.splice(minIdx, 1)[0];
-    if (reg[cell] !== -1) continue; // already claimed by an earlier expansion
-    reg[cell] = region;
-    const r = Math.floor(cell / n), c = cell % n;
-    if (r > 0)     tryPush(cell - n, region);
-    if (r < n - 1) tryPush(cell + n, region);
-    if (c > 0)     tryPush(cell - 1, region);
-    if (c < n - 1) tryPush(cell + 1, region);
-  }
-
-  return reg;
-}
-
-// ── Connectivity helpers ──────────────────────────────────────────────
-// Returns true if all cells in `regionId` (excluding `excludeCell`,
-// pass -1 to skip no cell) form a single connected component.
-function isRegionConnected(reg, n, regionId, excludeCell) {
-  const cells = [];
-  for (let c = 0; c < n * n; c++) {
-    if (reg[c] === regionId && c !== excludeCell) cells.push(c);
-  }
-  if (cells.length <= 1) return true;
-  const cellSet = new Set(cells);
-  const visited = new Set([cells[0]]);
-  const queue = [cells[0]];
-  while (queue.length > 0) {
-    const cur = queue.shift();
-    const r = Math.floor(cur / n), c = cur % n;
-    if (r > 0     && cellSet.has(cur - n) && !visited.has(cur - n)) { visited.add(cur - n); queue.push(cur - n); }
-    if (r < n - 1 && cellSet.has(cur + n) && !visited.has(cur + n)) { visited.add(cur + n); queue.push(cur + n); }
-    if (c > 0     && cellSet.has(cur - 1) && !visited.has(cur - 1)) { visited.add(cur - 1); queue.push(cur - 1); }
-    if (c < n - 1 && cellSet.has(cur + 1) && !visited.has(cur + 1)) { visited.add(cur + 1); queue.push(cur + 1); }
-  }
-  return visited.size === cells.length;
-}
-
-// Returns true if `cell` is 4-adjacent to at least one cell in `regionId`.
-function isAdjacentToRegion(reg, n, cell, regionId) {
-  const r = Math.floor(cell / n), c = cell % n;
-  if (r > 0     && reg[cell - n] === regionId) return true;
-  if (r < n - 1 && reg[cell + n] === regionId) return true;
-  if (c > 0     && reg[cell - 1] === regionId) return true;
-  if (c < n - 1 && reg[cell + 1] === regionId) return true;
-  return false;
-}
-
-// ── Step 2b: find the first alternative placement ────────────────────
-// Returns the first valid queen column permutation that differs from
-// queenCols, or null if queenCols is the unique solution.
-function findAlternative(reg, n, queenCols) {
-  const placed   = new Array(n).fill(-1);
-  const usedCols = new Set();
-  const usedRegs = new Set();
-  let alt = null;
-
-  function bt(row) {
-    if (alt) return;
-    if (row === n) {
-      if (!placed.every((c, r) => c === queenCols[r])) alt = [...placed];
-      return;
-    }
-    for (let col = 0; col < n; col++) {
-      if (usedCols.has(col)) continue;
-      if (usedRegs.has(reg[row * n + col])) continue;
-      if (row > 0 && Math.abs(placed[row - 1] - col) === 1) continue;
-      placed[row] = col;
-      usedCols.add(col);
-      usedRegs.add(reg[row * n + col]);
-      bt(row + 1);
-      placed[row] = -1;
-      usedCols.delete(col);
-      usedRegs.delete(reg[row * n + col]);
-      if (alt) return;
-    }
-  }
-
-  bt(0);
-  return alt;
-}
-
-// ── Step 3: Validate region shapes ───────────────────────────────────
-// Reject any region confined to a single row or column. Such regions
-// make the region constraint identical to row/column uniqueness, which
-// produces many solutions (the "stripe bug").
-function validateRegions(reg, n) {
-  for (let ri = 0; ri < n; ri++) {
-    let rowMin = n, rowMax = -1, colMin = n, colMax = -1;
-    for (let c = 0; c < n * n; c++) {
-      if (reg[c] !== ri) continue;
-      const r = Math.floor(c / n), col = c % n;
-      if (r   < rowMin) rowMin = r;
-      if (r   > rowMax) rowMax = r;
-      if (col < colMin) colMin = col;
-      if (col > colMax) colMax = col;
-    }
-    if (rowMax - rowMin < 1 || colMax - colMin < 1) return false;
-    if (!isRegionConnected(reg, n, ri, -1)) return false;
-  }
-  return true;
-}
-
-// ── Step 4: Uniqueness check (backtracking solver) ────────────────────
-// Places queens row-by-row, enforcing one per column, one per region,
-// and no diagonal adjacency between consecutive rows. Counts solutions;
-// returns true iff exactly 1 exists. Node cap prevents runaway searches.
-function isUnique(reg, n) {
-  let count = 0;
-  let nodes = 0;
-  const placed   = new Array(n).fill(-1);
-  const usedCols = new Set();
-  const usedRegs = new Set();
-
-  function bt(row) {
-    if (count > 1 || nodes > 150000) return;
-    if (row === n) { count++; return; }
-    for (let col = 0; col < n; col++) {
-      if (usedCols.has(col)) continue;
-      if (usedRegs.has(reg[row * n + col])) continue;
-      if (row > 0 && Math.abs(placed[row - 1] - col) === 1) continue;
-      nodes++;
-      placed[row] = col;
-      usedCols.add(col);
-      usedRegs.add(reg[row * n + col]);
-      bt(row + 1);
-      placed[row] = -1;
-      usedCols.delete(col);
-      usedRegs.delete(reg[row * n + col]);
-    }
-  }
-
-  bt(0);
-  return nodes <= 150000 && count === 1;
-}
-
-// ── Async generation with iterative refinement ───────────────────────
-// Strategy: start with Voronoi regions, then iteratively fix alternatives
-// (move one alternative-queen cell into another alternative-queen cell's
-// region, forcing a collision that blocks that alternative). Repeats until
-// the puzzle is unique. Uses a 14ms time budget per tick so the UI never
-// freezes, even for n=9.
-function generateAsync(difficulty, myGenId, onDone) {
-  const { n, noise, maxRefine } = DIFF[difficulty];
-  const MAX_OUTER = 300; // max fresh starts before giving up
-  let outerAttempt = 0;
-  let curReg = null;    // current region array being refined
-  let curCols = null;   // current queen column placement
-  let innerIter = 0;   // refinement steps taken on curReg
-
-  function tick() {
-    if (genId !== myGenId) return; // cancelled by a newer startNew()
-
-    const deadline = Date.now() + 14; // 14 ms budget per tick
-
-    while (Date.now() < deadline) {
-      // Need a fresh start?
-      if (!curReg || innerIter >= maxRefine) {
-        if (outerAttempt++ >= MAX_OUTER) { onDone(null); return; }
-        curCols = placeQueens(n);
-        if (!curCols) { curReg = null; continue; }
-        curReg = buildConnectedRegions(n, curCols, noise);
-        innerIter = 0;
-      }
-
-      // Check if current regions already give a unique solution
-      if (isUnique(curReg, n)) {
-        if (validateRegions(curReg, n)) {
-          const sol = new Array(n * n).fill(false);
-          for (let row = 0; row < n; row++) sol[row * n + curCols[row]] = true;
-          onDone({ n, regions: curReg, solution: sol });
-          return;
-        }
-        curReg = null; // shape invalid — try fresh start
-        continue;
-      }
-
-      // Find an alternative and fix it: move one alternative-queen cell
-      // into another alternative-queen cell's region to force a collision.
-      // Only accept moves that keep both affected regions connected (single
-      // island) — the moving cell must be 4-adjacent to its target region
-      // and its source region must stay connected after removal.
-      const alt = findAlternative(curReg, n, curCols);
-      if (!alt) { curReg = null; continue; } // shouldn't happen
-
-      const diffRows = [];
-      for (let r = 0; r < n; r++) {
-        if (alt[r] !== curCols[r]) diffRows.push(r);
-      }
-      if (diffRows.length >= 2) {
-        for (let attempt = 0; attempt < 8; attempt++) {
-          const ri = diffRows[Math.floor(Math.random() * diffRows.length)];
-          const rj = diffRows[Math.floor(Math.random() * diffRows.length)];
-          if (ri === rj) continue;
-
-          const ci = ri * n + alt[ri];
-          const cj = rj * n + alt[rj];
-
-          let movingCell = -1, targetRegion = -1;
-          if (alt[ri] !== curCols[ri]) {
-            movingCell = ci; targetRegion = curReg[cj];
-          } else if (alt[rj] !== curCols[rj]) {
-            movingCell = cj; targetRegion = curReg[ci];
-          }
-          if (movingCell === -1) continue;
-
-          const sourceRegion = curReg[movingCell];
-          if (sourceRegion === targetRegion) continue;
-
-          // Reject if the cell isn't touching the target region (would create an island)
-          if (!isAdjacentToRegion(curReg, n, movingCell, targetRegion)) continue;
-          // Reject if removing the cell disconnects its source region
-          if (!isRegionConnected(curReg, n, sourceRegion, movingCell)) continue;
-
-          curReg[movingCell] = targetRegion;
-          break;
-        }
-      }
-      innerIter++;
-    }
-
-    setTimeout(tick, 0); // yield to browser, then continue
-  }
-
-  setTimeout(tick, 0);
-}
 
 // ── Conflict detection ────────────────────────────────────────────────
 function detectConflicts() {
@@ -520,7 +262,6 @@ function renderBoard() {
     cell.dataset.cell = String(c);
     cell.style.background = COLORS[ri % COLORS.length];
 
-    // Thick border where region changes; thin border within same region
     cell.style.borderTop    = (row === 0     || regions[c - N] !== ri) ? THICK : THIN;
     cell.style.borderLeft   = (col === 0     || regions[c - 1] !== ri) ? THICK : THIN;
     cell.style.borderRight  = (col === N - 1 || regions[c + 1] !== ri) ? THICK : THIN;
@@ -603,7 +344,6 @@ document.getElementById('board').addEventListener('click', e => {
   if (!cell) return;
   const c = parseInt(cell.dataset.cell, 10);
 
-  // Cycle: blank (0) → X mark (1) → queen (2) → blank (0)
   cellState[c] = (cellState[c] + 1) % 3;
   if (cellState[c] === 2) placementCount++;
 
@@ -620,7 +360,7 @@ document.getElementById('board').addEventListener('click', e => {
       document.getElementById('ov-moves').textContent =
         `${placementCount} placement${placementCount !== 1 ? 's' : ''}`;
       document.getElementById('overlay').classList.add('show');
-      try { window.parent.postMessage({ type: 'queens-solved', difficulty: currentDiff }, '*'); } catch {}
+      try { window.parent.postMessage({ type: 'queens-solved', difficulty: 'easy' }, '*'); } catch {}
     }, 380);
   } else {
     renderBoard();
@@ -638,7 +378,6 @@ document.getElementById('btn-solution').addEventListener('click', () => {
   }
   showingSol = true;
   document.getElementById('btn-solution').textContent = 'Hide Solution';
-  // Render solution without mutating player state
   const saved = [...cellState];
   const wasSolved = solved;
   cellState = solution.map(v => v ? 2 : 0);
@@ -648,7 +387,7 @@ document.getElementById('btn-solution').addEventListener('click', () => {
   updateStatus();
 });
 
-function startNew() {
+function loadPuzzle(idx) {
   document.getElementById('overlay').classList.remove('show');
   document.getElementById('btn-solution').textContent = 'Show Solution';
   showingSol = false;
@@ -656,47 +395,30 @@ function startNew() {
   conflicts = new Set();
   placementCount = 0;
 
-  const myId = ++genId; // invalidates any in-progress generation
-  N = DIFF[currentDiff].n;
+  const puzzle = EASY_PUZZLES[idx];
+  N        = puzzle.n;
+  regions  = puzzle.regions;
+  solution = puzzle.solution;
+  cellState = new Array(N * N).fill(0);
 
-  document.getElementById('board').innerHTML =
-    `<div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;
-      color:var(--muted);font-size:13px;padding:32px">Generating…</div>`;
-  const msgEl = document.getElementById('status-msg');
-  msgEl.className = 'status-msg';
-  msgEl.textContent = 'Generating puzzle…';
-  document.getElementById('status-count').textContent = '';
-
-  generateAsync(currentDiff, myId, result => {
-    if (genId !== myId) return; // another startNew fired while we were computing
-    if (!result) {
-      msgEl.textContent = 'Tap "New Puzzle" to try again';
-      return;
-    }
-    N        = result.n;
-    regions  = result.regions;
-    solution = result.solution;
-    cellState = new Array(N * N).fill(0);
-    renderBoard();
-    renderLegend();
-    updateStatus();
-  });
+  renderBoard();
+  renderLegend();
+  updateStatus();
 }
 
-document.getElementById('btn-new').addEventListener('click', startNew);
-document.getElementById('btn-ov-new').addEventListener('click', startNew);
-
-document.querySelectorAll('.diff-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (btn.dataset.diff === currentDiff) return;
-    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentDiff = btn.dataset.diff;
-    startNew();
-  });
+document.getElementById('btn-new').addEventListener('click', () => {
+  loadPuzzle(currentPuzzleIdx);
+});
+document.getElementById('btn-ov-new').addEventListener('click', () => {
+  loadPuzzle(currentPuzzleIdx);
 });
 
-startNew();
+document.getElementById('puzzle-select').addEventListener('change', e => {
+  currentPuzzleIdx = parseInt(e.target.value, 10);
+  loadPuzzle(currentPuzzleIdx);
+});
+
+loadPuzzle(0);
 </script>
 </body>
 </html>

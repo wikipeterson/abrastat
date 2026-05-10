@@ -204,25 +204,82 @@ function placeQueens(n) {
   return null; // extremely rare
 }
 
-// ── Step 2: Voronoi region assignment ────────────────────────────────
-// Each cell goes to the nearest queen by Manhattan distance plus random
-// noise. High noise produces irregular shapes; low noise gives compact
-// blobs. Queen cells are always locked to their own region.
-function buildRegions(n, queenCols, noise) {
+// ── Step 2: Connected region assignment ──────────────────────────────
+// Grows regions from queen seeds via randomized BFS (Prim's-style).
+// Each frontier cell gets a random priority in [0, noise); the cell
+// with the lowest priority is claimed next. High noise → irregular
+// shapes; low noise → compact blobs. Because every cell is claimed by
+// expanding from an already-claimed neighbor, ALL regions are
+// guaranteed to be single connected islands.
+function buildConnectedRegions(n, queenCols, noise) {
   const reg = new Array(n * n).fill(-1);
-  for (let row = 0; row < n; row++) reg[row * n + queenCols[row]] = row;
-  for (let c = 0; c < n * n; c++) {
-    if (reg[c] !== -1) continue;
-    const r = Math.floor(c / n), col = c % n;
-    let best = Infinity, chosen = 0;
-    for (let qi = 0; qi < n; qi++) {
-      const dist = Math.abs(r - qi) + Math.abs(col - queenCols[qi])
-                   + Math.random() * noise;
-      if (dist < best) { best = dist; chosen = qi; }
-    }
-    reg[c] = chosen;
+  const heap = []; // entries: [priority, cell, region]
+
+  const tryPush = (cell, region) => {
+    if (reg[cell] !== -1) return;
+    heap.push([Math.random() * noise, cell, region]);
+  };
+
+  for (let row = 0; row < n; row++) {
+    const seed = row * n + queenCols[row];
+    reg[seed] = row;
+    const r = row, c = queenCols[row];
+    if (r > 0)     tryPush(seed - n, row);
+    if (r < n - 1) tryPush(seed + n, row);
+    if (c > 0)     tryPush(seed - 1, row);
+    if (c < n - 1) tryPush(seed + 1, row);
   }
+
+  while (heap.length > 0) {
+    // Linear min-scan is fine for n ≤ 9 (heap stays tiny)
+    let minIdx = 0;
+    for (let i = 1; i < heap.length; i++) {
+      if (heap[i][0] < heap[minIdx][0]) minIdx = i;
+    }
+    const [, cell, region] = heap.splice(minIdx, 1)[0];
+    if (reg[cell] !== -1) continue; // already claimed by an earlier expansion
+    reg[cell] = region;
+    const r = Math.floor(cell / n), c = cell % n;
+    if (r > 0)     tryPush(cell - n, region);
+    if (r < n - 1) tryPush(cell + n, region);
+    if (c > 0)     tryPush(cell - 1, region);
+    if (c < n - 1) tryPush(cell + 1, region);
+  }
+
   return reg;
+}
+
+// ── Connectivity helpers ──────────────────────────────────────────────
+// Returns true if all cells in `regionId` (excluding `excludeCell`,
+// pass -1 to skip no cell) form a single connected component.
+function isRegionConnected(reg, n, regionId, excludeCell) {
+  const cells = [];
+  for (let c = 0; c < n * n; c++) {
+    if (reg[c] === regionId && c !== excludeCell) cells.push(c);
+  }
+  if (cells.length <= 1) return true;
+  const cellSet = new Set(cells);
+  const visited = new Set([cells[0]]);
+  const queue = [cells[0]];
+  while (queue.length > 0) {
+    const cur = queue.shift();
+    const r = Math.floor(cur / n), c = cur % n;
+    if (r > 0     && cellSet.has(cur - n) && !visited.has(cur - n)) { visited.add(cur - n); queue.push(cur - n); }
+    if (r < n - 1 && cellSet.has(cur + n) && !visited.has(cur + n)) { visited.add(cur + n); queue.push(cur + n); }
+    if (c > 0     && cellSet.has(cur - 1) && !visited.has(cur - 1)) { visited.add(cur - 1); queue.push(cur - 1); }
+    if (c < n - 1 && cellSet.has(cur + 1) && !visited.has(cur + 1)) { visited.add(cur + 1); queue.push(cur + 1); }
+  }
+  return visited.size === cells.length;
+}
+
+// Returns true if `cell` is 4-adjacent to at least one cell in `regionId`.
+function isAdjacentToRegion(reg, n, cell, regionId) {
+  const r = Math.floor(cell / n), c = cell % n;
+  if (r > 0     && reg[cell - n] === regionId) return true;
+  if (r < n - 1 && reg[cell + n] === regionId) return true;
+  if (c > 0     && reg[cell - 1] === regionId) return true;
+  if (c < n - 1 && reg[cell + 1] === regionId) return true;
+  return false;
 }
 
 // ── Step 2b: find the first alternative placement ────────────────────
@@ -275,6 +332,7 @@ function validateRegions(reg, n) {
       if (col > colMax) colMax = col;
     }
     if (rowMax - rowMin < 1 || colMax - colMin < 1) return false;
+    if (!isRegionConnected(reg, n, ri, -1)) return false;
   }
   return true;
 }
@@ -337,7 +395,7 @@ function generateAsync(difficulty, myGenId, onDone) {
         if (outerAttempt++ >= MAX_OUTER) { onDone(null); return; }
         curCols = placeQueens(n);
         if (!curCols) { curReg = null; continue; }
-        curReg = buildRegions(n, curCols, noise);
+        curReg = buildConnectedRegions(n, curCols, noise);
         innerIter = 0;
       }
 
@@ -353,8 +411,11 @@ function generateAsync(difficulty, myGenId, onDone) {
         continue;
       }
 
-      // Find an alternative and fix it: move one of its non-queen cells
+      // Find an alternative and fix it: move one alternative-queen cell
       // into another alternative-queen cell's region to force a collision.
+      // Only accept moves that keep both affected regions connected (single
+      // island) — the moving cell must be 4-adjacent to its target region
+      // and its source region must stay connected after removal.
       const alt = findAlternative(curReg, n, curCols);
       if (!alt) { curReg = null; continue; } // shouldn't happen
 
@@ -363,14 +424,32 @@ function generateAsync(difficulty, myGenId, onDone) {
         if (alt[r] !== curCols[r]) diffRows.push(r);
       }
       if (diffRows.length >= 2) {
-        const ri = diffRows[Math.floor(Math.random() * diffRows.length)];
-        const rj = diffRows[Math.floor(Math.random() * diffRows.length)];
-        if (ri !== rj) {
+        for (let attempt = 0; attempt < 8; attempt++) {
+          const ri = diffRows[Math.floor(Math.random() * diffRows.length)];
+          const rj = diffRows[Math.floor(Math.random() * diffRows.length)];
+          if (ri === rj) continue;
+
           const ci = ri * n + alt[ri];
           const cj = rj * n + alt[rj];
-          // Only move non-queen cells (queen cells are fixed in their regions)
-          if (alt[ri] !== curCols[ri]) curReg[ci] = curReg[cj];
-          else if (alt[rj] !== curCols[rj]) curReg[cj] = curReg[ci];
+
+          let movingCell = -1, targetRegion = -1;
+          if (alt[ri] !== curCols[ri]) {
+            movingCell = ci; targetRegion = curReg[cj];
+          } else if (alt[rj] !== curCols[rj]) {
+            movingCell = cj; targetRegion = curReg[ci];
+          }
+          if (movingCell === -1) continue;
+
+          const sourceRegion = curReg[movingCell];
+          if (sourceRegion === targetRegion) continue;
+
+          // Reject if the cell isn't touching the target region (would create an island)
+          if (!isAdjacentToRegion(curReg, n, movingCell, targetRegion)) continue;
+          // Reject if removing the cell disconnects its source region
+          if (!isRegionConnected(curReg, n, sourceRegion, movingCell)) continue;
+
+          curReg[movingCell] = targetRegion;
+          break;
         }
       }
       innerIter++;

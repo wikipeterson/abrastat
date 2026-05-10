@@ -562,14 +562,28 @@ function loadSolvedSets() {
   for (const diff of ['easy', 'medium', 'hard']) {
     try {
       const stored = localStorage.getItem(SOLVED_KEYS[diff]);
-      if (stored) solvedSets[diff] = new Set(JSON.parse(stored));
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const normalized = Array.isArray(parsed)
+          ? parsed
+              .map(value => Number(value))
+              .filter(value => Number.isInteger(value) && value >= 0)
+          : [];
+        solvedSets[diff] = new Set(normalized);
+        localStorage.setItem(SOLVED_KEYS[diff], JSON.stringify([...solvedSets[diff]].sort((a, b) => a - b)));
+      }
     } catch {}
   }
 }
 
 function markSolved(diff, idx) {
+  solvedSets[diff] = new Set(
+    [...solvedSets[diff]]
+      .map(value => Number(value))
+      .filter(value => Number.isInteger(value) && value >= 0)
+  );
   solvedSets[diff].add(idx);
-  try { localStorage.setItem(SOLVED_KEYS[diff], JSON.stringify([...solvedSets[diff]])) } catch {}
+  try { localStorage.setItem(SOLVED_KEYS[diff], JSON.stringify([...solvedSets[diff]].sort((a, b) => a - b))) } catch {}
 }
 
 // ── Game state ────────────────────────────────────────────────────────

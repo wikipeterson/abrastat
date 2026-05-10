@@ -1,7 +1,10 @@
 import { createSign } from 'crypto'
 import {
   CURRENT_PUZZLE_WEEK_EVENT,
+  PuzzleWeek2048MedalLevel,
   PUZZLE_WEEK_MAX_TEAM_SIZE,
+  PuzzleWeekBonusMedals,
+  PuzzleWeekBonusTier,
   PUZZLE_WEEK_PUZZLES,
   PuzzleWeekAdminEntry,
   PuzzleWeekAnswerResult,
@@ -40,6 +43,40 @@ interface PuzzleWeekJoinCodeRecord {
   entryId: string
   eventId: string
   joinCode: string
+}
+
+const BONUS_TIER_VALUES: PuzzleWeekBonusTier[] = ['easy', 'medium', 'hard']
+const BONUS_2048_VALUES: PuzzleWeek2048MedalLevel[] = ['bronze', 'silver', 'gold']
+
+function emptyBonusMedals(): PuzzleWeekBonusMedals {
+  return {
+    slider: [],
+    lightsOut: [],
+    netwalk: [],
+    game2048: [],
+    queens: [],
+  }
+}
+
+function sanitizeStringArray<T extends string>(value: unknown, allowed: readonly T[]): T[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<T>()
+  for (const item of value) {
+    if (typeof item !== 'string') continue
+    if (!allowed.includes(item as T)) continue
+    seen.add(item as T)
+  }
+  return [...seen]
+}
+
+function sanitizeBonusMedals(data: Record<string, unknown> | PuzzleWeekBonusMedals | null | undefined): PuzzleWeekBonusMedals {
+  return {
+    slider: sanitizeStringArray(data?.slider, BONUS_TIER_VALUES),
+    lightsOut: sanitizeStringArray(data?.lightsOut, BONUS_TIER_VALUES),
+    netwalk: sanitizeStringArray(data?.netwalk, BONUS_TIER_VALUES),
+    game2048: sanitizeStringArray(data?.game2048, BONUS_2048_VALUES),
+    queens: sanitizeStringArray(data?.queens, BONUS_TIER_VALUES),
+  }
 }
 
 let cachedAccessToken: { token: string; expiresAt: number } | null = null
@@ -987,6 +1024,29 @@ export async function submitPuzzleWeekVoteServer(
     easiest: vote.easiest,
     hardest: vote.hardest,
     favorite: vote.favorite,
+    updatedAt: new Date(),
+  })
+}
+
+export async function getPuzzleWeekBonusMedalsServer(
+  eventId: string,
+  user: VerifiedPuzzleWeekUser,
+): Promise<PuzzleWeekBonusMedals> {
+  const data = await getDocument<Record<string, unknown>>('puzzleWeekBonusMedals', `${eventId}__${user.uid}`)
+  if (!data) return emptyBonusMedals()
+  return sanitizeBonusMedals(data)
+}
+
+export async function savePuzzleWeekBonusMedalsServer(
+  eventId: string,
+  user: VerifiedPuzzleWeekUser,
+  medals: PuzzleWeekBonusMedals,
+): Promise<void> {
+  const sanitized = sanitizeBonusMedals(medals)
+  await setDocument('puzzleWeekBonusMedals', `${eventId}__${user.uid}`, {
+    eventId,
+    userId: user.uid,
+    ...sanitized,
     updatedAt: new Date(),
   })
 }

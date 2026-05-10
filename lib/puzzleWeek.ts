@@ -83,6 +83,17 @@ export interface PuzzleWeekVoteTally {
   totalVoters: number
 }
 
+export type PuzzleWeekBonusTier = 'easy' | 'medium' | 'hard'
+export type PuzzleWeek2048MedalLevel = 'bronze' | 'silver' | 'gold'
+
+export interface PuzzleWeekBonusMedals {
+  slider: PuzzleWeekBonusTier[]
+  lightsOut: PuzzleWeekBonusTier[]
+  netwalk: PuzzleWeekBonusTier[]
+  game2048: PuzzleWeek2048MedalLevel[]
+  queens: PuzzleWeekBonusTier[]
+}
+
 export interface PuzzleWeekAdminEntry {
   entry: PuzzleWeekEntry
   members: PuzzleWeekMember[]
@@ -300,6 +311,21 @@ export async function submitPuzzleWeekVote(eventId: string, user: User, vote: Pu
     url: '/api/puzzle-week',
     method: 'POST',
     body: JSON.stringify({ action: 'submitVote', eventId, ...vote }),
+  })
+}
+
+export async function getPuzzleWeekBonusMedals(eventId: string, user: User): Promise<PuzzleWeekBonusMedals> {
+  return puzzleWeekRequest<PuzzleWeekBonusMedals>(user, {
+    url: `/api/puzzle-week?action=bonusMedals&eventId=${encodeURIComponent(eventId)}`,
+    method: 'GET',
+  })
+}
+
+export async function savePuzzleWeekBonusMedals(eventId: string, user: User, medals: PuzzleWeekBonusMedals): Promise<void> {
+  await puzzleWeekRequest<{ ok: true }>(user, {
+    url: '/api/puzzle-week',
+    method: 'POST',
+    body: JSON.stringify({ action: 'saveBonusMedals', eventId, medals }),
   })
 }
 

@@ -6,6 +6,12 @@ import { ArrowLeft, Calendar } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { signOut } from '@/lib/auth'
 import { canManagePuzzleWeekIdentity } from '@/lib/featureFlags'
+import {
+  CURRENT_PUZZLE_WEEK_EVENT,
+  getPuzzleWeekBonusMedals,
+  savePuzzleWeekBonusMedals,
+  type PuzzleWeekBonusMedals,
+} from '@/lib/puzzleWeek'
 
 // ---------- game constants ----------
 
@@ -947,11 +953,119 @@ const PUZZLE_LIST = [
 
 const LIVE_PUZZLES = PUZZLE_LIST.filter(p => p.live)
 
+type BonusMedalState = {
+  slider: Set<SliderLevel>
+  lightsOut: Set<SliderLevel>
+  netwalk: Set<NetwalkLevel>
+  game2048: Set<Game2048Medal>
+  queens: Set<QueensLevel>
+}
+
+function createEmptyBonusMedalState(): BonusMedalState {
+  return {
+    slider: new Set(),
+    lightsOut: new Set(),
+    netwalk: new Set(),
+    game2048: new Set(),
+    queens: new Set(),
+  }
+}
+
+function readStoredSet<T extends string>(key: string) {
+  try {
+    const stored = localStorage.getItem(key)
+    return stored ? new Set(JSON.parse(stored) as T[]) : new Set<T>()
+  } catch {
+    return new Set<T>()
+  }
+}
+
+function readLocalBonusMedalState(): BonusMedalState {
+  return {
+    slider: readStoredSet<SliderLevel>(SLIDER_MEDALS_KEY),
+    lightsOut: readStoredSet<SliderLevel>(LIGHTS_OUT_MEDALS_KEY),
+    netwalk: readStoredSet<NetwalkLevel>(NETWALK_MEDALS_KEY),
+    game2048: readStoredSet<Game2048Medal>(GAME_2048_MEDALS_KEY),
+    queens: readStoredSet<QueensLevel>(QUEENS_MEDALS_KEY),
+  }
+}
+
+function writeLocalBonusMedalState(state: BonusMedalState) {
+  try { localStorage.setItem(SLIDER_MEDALS_KEY, JSON.stringify([...state.slider])) } catch {}
+  try { localStorage.setItem(LIGHTS_OUT_MEDALS_KEY, JSON.stringify([...state.lightsOut])) } catch {}
+  try { localStorage.setItem(NETWALK_MEDALS_KEY, JSON.stringify([...state.netwalk])) } catch {}
+  try { localStorage.setItem(GAME_2048_MEDALS_KEY, JSON.stringify([...state.game2048])) } catch {}
+  try { localStorage.setItem(QUEENS_MEDALS_KEY, JSON.stringify([...state.queens])) } catch {}
+}
+
+function bonusMedalsFromProfile(profile: PuzzleWeekBonusMedals): BonusMedalState {
+  return {
+    slider: new Set(profile.slider as SliderLevel[]),
+    lightsOut: new Set(profile.lightsOut as SliderLevel[]),
+    netwalk: new Set(profile.netwalk as NetwalkLevel[]),
+    game2048: new Set(profile.game2048 as Game2048Medal[]),
+    queens: new Set(profile.queens as QueensLevel[]),
+  }
+}
+
+function bonusMedalsToProfile(state: BonusMedalState): PuzzleWeekBonusMedals {
+  return {
+    slider: [...state.slider],
+    lightsOut: [...state.lightsOut],
+    netwalk: [...state.netwalk],
+    game2048: [...state.game2048],
+    queens: [...state.queens],
+  }
+}
+
+function unionSets<T>(a: Set<T>, b: Set<T>) {
+  return new Set<T>([...a, ...b])
+}
+
+function unionBonusMedalStates(a: BonusMedalState, b: BonusMedalState): BonusMedalState {
+  return {
+    slider: unionSets(a.slider, b.slider),
+    lightsOut: unionSets(a.lightsOut, b.lightsOut),
+    netwalk: unionSets(a.netwalk, b.netwalk),
+    game2048: unionSets(a.game2048, b.game2048),
+    queens: unionSets(a.queens, b.queens),
+  }
+}
+
+function setsEqual<T>(a: Set<T>, b: Set<T>) {
+  if (a.size !== b.size) return false
+  for (const item of a) {
+    if (!b.has(item)) return false
+  }
+  return true
+}
+
+function bonusMedalStatesEqual(a: BonusMedalState, b: BonusMedalState) {
+  return (
+    setsEqual(a.slider, b.slider) &&
+    setsEqual(a.lightsOut, b.lightsOut) &&
+    setsEqual(a.netwalk, b.netwalk) &&
+    setsEqual(a.game2048, b.game2048) &&
+    setsEqual(a.queens, b.queens)
+  )
+}
+
+function cloneBonusMedalState(state: BonusMedalState): BonusMedalState {
+  return {
+    slider: new Set(state.slider),
+    lightsOut: new Set(state.lightsOut),
+    netwalk: new Set(state.netwalk),
+    game2048: new Set(state.game2048),
+    queens: new Set(state.queens),
+  }
+}
+
 // ---------- page ----------
 
 export function PuzzleWeekBonusHub() {
   const { user, isGuest } = useAuth()
   const canManage = canManagePuzzleWeekIdentity(user)
+  const puzzleWeekEventId = CURRENT_PUZZLE_WEEK_EVENT.id
 
   // Disable pull-to-refresh on mobile so swipe-down gestures don't reload the page.
   // Must target both html AND body — iOS Safari only respects the html element.
@@ -976,78 +1090,95 @@ export function PuzzleWeekBonusHub() {
 
   const [netwalkMedals, setNetwalkMedals] = useState<Set<NetwalkLevel>>(new Set())
   const [queensMedals, setQueensMedals] = useState<Set<QueensLevel>>(new Set())
+  const bonusMedalStateRef = useRef<BonusMedalState>(createEmptyBonusMedalState())
+
+  function getCurrentBonusMedalState(): BonusMedalState {
+    return {
+      slider: new Set(bonusMedalStateRef.current.slider),
+      lightsOut: new Set(bonusMedalStateRef.current.lightsOut),
+      netwalk: new Set(bonusMedalStateRef.current.netwalk),
+      game2048: new Set(bonusMedalStateRef.current.game2048),
+      queens: new Set(bonusMedalStateRef.current.queens),
+    }
+  }
+
+  function applyBonusMedalState(next: BonusMedalState) {
+    bonusMedalStateRef.current = cloneBonusMedalState(next)
+    setSliderMedals(new Set(next.slider))
+    setLightsOutMedals(new Set(next.lightsOut))
+    setNetwalkMedals(new Set(next.netwalk))
+    setGame2048Medals(new Set(next.game2048))
+    setQueensMedals(new Set(next.queens))
+    writeLocalBonusMedalState(next)
+  }
+
+  function syncBonusMedalState(next: BonusMedalState) {
+    applyBonusMedalState(next)
+    if (user && !isGuest) {
+      void savePuzzleWeekBonusMedals(puzzleWeekEventId, user, bonusMedalsToProfile(next)).catch(() => {})
+    }
+  }
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(SLIDER_MEDALS_KEY)
-      if (stored) setSliderMedals(new Set(JSON.parse(stored) as SliderLevel[]))
-    } catch {}
-    try {
-      const storedLights = localStorage.getItem(LIGHTS_OUT_MEDALS_KEY)
-      if (storedLights) setLightsOutMedals(new Set(JSON.parse(storedLights) as SliderLevel[]))
-    } catch {}
-    try {
-      const stored2048 = localStorage.getItem(GAME_2048_MEDALS_KEY)
-      if (stored2048) setGame2048Medals(new Set(JSON.parse(stored2048) as Game2048Medal[]))
-    } catch {}
-    try {
-      const storedNW = localStorage.getItem(NETWALK_MEDALS_KEY)
-      if (storedNW) setNetwalkMedals(new Set(JSON.parse(storedNW) as NetwalkLevel[]))
-    } catch {}
-    try {
-      const storedQ = localStorage.getItem(QUEENS_MEDALS_KEY)
-      if (storedQ) setQueensMedals(new Set(JSON.parse(storedQ) as QueensLevel[]))
-    } catch {}
-  }, [])
+    const localState = readLocalBonusMedalState()
+    applyBonusMedalState(localState)
+
+    if (!user || isGuest) return
+
+    let cancelled = false
+    void (async () => {
+      try {
+        const remoteProfile = await getPuzzleWeekBonusMedals(puzzleWeekEventId, user)
+        if (cancelled) return
+        const remoteState = bonusMedalsFromProfile(remoteProfile)
+        const mergedState = unionBonusMedalStates(getCurrentBonusMedalState(), remoteState)
+        applyBonusMedalState(mergedState)
+        if (!bonusMedalStatesEqual(remoteState, mergedState)) {
+          await savePuzzleWeekBonusMedals(puzzleWeekEventId, user, bonusMedalsToProfile(mergedState))
+        }
+      } catch {
+        // Keep local medals if the account sync fails.
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user, isGuest, puzzleWeekEventId])
 
   function awardSliderMedal(level: SliderLevel) {
-    setSliderMedals(prev => {
-      if (prev.has(level)) return prev
-      const next = new Set(prev)
-      next.add(level)
-      try { localStorage.setItem(SLIDER_MEDALS_KEY, JSON.stringify([...next])) } catch {}
-      return next
-    })
+    const current = getCurrentBonusMedalState()
+    if (current.slider.has(level)) return
+    const next = { ...current, slider: new Set(current.slider).add(level) }
+    syncBonusMedalState(next)
   }
 
   function awardLightsOutMedal(level: SliderLevel) {
-    setLightsOutMedals(prev => {
-      if (prev.has(level)) return prev
-      const next = new Set(prev)
-      next.add(level)
-      try { localStorage.setItem(LIGHTS_OUT_MEDALS_KEY, JSON.stringify([...next])) } catch {}
-      return next
-    })
+    const current = getCurrentBonusMedalState()
+    if (current.lightsOut.has(level)) return
+    const next = { ...current, lightsOut: new Set(current.lightsOut).add(level) }
+    syncBonusMedalState(next)
   }
 
   function awardNetwalkMedal(level: NetwalkLevel) {
-    setNetwalkMedals(prev => {
-      if (prev.has(level)) return prev
-      const next = new Set(prev)
-      next.add(level)
-      try { localStorage.setItem(NETWALK_MEDALS_KEY, JSON.stringify([...next])) } catch {}
-      return next
-    })
+    const current = getCurrentBonusMedalState()
+    if (current.netwalk.has(level)) return
+    const next = { ...current, netwalk: new Set(current.netwalk).add(level) }
+    syncBonusMedalState(next)
   }
 
   function award2048Medal(medal: Game2048Medal) {
-    setGame2048Medals(prev => {
-      if (prev.has(medal)) return prev
-      const next = new Set(prev)
-      next.add(medal)
-      try { localStorage.setItem(GAME_2048_MEDALS_KEY, JSON.stringify([...next])) } catch {}
-      return next
-    })
+    const current = getCurrentBonusMedalState()
+    if (current.game2048.has(medal)) return
+    const next = { ...current, game2048: new Set(current.game2048).add(medal) }
+    syncBonusMedalState(next)
   }
 
   function awardQueensMedal(level: QueensLevel) {
-    setQueensMedals(prev => {
-      if (prev.has(level)) return prev
-      const next = new Set(prev)
-      next.add(level)
-      try { localStorage.setItem(QUEENS_MEDALS_KEY, JSON.stringify([...next])) } catch {}
-      return next
-    })
+    const current = getCurrentBonusMedalState()
+    if (current.queens.has(level)) return
+    const next = { ...current, queens: new Set(current.queens).add(level) }
+    syncBonusMedalState(next)
   }
 
   // Listen for solve messages posted by the Queens iframe

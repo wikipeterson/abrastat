@@ -3,6 +3,7 @@ import {
   adminRenamePuzzleWeekEntryServer,
   adminRemovePuzzleWeekMemberServer,
   adminResetPuzzleWeekEntryServer,
+  getPuzzleWeekBonusMedalsServer,
   getPuzzleWeekAdminEntriesServer,
   getPuzzleWeekLeaderboardServer,
   getPuzzleWeekProgressServer,
@@ -12,11 +13,12 @@ import {
   registerPuzzleWeekSoloServer,
   registerPuzzleWeekTeamServer,
   resetPuzzleWeekRegistrationServer,
+  savePuzzleWeekBonusMedalsServer,
   submitPuzzleWeekAnswerServer,
   submitPuzzleWeekVoteServer,
   verifyPuzzleWeekRequest,
 } from '@/lib/puzzleWeekServer'
-import type { PuzzleWeekVote } from '@/lib/puzzleWeek'
+import type { PuzzleWeekBonusMedals, PuzzleWeekVote } from '@/lib/puzzleWeek'
 
 export async function GET(request: NextRequest) {
   try {
@@ -56,6 +58,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(registration)
     }
 
+    if (action === 'bonusMedals') {
+      const medals = await getPuzzleWeekBonusMedalsServer(eventId, user)
+      return NextResponse.json(medals)
+    }
+
     if (action === 'progress') {
       const registration = await getPuzzleWeekRegistrationServer(eventId, user)
       const progress = registration.entry
@@ -89,6 +96,7 @@ export async function POST(request: NextRequest) {
       easiest?: string
       hardest?: string
       favorite?: string
+      medals?: PuzzleWeekBonusMedals
     }
     if (!body.eventId) {
       return NextResponse.json({ error: 'Missing eventId.' }, { status: 400 })
@@ -134,6 +142,15 @@ export async function POST(request: NextRequest) {
         await submitPuzzleWeekVoteServer(body.eventId, user, vote)
         return NextResponse.json({ ok: true })
       }
+      case 'saveBonusMedals':
+        await savePuzzleWeekBonusMedalsServer(body.eventId, user, body.medals ?? {
+          slider: [],
+          lightsOut: [],
+          netwalk: [],
+          game2048: [],
+          queens: [],
+        })
+        return NextResponse.json({ ok: true })
       default:
         return NextResponse.json({ error: 'Unknown action.' }, { status: 400 })
     }

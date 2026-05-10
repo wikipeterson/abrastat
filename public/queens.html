@@ -33,7 +33,7 @@ html, body {
   max-width: 520px;
   margin: 0 auto;
   padding: 10px 14px;
-  gap: 7px;
+  gap: 6px;
 }
 
 .title-row {
@@ -41,16 +41,25 @@ html, body {
 }
 .game-title { font-size: 18px; font-weight: 700; }
 
-.puzzle-selector {
-  display: flex; align-items: center; gap: 7px;
+.diff-group { display: flex; gap: 4px; }
+.diff-btn {
+  font-size: 11px; font-weight: 600; padding: 4px 11px;
+  border-radius: 20px; border: 1.5px solid var(--border);
+  background: white; color: var(--muted); cursor: pointer; transition: all 0.14s;
 }
-.puzzle-selector label {
+.diff-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+.selector-row {
+  display: flex; align-items: center; gap: 7px; flex-shrink: 0;
+}
+.selector-row label {
   font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap;
 }
-.puzzle-selector select {
+.selector-row select {
+  flex: 1;
   font-size: 13px; font-weight: 600;
-  padding: 4px 28px 4px 11px;
-  border-radius: 20px; border: 1.5px solid var(--border);
+  padding: 5px 28px 5px 12px;
+  border-radius: 12px; border: 1.5px solid var(--border);
   background: white; color: var(--text);
   cursor: pointer; appearance: none; -webkit-appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231A8C80' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
@@ -74,7 +83,7 @@ html, body {
 }
 #board {
   display: grid;
-  width: min(calc(100vw - 28px), calc(100dvh - 198px));
+  width: min(calc(100vw - 28px), calc(100dvh - 228px));
   aspect-ratio: 1;
   border-radius: 10px; overflow: hidden;
   user-select: none; touch-action: none; cursor: pointer;
@@ -82,7 +91,6 @@ html, body {
 .cell { position: relative; transition: filter 0.08s; }
 .cell:active { filter: brightness(0.85); }
 
-/* Marks are absolutely positioned so they never resize cells */
 .mark {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
@@ -128,21 +136,15 @@ html, body {
 <div id="app">
   <div class="title-row">
     <span class="game-title">👑 Queens</span>
-    <div class="puzzle-selector">
-      <label for="puzzle-select">Puzzle</label>
-      <select id="puzzle-select">
-        <option value="0">#1</option>
-        <option value="1">#2</option>
-        <option value="2">#3</option>
-        <option value="3">#4</option>
-        <option value="4">#5</option>
-        <option value="5">#6</option>
-        <option value="6">#7</option>
-        <option value="7">#8</option>
-        <option value="8">#9</option>
-        <option value="9">#10</option>
-      </select>
+    <div class="diff-group">
+      <button class="diff-btn active" data-diff="easy">Easy</button>
+      <button class="diff-btn"        data-diff="medium">Medium</button>
     </div>
+  </div>
+
+  <div class="selector-row">
+    <label for="puzzle-select">Puzzle</label>
+    <select id="puzzle-select"></select>
   </div>
 
   <div class="status-bar">
@@ -178,7 +180,7 @@ const COLORS = [
   '#FFF1A8','#C9F1B0','#FFCFA8',
 ];
 
-// ── Pre-generated easy puzzles (6×6, unique solution) ─────────────────
+// ── Puzzle banks ──────────────────────────────────────────────────────
 const EASY_PUZZLES = [
   { n: 6, regions: [1,1,0,0,0,0,1,1,0,2,0,0,1,1,0,2,2,0,4,1,0,3,3,3,4,4,0,5,3,3,4,4,4,5,5,5], solution: [false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false,false,false,false,true,false] },
   { n: 6, regions: [3,0,0,1,1,1,3,3,0,1,1,1,3,3,1,1,1,2,3,3,3,1,2,2,3,5,3,1,4,4,3,5,5,5,5,4], solution: [false,true,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false] },
@@ -192,43 +194,83 @@ const EASY_PUZZLES = [
   { n: 6, regions: [1,1,1,0,0,4,1,3,1,2,0,4,3,3,2,2,0,4,3,3,4,4,4,4,5,3,4,4,4,4,5,5,5,4,4,4], solution: [false,false,false,false,true,false,true,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false] },
 ];
 
+const MEDIUM_PUZZLES = [
+  { n: 7, regions: [0,0,0,1,1,1,1,0,0,0,1,1,1,1,2,2,1,1,1,1,1,2,2,3,1,4,1,1,2,2,3,5,4,4,1,2,2,3,5,5,6,6,2,3,3,6,6,6,6], solution: [false,true,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false,false,false,false,false,false,false,false,true] },
+  { n: 7, regions: [0,0,0,0,1,1,1,2,2,3,0,3,3,1,2,2,3,3,3,3,3,2,3,3,3,3,3,3,2,4,3,3,3,3,3,4,4,4,5,5,3,6,4,4,4,5,5,6,6], solution: [false,false,true,false,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,true,false] },
+  { n: 7, regions: [2,2,2,1,0,0,5,2,1,1,1,0,5,5,2,1,1,5,5,5,5,4,4,4,3,3,5,5,4,4,4,3,5,5,5,6,6,6,3,5,5,5,6,6,5,5,5,5,5], solution: [false,false,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false] },
+  { n: 7, regions: [0,0,0,1,1,1,1,0,0,1,1,1,1,1,0,0,1,1,2,2,1,0,3,1,1,1,2,2,0,3,3,1,4,4,2,6,6,6,5,5,4,4,6,6,6,6,5,4,4], solution: [false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false] },
+  { n: 7, regions: [1,0,0,0,0,0,6,1,1,2,2,0,0,6,3,3,4,2,6,6,6,3,3,4,2,2,6,6,4,4,4,2,2,6,6,4,4,5,5,5,6,6,4,4,5,6,6,6,6], solution: [false,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,true] },
+  { n: 7, regions: [0,0,0,0,3,1,1,0,0,0,3,3,3,1,2,3,3,3,3,3,3,2,2,3,3,3,3,3,4,4,6,3,3,3,3,4,4,6,3,5,3,3,4,6,6,5,5,5,5], solution: [false,false,false,true,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false,false,false] },
+  { n: 7, regions: [1,1,0,0,0,0,0,1,1,0,2,0,0,0,2,2,0,2,2,0,3,2,2,2,2,2,3,3,2,4,4,4,5,5,5,2,2,2,4,5,6,5,2,2,4,4,6,6,5], solution: [false,false,true,false,false,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false] },
+  { n: 7, regions: [0,0,1,1,1,1,1,2,0,1,1,1,1,5,2,0,1,1,1,1,5,2,2,2,3,3,1,5,2,4,4,3,6,5,5,4,4,6,6,6,5,5,4,4,6,6,6,6,6], solution: [false,true,false,false,false,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false] },
+  { n: 7, regions: [2,2,0,0,1,1,1,2,2,0,1,1,3,1,2,3,3,3,3,3,3,3,3,4,3,3,5,5,6,3,4,4,4,5,5,6,6,6,6,5,5,5,6,6,6,6,5,5,5], solution: [false,false,false,true,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false] },
+  { n: 7, regions: [0,0,0,0,1,1,1,0,2,2,1,1,1,1,0,2,1,1,4,3,1,5,5,4,4,4,3,3,5,5,5,5,4,6,6,5,5,5,5,6,6,6,5,5,5,5,6,6,6], solution: [true,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false,false,false,true,false,false,false,false,false,false,false,false,false,true,false] },
+];
+
+const PUZZLES = { easy: EASY_PUZZLES, medium: MEDIUM_PUZZLES };
+
+// ── Solved-puzzle tracking ────────────────────────────────────────────
+const SOLVED_KEYS = { easy: 'pw-queens-solved-easy', medium: 'pw-queens-solved-medium' };
+const solvedSets = { easy: new Set(), medium: new Set() };
+
+function loadSolvedSets() {
+  for (const diff of ['easy', 'medium']) {
+    try {
+      const stored = localStorage.getItem(SOLVED_KEYS[diff]);
+      if (stored) solvedSets[diff] = new Set(JSON.parse(stored));
+    } catch {}
+  }
+}
+
+function markSolved(diff, idx) {
+  solvedSets[diff].add(idx);
+  try { localStorage.setItem(SOLVED_KEYS[diff], JSON.stringify([...solvedSets[diff]])) } catch {}
+}
+
 // ── Game state ────────────────────────────────────────────────────────
 let N = 6;
-let regions   = [];   // regions[cell] = 0..N-1
-let solution  = [];   // solution[cell] = true at queen positions
-let cellState = [];   // 0=blank  1=X-marker  2=queen
+let regions   = [];
+let solution  = [];
+let cellState = [];
 let conflicts = new Set();
 let solved       = false;
 let showingSol   = false;
-let currentPuzzleIdx = 0;
+let currentDiff  = 'easy';
+let currentIdx   = 0;
 let placementCount = 0;
+
+// ── Dropdown ──────────────────────────────────────────────────────────
+function refreshDropdown() {
+  const sel = document.getElementById('puzzle-select');
+  const bank = PUZZLES[currentDiff];
+  sel.innerHTML = '';
+  for (let i = 0; i < bank.length; i++) {
+    const opt = document.createElement('option');
+    opt.value = String(i);
+    const done = solvedSets[currentDiff].has(i);
+    opt.textContent = (done ? '✓ ' : '') + `#${i + 1}`;
+    if (i === currentIdx) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
 
 // ── Conflict detection ────────────────────────────────────────────────
 function detectConflicts() {
   const placed = [];
   for (let c = 0; c < N * N; c++) if (cellState[c] === 2) placed.push(c);
-
-  const bad = new Set();
-  const msgs = [];
-
+  const bad = new Set(), msgs = [];
   for (let i = 0; i < placed.length; i++) {
     for (let j = i + 1; j < placed.length; j++) {
       const a = placed[i], b = placed[j];
       const ar = Math.floor(a / N), ac = a % N;
       const br = Math.floor(b / N), bc = b % N;
-
-      function flag(msg) {
-        bad.add(a); bad.add(b);
-        if (!msgs.includes(msg)) msgs.push(msg);
-      }
-
-      if (ar === br)                                               flag('Two queens in the same row');
-      if (ac === bc)                                               flag('Two queens in the same column');
-      if (regions[a] === regions[b])                               flag('Two queens in the same region');
-      if (Math.abs(ar-br) === 1 && Math.abs(ac-bc) === 1)         flag('Two queens are touching diagonally');
+      function flag(msg) { bad.add(a); bad.add(b); if (!msgs.includes(msg)) msgs.push(msg); }
+      if (ar === br)                                       flag('Two queens in the same row');
+      if (ac === bc)                                       flag('Two queens in the same column');
+      if (regions[a] === regions[b])                       flag('Two queens in the same region');
+      if (Math.abs(ar-br) === 1 && Math.abs(ac-bc) === 1) flag('Two queens are touching diagonally');
     }
   }
-
   return { bad, msgs };
 }
 
@@ -250,23 +292,18 @@ function renderBoard() {
   const el = document.getElementById('board');
   el.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
   el.innerHTML = '';
-
   const THICK = '2px solid rgba(25,25,25,0.48)';
   const THIN  = '1px solid rgba(0,0,0,0.09)';
-
   for (let c = 0; c < N * N; c++) {
     const row = Math.floor(c / N), col = c % N, ri = regions[c];
-
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.dataset.cell = String(c);
     cell.style.background = COLORS[ri % COLORS.length];
-
     cell.style.borderTop    = (row === 0     || regions[c - N] !== ri) ? THICK : THIN;
     cell.style.borderLeft   = (col === 0     || regions[c - 1] !== ri) ? THICK : THIN;
     cell.style.borderRight  = (col === N - 1 || regions[c + 1] !== ri) ? THICK : THIN;
     cell.style.borderBottom = (row === N - 1 || regions[c + N] !== ri) ? THICK : THIN;
-
     const state = cellState[c];
     if (state > 0) {
       const mark = document.createElement('div');
@@ -274,16 +311,11 @@ function renderBoard() {
         mark.className = 'mark mark-x';
         mark.textContent = '✕';
       } else {
-        mark.className = 'mark ' + (
-          solved             ? 'mark-solved'   :
-          conflicts.has(c)   ? 'mark-conflict' :
-                               'mark-queen'
-        );
+        mark.className = 'mark ' + (solved ? 'mark-solved' : conflicts.has(c) ? 'mark-conflict' : 'mark-queen');
         mark.textContent = '♛';
       }
       cell.appendChild(mark);
     }
-
     el.appendChild(cell);
   }
 }
@@ -307,9 +339,7 @@ function updateStatus(msgs = []) {
   const msgEl   = document.getElementById('status-msg');
   const countEl = document.getElementById('status-count');
   const placed  = cellState.filter(v => v === 2).length;
-
   countEl.textContent = placed > 0 ? `${placed} / ${N}` : '';
-
   if (solved) {
     msgEl.className = 'status-msg solved';
     msgEl.textContent = '✓ Puzzle solved!';
@@ -343,24 +373,23 @@ document.getElementById('board').addEventListener('click', e => {
   const cell = e.target.closest('.cell');
   if (!cell) return;
   const c = parseInt(cell.dataset.cell, 10);
-
   cellState[c] = (cellState[c] + 1) % 3;
   if (cellState[c] === 2) placementCount++;
-
   const { bad, msgs } = detectConflicts();
   conflicts = bad;
-
   const queenCount = cellState.filter(v => v === 2).length;
   if (queenCount === N && conflicts.size === 0 && isSolved()) {
     solved = true;
     conflicts = new Set();
+    markSolved(currentDiff, currentIdx);
+    refreshDropdown();
     renderBoard();
     updateStatus();
     setTimeout(() => {
       document.getElementById('ov-moves').textContent =
         `${placementCount} placement${placementCount !== 1 ? 's' : ''}`;
       document.getElementById('overlay').classList.add('show');
-      try { window.parent.postMessage({ type: 'queens-solved', difficulty: 'easy' }, '*'); } catch {}
+      try { window.parent.postMessage({ type: 'queens-solved', difficulty: currentDiff }, '*'); } catch {}
     }, 380);
   } else {
     renderBoard();
@@ -372,14 +401,12 @@ document.getElementById('btn-solution').addEventListener('click', () => {
   if (showingSol) {
     showingSol = false;
     document.getElementById('btn-solution').textContent = 'Show Solution';
-    renderBoard();
-    updateStatus();
+    renderBoard(); updateStatus();
     return;
   }
   showingSol = true;
   document.getElementById('btn-solution').textContent = 'Hide Solution';
-  const saved = [...cellState];
-  const wasSolved = solved;
+  const saved = [...cellState], wasSolved = solved;
   cellState = solution.map(v => v ? 2 : 0);
   solved = true; conflicts = new Set();
   renderBoard();
@@ -387,38 +414,39 @@ document.getElementById('btn-solution').addEventListener('click', () => {
   updateStatus();
 });
 
-function loadPuzzle(idx) {
+function loadPuzzle(diff, idx) {
   document.getElementById('overlay').classList.remove('show');
   document.getElementById('btn-solution').textContent = 'Show Solution';
-  showingSol = false;
-  solved = false;
-  conflicts = new Set();
-  placementCount = 0;
-
-  const puzzle = EASY_PUZZLES[idx];
-  N        = puzzle.n;
-  regions  = puzzle.regions;
-  solution = puzzle.solution;
+  showingSol = false; solved = false; conflicts = new Set(); placementCount = 0;
+  currentDiff = diff; currentIdx = idx;
+  const puzzle = PUZZLES[diff][idx];
+  N = puzzle.n; regions = puzzle.regions; solution = puzzle.solution;
   cellState = new Array(N * N).fill(0);
-
-  renderBoard();
-  renderLegend();
-  updateStatus();
+  renderBoard(); renderLegend(); updateStatus();
 }
 
-document.getElementById('btn-new').addEventListener('click', () => {
-  loadPuzzle(currentPuzzleIdx);
-});
-document.getElementById('btn-ov-new').addEventListener('click', () => {
-  loadPuzzle(currentPuzzleIdx);
-});
+document.getElementById('btn-new').addEventListener('click', () => loadPuzzle(currentDiff, currentIdx));
+document.getElementById('btn-ov-new').addEventListener('click', () => loadPuzzle(currentDiff, currentIdx));
 
 document.getElementById('puzzle-select').addEventListener('change', e => {
-  currentPuzzleIdx = parseInt(e.target.value, 10);
-  loadPuzzle(currentPuzzleIdx);
+  loadPuzzle(currentDiff, parseInt(e.target.value, 10));
 });
 
-loadPuzzle(0);
+document.querySelectorAll('.diff-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.diff === currentDiff) return;
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentIdx = 0;
+    refreshDropdown();
+    loadPuzzle(btn.dataset.diff, 0);
+  });
+});
+
+// ── Init ──────────────────────────────────────────────────────────────
+loadSolvedSets();
+refreshDropdown();
+loadPuzzle('easy', 0);
 </script>
 </body>
 </html>

@@ -466,31 +466,6 @@ export function PuzzleWeekHub() {
         )}
 
         <div className={`grid gap-4 ${entry ? 'lg:grid-cols-2' : ''}`}>
-          <div className="rounded-3xl border border-[var(--color-border)] bg-white/80 px-4 sm:px-5 py-4 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-[var(--color-text)]">
-                  Try to earn all {TOTAL_BONUS_MEDALS} medals
-                </p>
-                <p className="mt-1 text-xs text-[var(--color-muted)]">
-                  {bonusMedalCount} of {TOTAL_BONUS_MEDALS} earned across the bonus puzzles.
-                </p>
-              </div>
-              <Link
-                href="/puzzleweek/bonus"
-                className="inline-flex flex-shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
-              >
-                Bonus Puzzles
-              </Link>
-            </div>
-            <div className="mt-3 h-3 overflow-hidden rounded-full bg-[var(--color-accent-light)]">
-              <div
-                className="h-full rounded-full bg-[var(--color-accent)] transition-all duration-300"
-                style={{ width: `${(bonusMedalCount / TOTAL_BONUS_MEDALS) * 100}%` }}
-              />
-            </div>
-          </div>
-
           {entry && (
             <div className="rounded-3xl border border-[var(--color-border)] bg-white/80 px-4 sm:px-5 py-4 shadow-sm">
               <div className="flex items-start justify-between gap-4">
@@ -532,6 +507,31 @@ export function PuzzleWeekHub() {
               </div>
             </div>
           )}
+
+          <div className="rounded-3xl border border-[var(--color-border)] bg-white/80 px-4 sm:px-5 py-4 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[var(--color-text)]">
+                  Try to earn all {TOTAL_BONUS_MEDALS} medals
+                </p>
+                <p className="mt-1 text-xs text-[var(--color-muted)]">
+                  {bonusMedalCount} of {TOTAL_BONUS_MEDALS} earned across the bonus puzzles.
+                </p>
+              </div>
+              <Link
+                href="/puzzleweek/bonus"
+                className="inline-flex flex-shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+              >
+                Bonus Puzzles
+              </Link>
+            </div>
+            <div className="mt-3 h-3 overflow-hidden rounded-full bg-[var(--color-accent-light)]">
+              <div
+                className="h-full rounded-full bg-[var(--color-accent)] transition-all duration-300"
+                style={{ width: `${(bonusMedalCount / TOTAL_BONUS_MEDALS) * 100}%` }}
+              />
+            </div>
+          </div>
         </div>
 
         {entry && (
@@ -1402,8 +1402,8 @@ function MetaPuzzleCard({
   return (
     <div className={`rounded-2xl border p-6 transition-colors ${
       solved
-        ? 'border-amber-300 bg-amber-50'
-        : 'border-amber-200/70 bg-amber-50/40'
+        ? 'border-amber-300 bg-white'
+        : 'border-amber-200/70 bg-white'
     }`}>
       <div className="flex items-start gap-4">
         <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-base font-bold transition-colors ${

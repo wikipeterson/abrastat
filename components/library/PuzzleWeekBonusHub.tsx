@@ -31,6 +31,14 @@ const NETWALK_SIZES: Record<NetwalkLevel, number> = { easy: 3, medium: 5, hard: 
 const NETWALK_LABELS: Record<NetwalkLevel, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' }
 const NETWALK_MEDALS: Record<NetwalkLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
 const NETWALK_MEDALS_KEY = 'pw-netwalk-medals'
+
+// ---------- queens levels ----------
+
+type QueensLevel = 'easy' | 'medium' | 'hard'
+const QUEENS_LABELS: Record<QueensLevel, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' }
+const QUEENS_MEDALS: Record<QueensLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
+const QUEENS_MEDALS_KEY = 'pw-queens-medals'
+
 type Game2048Medal = 'bronze' | 'silver' | 'gold'
 const GAME_2048_MEDALS: Record<Game2048Medal, { threshold: number; emoji: string; label: string }> = {
   bronze: { threshold: 1024, emoji: '🥉', label: 'Bronze' },
@@ -967,6 +975,7 @@ export function PuzzleWeekBonusHub() {
   const [game2048Medals, setGame2048Medals] = useState<Set<Game2048Medal>>(new Set())
 
   const [netwalkMedals, setNetwalkMedals] = useState<Set<NetwalkLevel>>(new Set())
+  const [queensMedals, setQueensMedals] = useState<Set<QueensLevel>>(new Set())
 
   useEffect(() => {
     try {
@@ -984,6 +993,10 @@ export function PuzzleWeekBonusHub() {
     try {
       const storedNW = localStorage.getItem(NETWALK_MEDALS_KEY)
       if (storedNW) setNetwalkMedals(new Set(JSON.parse(storedNW) as NetwalkLevel[]))
+    } catch {}
+    try {
+      const storedQ = localStorage.getItem(QUEENS_MEDALS_KEY)
+      if (storedQ) setQueensMedals(new Set(JSON.parse(storedQ) as QueensLevel[]))
     } catch {}
   }, [])
 
@@ -1026,6 +1039,27 @@ export function PuzzleWeekBonusHub() {
       return next
     })
   }
+
+  function awardQueensMedal(level: QueensLevel) {
+    setQueensMedals(prev => {
+      if (prev.has(level)) return prev
+      const next = new Set(prev)
+      next.add(level)
+      try { localStorage.setItem(QUEENS_MEDALS_KEY, JSON.stringify([...next])) } catch {}
+      return next
+    })
+  }
+
+  // Listen for solve messages posted by the Queens iframe
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      if (e.data?.type === 'queens-solved' && e.data?.difficulty) {
+        awardQueensMedal(e.data.difficulty as QueensLevel)
+      }
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
 
   function renderGame() {
     switch (selectedId) {
@@ -1129,6 +1163,19 @@ export function PuzzleWeekBonusHub() {
                 ))}
               </div>
             )}
+            {p.id === 'queens' && (
+              <div className="flex items-center gap-1 mt-1.5">
+                {(['easy', 'medium', 'hard'] as QueensLevel[]).map(l => (
+                  <span
+                    key={l}
+                    title={`${QUEENS_LABELS[l]}: ${queensMedals.has(l) ? 'earned' : 'not yet earned'}`}
+                    className={`text-sm leading-none transition-opacity ${queensMedals.has(l) ? 'opacity-100' : 'opacity-15'}`}
+                  >
+                    {QUEENS_MEDALS[l]}
+                  </span>
+                ))}
+              </div>
+            )}
             {!p.live && (
               <span className="mt-1.5 inline-block rounded-full bg-[var(--color-accent-light)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-accent)]">
                 Soon
@@ -1212,6 +1259,12 @@ export function PuzzleWeekBonusHub() {
                 game2048Medals.has('gold') ? <span>🥇</span>
                 : game2048Medals.has('silver') ? <span>🥈</span>
                 : game2048Medals.has('bronze') ? <span>🥉</span>
+                : null
+              )}
+              {p.id === 'queens' && (
+                queensMedals.has('hard') ? <span>🥇</span>
+                : queensMedals.has('medium') ? <span>🥈</span>
+                : queensMedals.has('easy') ? <span>🥉</span>
                 : null
               )}
             </button>

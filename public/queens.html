@@ -660,6 +660,8 @@ function showSuccess() {
   document.getElementById('success-moves').textContent =
     `${moves} move${moves !== 1 ? 's' : ''}`;
   overlay.classList.add('show');
+  // Notify parent hub to award medal for this difficulty
+  try { window.parent.postMessage({ type: 'queens-solved', difficulty: currentDiff }, '*') } catch {}
 }
 
 // ── interaction ───────────────────────────────────────────────────────

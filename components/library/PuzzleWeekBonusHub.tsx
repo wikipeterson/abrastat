@@ -21,6 +21,13 @@ const SLIDER_SIZES: Record<SliderLevel, number> = { easy: 3, medium: 4, hard: 5 
 const SLIDER_LABELS: Record<SliderLevel, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' }
 const SLIDER_MEDALS: Record<SliderLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
 const SLIDER_MEDALS_KEY = 'pw-slider-medals'
+type Game2048Medal = 'bronze' | 'silver' | 'gold'
+const GAME_2048_MEDALS: Record<Game2048Medal, { threshold: number; emoji: string; label: string }> = {
+  bronze: { threshold: 1024, emoji: '🥉', label: 'Bronze' },
+  silver: { threshold: 2048, emoji: '🥈', label: 'Silver' },
+  gold: { threshold: 4096, emoji: '🥇', label: 'Gold' },
+}
+const GAME_2048_MEDALS_KEY = 'pw-2048-medals'
 
 type NetwalkCell = {
   baseMask: number
@@ -615,7 +622,13 @@ function NetwalkBoard() {
   )
 }
 
-function Puzzle2048Board() {
+function Puzzle2048Board({
+  medals,
+  onAwardMedal,
+}: {
+  medals: Set<Game2048Medal>
+  onAwardMedal: (medal: Game2048Medal) => void
+}) {
   const [board, setBoard] = useState<number[]>(() => create2048Board())
   const [score, setScore] = useState(0)
   const [bestTile, setBestTile] = useState(4)
@@ -630,7 +643,11 @@ function Puzzle2048Board() {
     if (!result.moved) return
     setBoard(result.board)
     setScore(current => current + result.scoreGain)
-    setBestTile(current => Math.max(current, ...result.board))
+    const nextBest = Math.max(bestTile, ...result.board)
+    setBestTile(nextBest)
+    if (nextBest >= GAME_2048_MEDALS.gold.threshold) onAwardMedal('gold')
+    else if (nextBest >= GAME_2048_MEDALS.silver.threshold) onAwardMedal('silver')
+    else if (nextBest >= GAME_2048_MEDALS.bronze.threshold) onAwardMedal('bronze')
   }
 
   function handleReset() {
@@ -639,6 +656,9 @@ function Puzzle2048Board() {
     setScore(0)
     setBestTile(Math.max(...next))
   }
+
+  const highestMedal: Game2048Medal | null =
+    medals.has('gold') ? 'gold' : medals.has('silver') ? 'silver' : medals.has('bronze') ? 'bronze' : null
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -685,6 +705,12 @@ function Puzzle2048Board() {
           </p>
         </div>
         <div className="flex gap-2">
+          {highestMedal && (
+            <div className="rounded-2xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-center">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Medal</div>
+              <div className="text-lg leading-tight">{GAME_2048_MEDALS[highestMedal].emoji}</div>
+            </div>
+          )}
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-right">
             <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Score</div>
             <div className="text-lg font-bold leading-tight text-[var(--color-text)]">{score}</div>
@@ -734,7 +760,15 @@ function Puzzle2048Board() {
 
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-medium text-[var(--color-text)]">
-          {stuck ? 'No more moves. Try again?' : won ? '🎉 You made 2048!' : 'Swipe or use arrow keys to merge tiles.'}
+          {stuck
+            ? 'No more moves. Try again?'
+            : bestTile >= GAME_2048_MEDALS.gold.threshold
+              ? `🎉 ${GAME_2048_MEDALS.gold.emoji} Gold earned at 4096!`
+              : won
+                ? `🎉 ${GAME_2048_MEDALS.silver.emoji} Silver earned at 2048!`
+                : bestTile >= GAME_2048_MEDALS.bronze.threshold
+                  ? `Nice run — ${GAME_2048_MEDALS.bronze.emoji} bronze earned at 1024.`
+                  : 'Swipe or use arrow keys to merge tiles.'}
         </p>
         <div className="flex gap-2">
           {(['left', 'up', 'down', 'right'] as Direction2048[]).map(direction => (
@@ -813,11 +847,16 @@ export function PuzzleWeekBonusHub() {
   )
 
   const [sliderMedals, setSliderMedals] = useState<Set<SliderLevel>>(new Set())
+  const [game2048Medals, setGame2048Medals] = useState<Set<Game2048Medal>>(new Set())
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem(SLIDER_MEDALS_KEY)
       if (stored) setSliderMedals(new Set(JSON.parse(stored) as SliderLevel[]))
+    } catch {}
+    try {
+      const stored2048 = localStorage.getItem(GAME_2048_MEDALS_KEY)
+      if (stored2048) setGame2048Medals(new Set(JSON.parse(stored2048) as Game2048Medal[]))
     } catch {}
   }, [])
 
@@ -831,12 +870,22 @@ export function PuzzleWeekBonusHub() {
     })
   }
 
+  function award2048Medal(medal: Game2048Medal) {
+    setGame2048Medals(prev => {
+      if (prev.has(medal)) return prev
+      const next = new Set(prev)
+      next.add(medal)
+      try { localStorage.setItem(GAME_2048_MEDALS_KEY, JSON.stringify([...next])) } catch {}
+      return next
+    })
+  }
+
   function renderGame() {
     switch (selectedId) {
       case 'slider':    return <SliderPuzzleBoard medals={sliderMedals} onSolve={awardSliderMedal} />
       case 'lightsout': return <LightsOutBoard />
       case 'netwalk':   return <NetwalkBoard />
-      case '2048':      return <Puzzle2048Board />
+      case '2048':      return <Puzzle2048Board medals={game2048Medals} onAwardMedal={award2048Medal} />
       default:          return null
     }
   }
@@ -971,6 +1020,12 @@ export function PuzzleWeekBonusHub() {
                 sliderMedals.has('hard') ? <span>🥇</span>
                 : sliderMedals.has('medium') ? <span>🥈</span>
                 : sliderMedals.has('easy') ? <span>🥉</span>
+                : null
+              )}
+              {p.id === '2048' && (
+                game2048Medals.has('gold') ? <span>🥇</span>
+                : game2048Medals.has('silver') ? <span>🥈</span>
+                : game2048Medals.has('bronze') ? <span>🥉</span>
                 : null
               )}
             </button>

@@ -60,6 +60,8 @@ html, body {
   flex-direction: column;
   gap: 10px;
   padding: 12px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .title-row {
@@ -191,7 +193,7 @@ html, body {
 .ov-sub   { color: var(--muted); font-size: 14px; }
 .ov-moves { font-weight: 700; color: var(--accent); font-size: 15px; }
 
-@media (min-width: 860px) {
+@media (min-width: 720px) {
   #app {
     padding: 20px;
   }
@@ -207,7 +209,7 @@ html, body {
   }
 
   .side-panel {
-    flex: 0 0 clamp(320px, 31vw, 390px);
+    flex: 0 0 clamp(290px, 28vw, 350px);
     min-height: 0;
   }
 

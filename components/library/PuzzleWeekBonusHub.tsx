@@ -1543,7 +1543,7 @@ export function PuzzleWeekBonusHub() {
             </aside>
 
             <section className="flex h-full min-h-0 flex-1 min-w-0 self-stretch overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm">
-              <div className="h-full min-h-0">
+              <div className="h-full min-h-0 w-full">
                 {renderGame()}
               </div>
             </section>

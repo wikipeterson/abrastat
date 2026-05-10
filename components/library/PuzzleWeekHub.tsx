@@ -718,6 +718,106 @@ export function PuzzleWeekHub() {
                 </div>
               </div>
 
+              {entry.type === 'solo' && (
+                <div className="border-t border-[var(--color-border)] px-6 py-4">
+                  {registerMode === 'create-team' ? (
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-[var(--color-text)]">Create a team</p>
+                        <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+                          Pick a team name and we&apos;ll move your registration onto the new team.
+                        </p>
+                      </div>
+                      <input
+                        value={teamName}
+                        onChange={e => setTeamName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            void handleCreateTeam()
+                          }
+                        }}
+                        placeholder="Team name"
+                        className="w-full rounded-2xl border border-[var(--color-border)] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={handleCreateTeam}
+                          disabled={submitting}
+                          className="rounded-xl bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-60"
+                        >
+                          {submitting ? 'Creating…' : 'Create Team'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setRegisterMode(null)
+                            setTeamName('')
+                          }}
+                          className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-muted)] transition hover:border-[var(--color-accent)]"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : !showJoinTeam ? (
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-[var(--color-text)]">Want to create or join a team?</p>
+                        <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+                          Start a new team and share its join code, or enter a join code to move your registration onto an existing team.
+                        </p>
+                      </div>
+                      <div className="flex flex-shrink-0 gap-2">
+                        <button
+                          onClick={() => {
+                            setRegisterMode('create-team')
+                            setShowJoinTeam(false)
+                            setError(null)
+                          }}
+                          className="rounded-xl bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white transition hover:brightness-105"
+                        >
+                          Create Team
+                        </button>
+                        <button
+                          onClick={() => setShowJoinTeam(true)}
+                          className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)]"
+                        >
+                          Join a Team
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium text-[var(--color-text)]">Enter the team join code</p>
+                      <div className="flex gap-2">
+                        <input
+                          value={joinCode}
+                          onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                          placeholder="ABC123"
+                          className="flex-1 min-w-0 rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-center text-base tracking-[0.25em] uppercase focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                        />
+                        <button
+                          onClick={handleJoinTeam}
+                          disabled={submitting}
+                          className="flex-shrink-0 rounded-xl bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-60"
+                        >
+                          {submitting ? 'Joining…' : 'Join'}
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setShowJoinTeam(false)
+                          setJoinCode('')
+                        }}
+                        className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-muted)] transition hover:border-[var(--color-accent)]"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Team members */}
               {entry.type === 'team' && members.length > 0 && (
                 <div className="border-t border-[var(--color-border)] px-6 py-4">
@@ -735,107 +835,6 @@ export function PuzzleWeekHub() {
                 </div>
               )}
             </div>
-
-            {/* Solo → join a team */}
-            {entry.type === 'solo' && (
-              <div className="rounded-3xl border border-[var(--color-border)] bg-white/60 px-6 py-4">
-                {registerMode === 'create-team' ? (
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm font-medium text-[var(--color-text)]">Create a team</p>
-                      <p className="mt-0.5 text-xs text-[var(--color-muted)]">
-                        Pick a team name and we&apos;ll move your registration onto the new team.
-                      </p>
-                    </div>
-                    <input
-                      value={teamName}
-                      onChange={e => setTeamName(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          void handleCreateTeam()
-                        }
-                      }}
-                      placeholder="Team name"
-                      className="w-full rounded-2xl border border-[var(--color-border)] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                    />
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={handleCreateTeam}
-                        disabled={submitting}
-                        className="rounded-xl bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-60"
-                      >
-                        {submitting ? 'Creating…' : 'Create Team'}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setRegisterMode(null)
-                          setTeamName('')
-                        }}
-                        className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-muted)] transition hover:border-[var(--color-accent)]"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : !showJoinTeam ? (
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-[var(--color-text)]">Want to create or join a team?</p>
-                      <p className="mt-0.5 text-xs text-[var(--color-muted)]">
-                        Start a new team and share its join code, or enter a join code to move your registration onto an existing team.
-                      </p>
-                    </div>
-                    <div className="flex flex-shrink-0 gap-2">
-                      <button
-                        onClick={() => {
-                          setRegisterMode('create-team')
-                          setShowJoinTeam(false)
-                          setError(null)
-                        }}
-                        className="rounded-xl bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white transition hover:brightness-105"
-                      >
-                        Create Team
-                      </button>
-                      <button
-                        onClick={() => setShowJoinTeam(true)}
-                        className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)]"
-                      >
-                        Join a Team
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <p className="text-sm font-medium text-[var(--color-text)]">Enter the team join code</p>
-                    <div className="flex gap-2">
-                      <input
-                        value={joinCode}
-                        onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                        placeholder="ABC123"
-                        className="flex-1 min-w-0 rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-center text-base tracking-[0.25em] uppercase focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                      />
-                      <button
-                        onClick={handleJoinTeam}
-                        disabled={submitting}
-                        className="flex-shrink-0 rounded-xl bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-60"
-                      >
-                        {submitting ? 'Joining…' : 'Join'}
-                      </button>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setShowJoinTeam(false)
-                        setJoinCode('')
-                      }}
-                      className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-muted)] transition hover:border-[var(--color-accent)]"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
 
             {error && (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">

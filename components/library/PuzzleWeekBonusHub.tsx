@@ -48,6 +48,7 @@ const QUEENS_MEDALS: Record<QueensLevel, string> = { easy: '🥉', medium: '🥈
 const QUEENS_MEDALS_KEY = 'pw-queens-medals'
 const QUEENS_SOLVED_ORDER_VERSION_KEY = 'pw-queens-solved-order-version'
 const QUEENS_EASY_OLD_TO_NEW = [4, 3, 9, 5, 6, 8, 1, 2, 0, 7] as const
+const QUEENS_MEDIUM_OLD_TO_NEW = [2, 0, 3, 4, 7, 1, 5, 6, 8, 9] as const
 const QUEENS_SOLVED_KEYS: Record<QueensLevel, string> = {
   easy: 'pw-queens-solved-easy',
   medium: 'pw-queens-solved-medium',
@@ -1402,6 +1403,18 @@ function remapEasyQueensSolvedSet(set: Set<number>) {
   )
 }
 
+function remapMediumQueensSolvedSet(set: Set<number>) {
+  return new Set(
+    [...set]
+      .map(index => (
+        index >= 0 && index < QUEENS_MEDIUM_OLD_TO_NEW.length
+          ? QUEENS_MEDIUM_OLD_TO_NEW[index]
+          : index
+      ))
+      .filter(index => Number.isInteger(index) && index >= 0),
+  )
+}
+
 function readStoredSet<T extends string>(key: string) {
   try {
     const stored = localStorage.getItem(key)
@@ -1458,7 +1471,12 @@ function readLocalQueensSolvedBoardState(): QueensSolvedBoardState {
     version = hasAny ? 1 : PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION
   }
   if (version < PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION) {
-    state.easy = remapEasyQueensSolvedSet(state.easy)
+    if (version < 2) {
+      state.easy = remapEasyQueensSolvedSet(state.easy)
+    }
+    if (version < 3) {
+      state.medium = remapMediumQueensSolvedSet(state.medium)
+    }
     writeLocalQueensSolvedBoardState(state)
   }
   return state
@@ -1496,7 +1514,12 @@ function queensSolvedBoardsFromProfile(profile: PuzzleWeekBonusMedals): QueensSo
     hard: new Set(profile.queensSolved.hard),
   }
   if ((profile.queensSolvedOrderVersion ?? 1) < PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION) {
-    state.easy = remapEasyQueensSolvedSet(state.easy)
+    if ((profile.queensSolvedOrderVersion ?? 1) < 2) {
+      state.easy = remapEasyQueensSolvedSet(state.easy)
+    }
+    if ((profile.queensSolvedOrderVersion ?? 1) < 3) {
+      state.medium = remapMediumQueensSolvedSet(state.medium)
+    }
   }
   return state
 }

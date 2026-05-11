@@ -175,9 +175,9 @@ html, body {
 .mark {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: clamp(20px, 5.8vw, 36px); pointer-events: none; line-height: 1;
+  font-size: clamp(26px, 7vw, 48px); pointer-events: none; line-height: 1;
 }
-.mark-x        { color: rgba(0,0,0,0.28); font-weight: 700; font-size: clamp(18px, 4.9vw, 32px); }
+.mark-x        { color: rgba(0,0,0,0.28); font-weight: 700; font-size: clamp(22px, 6vw, 40px); }
 .mark-queen    { color: rgba(0,0,0,0.70); text-shadow: 0 1px 3px rgba(0,0,0,0.18); }
 .mark-conflict { color: #B22222; text-shadow: 0 0 6px rgba(178,34,34,0.35); }
 .mark-solved   { color: #1A7A4A; text-shadow: 0 0 8px rgba(46,196,182,0.55); animation: pop 0.28s ease; }
@@ -281,6 +281,7 @@ html, body {
   #board {
     width: min(100%, calc(100dvh - 60px));
   }
+  #btn-picker { display: none; }
 }
 
 @media (max-width: 640px) {
@@ -299,10 +300,10 @@ html, body {
   }
 
   .mark {
-    font-size: clamp(18px, 6vw, 32px);
+    font-size: clamp(24px, 8.5vw, 44px);
   }
   .mark-x {
-    font-size: clamp(16px, 5vw, 26px);
+    font-size: clamp(20px, 7vw, 38px);
   }
 
   #board {
@@ -317,7 +318,37 @@ html, body {
 @media (max-width: 719px) {
   .side-scroll { display: none; }
   .info-btn { display: flex; }
+  #status-count { display: none; }
 }
+
+.puzzle-inline-card {
+  background: rgba(214,245,242,0.56);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 14px;
+}
+.puzzle-inline-title {
+  font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+  font-weight: 800; color: var(--muted); margin-bottom: 10px;
+}
+.puzzle-inline-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
+}
+.puzzle-inline-item {
+  display: flex; align-items: center; justify-content: center;
+  height: 32px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 12px; font-weight: 700; background: white; color: var(--text);
+  cursor: pointer; transition: all 0.14s;
+}
+.puzzle-inline-item:hover { background: var(--accent-light); }
+.puzzle-inline-item.current { background: var(--accent); border-color: var(--accent); color: white; }
+.puzzle-inline-item.solved { border-color: #a7f3d0; background: #ecfdf5; color: #065f46; }
+
+.ov-buttons {
+  display: flex; flex-direction: column; gap: 8px;
+  width: 100%; max-width: 220px; margin-top: 6px;
+}
+.ov-buttons .btn { width: 100%; }
 
 .info-btn {
   display: none;
@@ -426,7 +457,6 @@ html, body {
         </div>
 
         <div class="btn-row">
-          <button class="btn"         id="btn-solution">Show Solution</button>
           <button class="btn"         id="btn-picker">#1</button>
           <button class="btn primary" id="btn-new">Restart</button>
         </div>
@@ -439,6 +469,10 @@ html, body {
 
       <div class="side-scroll">
         <div class="side-scroll-inner">
+          <div class="puzzle-inline-card">
+            <div class="puzzle-inline-title">Puzzle</div>
+            <div class="puzzle-inline-grid" id="puzzle-inline-grid"></div>
+          </div>
           <div class="rules-card">
             <div class="rules-title">Goal</div>
             <div class="rules-copy">Place exactly one queen in every row, every column, and every colored region.</div>
@@ -460,7 +494,11 @@ html, body {
   <div class="ov-title">Puzzle solved!</div>
   <div class="ov-sub">All queens placed correctly.</div>
   <div class="ov-moves" id="ov-moves"></div>
-  <button class="btn primary" style="width:180px;margin-top:6px" id="btn-ov-new">Play Again</button>
+  <div class="ov-medal" id="ov-medal" style="display:none;font-size:22px;font-weight:800;color:var(--accent)"></div>
+  <div class="ov-buttons">
+    <button class="btn primary" id="btn-ov-new">New Puzzle?</button>
+    <button class="btn" id="btn-ov-admire">Admire your puzzle?</button>
+  </div>
 </div>
 
 <div class="puzzle-modal-overlay" id="puzzle-modal-overlay">
@@ -3417,7 +3455,6 @@ let solution  = [];
 let cellState = [];
 let conflicts = new Set();
 let solved       = false;
-let showingSol   = false;
 let currentDiff  = 'easy';
 let currentIdx   = 0;
 let placementCount = 0;
@@ -3427,6 +3464,23 @@ let pickerDiff = 'easy';
 
 function refreshPicker() {
   document.getElementById('btn-picker').textContent = '#' + (currentIdx + 1);
+  buildInlineGrid();
+}
+
+function buildInlineGrid() {
+  const grid = document.getElementById('puzzle-inline-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const bank = PUZZLES[currentDiff];
+  for (let i = 0; i < bank.length; i++) {
+    const isSolvedPuzzle = solvedSets[currentDiff].has(i);
+    const isCurrent = i === currentIdx;
+    const item = document.createElement('button');
+    item.className = 'puzzle-inline-item' + (isCurrent ? ' current' : isSolvedPuzzle ? ' solved' : '');
+    item.textContent = isSolvedPuzzle && !isCurrent ? '✓' : String(i + 1);
+    item.addEventListener('click', () => loadPuzzle(currentDiff, i));
+    grid.appendChild(item);
+  }
 }
 
 function buildPickerGrid() {
@@ -3543,13 +3597,6 @@ function updateStatus(msgs = []) {
     barEl.style.display = 'flex';
     return;
   }
-  if (showingSol) {
-    msgEl.className = 'status-msg';
-    msgEl.textContent = 'This is the unique solution';
-    countEl.textContent = '';
-    barEl.style.display = 'flex';
-    return;
-  }
   if (msgs.length > 0) {
     msgEl.className = 'status-msg conflict';
     msgEl.textContent = msgs[0];
@@ -3569,7 +3616,7 @@ function updateStatus(msgs = []) {
 
 // ── Interaction ───────────────────────────────────────────────────────
 document.getElementById('board').addEventListener('click', e => {
-  if (solved || showingSol) return;
+  if (solved) return;
   const cell = e.target.closest('.cell');
   if (!cell) return;
   const c = parseInt(cell.dataset.cell, 10);
@@ -3584,9 +3631,19 @@ document.getElementById('board').addEventListener('click', e => {
     markSolved(currentDiff, currentIdx);
     renderBoard();
     updateStatus();
+    const wasNewMedal = !solvedSets[currentDiff].size || (solvedSets[currentDiff].size === PUZZLES[currentDiff].length - 1 && !solvedSets[currentDiff].has(currentIdx));
     setTimeout(() => {
       document.getElementById('ov-moves').textContent =
         `${placementCount} placement${placementCount !== 1 ? 's' : ''}`;
+      const medalEl = document.getElementById('ov-medal');
+      const allSolved = PUZZLES[currentDiff].every((_, i) => solvedSets[currentDiff].has(i));
+      if (allSolved) {
+        const medals = { easy: '🥉', medium: '🥈', hard: '🥇' };
+        medalEl.textContent = `${medals[currentDiff]} New medal earned!`;
+        medalEl.style.display = '';
+      } else {
+        medalEl.style.display = 'none';
+      }
       document.getElementById('overlay').classList.add('show');
       try { window.parent.postMessage({ type: 'queens-solved', difficulty: currentDiff }, '*'); } catch {}
     }, 380);
@@ -3596,27 +3653,9 @@ document.getElementById('board').addEventListener('click', e => {
   }
 });
 
-document.getElementById('btn-solution').addEventListener('click', () => {
-  if (showingSol) {
-    showingSol = false;
-    document.getElementById('btn-solution').textContent = 'Show Solution';
-    renderBoard(); updateStatus();
-    return;
-  }
-  showingSol = true;
-  document.getElementById('btn-solution').textContent = 'Hide Solution';
-  const saved = [...cellState], wasSolved = solved;
-  cellState = solution.map(v => v ? 2 : 0);
-  solved = true; conflicts = new Set();
-  renderBoard();
-  solved = wasSolved; cellState = saved;
-  updateStatus();
-});
-
 function loadPuzzle(diff, idx) {
   document.getElementById('overlay').classList.remove('show');
-  document.getElementById('btn-solution').textContent = 'Show Solution';
-  showingSol = false; solved = false; conflicts = new Set(); placementCount = 0;
+  solved = false; conflicts = new Set(); placementCount = 0;
   currentDiff = diff; currentIdx = idx;
   const puzzle = PUZZLES[diff][idx];
   N = puzzle.n; regions = puzzle.regions; solution = puzzle.solution;
@@ -3626,7 +3665,12 @@ function loadPuzzle(diff, idx) {
 }
 
 document.getElementById('btn-new').addEventListener('click', () => loadPuzzle(currentDiff, currentIdx));
-document.getElementById('btn-ov-new').addEventListener('click', () => loadPuzzle(currentDiff, currentIdx));
+document.getElementById('btn-ov-new').addEventListener('click', () =>
+  loadPuzzle(currentDiff, (currentIdx + 1) % PUZZLES[currentDiff].length)
+);
+document.getElementById('btn-ov-admire').addEventListener('click', () =>
+  document.getElementById('overlay').classList.remove('show')
+);
 document.getElementById('btn-picker').addEventListener('click', openPicker);
 document.getElementById('puzzle-modal-close').addEventListener('click', closePicker);
 document.getElementById('puzzle-modal-overlay').addEventListener('click', e => {

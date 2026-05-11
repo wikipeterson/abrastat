@@ -675,6 +675,49 @@ function getNetwalkStatus(board: NetwalkCell[], size: number) {
 
 // ---------- game components ----------
 
+function SolvedOverlay({
+  emoji,
+  title,
+  subtitle,
+  medal,
+  onNewPuzzle,
+  onAdmire,
+}: {
+  emoji: string
+  title: string
+  subtitle: string
+  medal?: string
+  onNewPuzzle: () => void
+  onAdmire: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-[var(--color-bg)]/95 px-6 text-center">
+      <div className="text-5xl" style={{ animation: 'pw-bounce 0.45s ease' }}>{emoji}</div>
+      <p className="text-2xl font-bold text-[var(--color-text)]">{title}</p>
+      <p className="text-sm text-[var(--color-muted)]">{subtitle}</p>
+      {medal && (
+        <p className="text-lg font-bold text-[var(--color-accent)]">{medal}</p>
+      )}
+      <div className="mt-2 flex w-full max-w-[220px] flex-col gap-2">
+        <button
+          type="button"
+          onClick={onNewPuzzle}
+          className="w-full rounded-2xl bg-[var(--color-accent)] py-3 text-sm font-semibold text-white transition hover:brightness-105"
+        >
+          New Puzzle?
+        </button>
+        <button
+          type="button"
+          onClick={onAdmire}
+          className="w-full rounded-2xl border border-[var(--color-border)] bg-white py-3 text-sm font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+        >
+          Admire your puzzle?
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function BonusGameLayout({
   board,
   sidebar,
@@ -820,16 +863,33 @@ function SliderPuzzleBoard({
   const [moves, setMoves] = useState(0)
   const [boardKey, setBoardKey] = useState(0)
   const [howToPlayOpen, setHowToPlayOpen] = useState(false)
+  const [showOverlay, setShowOverlay] = useState(false)
+  const overlayShownRef = useRef(false)
+
+  const total = size * size
+  const solved = board.every((v, i) => (i === total - 1 ? v === 0 : v === i + 1))
+
+  useEffect(() => {
+    if (solved && !overlayShownRef.current) {
+      overlayShownRef.current = true
+      const t = window.setTimeout(() => setShowOverlay(true), 380)
+      return () => window.clearTimeout(t)
+    }
+    if (!solved) { overlayShownRef.current = false; setShowOverlay(false) }
+  }, [solved])
+
+  function newBoard() {
+    setBoard(createSliderBoard(size)); setMoves(0); setBoardKey(k => k + 1); setShowOverlay(false)
+  }
 
   function switchLevel(l: SliderLevel) {
     setLevel(l)
     setBoard(createSliderBoard(SLIDER_SIZES[l]))
     setMoves(0)
     setBoardKey(k => k + 1)
+    setShowOverlay(false)
   }
 
-  const total = size * size
-  const solved = board.every((v, i) => (i === total - 1 ? v === 0 : v === i + 1))
   const emptyIdx = board.indexOf(0)
   const movableTiles = new Set(solved ? [] : sliderNeighbors(emptyIdx, size).map(index => board[index]).filter(Boolean))
 
@@ -850,6 +910,7 @@ function SliderPuzzleBoard({
   const tileFont = size === 3 ? 'text-2xl' : size === 4 ? 'text-lg' : 'text-sm'
 
   return (
+  <>
     <BonusGameLayout
       board={
         <div className="h-full w-full rounded-[1.65rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-3 shadow-inner">
@@ -937,7 +998,7 @@ function SliderPuzzleBoard({
             </div>
             <button
               type="button"
-              onClick={() => { setBoard(createSliderBoard(size)); setMoves(0); setBoardKey(k => k + 1) }}
+              onClick={newBoard}
               className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 transition hover:bg-slate-50"
             >
               <div className="text-sm font-bold text-[var(--color-text)]">New Board</div>
@@ -955,7 +1016,7 @@ function SliderPuzzleBoard({
             <BonusStatTile label="Moves" value={moves} />
             <button
               type="button"
-              onClick={() => { setBoard(createSliderBoard(size)); setMoves(0); setBoardKey(k => k + 1) }}
+              onClick={newBoard}
               className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-slate-50"
             >
               <div className="text-[clamp(1.15rem,1.55vw,1.55rem)] font-bold leading-none text-[var(--color-text)]">
@@ -1016,6 +1077,17 @@ function SliderPuzzleBoard({
         </div>
       }
     />
+    {showOverlay && (
+      <SolvedOverlay
+        emoji="🧩"
+        title="Puzzle solved!"
+        subtitle={`${moves} move${moves !== 1 ? 's' : ''}`}
+        medal={medals.has(level) ? undefined : `${SLIDER_MEDALS[level]} New medal earned!`}
+        onNewPuzzle={newBoard}
+        onAdmire={() => setShowOverlay(false)}
+      />
+    )}
+  </>
   )
 }
 
@@ -1031,13 +1103,29 @@ function LightsOutBoard({
   const [board, setBoard] = useState<boolean[]>(() => createLightsOutBoard(LIGHTS_OUT_SIZES.medium))
   const [moves, setMoves] = useState(0)
   const [howToPlayOpen, setHowToPlayOpen] = useState(false)
+  const [showOverlay, setShowOverlay] = useState(false)
+  const overlayShownRef = useRef(false)
 
   const solved = board.every(c => !c)
+
+  useEffect(() => {
+    if (solved && !overlayShownRef.current) {
+      overlayShownRef.current = true
+      const t = window.setTimeout(() => setShowOverlay(true), 380)
+      return () => window.clearTimeout(t)
+    }
+    if (!solved) { overlayShownRef.current = false; setShowOverlay(false) }
+  }, [solved])
+
+  function newBoard() {
+    setBoard(createLightsOutBoard(size)); setMoves(0); setShowOverlay(false)
+  }
 
   function switchLevel(nextLevel: SliderLevel) {
     setLevel(nextLevel)
     setBoard(createLightsOutBoard(LIGHTS_OUT_SIZES[nextLevel]))
     setMoves(0)
+    setShowOverlay(false)
   }
 
   function handlePress(r: number, c: number) {
@@ -1051,6 +1139,7 @@ function LightsOutBoard({
   }
 
   return (
+  <>
     <BonusGameLayout
       board={
         <div
@@ -1112,7 +1201,7 @@ function LightsOutBoard({
             </div>
             <button
               type="button"
-              onClick={() => { setBoard(createLightsOutBoard(size)); setMoves(0) }}
+              onClick={newBoard}
               className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white py-2.5 transition active:bg-slate-50"
             >
               <div className="text-sm font-bold leading-none text-[var(--color-text)]">New Board</div>
@@ -1130,7 +1219,7 @@ function LightsOutBoard({
             <BonusStatTile label="Moves" value={moves} />
             <button
               type="button"
-              onClick={() => { setBoard(createLightsOutBoard(size)); setMoves(0) }}
+              onClick={newBoard}
               className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-slate-50"
             >
               <div className="text-[clamp(1.15rem,1.55vw,1.55rem)] font-bold leading-none text-[var(--color-text)]">
@@ -1193,6 +1282,17 @@ function LightsOutBoard({
         </div>
       }
     />
+    {showOverlay && (
+      <SolvedOverlay
+        emoji="💡"
+        title="Lights out!"
+        subtitle={`${moves} move${moves !== 1 ? 's' : ''}`}
+        medal={medals.has(level) ? undefined : `${LIGHTS_OUT_MEDALS[level]} New medal earned!`}
+        onNewPuzzle={newBoard}
+        onAdmire={() => setShowOverlay(false)}
+      />
+    )}
+  </>
   )
 }
 
@@ -1208,15 +1308,31 @@ function NetwalkBoard({
   const [board, setBoard] = useState<NetwalkCell[]>(() => createNetwalkBoard(NETWALK_SIZES['medium']))
   const [moves, setMoves] = useState(0)
   const [howToPlayOpen, setHowToPlayOpen] = useState(false)
+  const [showOverlay, setShowOverlay] = useState(false)
+  const overlayShownRef = useRef(false)
   const pendingTap = useRef<{ index: number; timer: number } | null>(null)
   const solvedAwardedRef = useRef(false)
   const status = getNetwalkStatus(board, size)
+
+  useEffect(() => {
+    if (status.solved && !overlayShownRef.current) {
+      overlayShownRef.current = true
+      const t = window.setTimeout(() => setShowOverlay(true), 380)
+      return () => window.clearTimeout(t)
+    }
+    if (!status.solved) { overlayShownRef.current = false; setShowOverlay(false) }
+  }, [status.solved])
+
+  function newBoard() {
+    setBoard(createNetwalkBoard(size)); setMoves(0); solvedAwardedRef.current = false; setShowOverlay(false)
+  }
 
   function switchLevel(l: NetwalkLevel) {
     setLevel(l)
     setBoard(createNetwalkBoard(NETWALK_SIZES[l]))
     setMoves(0)
     solvedAwardedRef.current = false
+    setShowOverlay(false)
     if (pendingTap.current) {
       window.clearTimeout(pendingTap.current.timer)
       pendingTap.current = null
@@ -1263,6 +1379,7 @@ function NetwalkBoard({
   const pct = Math.round((status.connectedCount / board.length) * 100)
 
   return (
+  <>
     <BonusGameLayout
       board={
         <div
@@ -1359,7 +1476,7 @@ function NetwalkBoard({
             </div>
             <button
               type="button"
-              onClick={() => { setBoard(createNetwalkBoard(size)); setMoves(0); solvedAwardedRef.current = false }}
+              onClick={newBoard}
               className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white py-2.5 transition active:bg-slate-50"
             >
               <div className="text-sm font-bold leading-none text-[var(--color-text)]">New Board</div>
@@ -1390,7 +1507,7 @@ function NetwalkBoard({
             </div>
             <button
               type="button"
-              onClick={() => { setBoard(createNetwalkBoard(size)); setMoves(0); solvedAwardedRef.current = false }}
+              onClick={newBoard}
               className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-slate-50"
             >
               <div className="text-[clamp(1.15rem,1.55vw,1.55rem)] font-bold leading-none text-[var(--color-text)]">
@@ -1451,6 +1568,17 @@ function NetwalkBoard({
         </div>
       }
     />
+    {showOverlay && (
+      <SolvedOverlay
+        emoji="🌐"
+        title="Network restored!"
+        subtitle={`${moves} move${moves !== 1 ? 's' : ''}`}
+        medal={medals.has(level) ? undefined : `${NETWALK_MEDALS[level]} New medal earned!`}
+        onNewPuzzle={newBoard}
+        onAdmire={() => setShowOverlay(false)}
+      />
+    )}
+  </>
   )
 }
 
@@ -1465,10 +1593,21 @@ function Puzzle2048Board({
   const [score, setScore] = useState(0)
   const [bestTile, setBestTile] = useState(4)
   const [howToPlayOpen, setHowToPlayOpen] = useState(false)
+  const [showOverlay, setShowOverlay] = useState(false)
+  const overlayShownRef = useRef(false)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
 
   const won = bestTile >= 2048
   const stuck = !canMove2048(board)
+
+  useEffect(() => {
+    if (won && !overlayShownRef.current) {
+      overlayShownRef.current = true
+      const t = window.setTimeout(() => setShowOverlay(true), 380)
+      return () => window.clearTimeout(t)
+    }
+    if (!won) { overlayShownRef.current = false; setShowOverlay(false) }
+  }, [won])
 
   function handleMove(direction: Direction2048) {
     if (stuck) return
@@ -1524,6 +1663,7 @@ function Puzzle2048Board({
   }
 
   return (
+  <>
     <BonusGameLayout
       board={
         <div
@@ -1684,6 +1824,17 @@ function Puzzle2048Board({
         </div>
       }
     />
+    {showOverlay && (
+      <SolvedOverlay
+        emoji="🏆"
+        title="2048 reached!"
+        subtitle={`Score: ${score}`}
+        medal={medals.has('gold') ? undefined : `${GAME_2048_MEDALS.gold.emoji} New medal earned!`}
+        onNewPuzzle={() => { handleReset(); setShowOverlay(false) }}
+        onAdmire={() => setShowOverlay(false)}
+      />
+    )}
+  </>
   )
 }
 
@@ -1750,7 +1901,10 @@ function StarBattleBoard({
   const [puzzleIdx, setPuzzleIdx] = useState(0)
   const [cells, setCells] = useState<number[]>(() => Array(SB_PUZZLES['easy'][0].size ** 2).fill(0))
   const [howToPlayOpen, setHowToPlayOpen] = useState(false)
+  const [sbPickerOpen, setSbPickerOpen] = useState(false)
+  const [showOverlay, setShowOverlay] = useState(false)
   const solvedRef = useRef(false)
+  const overlayShownRef = useRef(false)
 
   const puzzle = SB_PUZZLES[level][puzzleIdx % SB_PUZZLES[level].length]
   const { size, regions } = puzzle
@@ -1766,24 +1920,35 @@ function StarBattleBoard({
     if (!solved) solvedRef.current = false
   }, [solved, level, puzzleIdx, onSolve])
 
+  useEffect(() => {
+    if (solved && !overlayShownRef.current) {
+      overlayShownRef.current = true
+      const t = window.setTimeout(() => setShowOverlay(true), 380)
+      return () => window.clearTimeout(t)
+    }
+    if (!solved) { overlayShownRef.current = false; setShowOverlay(false) }
+  }, [solved])
+
   function switchLevel(l: StarBattleLevel) {
     setLevel(l)
     setPuzzleIdx(0)
     setCells(Array(SB_PUZZLES[l][0].size ** 2).fill(0))
     solvedRef.current = false
+    setShowOverlay(false)
   }
 
   function selectPuzzle(idx: number) {
     setPuzzleIdx(idx)
     setCells(Array(SB_PUZZLES[level][idx].size ** 2).fill(0))
     solvedRef.current = false
+    setShowOverlay(false)
   }
 
   function handleCell(idx: number) {
     if (solved) return
     setCells(prev => {
       const next = [...prev]
-      next[idx] = (next[idx] + 1) % 3
+      next[idx] = next[idx] === 0 ? 2 : next[idx] === 2 ? 1 : 0
       return next
     })
   }
@@ -1792,6 +1957,7 @@ function StarBattleBoard({
   const valid = sbIsValid(stars, size, regions)
 
   return (
+  <>
     <BonusGameLayout
       board={
         <div className="h-full w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-2">
@@ -1821,10 +1987,10 @@ function StarBattleBoard({
                   }}
                 >
                   {state === 1 && (
-                    <span className="select-none text-[clamp(0.75rem,2vw,1.25rem)] leading-none drop-shadow-sm">⭐</span>
+                    <span className="select-none text-[clamp(1rem,3vw,2rem)] leading-none drop-shadow-sm">⭐</span>
                   )}
                   {state === 2 && (
-                    <span className="select-none text-[clamp(0.55rem,1.4vw,0.85rem)] font-bold leading-none text-slate-400">✕</span>
+                    <span className="select-none text-[clamp(0.8rem,2.2vw,1.4rem)] font-bold leading-none text-slate-400">✕</span>
                   )}
                 </button>
               )
@@ -1834,6 +2000,7 @@ function StarBattleBoard({
       }
       sidebar={
         <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden lg:gap-2.5">
+          {/* Fixed top: title + difficulty buttons */}
           <div className="hidden flex-shrink-0 lg:block">
             <p className="text-[clamp(1.45rem,1.9vw,2.25rem)] font-bold leading-[1.05] text-[var(--color-text)]">
               Star Battle
@@ -1861,11 +2028,21 @@ function StarBattleBoard({
               </button>
             ))}
           </div>
+
+          {/* Mobile-only: stars counter + puzzle picker button + how to play */}
           <div className="flex flex-shrink-0 gap-2 lg:hidden">
             <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5">
               <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">Stars</div>
               <div className="text-lg font-bold leading-none text-[var(--color-text)]">{numStars}/{size * 2}</div>
             </div>
+            <button
+              type="button"
+              onClick={() => setSbPickerOpen(true)}
+              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-slate-50"
+            >
+              #{puzzleIdx + 1}
+              <span className="text-[10px] text-[var(--color-accent)]">▾</span>
+            </button>
             <button
               type="button"
               onClick={() => setHowToPlayOpen(true)}
@@ -1875,28 +2052,9 @@ function StarBattleBoard({
               <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">?</span>
             </button>
           </div>
-          <div className="flex flex-shrink-0 flex-col gap-1 lg:hidden">
-            <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">Puzzle</div>
-            <div className="grid grid-cols-5 gap-1.5">
-              {SB_PUZZLES[level].map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => selectPuzzle(i)}
-                  className={`flex h-8 items-center justify-center rounded-lg text-xs font-bold transition ${
-                    puzzleIdx === i
-                      ? 'bg-[var(--color-accent)] text-white shadow-sm'
-                      : solvedBoards[level].has(i)
-                        ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
-                        : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
-                  }`}
-                >
-                  {solvedBoards[level].has(i) && puzzleIdx !== i ? '✓' : i + 1}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="hidden flex-shrink-0 flex-col gap-2 lg:flex">
+
+          {/* Desktop: scrollable area with stats, puzzle grid, messages, info */}
+          <div className="hidden min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto lg:flex">
             <BonusStatTile label="Stars" value={`${numStars}/${size * 2}`} />
             <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-muted)]">Puzzle</div>
@@ -1914,30 +2072,90 @@ function StarBattleBoard({
                           : 'border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-slate-50'
                     }`}
                   >
-                    {solvedBoards[level].has(i) && puzzleIdx !== i ? '✓' : i + 1}
+                    {solvedBoards[level].has(i) ? '✓' : i + 1}
                   </button>
                 ))}
               </div>
             </div>
-          </div>
-          {numStars === size * 2 && !solved && !valid && (
-            <div className="flex-shrink-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              A rule is violated — stars can&apos;t touch, and each row, column, and region needs exactly 2.
-            </div>
-          )}
-          {solved && (
-            <div className="flex-shrink-0 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-              🎉 {STAR_BATTLE_MEDALS[level]} {STAR_BATTLE_LABELS[level]} solved!
-            </div>
-          )}
-          <div className="hidden lg:flex lg:flex-col lg:gap-2.5">
+            {numStars === size * 2 && !solved && !valid && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                A rule is violated — stars can&apos;t touch, and each row, column, and region needs exactly 2.
+              </div>
+            )}
             <BonusInfoCard label="Goal">
               Place exactly <strong>2 stars</strong> in every row, every column, and every colored region. Stars cannot touch each other — not even diagonally.
             </BonusInfoCard>
             <BonusInfoCard label="How It Works">
-              Click once to place a ⭐, click again to mark a cell ✕ (a reminder it can&apos;t hold a star), click a third time to clear it.
+              Click once to mark a cell ✕ (a reminder it can&apos;t hold a star), click again to place a ⭐, click a third time to clear it.
             </BonusInfoCard>
           </div>
+
+          {/* Mobile-only: error message */}
+          {numStars === size * 2 && !solved && !valid && (
+            <div className="flex-shrink-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 lg:hidden">
+              A rule is violated — stars can&apos;t touch, and each row, column, and region needs exactly 2.
+            </div>
+          )}
+
+          {/* Mobile picker drawer */}
+          {sbPickerOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 lg:hidden"
+              onClick={() => setSbPickerOpen(false)}
+            >
+              <div
+                className="flex w-full max-w-lg flex-col rounded-t-3xl bg-white px-4 pb-8 pt-5 shadow-xl max-h-[85dvh] overflow-y-auto"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-[var(--color-text)]">Select Puzzle</p>
+                  <button
+                    type="button"
+                    onClick={() => setSbPickerOpen(false)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-slate-50"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex gap-2 mb-4">
+                  {(['easy', 'medium', 'hard'] as StarBattleLevel[]).filter(l => SB_PUZZLES[l].length > 0).map(l => (
+                    <button
+                      key={l}
+                      type="button"
+                      onClick={() => switchLevel(l)}
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                        level === l
+                          ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                          : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                      }`}
+                    >
+                      {STAR_BATTLE_LABELS[l]}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {SB_PUZZLES[level].map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => { selectPuzzle(i); setSbPickerOpen(false) }}
+                      className={`flex h-10 items-center justify-center rounded-xl text-sm font-bold transition ${
+                        puzzleIdx === i
+                          ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                          : solvedBoards[level].has(i)
+                            ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                            : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                      }`}
+                    >
+                      {solvedBoards[level].has(i) ? '✓' : i + 1}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile how-to-play drawer */}
           {howToPlayOpen && (
             <div
               className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 lg:hidden"
@@ -1962,7 +2180,7 @@ function StarBattleBoard({
                     Place exactly <strong>2 stars</strong> in every row, every column, and every colored region. Stars cannot touch — not even diagonally.
                   </BonusInfoCard>
                   <BonusInfoCard label="How It Works">
-                    Tap once to place a ⭐, tap again to mark ✕, tap a third time to clear.
+                    Tap once to mark ✕, tap again to place a ⭐, tap a third time to clear.
                   </BonusInfoCard>
                 </div>
                 <button
@@ -1978,6 +2196,17 @@ function StarBattleBoard({
         </div>
       }
     />
+    {showOverlay && (
+      <SolvedOverlay
+        emoji="⭐"
+        title="Puzzle solved!"
+        subtitle={`${STAR_BATTLE_LABELS[level]} #${puzzleIdx + 1}`}
+        medal={medals.has(level) ? undefined : `${STAR_BATTLE_MEDALS[level]} New medal earned!`}
+        onNewPuzzle={() => selectPuzzle((puzzleIdx + 1) % SB_PUZZLES[level].length)}
+        onAdmire={() => setShowOverlay(false)}
+      />
+    )}
+  </>
   )
 }
 

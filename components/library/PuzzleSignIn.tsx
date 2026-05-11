@@ -3,43 +3,90 @@
 import { useEffect, useState } from 'react'
 import { SignInButton } from '@/components/auth/SignInButton'
 
-const SIZE = 360
-const TILE = SIZE / 3  // 120px
+const TILE = 120           // base tile size
+const PAD  = 22            // tab protrusion depth
+const BOX  = TILE + 2*PAD  // 164 — each piece div
+const SIZE = TILE * 3      // 360 — full puzzle
+const TW2  = 18            // half-width of tab neck (tab spans 36px)
 const SOLVED_KEY = 'pw2026-puzzle-solved'
 
-// ---------- puzzle logic ----------
+// H[r][c]: right-edge connector of source piece (r,c), c ∈ {0,1}. +1=tab out, -1=notch in.
+const H = [[1,-1],[-1,1],[1,-1]]
+// V[r][c]: bottom-edge connector of source piece (r,c), r ∈ {0,1}.
+const V = [[1,-1,1],[-1,1,-1]]
 
-function getNeighbors(idx: number): number[] {
-  const r = Math.floor(idx / 3), c = idx % 3
-  const n: number[] = []
-  if (r > 0) n.push(idx - 3)
-  if (r < 2) n.push(idx + 3)
-  if (c > 0) n.push(idx - 1)
-  if (c < 2) n.push(idx + 1)
-  return n
+function getConns(r: number, c: number): [number,number,number,number] {
+  return [
+    r > 0 ? -V[r-1][c] : 0,   // top
+    c < 2 ?  H[r][c]   : 0,   // right
+    r < 2 ?  V[r][c]   : 0,   // bottom
+    c > 0 ? -H[r][c-1] : 0,   // left
+  ]
 }
 
-function generateShuffle(steps = 120): number[] {
-  const t = [1, 2, 3, 4, 5, 6, 7, 8, 0]
-  let e = 8, last = -1
-  for (let i = 0; i < steps; i++) {
-    const ns = getNeighbors(e).filter(n => n !== last)
-    const pick = ns[Math.floor(Math.random() * ns.length)]
-    t[e] = t[pick]; t[pick] = 0
-    last = e; e = pick
+// Build an SVG path for a jigsaw piece within a BOX×BOX coordinate space.
+// The base square occupies (PAD,PAD)→(PAD+TILE, PAD+TILE).
+// Tab connectors: +1 = bulge outward, -1 = cut inward, 0 = flat border edge.
+function buildPath(top: number, right: number, bottom: number, left: number): string {
+  const s = PAD, e = PAD + TILE, m = PAD + TILE / 2
+  const p: string[] = [`M ${s} ${s}`]
+
+  // Top edge: left → right (y = s)
+  if (top === 0) {
+    p.push(`L ${e} ${s}`)
+  } else {
+    const ay = top > 0 ? 0 : 2*s
+    p.push(`L ${m-TW2} ${s}`, `C ${m-TW2} ${s} ${m-TW2} ${ay} ${m} ${ay}`, `C ${m} ${ay} ${m+TW2} ${ay} ${m+TW2} ${s}`, `L ${e} ${s}`)
   }
-  // Guarantee not accidentally solved
-  if (t.every((v, i) => (i === 8 ? v === 0 : v === i + 1))) return generateShuffle(steps)
-  return t
+
+  // Right edge: top → bottom (x = e)
+  if (right === 0) {
+    p.push(`L ${e} ${e}`)
+  } else {
+    const ax = right > 0 ? e+PAD : e-PAD
+    p.push(`L ${e} ${m-TW2}`, `C ${e} ${m-TW2} ${ax} ${m-TW2} ${ax} ${m}`, `C ${ax} ${m} ${ax} ${m+TW2} ${e} ${m+TW2}`, `L ${e} ${e}`)
+  }
+
+  // Bottom edge: right → left (y = e)
+  if (bottom === 0) {
+    p.push(`L ${s} ${e}`)
+  } else {
+    const ay = bottom > 0 ? e+PAD : e-PAD
+    p.push(`L ${m+TW2} ${e}`, `C ${m+TW2} ${e} ${m+TW2} ${ay} ${m} ${ay}`, `C ${m} ${ay} ${m-TW2} ${ay} ${m-TW2} ${e}`, `L ${s} ${e}`)
+  }
+
+  // Left edge: bottom → top (x = s)
+  if (left === 0) {
+    p.push(`L ${s} ${s}`)
+  } else {
+    const ax = left > 0 ? 0 : 2*s
+    p.push(`L ${s} ${m+TW2}`, `C ${s} ${m+TW2} ${ax} ${m+TW2} ${ax} ${m}`, `C ${ax} ${m} ${ax} ${m-TW2} ${s} ${m-TW2}`, `L ${s} ${s}`)
+  }
+
+  return p.join(' ') + ' Z'
 }
 
-function isSolved(tiles: number[]): boolean {
-  return tiles.every((v, i) => (i === 8 ? v === 0 : v === i + 1))
+// Pre-compute the 9 clip-path strings (indexed by piece value 0–8)
+const PIECE_PATHS = Array.from({ length: 9 }, (_, v) => {
+  const [top, right, bottom, left] = getConns(Math.floor(v/3), v%3)
+  return buildPath(top, right, bottom, left)
+})
+
+// ---------- shuffle ----------
+
+function generateShuffle(): number[] {
+  const arr = Array.from({ length: 9 }, (_, i) => i)
+  for (let i = 8; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i+1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  if (arr.every((v, i) => v === i)) return generateShuffle()
+  return arr
 }
 
-// ---------- static visual face (rendered inside each tile, not interactive) ----------
+// ---------- card image (same visual as before, rendered inside each piece) ----------
 
-function CardFace() {
+function CardFaceImage() {
   return (
     <div style={{
       width: SIZE, height: SIZE,
@@ -47,8 +94,6 @@ function CardFace() {
       alignItems: 'center', justifyContent: 'center',
       gap: 16, padding: 40,
       background: 'white',
-      borderRadius: 24,
-      border: '1px solid var(--color-border)',
       boxSizing: 'border-box',
       userSelect: 'none',
     }}>
@@ -58,7 +103,6 @@ function CardFace() {
       <p style={{ margin: 0, fontSize: 14, color: 'var(--color-muted)', textAlign: 'center', lineHeight: 1.5 }}>
         Use your Haverford School District Google account to join.
       </p>
-      {/* Visual-only Google button — not wired to OAuth */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10,
         border: '1px solid var(--color-border)',
@@ -83,10 +127,10 @@ function CardFace() {
 type Phase = 'puzzle' | 'celebrating' | 'signin'
 
 export function PuzzleSignIn() {
-  const [phase, setPhase] = useState<Phase>('puzzle')
-  const [tiles, setTiles] = useState<number[]>(() => generateShuffle())
-  const [moves, setMoves] = useState(0)
-  const [resetKey, setResetKey] = useState(0)
+  const [phase, setPhase]       = useState<Phase>('puzzle')
+  const [tiles, setTiles]       = useState<number[]>(() => generateShuffle())
+  const [selected, setSelected] = useState<number | null>(null)
+  const [swaps, setSwaps]       = useState(0)
 
   useEffect(() => {
     try {
@@ -94,18 +138,18 @@ export function PuzzleSignIn() {
     } catch { /* localStorage unavailable */ }
   }, [])
 
-  const emptyIdx = tiles.indexOf(0)
-
-  function move(idx: number) {
+  function handleClick(idx: number) {
     if (phase !== 'puzzle') return
-    if (!getNeighbors(emptyIdx).includes(idx)) return
+    if (selected === null)  { setSelected(idx); return }
+    if (selected === idx)   { setSelected(null); return }
+
     const next = [...tiles]
-    next[emptyIdx] = next[idx]
-    next[idx] = 0
+    ;[next[selected], next[idx]] = [next[idx], next[selected]]
     setTiles(next)
-    const newMoves = moves + 1
-    setMoves(newMoves)
-    if (isSolved(next)) {
+    setSwaps(n => n + 1)
+    setSelected(null)
+
+    if (next.every((v, i) => v === i)) {
       setPhase('celebrating')
       try { localStorage.setItem(SOLVED_KEY, '1') } catch { /* ignore */ }
       setTimeout(() => setPhase('signin'), 1800)
@@ -114,9 +158,9 @@ export function PuzzleSignIn() {
 
   function restart() {
     setTiles(generateShuffle())
-    setMoves(0)
+    setSwaps(0)
     setPhase('puzzle')
-    setResetKey(k => k + 1)
+    setSelected(null)
     try { localStorage.removeItem(SOLVED_KEY) } catch { /* ignore */ }
   }
 
@@ -146,56 +190,53 @@ export function PuzzleSignIn() {
     <div className="flex flex-col items-center gap-5">
       <div className="text-center space-y-1">
         <p className="text-sm font-semibold text-[var(--color-text)]">Solve the puzzle to sign in</p>
-        <p className="text-xs text-[var(--color-muted)]">{moves} move{moves !== 1 ? 's' : ''}</p>
+        <p className="text-xs text-[var(--color-muted)]">
+          {selected !== null ? 'Now click a piece to swap' : `${swaps} swap${swaps !== 1 ? 's' : ''}`}
+        </p>
       </div>
 
-      <div style={{ overflowX: 'auto', display: 'flex', justifyContent: 'center' }}>
+      {/* Extra padding so tabs outside the 360px board don't get clipped */}
+      <div style={{ padding: PAD, display: 'flex', justifyContent: 'center' }}>
         <div
-          key={resetKey}
-          className="relative select-none rounded-3xl"
-          style={{
-            width: SIZE, height: SIZE,
-            flexShrink: 0,
-            background: 'var(--color-bg)',
-            boxShadow: celebrating
-              ? '0 0 0 3px var(--color-accent), 0 8px 30px rgba(0,0,0,0.12)'
-              : '0 4px 20px rgba(0,0,0,0.10)',
-            transition: 'box-shadow 0.3s ease',
-          }}
+          className="relative select-none"
+          style={{ width: SIZE, height: SIZE }}
         >
           {tiles.map((value, idx) => {
-            if (value === 0) return null
-            const row = Math.floor(idx / 3)
-            const col = idx % 3
-            const imgRow = Math.floor((value - 1) / 3)
-            const imgCol = (value - 1) % 3
-            const canSlide = getNeighbors(emptyIdx).includes(idx)
+            const destRow = Math.floor(idx / 3), destCol = idx % 3
+            const srcRow  = Math.floor(value / 3), srcCol  = value % 3
+            const isSelected = selected === idx
 
             return (
               <div
                 key={value}
-                onClick={() => move(idx)}
+                onClick={() => handleClick(idx)}
                 style={{
                   position: 'absolute',
-                  width: TILE, height: TILE,
-                  left: col * TILE, top: row * TILE,
-                  overflow: 'hidden',
-                  borderRadius: 6,
-                  cursor: canSlide && !celebrating ? 'pointer' : 'default',
-                  transition: 'left 0.14s ease, top 0.14s ease, box-shadow 0.25s ease',
-                  boxShadow: celebrating
-                    ? 'inset 0 0 0 2px var(--color-accent)'
-                    : 'inset 0 0 0 2px var(--color-bg)',
-                  willChange: 'left, top',
+                  // Offset by -PAD so the BOX×BOX div is centered on the TILE slot
+                  left: destCol * TILE - PAD,
+                  top:  destRow * TILE - PAD,
+                  width: BOX, height: BOX,
+                  cursor: celebrating ? 'default' : 'pointer',
+                  clipPath: `path('${PIECE_PATHS[value]}')`,
+                  // drop-shadow gives visible jigsaw cut lines between pieces
+                  filter: celebrating
+                    ? `drop-shadow(0 0 6px var(--color-accent))`
+                    : isSelected
+                      ? `brightness(0.82) drop-shadow(0 0 5px var(--color-accent))`
+                      : `drop-shadow(0 1px 3px rgba(0,0,0,0.22))`,
+                  transition: 'filter 0.15s ease',
+                  zIndex: isSelected ? 10 : 1,
                 }}
               >
+                {/* Full CardFaceImage shifted so the correct region shows through */}
                 <div style={{
                   position: 'absolute',
-                  left: -(imgCol * TILE),
-                  top: -(imgRow * TILE),
+                  left: PAD - srcCol * TILE,
+                  top:  PAD - srcRow * TILE,
+                  width: SIZE, height: SIZE,
                   pointerEvents: 'none',
                 }}>
-                  <CardFace />
+                  <CardFaceImage />
                 </div>
               </div>
             )
@@ -203,13 +244,13 @@ export function PuzzleSignIn() {
 
           {celebrating && (
             <div
-              className="absolute inset-0 flex items-center justify-center z-10 rounded-3xl"
-              style={{ background: 'rgba(255,255,255,0.88)' }}
+              className="absolute inset-0 flex items-center justify-center z-20 rounded-2xl"
+              style={{ background: 'rgba(255,255,255,0.90)' }}
             >
               <div className="text-center space-y-2">
                 <div className="text-4xl">🎉</div>
                 <div className="text-xl font-semibold text-[var(--color-text)]">You solved it!</div>
-                <div className="text-sm text-[var(--color-muted)]">{moves} move{moves !== 1 ? 's' : ''}</div>
+                <div className="text-sm text-[var(--color-muted)]">{swaps} swap{swaps !== 1 ? 's' : ''}</div>
               </div>
             </div>
           )}

@@ -2601,7 +2601,7 @@ export function PuzzleWeekBonusHub() {
         className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
       >
         <ArrowLeft className="h-4 w-4 flex-shrink-0 text-[var(--color-muted)]" />
-        Main Puzzles
+        Puzzle Week
       </Link>
       {canManage && (
         <Link

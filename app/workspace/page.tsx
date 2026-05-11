@@ -29,11 +29,12 @@ interface CardOption {
 }
 
 type WorkspaceMode = 'library' | 'lab'
-type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls' | 'puzzle-week'
+type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls' | 'puzzle-week' | 'logic-puzzles'
 type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 
 const SIDEBAR_WIDTH_CLASS = 'md:w-48'
 const PUZZLE_WEEK_URL = 'https://puzzleweek.abrastat.com'
+const LOGIC_PUZZLES_URL = 'https://puzzleweek.abrastat.com/bonus'
 
 const EXPLORE_CARD_OPTIONS: CardOption[] = [
   { type: 'graph',      icon: '📈', label: 'Graph' },
@@ -56,7 +57,7 @@ const INFERENCE_CARD_OPTIONS: CardOption[] = [
   { type: 'two-prop-randomization',  icon: '🎲', label: 'Two-Prop Randomization Test' },
 ]
 
-const BASE_LIBRARY_ITEMS: { id: Exclude<LibrarySection, 'puzzle-week'>; label: string; soon?: boolean }[] = [
+const BASE_LIBRARY_ITEMS: { id: Exclude<LibrarySection, 'puzzle-week' | 'logic-puzzles'>; label: string; soon?: boolean }[] = [
   { id: 'all', label: 'Public Datasets' },
   { id: 'mine', label: 'My Datasets' },
   { id: 'games', label: 'Games' },
@@ -695,11 +696,11 @@ function WorkspaceContent() {
   const { user } = useAuth()
   const showPuzzleWeek = canAccessPuzzleWeek(user)
   const libraryItems: { id: LibrarySection; label: string; soon?: boolean }[] = showPuzzleWeek
-    ? [...BASE_LIBRARY_ITEMS, { id: 'puzzle-week', label: 'Puzzle Week' }]
+    ? [...BASE_LIBRARY_ITEMS, { id: 'puzzle-week', label: 'Puzzle Week' }, { id: 'logic-puzzles', label: 'Logic Puzzles' }]
     : BASE_LIBRARY_ITEMS
 
   useEffect(() => {
-    if (librarySection === 'puzzle-week' && !showPuzzleWeek) {
+    if ((librarySection === 'puzzle-week' || librarySection === 'logic-puzzles') && !showPuzzleWeek) {
       setLibrarySection('all')
     }
   }, [librarySection, showPuzzleWeek])
@@ -707,6 +708,9 @@ function WorkspaceContent() {
   useEffect(() => {
     if (mode === 'library' && librarySection === 'puzzle-week' && showPuzzleWeek) {
       window.location.href = PUZZLE_WEEK_URL
+    }
+    if (mode === 'library' && librarySection === 'logic-puzzles' && showPuzzleWeek) {
+      window.location.href = LOGIC_PUZZLES_URL
     }
   }, [librarySection, mode, showPuzzleWeek])
 
@@ -763,6 +767,10 @@ function WorkspaceContent() {
   function handleLibrarySectionChange(nextSection: LibrarySection) {
     if (nextSection === 'puzzle-week') {
       window.location.href = PUZZLE_WEEK_URL
+      return
+    }
+    if (nextSection === 'logic-puzzles') {
+      window.location.href = LOGIC_PUZZLES_URL
       return
     }
     setLibrarySection(nextSection)

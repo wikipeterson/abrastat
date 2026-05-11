@@ -17,6 +17,7 @@ const BASE_LIBRARY_LINKS = [
 ]
 
 const PUZZLE_WEEK_URL = 'https://puzzleweek.abrastat.com'
+const LOGIC_PUZZLES_URL = 'https://puzzleweek.abrastat.com/bonus'
 
 const APPLET_LINKS = [
   { href: '/applets/dice-roller', label: 'Dice Roller' },
@@ -40,7 +41,7 @@ export function AppletShell({
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { user } = useAuth()
   const libraryLinks = canAccessPuzzleWeek(user)
-    ? [...BASE_LIBRARY_LINKS, { href: PUZZLE_WEEK_URL, label: 'Puzzle Week' }]
+    ? [...BASE_LIBRARY_LINKS, { href: PUZZLE_WEEK_URL, label: 'Puzzle Week' }, { href: LOGIC_PUZZLES_URL, label: 'Logic Puzzles' }]
     : BASE_LIBRARY_LINKS
 
   return (

@@ -1712,6 +1712,9 @@ function StarBattleBoard({
   const [puzzleIdx, setPuzzleIdx] = useState(0)
   const [cells, setCells] = useState<number[]>(() => Array(SB_PUZZLES['easy'][0].size ** 2).fill(0))
   const [howToPlayOpen, setHowToPlayOpen] = useState(false)
+  const [solvedIndices, setSolvedIndices] = useState<Record<StarBattleLevel, Set<number>>>({
+    easy: new Set(), medium: new Set(), hard: new Set(),
+  })
   const solvedRef = useRef(false)
 
   const puzzle = SB_PUZZLES[level][puzzleIdx % SB_PUZZLES[level].length]
@@ -1724,9 +1727,10 @@ function StarBattleBoard({
     if (solved && !solvedRef.current) {
       solvedRef.current = true
       onSolve(level)
+      setSolvedIndices(prev => ({ ...prev, [level]: new Set(prev[level]).add(puzzleIdx) }))
     }
     if (!solved) solvedRef.current = false
-  }, [solved, level, onSolve])
+  }, [solved, level, puzzleIdx, onSolve])
 
   function switchLevel(l: StarBattleLevel) {
     setLevel(l)
@@ -1735,10 +1739,9 @@ function StarBattleBoard({
     solvedRef.current = false
   }
 
-  function newPuzzle() {
-    const next = (puzzleIdx + 1) % SB_PUZZLES[level].length
-    setPuzzleIdx(next)
-    setCells(Array(SB_PUZZLES[level][next % SB_PUZZLES[level].length].size ** 2).fill(0))
+  function selectPuzzle(idx: number) {
+    setPuzzleIdx(idx)
+    setCells(Array(SB_PUZZLES[level][idx].size ** 2).fill(0))
     solvedRef.current = false
   }
 
@@ -1760,7 +1763,7 @@ function StarBattleBoard({
         <div className="h-full w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-2">
           <div
             className="grid h-full w-full"
-            style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))` }}
+            style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${size}, minmax(0, 1fr))` }}
           >
             {cells.map((state, idx) => {
               const region = regions[idx]
@@ -1774,7 +1777,7 @@ function StarBattleBoard({
                   type="button"
                   onClick={() => handleCell(idx)}
                   aria-label={`Cell ${row + 1},${col + 1}`}
-                  className="relative flex items-center justify-center transition-colors duration-100"
+                  className="relative flex items-center justify-center overflow-hidden transition-colors duration-100"
                   style={{
                     background: SB_REGION_COLORS[region % SB_REGION_COLORS.length],
                     borderRight: rightNeighbor !== region ? '2px solid rgba(0,0,0,0.25)' : '1px solid rgba(0,0,0,0.08)',
@@ -1831,13 +1834,6 @@ function StarBattleBoard({
             </div>
             <button
               type="button"
-              onClick={newPuzzle}
-              className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 transition hover:bg-slate-50"
-            >
-              <div className="text-sm font-bold text-[var(--color-text)]">New Board</div>
-            </button>
-            <button
-              type="button"
               onClick={() => setHowToPlayOpen(true)}
               className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-slate-50"
             >
@@ -1845,17 +1841,50 @@ function StarBattleBoard({
               <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">?</span>
             </button>
           </div>
-          <div className="hidden flex-shrink-0 grid-cols-2 gap-3 lg:grid">
+          <div className="flex flex-shrink-0 flex-col gap-1 lg:hidden">
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">Puzzle</div>
+            <div className="grid grid-cols-5 gap-1.5">
+              {SB_PUZZLES[level].map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => selectPuzzle(i)}
+                  className={`flex h-8 items-center justify-center rounded-lg text-xs font-bold transition ${
+                    puzzleIdx === i
+                      ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                      : solvedIndices[level].has(i)
+                        ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                        : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                  }`}
+                >
+                  {solvedIndices[level].has(i) && puzzleIdx !== i ? '✓' : i + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="hidden flex-shrink-0 flex-col gap-2 lg:flex">
             <BonusStatTile label="Stars" value={`${numStars}/${size * 2}`} />
-            <button
-              type="button"
-              onClick={newPuzzle}
-              className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-slate-50"
-            >
-              <div className="text-[clamp(1.15rem,1.55vw,1.55rem)] font-bold leading-none text-[var(--color-text)]">
-                New Board
+            <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-muted)]">Puzzle</div>
+              <div className="grid grid-cols-5 gap-1.5">
+                {SB_PUZZLES[level].map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => selectPuzzle(i)}
+                    className={`flex h-8 items-center justify-center rounded-lg text-xs font-bold transition ${
+                      puzzleIdx === i
+                        ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                        : solvedIndices[level].has(i)
+                          ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                          : 'border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-slate-50'
+                    }`}
+                  >
+                    {solvedIndices[level].has(i) && puzzleIdx !== i ? '✓' : i + 1}
+                  </button>
+                ))}
               </div>
-            </button>
+            </div>
           </div>
           {numStars === size * 2 && !solved && !valid && (
             <div className="flex-shrink-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -2683,7 +2712,7 @@ export function PuzzleWeekBonusHub() {
                 className="mt-1 text-4xl lg:text-5xl font-semibold leading-tight text-[var(--color-text)]"
                 style={{ fontFamily: 'var(--font-fraunces)' }}
               >
-                Bonus Puzzles
+                Logic Puzzles
               </h1>
               <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] shadow-sm">
                 <Calendar className="h-3 w-3" />

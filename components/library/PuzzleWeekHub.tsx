@@ -515,14 +515,14 @@ export function PuzzleWeekHub() {
                   Try to earn all {TOTAL_BONUS_MEDALS} medals
                 </p>
                 <p className="mt-1 text-xs text-[var(--color-muted)]">
-                  {bonusMedalCount} of {TOTAL_BONUS_MEDALS} earned across the bonus puzzles.
+                  {bonusMedalCount} of {TOTAL_BONUS_MEDALS} earned across the logic puzzles.
                 </p>
               </div>
               <Link
                 href="/puzzleweek/bonus"
                 className="inline-flex flex-shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
               >
-                Bonus Puzzles
+                Logic Puzzles
               </Link>
             </div>
             <div className="mt-3 h-3 overflow-hidden rounded-full bg-[var(--color-accent-light)]">

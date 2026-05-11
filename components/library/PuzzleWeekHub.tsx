@@ -535,7 +535,7 @@ export function PuzzleWeekHub() {
         </div>
 
         {entry && (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.8fr)]">
 
             {/* Rules card */}
             <div className="rounded-3xl border border-[var(--color-border)] bg-white/70 px-4 sm:px-7 py-4 sm:py-5 shadow-sm">
@@ -612,7 +612,7 @@ export function PuzzleWeekHub() {
                     return (
                       <div
                         key={lb.entryId}
-                        className={`flex items-center gap-2 border-b px-3 py-2 last:border-b-0 border-[var(--color-border)] ${
+                        className={`flex items-start gap-2 border-b px-3 py-2 last:border-b-0 border-[var(--color-border)] ${
                           isMe ? 'bg-[var(--color-accent-light)]/40' : 'hover:bg-slate-50/60'
                         }`}
                       >
@@ -623,8 +623,8 @@ export function PuzzleWeekHub() {
                           }
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`truncate text-xs font-semibold ${isMe ? 'text-[var(--color-accent)]' : 'text-[var(--color-text)]'}`}>
+                          <div className="flex items-start gap-1.5">
+                            <span className={`text-xs font-semibold leading-snug break-words ${isMe ? 'text-[var(--color-accent)]' : 'text-[var(--color-text)]'}`}>
                               {lb.name}
                             </span>
                             {isMe && (

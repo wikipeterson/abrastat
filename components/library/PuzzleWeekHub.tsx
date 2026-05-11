@@ -53,7 +53,7 @@ function topVotedIds(tally: Record<string, number>): Set<string> {
 
 const MAIN_PUZZLES = PUZZLE_WEEK_PUZZLES.slice(0, PUZZLE_WEEK_PUZZLES.length - 1)
 const META_PUZZLE = PUZZLE_WEEK_PUZZLES[PUZZLE_WEEK_PUZZLES.length - 1]
-const TOTAL_BONUS_MEDALS = 15
+const TOTAL_BONUS_MEDALS = 18
 
 function countBonusMedals(medals: PuzzleWeekBonusMedals) {
   return (
@@ -61,7 +61,8 @@ function countBonusMedals(medals: PuzzleWeekBonusMedals) {
     medals.lightsOut.length +
     medals.netwalk.length +
     medals.game2048.length +
-    medals.queens.length
+    medals.queens.length +
+    medals.starBattle.length
   )
 }
 

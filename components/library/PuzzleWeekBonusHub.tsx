@@ -62,6 +62,11 @@ type StarBattleLevel = 'easy' | 'medium' | 'hard'
 const STAR_BATTLE_LABELS: Record<StarBattleLevel, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' }
 const STAR_BATTLE_MEDALS: Record<StarBattleLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
 const STAR_BATTLE_MEDALS_KEY = 'pw-starbattle-medals'
+const STAR_BATTLE_SOLVED_KEYS: Record<StarBattleLevel, string> = {
+  easy: 'pw-starbattle-solved-easy',
+  medium: 'pw-starbattle-solved-medium',
+  hard: 'pw-starbattle-solved-hard',
+}
 
 // Each puzzle: size×size grid, regions[] maps cell index→region id (0-based), solution is Set of star indices
 type StarBattlePuzzle = { size: number; regions: number[]; solution: number[] }
@@ -1734,18 +1739,17 @@ function sbIsSolved(stars: number[], puzzle: StarBattlePuzzle) {
 // Cell state: 0 = empty, 1 = star, 2 = X marker
 function StarBattleBoard({
   medals,
+  solvedBoards,
   onSolve,
 }: {
   medals: Set<StarBattleLevel>
-  onSolve: (level: StarBattleLevel) => void
+  solvedBoards: Record<StarBattleLevel, Set<number>>
+  onSolve: (level: StarBattleLevel, puzzleIdx: number) => void
 }) {
   const [level, setLevel] = useState<StarBattleLevel>('easy')
   const [puzzleIdx, setPuzzleIdx] = useState(0)
   const [cells, setCells] = useState<number[]>(() => Array(SB_PUZZLES['easy'][0].size ** 2).fill(0))
   const [howToPlayOpen, setHowToPlayOpen] = useState(false)
-  const [solvedIndices, setSolvedIndices] = useState<Record<StarBattleLevel, Set<number>>>({
-    easy: new Set(), medium: new Set(), hard: new Set(),
-  })
   const solvedRef = useRef(false)
 
   const puzzle = SB_PUZZLES[level][puzzleIdx % SB_PUZZLES[level].length]
@@ -1757,8 +1761,7 @@ function StarBattleBoard({
   useEffect(() => {
     if (solved && !solvedRef.current) {
       solvedRef.current = true
-      onSolve(level)
-      setSolvedIndices(prev => ({ ...prev, [level]: new Set(prev[level]).add(puzzleIdx) }))
+      onSolve(level, puzzleIdx)
     }
     if (!solved) solvedRef.current = false
   }, [solved, level, puzzleIdx, onSolve])
@@ -1883,12 +1886,12 @@ function StarBattleBoard({
                   className={`flex h-8 items-center justify-center rounded-lg text-xs font-bold transition ${
                     puzzleIdx === i
                       ? 'bg-[var(--color-accent)] text-white shadow-sm'
-                      : solvedIndices[level].has(i)
+                      : solvedBoards[level].has(i)
                         ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
                         : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
                   }`}
                 >
-                  {solvedIndices[level].has(i) && puzzleIdx !== i ? '✓' : i + 1}
+                  {solvedBoards[level].has(i) && puzzleIdx !== i ? '✓' : i + 1}
                 </button>
               ))}
             </div>
@@ -1906,12 +1909,12 @@ function StarBattleBoard({
                     className={`flex h-8 items-center justify-center rounded-lg text-xs font-bold transition ${
                       puzzleIdx === i
                         ? 'bg-[var(--color-accent)] text-white shadow-sm'
-                        : solvedIndices[level].has(i)
+                        : solvedBoards[level].has(i)
                           ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
                           : 'border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-slate-50'
                     }`}
                   >
-                    {solvedIndices[level].has(i) && puzzleIdx !== i ? '✓' : i + 1}
+                    {solvedBoards[level].has(i) && puzzleIdx !== i ? '✓' : i + 1}
                   </button>
                 ))}
               </div>
@@ -2038,6 +2041,7 @@ type BonusMedalState = {
 }
 
 type QueensSolvedBoardState = Record<QueensLevel, Set<number>>
+type StarBattleSolvedBoardState = Record<StarBattleLevel, Set<number>>
 
 function createEmptyBonusMedalState(): BonusMedalState {
   return {
@@ -2056,6 +2060,10 @@ function createEmptyQueensSolvedBoardState(): QueensSolvedBoardState {
     medium: new Set(),
     hard: new Set(),
   }
+}
+
+function createEmptyStarBattleSolvedBoardState(): StarBattleSolvedBoardState {
+  return { easy: new Set(), medium: new Set(), hard: new Set() }
 }
 
 function remapEasyQueensSolvedSet(set: Set<number>) {
@@ -2181,6 +2189,20 @@ function writeLocalQueensSolvedBoardState(state: QueensSolvedBoardState) {
   try { localStorage.setItem(QUEENS_SOLVED_ORDER_VERSION_KEY, String(PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION)) } catch {}
 }
 
+function readLocalStarBattleSolvedBoardState(): StarBattleSolvedBoardState {
+  return {
+    easy: readStoredNumberSet(STAR_BATTLE_SOLVED_KEYS.easy),
+    medium: readStoredNumberSet(STAR_BATTLE_SOLVED_KEYS.medium),
+    hard: readStoredNumberSet(STAR_BATTLE_SOLVED_KEYS.hard),
+  }
+}
+
+function writeLocalStarBattleSolvedBoardState(state: StarBattleSolvedBoardState) {
+  try { localStorage.setItem(STAR_BATTLE_SOLVED_KEYS.easy, JSON.stringify([...state.easy].sort((a, b) => a - b))) } catch {}
+  try { localStorage.setItem(STAR_BATTLE_SOLVED_KEYS.medium, JSON.stringify([...state.medium].sort((a, b) => a - b))) } catch {}
+  try { localStorage.setItem(STAR_BATTLE_SOLVED_KEYS.hard, JSON.stringify([...state.hard].sort((a, b) => a - b))) } catch {}
+}
+
 function bonusMedalsFromProfile(profile: PuzzleWeekBonusMedals): BonusMedalState {
   return {
     slider: new Set(profile.slider as SliderLevel[]),
@@ -2220,7 +2242,24 @@ function queensSolvedBoardsToProfile(state: QueensSolvedBoardState): PuzzleWeekQ
   }
 }
 
-function bonusMedalsToProfile(state: BonusMedalState, queensSolved: QueensSolvedBoardState): PuzzleWeekBonusMedals {
+function starBattleSolvedBoardsFromProfile(profile: PuzzleWeekBonusMedals): StarBattleSolvedBoardState {
+  const sb = profile.starBattleSolved ?? { easy: [], medium: [], hard: [] }
+  return {
+    easy: new Set(sb.easy),
+    medium: new Set(sb.medium),
+    hard: new Set(sb.hard),
+  }
+}
+
+function starBattleSolvedBoardsToProfile(state: StarBattleSolvedBoardState): PuzzleWeekQueensSolvedBoards {
+  return {
+    easy: [...state.easy].sort((a, b) => a - b),
+    medium: [...state.medium].sort((a, b) => a - b),
+    hard: [...state.hard].sort((a, b) => a - b),
+  }
+}
+
+function bonusMedalsToProfile(state: BonusMedalState, queensSolved: QueensSolvedBoardState, starBattleSolved: StarBattleSolvedBoardState): PuzzleWeekBonusMedals {
   return {
     slider: [...state.slider],
     lightsOut: [...state.lightsOut],
@@ -2230,6 +2269,7 @@ function bonusMedalsToProfile(state: BonusMedalState, queensSolved: QueensSolved
     queensSolved: queensSolvedBoardsToProfile(queensSolved),
     queensSolvedOrderVersion: PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION,
     starBattle: [...state.starBattle],
+    starBattleSolved: starBattleSolvedBoardsToProfile(starBattleSolved),
   }
 }
 
@@ -2302,6 +2342,22 @@ function cloneQueensSolvedBoardState(state: QueensSolvedBoardState): QueensSolve
   }
 }
 
+function unionStarBattleSolvedBoardStates(a: StarBattleSolvedBoardState, b: StarBattleSolvedBoardState): StarBattleSolvedBoardState {
+  return {
+    easy: unionSets(a.easy, b.easy),
+    medium: unionSets(a.medium, b.medium),
+    hard: unionSets(a.hard, b.hard),
+  }
+}
+
+function starBattleSolvedBoardStatesEqual(a: StarBattleSolvedBoardState, b: StarBattleSolvedBoardState) {
+  return setsEqual(a.easy, b.easy) && setsEqual(a.medium, b.medium) && setsEqual(a.hard, b.hard)
+}
+
+function cloneStarBattleSolvedBoardState(state: StarBattleSolvedBoardState): StarBattleSolvedBoardState {
+  return { easy: new Set(state.easy), medium: new Set(state.medium), hard: new Set(state.hard) }
+}
+
 // ---------- page ----------
 
 export function PuzzleWeekBonusHub() {
@@ -2346,6 +2402,8 @@ export function PuzzleWeekBonusHub() {
   const bonusMedalStateRef = useRef<BonusMedalState>(createEmptyBonusMedalState())
   const [queensSolvedBoards, setQueensSolvedBoards] = useState<QueensSolvedBoardState>(createEmptyQueensSolvedBoardState())
   const queensSolvedBoardsRef = useRef<QueensSolvedBoardState>(createEmptyQueensSolvedBoardState())
+  const [starBattleSolvedBoards, setStarBattleSolvedBoards] = useState<StarBattleSolvedBoardState>(createEmptyStarBattleSolvedBoardState())
+  const starBattleSolvedBoardsRef = useRef<StarBattleSolvedBoardState>(createEmptyStarBattleSolvedBoardState())
   const queensFrameRef = useRef<HTMLIFrameElement | null>(null)
 
   function getCurrentBonusMedalState(): BonusMedalState {
@@ -2361,6 +2419,10 @@ export function PuzzleWeekBonusHub() {
 
   function getCurrentQueensSolvedBoardState(): QueensSolvedBoardState {
     return cloneQueensSolvedBoardState(queensSolvedBoardsRef.current)
+  }
+
+  function getCurrentStarBattleSolvedBoardState(): StarBattleSolvedBoardState {
+    return cloneStarBattleSolvedBoardState(starBattleSolvedBoardsRef.current)
   }
 
   function applyBonusMedalState(next: BonusMedalState) {
@@ -2380,6 +2442,12 @@ export function PuzzleWeekBonusHub() {
     writeLocalQueensSolvedBoardState(next)
   }
 
+  function applyStarBattleSolvedBoardState(next: StarBattleSolvedBoardState) {
+    starBattleSolvedBoardsRef.current = cloneStarBattleSolvedBoardState(next)
+    setStarBattleSolvedBoards(cloneStarBattleSolvedBoardState(next))
+    writeLocalStarBattleSolvedBoardState(next)
+  }
+
   function postQueensSync(next: QueensSolvedBoardState = getCurrentQueensSolvedBoardState()) {
     queensFrameRef.current?.contentWindow?.postMessage({
       type: 'queens-sync',
@@ -2390,15 +2458,17 @@ export function PuzzleWeekBonusHub() {
     }, '*')
   }
 
-  function syncBonusProfile(nextMedals: BonusMedalState, nextQueensSolvedBoards: QueensSolvedBoardState) {
+  function syncBonusProfile(nextMedals: BonusMedalState, nextQueensSolvedBoards: QueensSolvedBoardState, nextStarBattleSolvedBoards?: StarBattleSolvedBoardState) {
+    const starBattleBoards = nextStarBattleSolvedBoards ?? getCurrentStarBattleSolvedBoardState()
     applyBonusMedalState(nextMedals)
     applyQueensSolvedBoardState(nextQueensSolvedBoards)
+    applyStarBattleSolvedBoardState(starBattleBoards)
     postQueensSync(nextQueensSolvedBoards)
     if (user && !isGuest) {
       void savePuzzleWeekBonusMedals(
         puzzleWeekEventId,
         user,
-        bonusMedalsToProfile(nextMedals, nextQueensSolvedBoards),
+        bonusMedalsToProfile(nextMedals, nextQueensSolvedBoards, starBattleBoards),
       ).catch(() => {})
     }
   }
@@ -2408,6 +2478,8 @@ export function PuzzleWeekBonusHub() {
     applyBonusMedalState(localState)
     const localQueensState = readLocalQueensSolvedBoardState()
     applyQueensSolvedBoardState(localQueensState)
+    const localStarBattleState = readLocalStarBattleSolvedBoardState()
+    applyStarBattleSolvedBoardState(localStarBattleState)
 
     if (!user || isGuest) return
 
@@ -2418,18 +2490,22 @@ export function PuzzleWeekBonusHub() {
         if (cancelled) return
         const remoteState = bonusMedalsFromProfile(remoteProfile)
         const remoteQueensState = queensSolvedBoardsFromProfile(remoteProfile)
+        const remoteStarBattleState = starBattleSolvedBoardsFromProfile(remoteProfile)
         const mergedState = unionBonusMedalStates(getCurrentBonusMedalState(), remoteState)
         const mergedQueensState = unionQueensSolvedBoardStates(getCurrentQueensSolvedBoardState(), remoteQueensState)
+        const mergedStarBattleState = unionStarBattleSolvedBoardStates(getCurrentStarBattleSolvedBoardState(), remoteStarBattleState)
         applyBonusMedalState(mergedState)
         applyQueensSolvedBoardState(mergedQueensState)
+        applyStarBattleSolvedBoardState(mergedStarBattleState)
         if (
           !bonusMedalStatesEqual(remoteState, mergedState) ||
-          !queensSolvedBoardStatesEqual(remoteQueensState, mergedQueensState)
+          !queensSolvedBoardStatesEqual(remoteQueensState, mergedQueensState) ||
+          !starBattleSolvedBoardStatesEqual(remoteStarBattleState, mergedStarBattleState)
         ) {
           await savePuzzleWeekBonusMedals(
             puzzleWeekEventId,
             user,
-            bonusMedalsToProfile(mergedState, mergedQueensState),
+            bonusMedalsToProfile(mergedState, mergedQueensState, mergedStarBattleState),
           )
         }
       } catch {
@@ -2477,11 +2553,16 @@ export function PuzzleWeekBonusHub() {
     syncBonusProfile(next, getCurrentQueensSolvedBoardState())
   }
 
-  function awardStarBattleMedal(level: StarBattleLevel) {
+  function awardStarBattleMedal(level: StarBattleLevel, puzzleIdx: number) {
     const current = getCurrentBonusMedalState()
-    if (current.starBattle.has(level)) return
-    const next = { ...current, starBattle: new Set(current.starBattle).add(level) }
-    syncBonusProfile(next, getCurrentQueensSolvedBoardState())
+    const currentBoards = getCurrentStarBattleSolvedBoardState()
+    const hasMedal = current.starBattle.has(level)
+    const hasPuzzle = currentBoards[level].has(puzzleIdx)
+    if (hasMedal && hasPuzzle) return
+    const nextMedals = hasMedal ? current : { ...current, starBattle: new Set(current.starBattle).add(level) }
+    const nextBoards = cloneStarBattleSolvedBoardState(currentBoards)
+    if (!hasPuzzle) nextBoards[level].add(puzzleIdx)
+    syncBonusProfile(nextMedals, getCurrentQueensSolvedBoardState(), nextBoards)
   }
 
   // Listen for solve messages posted by the Queens iframe
@@ -2531,7 +2612,7 @@ export function PuzzleWeekBonusHub() {
           onLoad={() => postQueensSync()}
         />
       )
-      case 'starbattle': return <StarBattleBoard medals={starBattleMedals} onSolve={awardStarBattleMedal} />
+      case 'starbattle': return <StarBattleBoard medals={starBattleMedals} solvedBoards={starBattleSolvedBoards} onSolve={awardStarBattleMedal} />
       default:          return null
     }
   }

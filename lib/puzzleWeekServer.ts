@@ -60,6 +60,7 @@ function emptyBonusMedals(): PuzzleWeekBonusMedals {
     queensSolved: { easy: [], medium: [], hard: [] },
     queensSolvedOrderVersion: PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION,
     starBattle: [],
+    starBattleSolved: { easy: [], medium: [], hard: [] },
   }
 }
 
@@ -112,6 +113,7 @@ function sanitizeBonusMedals(data: Record<string, unknown> | PuzzleWeekBonusMeda
     queensSolved,
     queensSolvedOrderVersion: sanitizeQueensSolvedOrderVersion(data?.queensSolvedOrderVersion, queensSolved),
     starBattle: sanitizeStringArray(data?.starBattle, BONUS_TIER_VALUES),
+    starBattleSolved: sanitizeQueensSolvedBoards(data?.starBattleSolved),
   }
 }
 

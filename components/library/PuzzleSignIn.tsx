@@ -171,7 +171,7 @@ export function PuzzleSignIn() {
                   clipPath: `path('${PIECE_PATHS[value]}')`,
                   filter: isSelected
                     ? 'brightness(0.82) drop-shadow(0 0 5px var(--color-accent))'
-                    : 'drop-shadow(0 1px 3px rgba(0,0,0,0.22))',
+                    : 'drop-shadow(0 0 1.5px var(--color-border)) drop-shadow(0 1px 3px rgba(0,0,0,0.15))',
                   transition: 'filter 0.15s ease',
                   zIndex: isSelected ? 10 : 1,
                 }}

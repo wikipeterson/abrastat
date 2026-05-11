@@ -149,6 +149,8 @@ export function PuzzleSignIn() {
           className="select-none"
           style={{
             position: 'relative', width: SIZE, height: SIZE,
+            background: 'var(--color-border)',
+            borderRadius: 4,
             opacity: solved ? 0 : 1,
             transition: 'opacity 0.5s ease',
             pointerEvents: solved ? 'none' : 'auto',
@@ -171,7 +173,7 @@ export function PuzzleSignIn() {
                   clipPath: `path('${PIECE_PATHS[value]}')`,
                   filter: isSelected
                     ? 'brightness(0.82) drop-shadow(0 0 5px var(--color-accent))'
-                    : 'drop-shadow(0 0 1.5px var(--color-border)) drop-shadow(0 1px 3px rgba(0,0,0,0.15))',
+                    : undefined,
                   transition: 'filter 0.15s ease',
                   zIndex: isSelected ? 10 : 1,
                 }}

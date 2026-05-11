@@ -466,7 +466,7 @@ export function PuzzleWeekHub() {
           </div>
         )}
 
-        <div className={`grid gap-4 ${entry ? 'lg:grid-cols-2' : ''}`}>
+        {user && !isGuest && <div className={`grid gap-4 ${entry ? 'lg:grid-cols-2' : ''}`}>
           {entry && (
             <div className="rounded-3xl border border-[var(--color-border)] bg-white/80 px-4 sm:px-5 py-4 shadow-sm">
               <div className="flex items-start justify-between gap-4">
@@ -533,7 +533,7 @@ export function PuzzleWeekHub() {
               />
             </div>
           </div>
-        </div>
+        </div>}
 
         {entry && (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.8fr)]">
@@ -1006,7 +1006,7 @@ export function PuzzleWeekHub() {
         )}
 
         {/* ── Community Poll ── */}
-        <div className="space-y-5 border-t border-[var(--color-border)] pt-8">
+        {user && !isGuest && <div className="space-y-5 border-t border-[var(--color-border)] pt-8">
           <div className="flex items-center gap-2.5">
             <span className="text-xl leading-none">🗳️</span>
             <h2 className="text-lg font-semibold text-[var(--color-text)]">Community Poll</h2>
@@ -1073,10 +1073,10 @@ export function PuzzleWeekHub() {
               </div>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Leaderboard — full version for non-registered users */}
-        {!entry && <div className="space-y-4 border-t border-[var(--color-border)] pt-8">
+        {user && !isGuest && !entry && <div className="space-y-4 border-t border-[var(--color-border)] pt-8">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
               <Trophy className="h-5 w-5 text-[var(--color-accent)]" />

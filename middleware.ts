@@ -7,14 +7,6 @@ function isPuzzleWeekHost(hostHeader: string | null): boolean {
 }
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-
-  if (isPuzzleWeekHost(request.headers.get('host')) && pathname === '/') {
-    const url = request.nextUrl.clone()
-    url.pathname = '/puzzleweek'
-    return NextResponse.rewrite(url)
-  }
-
   return NextResponse.next()
 }
 

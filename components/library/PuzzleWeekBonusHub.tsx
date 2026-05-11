@@ -388,9 +388,9 @@ const SB_REGION_COLORS = [
 
 type Game2048Medal = 'bronze' | 'silver' | 'gold'
 const GAME_2048_MEDALS: Record<Game2048Medal, { threshold: number; emoji: string; label: string }> = {
-  bronze: { threshold: 1024, emoji: '🥉', label: 'Bronze' },
-  silver: { threshold: 2048, emoji: '🥈', label: 'Silver' },
-  gold: { threshold: 4096, emoji: '🥇', label: 'Gold' },
+  bronze: { threshold: 512, emoji: '🥉', label: 'Bronze' },
+  silver: { threshold: 1024, emoji: '🥈', label: 'Silver' },
+  gold: { threshold: 2048, emoji: '🥇', label: 'Gold' },
 }
 const GAME_2048_MEDALS_KEY = 'pw-2048-medals'
 
@@ -1583,10 +1583,10 @@ function Puzzle2048Board({
               {stuck
                 ? 'No more moves. Start a new board and try another run.'
                 : bestTile >= GAME_2048_MEDALS.gold.threshold
-                  ? `🎉 ${GAME_2048_MEDALS.gold.emoji} Gold earned at 4096!`
+                  ? `🎉 ${GAME_2048_MEDALS.gold.emoji} Gold earned at 2048!`
                   : won
-                    ? `🎉 ${GAME_2048_MEDALS.silver.emoji} Silver earned at 2048!`
-                    : `🎉 ${GAME_2048_MEDALS.bronze.emoji} Bronze earned at 1024!`}
+                    ? `🎉 ${GAME_2048_MEDALS.silver.emoji} Silver earned at 1024!`
+                    : `🎉 ${GAME_2048_MEDALS.bronze.emoji} Bronze earned at 512!`}
             </div>
           )}
           <div className="hidden flex-shrink-0 lg:block">
@@ -1602,7 +1602,7 @@ function Puzzle2048Board({
           </div>
           <div className="hidden lg:flex lg:flex-col lg:gap-2.5">
             <BonusInfoCard label="Goal">
-              Combine equal tiles to build larger values. Reach <strong>1024</strong> for bronze, <strong>2048</strong> for silver, and <strong>4096</strong> for gold.
+              Combine equal tiles to build larger values. Reach <strong>512</strong> for bronze, <strong>1024</strong> for silver, and <strong>2048</strong> for gold.
             </BonusInfoCard>
             <BonusInfoCard label="How It Works">
               Swipe or use the arrow buttons to slide all tiles at once. Matching numbers merge when they collide.
@@ -1629,7 +1629,7 @@ function Puzzle2048Board({
                 </div>
                 <div className="flex flex-col gap-3">
                   <BonusInfoCard label="Goal">
-                    Combine equal tiles to build larger values. Reach <strong>1024</strong> for bronze, <strong>2048</strong> for silver, and <strong>4096</strong> for gold.
+                    Combine equal tiles to build larger values. Reach <strong>512</strong> for bronze, <strong>1024</strong> for silver, and <strong>2048</strong> for gold.
                   </BonusInfoCard>
                   <BonusInfoCard label="How It Works">
                     Swipe or use the arrow buttons to slide all tiles at once. Matching numbers merge when they collide.

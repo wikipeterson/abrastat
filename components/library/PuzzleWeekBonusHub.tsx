@@ -49,11 +49,103 @@ const QUEENS_MEDALS_KEY = 'pw-queens-medals'
 const QUEENS_SOLVED_ORDER_VERSION_KEY = 'pw-queens-solved-order-version'
 const QUEENS_EASY_OLD_TO_NEW = [4, 3, 9, 5, 6, 8, 1, 2, 0, 7] as const
 const QUEENS_MEDIUM_OLD_TO_NEW = [2, 0, 3, 4, 7, 1, 5, 6, 8, 9] as const
+const QUEENS_HARD_OLD_TO_NEW = [2, 8, 0, 3, 1, 9, 6, 7, 4, 5] as const
 const QUEENS_SOLVED_KEYS: Record<QueensLevel, string> = {
   easy: 'pw-queens-solved-easy',
   medium: 'pw-queens-solved-medium',
   hard: 'pw-queens-solved-hard',
 }
+
+// ---------- star battle levels ----------
+
+type StarBattleLevel = 'easy' | 'medium' | 'hard'
+const STAR_BATTLE_LABELS: Record<StarBattleLevel, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' }
+const STAR_BATTLE_MEDALS: Record<StarBattleLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
+const STAR_BATTLE_MEDALS_KEY = 'pw-starbattle-medals'
+
+// Each puzzle: size×size grid, regions[] maps cell index→region id (0-based), solution is Set of star indices
+type StarBattlePuzzle = { size: number; regions: number[]; solution: number[] }
+
+// 8×8, 8 regions, 2 stars per row/col/region
+const SB_EASY: StarBattlePuzzle[] = [
+  {
+    size: 8,
+    regions: [
+      0,0,0,1,1,1,2,2,
+      0,0,1,1,3,1,2,2,
+      0,4,4,3,3,5,5,2,
+      0,4,4,3,5,5,6,2,
+      0,4,3,3,5,6,6,7,
+      0,4,3,5,5,6,7,7,
+      0,4,4,5,6,6,7,7,
+      0,0,4,5,6,7,7,7,
+    ],
+    solution: [3,6, 9,14, 17,21, 26,28, 33,36, 40,45, 50,53, 58,61].slice(0,16),
+  },
+  {
+    size: 8,
+    regions: [
+      0,0,0,0,1,1,1,1,
+      0,2,2,0,1,3,3,1,
+      0,2,2,4,4,3,3,1,
+      0,2,4,4,5,5,3,1,
+      0,2,4,5,5,6,6,1,
+      0,2,4,5,6,6,7,1,
+      0,2,4,5,6,7,7,1,
+      0,0,0,0,0,0,0,1,
+    ],
+    solution: [1,6, 10,13, 19,22, 27,28, 33,36, 41,44, 49,54, 57,62],
+  },
+]
+
+const SB_MEDIUM: StarBattlePuzzle[] = [
+  {
+    size: 10,
+    regions: [
+      0,0,0,0,1,1,1,2,2,2,
+      0,3,3,0,1,4,1,2,5,2,
+      0,3,3,6,6,4,4,5,5,2,
+      0,3,6,6,7,7,4,5,5,2,
+      0,3,6,7,7,8,8,5,9,2,
+      0,3,6,7,8,8,9,9,9,2,
+      0,3,6,7,8,9,9,5,9,2,
+      0,3,3,7,8,9,5,5,9,2,
+      0,3,3,3,8,9,5,2,2,2,
+      0,0,0,0,0,0,0,0,0,2,
+    ],
+    solution: [2,7, 10,15, 22,27, 31,38, 43,46, 51,56, 63,68, 70,79, 81,88, 90,99],
+  },
+]
+
+const SB_HARD: StarBattlePuzzle[] = [
+  {
+    size: 10,
+    regions: [
+      0,0,1,1,1,2,2,2,3,3,
+      0,4,4,1,5,5,2,6,6,3,
+      0,4,4,7,5,5,8,6,6,3,
+      0,4,7,7,9,5,8,8,6,3,
+      0,4,7,9,9,5,8,6,6,3,
+      0,4,7,9,5,5,8,6,3,3,
+      0,4,7,9,5,8,8,6,3,3,
+      0,4,4,9,9,8,6,6,3,3,
+      0,4,4,4,9,8,6,3,3,3,
+      0,0,0,0,0,0,0,0,0,3,
+    ],
+    solution: [2,9, 10,17, 24,29, 31,38, 42,47, 51,56, 63,68, 70,75, 82,87, 90,99],
+  },
+]
+
+const SB_PUZZLES: Record<StarBattleLevel, StarBattlePuzzle[]> = {
+  easy: SB_EASY,
+  medium: SB_MEDIUM,
+  hard: SB_HARD,
+}
+
+const SB_REGION_COLORS = [
+  '#bfdbfe','#bbf7d0','#fde68a','#fecaca','#e9d5ff',
+  '#fed7aa','#a7f3d0','#fbcfe8','#cffafe','#d1d5db',
+]
 
 type Game2048Medal = 'bronze' | 'silver' | 'gold'
 const GAME_2048_MEDALS: Record<Game2048Medal, { threshold: number; emoji: string; label: string }> = {
@@ -1320,6 +1412,273 @@ function Puzzle2048Board({
   )
 }
 
+// ---------- star battle ----------
+
+function sbAdjacent(a: number, b: number, size: number) {
+  const ar = Math.floor(a / size), ac = a % size
+  const br = Math.floor(b / size), bc = b % size
+  return Math.abs(ar - br) <= 1 && Math.abs(ac - bc) <= 1
+}
+
+function sbIsValid(stars: number[], size: number, regions: number[]) {
+  for (let i = 0; i < stars.length; i++) {
+    for (let j = i + 1; j < stars.length; j++) {
+      if (sbAdjacent(stars[i], stars[j], size)) return false
+    }
+  }
+  const rowCounts = Array<number>(size).fill(0)
+  const colCounts = Array<number>(size).fill(0)
+  const regionCounts: Record<number, number> = {}
+  for (const s of stars) {
+    const r = Math.floor(s / size), c = s % size
+    rowCounts[r]++
+    colCounts[c]++
+    regionCounts[regions[s]] = (regionCounts[regions[s]] ?? 0) + 1
+    if (rowCounts[r] > 2 || colCounts[c] > 2) return false
+    if (regionCounts[regions[s]] > 2) return false
+  }
+  return true
+}
+
+function sbIsSolved(stars: number[], puzzle: StarBattlePuzzle) {
+  const { size, regions } = puzzle
+  if (stars.length !== size * 2) return false
+  if (!sbIsValid(stars, size, regions)) return false
+  const rowCounts = Array<number>(size).fill(0)
+  const colCounts = Array<number>(size).fill(0)
+  const regionCounts: Record<number, number> = {}
+  for (const s of stars) {
+    rowCounts[Math.floor(s / size)]++
+    colCounts[s % size]++
+    regionCounts[regions[s]] = (regionCounts[regions[s]] ?? 0) + 1
+  }
+  const numRegions = new Set(regions).size
+  return (
+    rowCounts.every(c => c === 2) &&
+    colCounts.every(c => c === 2) &&
+    Object.keys(regionCounts).length === numRegions &&
+    Object.values(regionCounts).every(c => c === 2)
+  )
+}
+
+// Cell state: 0 = empty, 1 = star, 2 = X marker
+function StarBattleBoard({
+  medals,
+  onSolve,
+}: {
+  medals: Set<StarBattleLevel>
+  onSolve: (level: StarBattleLevel) => void
+}) {
+  const [level, setLevel] = useState<StarBattleLevel>('easy')
+  const [puzzleIdx, setPuzzleIdx] = useState(0)
+  const [cells, setCells] = useState<number[]>(() => Array(SB_PUZZLES['easy'][0].size ** 2).fill(0))
+  const [howToPlayOpen, setHowToPlayOpen] = useState(false)
+  const solvedRef = useRef(false)
+
+  const puzzle = SB_PUZZLES[level][puzzleIdx % SB_PUZZLES[level].length]
+  const { size, regions } = puzzle
+
+  const stars = cells.reduce<number[]>((acc, v, i) => { if (v === 1) acc.push(i); return acc }, [])
+  const solved = sbIsSolved(stars, puzzle)
+
+  useEffect(() => {
+    if (solved && !solvedRef.current) {
+      solvedRef.current = true
+      onSolve(level)
+    }
+    if (!solved) solvedRef.current = false
+  }, [solved, level, onSolve])
+
+  function switchLevel(l: StarBattleLevel) {
+    setLevel(l)
+    setPuzzleIdx(0)
+    setCells(Array(SB_PUZZLES[l][0].size ** 2).fill(0))
+    solvedRef.current = false
+  }
+
+  function newPuzzle() {
+    const next = (puzzleIdx + 1) % SB_PUZZLES[level].length
+    setPuzzleIdx(next)
+    setCells(Array(SB_PUZZLES[level][next % SB_PUZZLES[level].length].size ** 2).fill(0))
+    solvedRef.current = false
+  }
+
+  function handleCell(idx: number) {
+    if (solved) return
+    setCells(prev => {
+      const next = [...prev]
+      next[idx] = (next[idx] + 1) % 3
+      return next
+    })
+  }
+
+  const numStars = stars.length
+  const valid = sbIsValid(stars, size, regions)
+
+  return (
+    <BonusGameLayout
+      board={
+        <div className="h-full w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-2">
+          <div
+            className="grid h-full w-full"
+            style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))` }}
+          >
+            {cells.map((state, idx) => {
+              const region = regions[idx]
+              const row = Math.floor(idx / size)
+              const col = idx % size
+              const rightNeighbor = col < size - 1 ? regions[idx + 1] : -1
+              const bottomNeighbor = row < size - 1 ? regions[idx + size] : -1
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleCell(idx)}
+                  aria-label={`Cell ${row + 1},${col + 1}`}
+                  className="relative flex items-center justify-center transition-colors duration-100"
+                  style={{
+                    background: SB_REGION_COLORS[region % SB_REGION_COLORS.length],
+                    borderRight: rightNeighbor !== region ? '2px solid rgba(0,0,0,0.25)' : '1px solid rgba(0,0,0,0.08)',
+                    borderBottom: bottomNeighbor !== region ? '2px solid rgba(0,0,0,0.25)' : '1px solid rgba(0,0,0,0.08)',
+                    borderTop: row === 0 ? '2px solid rgba(0,0,0,0.25)' : undefined,
+                    borderLeft: col === 0 ? '2px solid rgba(0,0,0,0.25)' : undefined,
+                  }}
+                >
+                  {state === 1 && (
+                    <span className="select-none text-[clamp(0.75rem,2vw,1.25rem)] leading-none drop-shadow-sm">⭐</span>
+                  )}
+                  {state === 2 && (
+                    <span className="select-none text-[clamp(0.55rem,1.4vw,0.85rem)] font-bold leading-none text-slate-400">✕</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      }
+      sidebar={
+        <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden lg:gap-2.5">
+          <div className="hidden flex-shrink-0 lg:block">
+            <p className="text-[clamp(1.45rem,1.9vw,2.25rem)] font-bold leading-[1.05] text-[var(--color-text)]">
+              Star Battle
+            </p>
+            <h2 className="mt-2 text-[clamp(1rem,1.2vw,1.24rem)] font-medium leading-[1.28] text-[var(--color-muted)]">
+              2 stars per row, column &amp; region.
+            </h2>
+          </div>
+          <div className="flex flex-shrink-0 flex-wrap gap-2">
+            {(['easy', 'medium', 'hard'] as StarBattleLevel[]).map(l => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => switchLevel(l)}
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition lg:text-sm ${
+                  level === l
+                    ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                    : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                }`}
+              >
+                {STAR_BATTLE_LABELS[l]}
+                <span className={`leading-none transition-opacity ${medals.has(l) ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
+                  {STAR_BATTLE_MEDALS[l]}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-shrink-0 gap-2 lg:hidden">
+            <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5">
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">Stars</div>
+              <div className="text-lg font-bold leading-none text-[var(--color-text)]">{numStars}/{size * 2}</div>
+            </div>
+            <button
+              type="button"
+              onClick={newPuzzle}
+              className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 transition hover:bg-slate-50"
+            >
+              <div className="text-sm font-bold text-[var(--color-text)]">New Board</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setHowToPlayOpen(true)}
+              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-slate-50"
+            >
+              How to play
+              <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">?</span>
+            </button>
+          </div>
+          <div className="hidden flex-shrink-0 grid-cols-2 gap-3 lg:grid">
+            <BonusStatTile label="Stars" value={`${numStars}/${size * 2}`} />
+            <button
+              type="button"
+              onClick={newPuzzle}
+              className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-slate-50"
+            >
+              <div className="text-[clamp(1.15rem,1.55vw,1.55rem)] font-bold leading-none text-[var(--color-text)]">
+                New Board
+              </div>
+            </button>
+          </div>
+          {numStars === size * 2 && !solved && !valid && (
+            <div className="flex-shrink-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              A rule is violated — stars can&apos;t touch, and each row, column, and region needs exactly 2.
+            </div>
+          )}
+          {solved && (
+            <div className="flex-shrink-0 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+              🎉 {STAR_BATTLE_MEDALS[level]} {STAR_BATTLE_LABELS[level]} solved!
+            </div>
+          )}
+          <div className="hidden lg:flex lg:flex-col lg:gap-2.5">
+            <BonusInfoCard label="Goal">
+              Place exactly <strong>2 stars</strong> in every row, every column, and every colored region. Stars cannot touch each other — not even diagonally.
+            </BonusInfoCard>
+            <BonusInfoCard label="How It Works">
+              Click once to place a ⭐, click again to mark a cell ✕ (a reminder it can&apos;t hold a star), click a third time to clear it.
+            </BonusInfoCard>
+          </div>
+          {howToPlayOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 lg:hidden"
+              onClick={() => setHowToPlayOpen(false)}
+            >
+              <div
+                className="flex w-full max-w-lg flex-col gap-3 rounded-t-3xl bg-white px-5 pb-8 pt-5 shadow-xl"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-[var(--color-text)]">How to Play</p>
+                  <button
+                    type="button"
+                    onClick={() => setHowToPlayOpen(false)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <BonusInfoCard label="Goal">
+                    Place exactly <strong>2 stars</strong> in every row, every column, and every colored region. Stars cannot touch — not even diagonally.
+                  </BonusInfoCard>
+                  <BonusInfoCard label="How It Works">
+                    Tap once to place a ⭐, tap again to mark ✕, tap a third time to clear.
+                  </BonusInfoCard>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setHowToPlayOpen(false)}
+                  className="mt-1 w-full rounded-2xl bg-[var(--color-accent)] py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      }
+    />
+  )
+}
+
 // ---------- puzzle registry ----------
 
 const PUZZLE_LIST = [
@@ -1358,6 +1717,13 @@ const PUZZLE_LIST = [
     desc: 'One queen per row, column & color region',
     live: true,
   },
+  {
+    id: 'starbattle',
+    name: 'Star Battle',
+    emoji: '⭐',
+    desc: 'Place 2 stars in every row, column & region',
+    live: true,
+  },
 ]
 
 const LIVE_PUZZLES = PUZZLE_LIST.filter(p => p.live)
@@ -1369,6 +1735,7 @@ type BonusMedalState = {
   netwalk: Set<NetwalkLevel>
   game2048: Set<Game2048Medal>
   queens: Set<QueensLevel>
+  starBattle: Set<StarBattleLevel>
 }
 
 type QueensSolvedBoardState = Record<QueensLevel, Set<number>>
@@ -1380,6 +1747,7 @@ function createEmptyBonusMedalState(): BonusMedalState {
     netwalk: new Set(),
     game2048: new Set(),
     queens: new Set(),
+    starBattle: new Set(),
   }
 }
 
@@ -1415,6 +1783,18 @@ function remapMediumQueensSolvedSet(set: Set<number>) {
   )
 }
 
+function remapHardQueensSolvedSet(set: Set<number>) {
+  return new Set(
+    [...set]
+      .map(index => (
+        index >= 0 && index < QUEENS_HARD_OLD_TO_NEW.length
+          ? QUEENS_HARD_OLD_TO_NEW[index]
+          : index
+      ))
+      .filter(index => Number.isInteger(index) && index >= 0),
+  )
+}
+
 function readStoredSet<T extends string>(key: string) {
   try {
     const stored = localStorage.getItem(key)
@@ -1431,6 +1811,7 @@ function readLocalBonusMedalState(): BonusMedalState {
     netwalk: readStoredSet<NetwalkLevel>(NETWALK_MEDALS_KEY),
     game2048: readStoredSet<Game2048Medal>(GAME_2048_MEDALS_KEY),
     queens: readStoredSet<QueensLevel>(QUEENS_MEDALS_KEY),
+    starBattle: readStoredSet<StarBattleLevel>(STAR_BATTLE_MEDALS_KEY),
   }
 }
 
@@ -1477,6 +1858,9 @@ function readLocalQueensSolvedBoardState(): QueensSolvedBoardState {
     if (version < 3) {
       state.medium = remapMediumQueensSolvedSet(state.medium)
     }
+    if (version < 4) {
+      state.hard = remapHardQueensSolvedSet(state.hard)
+    }
     writeLocalQueensSolvedBoardState(state)
   }
   return state
@@ -1488,6 +1872,7 @@ function writeLocalBonusMedalState(state: BonusMedalState) {
   try { localStorage.setItem(NETWALK_MEDALS_KEY, JSON.stringify([...state.netwalk])) } catch {}
   try { localStorage.setItem(GAME_2048_MEDALS_KEY, JSON.stringify([...state.game2048])) } catch {}
   try { localStorage.setItem(QUEENS_MEDALS_KEY, JSON.stringify([...state.queens])) } catch {}
+  try { localStorage.setItem(STAR_BATTLE_MEDALS_KEY, JSON.stringify([...state.starBattle])) } catch {}
 }
 
 function writeLocalQueensSolvedBoardState(state: QueensSolvedBoardState) {
@@ -1504,6 +1889,7 @@ function bonusMedalsFromProfile(profile: PuzzleWeekBonusMedals): BonusMedalState
     netwalk: new Set(profile.netwalk as NetwalkLevel[]),
     game2048: new Set(profile.game2048 as Game2048Medal[]),
     queens: new Set(profile.queens as QueensLevel[]),
+    starBattle: new Set((profile.starBattle ?? []) as StarBattleLevel[]),
   }
 }
 
@@ -1519,6 +1905,9 @@ function queensSolvedBoardsFromProfile(profile: PuzzleWeekBonusMedals): QueensSo
     }
     if ((profile.queensSolvedOrderVersion ?? 1) < 3) {
       state.medium = remapMediumQueensSolvedSet(state.medium)
+    }
+    if ((profile.queensSolvedOrderVersion ?? 1) < 4) {
+      state.hard = remapHardQueensSolvedSet(state.hard)
     }
   }
   return state
@@ -1541,6 +1930,7 @@ function bonusMedalsToProfile(state: BonusMedalState, queensSolved: QueensSolved
     queens: [...state.queens],
     queensSolved: queensSolvedBoardsToProfile(queensSolved),
     queensSolvedOrderVersion: PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION,
+    starBattle: [...state.starBattle],
   }
 }
 
@@ -1555,6 +1945,7 @@ function unionBonusMedalStates(a: BonusMedalState, b: BonusMedalState): BonusMed
     netwalk: unionSets(a.netwalk, b.netwalk),
     game2048: unionSets(a.game2048, b.game2048),
     queens: unionSets(a.queens, b.queens),
+    starBattle: unionSets(a.starBattle, b.starBattle),
   }
 }
 
@@ -1580,7 +1971,8 @@ function bonusMedalStatesEqual(a: BonusMedalState, b: BonusMedalState) {
     setsEqual(a.lightsOut, b.lightsOut) &&
     setsEqual(a.netwalk, b.netwalk) &&
     setsEqual(a.game2048, b.game2048) &&
-    setsEqual(a.queens, b.queens)
+    setsEqual(a.queens, b.queens) &&
+    setsEqual(a.starBattle, b.starBattle)
   )
 }
 
@@ -1599,6 +1991,7 @@ function cloneBonusMedalState(state: BonusMedalState): BonusMedalState {
     netwalk: new Set(state.netwalk),
     game2048: new Set(state.game2048),
     queens: new Set(state.queens),
+    starBattle: new Set(state.starBattle),
   }
 }
 
@@ -1648,9 +2041,9 @@ export function PuzzleWeekBonusHub() {
   const [sliderMedals, setSliderMedals] = useState<Set<SliderLevel>>(new Set())
   const [lightsOutMedals, setLightsOutMedals] = useState<Set<SliderLevel>>(new Set())
   const [game2048Medals, setGame2048Medals] = useState<Set<Game2048Medal>>(new Set())
-
   const [netwalkMedals, setNetwalkMedals] = useState<Set<NetwalkLevel>>(new Set())
   const [queensMedals, setQueensMedals] = useState<Set<QueensLevel>>(new Set())
+  const [starBattleMedals, setStarBattleMedals] = useState<Set<StarBattleLevel>>(new Set())
   const bonusMedalStateRef = useRef<BonusMedalState>(createEmptyBonusMedalState())
   const [queensSolvedBoards, setQueensSolvedBoards] = useState<QueensSolvedBoardState>(createEmptyQueensSolvedBoardState())
   const queensSolvedBoardsRef = useRef<QueensSolvedBoardState>(createEmptyQueensSolvedBoardState())
@@ -1663,6 +2056,7 @@ export function PuzzleWeekBonusHub() {
       netwalk: new Set(bonusMedalStateRef.current.netwalk),
       game2048: new Set(bonusMedalStateRef.current.game2048),
       queens: new Set(bonusMedalStateRef.current.queens),
+      starBattle: new Set(bonusMedalStateRef.current.starBattle),
     }
   }
 
@@ -1677,6 +2071,7 @@ export function PuzzleWeekBonusHub() {
     setNetwalkMedals(new Set(next.netwalk))
     setGame2048Medals(new Set(next.game2048))
     setQueensMedals(new Set(next.queens))
+    setStarBattleMedals(new Set(next.starBattle))
     writeLocalBonusMedalState(next)
   }
 
@@ -1783,6 +2178,13 @@ export function PuzzleWeekBonusHub() {
     syncBonusProfile(next, getCurrentQueensSolvedBoardState())
   }
 
+  function awardStarBattleMedal(level: StarBattleLevel) {
+    const current = getCurrentBonusMedalState()
+    if (current.starBattle.has(level)) return
+    const next = { ...current, starBattle: new Set(current.starBattle).add(level) }
+    syncBonusProfile(next, getCurrentQueensSolvedBoardState())
+  }
+
   // Listen for solve messages posted by the Queens iframe
   useEffect(() => {
     function onMessage(e: MessageEvent) {
@@ -1830,6 +2232,7 @@ export function PuzzleWeekBonusHub() {
           onLoad={() => postQueensSync()}
         />
       )
+      case 'starbattle': return <StarBattleBoard medals={starBattleMedals} onSolve={awardStarBattleMedal} />
       default:          return null
     }
   }

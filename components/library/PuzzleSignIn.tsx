@@ -149,8 +149,6 @@ export function PuzzleSignIn() {
           className="select-none"
           style={{
             position: 'relative', width: SIZE, height: SIZE,
-            background: 'var(--color-border)',
-            borderRadius: 4,
             opacity: solved ? 0 : 1,
             transition: 'opacity 0.5s ease',
             pointerEvents: solved ? 'none' : 'auto',
@@ -190,6 +188,25 @@ export function PuzzleSignIn() {
               </div>
             )
           })}
+
+          {/* SVG outlines — stroke drawn over all pieces, follows exact jigsaw shape */}
+          <svg
+            style={{ position: 'absolute', top: 0, left: 0, width: SIZE, height: SIZE, overflow: 'visible', pointerEvents: 'none', zIndex: 20 }}
+          >
+            {tiles.map((value, idx) => {
+              const destRow = Math.floor(idx / 3), destCol = idx % 3
+              return (
+                <path
+                  key={value}
+                  d={PIECE_PATHS[value]}
+                  fill="none"
+                  stroke="var(--color-text)"
+                  strokeWidth="1.5"
+                  transform={`translate(${destCol * TILE - PAD} ${destRow * TILE - PAD})`}
+                />
+              )
+            })}
+          </svg>
         </div>
 
         {/* Real sign-in card — fades in when solved, sits over the board */}

@@ -1645,7 +1645,7 @@ function Puzzle2048Board({
     if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 15) return
     // Extend the lockout on every event so momentum scrolling can't sneak in
     if (wheelTimer.current) clearTimeout(wheelTimer.current)
-    wheelTimer.current = setTimeout(() => { wheelLocked.current = false }, 200)
+    wheelTimer.current = setTimeout(() => { wheelLocked.current = false }, 100)
     if (wheelLocked.current) return
     wheelLocked.current = true
     const direction: Direction2048 = Math.abs(deltaX) > Math.abs(deltaY)

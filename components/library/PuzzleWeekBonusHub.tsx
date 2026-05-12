@@ -1648,18 +1648,24 @@ function Puzzle2048Board({
   })
 
   const colorClasses: Record<number, string> = {
-    0: 'bg-white/45 text-transparent',
-    2: 'bg-[#f5f6ff] text-slate-700',
-    4: 'bg-[#e8f7f5] text-teal-700',
-    8: 'bg-[#d7f5ef] text-teal-800',
-    16: 'bg-[#c6efe8] text-teal-900',
-    32: 'bg-[#ffe2ba] text-orange-900',
-    64: 'bg-[#ffd19d] text-orange-900',
-    128: 'bg-[#ffc37f] text-orange-950',
-    256: 'bg-[#ffb560] text-orange-950',
-    512: 'bg-[#ffa43f] text-white',
-    1024: 'bg-[#f58e2b] text-white',
-    2048: 'bg-[#f3c84b] text-slate-900',
+    0:    'bg-[var(--color-accent-light)] text-transparent',
+    2:    'bg-[#EEF9F8] text-[#6aadaa]',
+    4:    'bg-[#C4EDEA] text-[#0D6E67]',
+    8:    'bg-[#3DD1C6] text-white',
+    16:   'bg-[#1AB0A5] text-white',
+    32:   'bg-[#FFD60A] text-[#5C3D00]',
+    64:   'bg-[#FFA83C] text-white',
+    128:  'bg-[#FF7B36] text-white',
+    256:  'bg-[#F75C2F] text-white',
+    512:  'bg-[#E03A3A] text-white',
+    1024: 'bg-[#9B59B6] text-white',
+    2048: 'bg-[#F3C84B] text-[#5C3D00]',
+  }
+
+  function tileFont(value: number): string {
+    if (value >= 1000) return 'text-sm sm:text-base'
+    if (value >= 100)  return 'text-base sm:text-lg'
+    return 'text-xl sm:text-2xl'
   }
 
   return (
@@ -1690,8 +1696,8 @@ function Puzzle2048Board({
                 key={`2048-${index}`}
                 type="button"
                 onClick={() => {}}
-                className={`aspect-square rounded-2xl border border-white/50 text-lg font-bold shadow-sm transition-colors sm:text-xl ${
-                  colorClasses[value] ?? 'bg-[#f28f3b] text-white'
+                className={`aspect-square rounded-2xl border border-white/30 font-bold shadow-sm transition-colors ${tileFont(value)} ${
+                  colorClasses[value] ?? 'bg-[#E03A3A] text-white'
                 }`}
               >
                 {value === 0 ? '' : value}

@@ -66,6 +66,24 @@ function countBonusMedals(medals: PuzzleWeekBonusMedals) {
   )
 }
 
+function countLocalBonusMedals(): number {
+  function readCount(key: string): number {
+    try {
+      const stored = localStorage.getItem(key)
+      const parsed = stored ? JSON.parse(stored) : []
+      return Array.isArray(parsed) ? parsed.length : 0
+    } catch { return 0 }
+  }
+  return (
+    readCount('pw-slider-medals') +
+    readCount('pw-lightsout-medals') +
+    readCount('pw-netwalk-medals') +
+    readCount('pw-2048-medals') +
+    readCount('pw-queens-medals') +
+    readCount('pw-starbattle-medals')
+  )
+}
+
 export function PuzzleWeekHub() {
   const { user, loading, isGuest } = useAuth()
   const [entry, setEntry] = useState<PuzzleWeekEntry | null>(null)
@@ -180,14 +198,13 @@ export function PuzzleWeekHub() {
       setBonusMedalCount(0)
       return
     }
+    setBonusMedalCount(countLocalBonusMedals())
     let cancelled = false
     void (async () => {
       try {
         const medals = await getPuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, user)
-        if (!cancelled) setBonusMedalCount(countBonusMedals(medals))
-      } catch {
-        if (!cancelled) setBonusMedalCount(0)
-      }
+        if (!cancelled) setBonusMedalCount(c => Math.max(c, countBonusMedals(medals)))
+      } catch { /* keep local count */ }
     })()
     return () => { cancelled = true }
   }, [user, isGuest])

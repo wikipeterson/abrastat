@@ -441,7 +441,7 @@ export function PuzzleWeekHub() {
           )}
         </div>
 
-        {countdown && !countdown.started && !countdown.ended && (
+        {(user && !isGuest) && countdown && !countdown.started && !countdown.ended && (
           <div className="text-center pt-1 space-y-1.5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
               Puzzle Week begins in
@@ -682,7 +682,33 @@ export function PuzzleWeekHub() {
 
         {/* ── Auth / registration states ── */}
         {!user || isGuest ? (
-          <PuzzleSignIn />
+          <div className="flex flex-col items-center gap-8">
+            {countdown && !countdown.started && !countdown.ended && (
+              <div className="text-center space-y-1.5">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+                  Puzzle Week begins in
+                </p>
+                <div className="flex items-end justify-center gap-2 sm:gap-3">
+                  {([
+                    { value: countdown.days, label: 'days' },
+                    { value: countdown.hours, label: 'hrs' },
+                    { value: countdown.minutes, label: 'min' },
+                    { value: countdown.seconds, label: 'sec' },
+                  ] as const).map(({ value, label }) => (
+                    <div key={label} className="flex flex-col items-center">
+                      <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-bold tabular-nums text-[var(--color-text)] shadow-sm">
+                        {String(value).padStart(2, '0')}
+                      </div>
+                      <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
+                        {label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <PuzzleSignIn />
+          </div>
         ) : loadingRegistration && !entry ? (
           null
         ) : !canRegister ? (

@@ -20,7 +20,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
-  background: var(--bg);
+  background: white;
   color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
   -webkit-tap-highlight-color: transparent;
@@ -260,7 +260,7 @@ html, body {
 
 @media (min-width: 720px) {
   #app {
-    padding: 0;
+    padding: 20px;
   }
 
   .game-shell {
@@ -274,12 +274,12 @@ html, body {
   }
 
   .side-panel {
-    flex: 0 0 clamp(330px, 30vw, 420px);
+    flex: 0 0 clamp(290px, 28vw, 350px);
     min-height: 0;
   }
 
   #board {
-    width: min(100%, calc(100dvh - 60px));
+    width: min(100%, calc(100dvh - 100px));
   }
   #btn-picker { display: none; }
 }

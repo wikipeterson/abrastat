@@ -1641,16 +1641,17 @@ function Puzzle2048Board({
   }
 
   function handleWheel(event: React.WheelEvent) {
-    if (wheelLocked.current) return
     const { deltaX, deltaY } = event
     if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 15) return
+    // Extend the lockout on every event so momentum scrolling can't sneak in
+    if (wheelTimer.current) clearTimeout(wheelTimer.current)
+    wheelTimer.current = setTimeout(() => { wheelLocked.current = false }, 200)
+    if (wheelLocked.current) return
+    wheelLocked.current = true
     const direction: Direction2048 = Math.abs(deltaX) > Math.abs(deltaY)
       ? (deltaX > 0 ? 'left' : 'right')
       : (deltaY > 0 ? 'up' : 'down')
-    wheelLocked.current = true
     handleMove(direction)
-    if (wheelTimer.current) clearTimeout(wheelTimer.current)
-    wheelTimer.current = setTimeout(() => { wheelLocked.current = false }, 200)
   }
 
   useEffect(() => {

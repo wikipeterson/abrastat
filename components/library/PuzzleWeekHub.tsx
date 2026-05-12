@@ -354,8 +354,8 @@ export function PuzzleWeekHub() {
   ).length
 
   return (
-    <main className="min-h-screen px-4 sm:px-6 py-6 sm:py-8" style={{ background: 'var(--color-bg)' }}>
-      <div className="mx-auto max-w-5xl space-y-5 sm:space-y-6">
+    <main className="min-h-screen flex flex-col px-4 sm:px-6 py-6 sm:py-8" style={{ background: 'var(--color-bg)' }}>
+      <div className="mx-auto w-full max-w-5xl flex flex-col flex-1 gap-5 sm:gap-6">
 
         {/* ── Mobile header: stacked ── */}
         <div className="sm:hidden space-y-3">
@@ -682,7 +682,7 @@ export function PuzzleWeekHub() {
 
         {/* ── Auth / registration states ── */}
         {!user || isGuest ? (
-          <div className="flex flex-col items-center gap-8">
+          <div className="flex-1 flex flex-col items-center justify-center gap-8">
             {countdown && !countdown.started && !countdown.ended && (
               <div className="text-center space-y-1.5">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">

@@ -56,8 +56,8 @@ function isPuzzleWeekPreviewUser(user: User | null | undefined): boolean {
   return isPuzzleWeekPreviewIdentity(user)
 }
 
-export function canAccessPuzzleWeek(user: User | null | undefined): boolean {
-  return isPuzzleWeekPreviewUser(user)
+export function canAccessPuzzleWeek(_user: User | null | undefined): boolean {
+  return true
 }
 
 export function canRegisterForPuzzleWeek(user: User | null | undefined): boolean {

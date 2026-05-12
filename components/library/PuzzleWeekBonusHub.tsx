@@ -1645,8 +1645,8 @@ function Puzzle2048Board({
     const { deltaX, deltaY } = event
     if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 15) return
     const direction: Direction2048 = Math.abs(deltaX) > Math.abs(deltaY)
-      ? (deltaX > 0 ? 'right' : 'left')
-      : (deltaY > 0 ? 'down' : 'up')
+      ? (deltaX > 0 ? 'left' : 'right')
+      : (deltaY > 0 ? 'up' : 'down')
     wheelLocked.current = true
     handleMove(direction)
     if (wheelTimer.current) clearTimeout(wheelTimer.current)

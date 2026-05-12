@@ -1594,7 +1594,9 @@ function Puzzle2048Board({
   const [bestTile, setBestTile] = useState(4)
   const [howToPlayOpen, setHowToPlayOpen] = useState(false)
   const [showOverlay, setShowOverlay] = useState(false)
+  const [mergedCells, setMergedCells] = useState<Set<number>>(new Set())
   const overlayShownRef = useRef(false)
+  const mergedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
 
   const won = bestTile >= 2048
@@ -1613,10 +1615,17 @@ function Puzzle2048Board({
     if (stuck) return
     const result = move2048(board, direction)
     if (!result.moved) return
+    const changed = new Set<number>()
+    result.board.forEach((v, i) => { if (v > 0 && v !== board[i]) changed.add(i) })
     setBoard(result.board)
     setScore(current => current + result.scoreGain)
     const nextBest = Math.max(bestTile, ...result.board)
     setBestTile(nextBest)
+    if (changed.size > 0) {
+      if (mergedTimer.current) clearTimeout(mergedTimer.current)
+      setMergedCells(changed)
+      mergedTimer.current = setTimeout(() => setMergedCells(new Set()), 220)
+    }
     if (nextBest >= GAME_2048_MEDALS.gold.threshold) onAwardMedal('gold')
     else if (nextBest >= GAME_2048_MEDALS.silver.threshold) onAwardMedal('silver')
     else if (nextBest >= GAME_2048_MEDALS.bronze.threshold) onAwardMedal('bronze')
@@ -1698,7 +1707,7 @@ function Puzzle2048Board({
                 onClick={() => {}}
                 className={`aspect-square rounded-2xl border border-white/30 font-bold shadow-sm transition-colors ${tileFont(value)} ${
                   colorClasses[value] ?? 'bg-[#E03A3A] text-white'
-                }`}
+                } ${mergedCells.has(index) ? 'animate-tile-pop' : ''}`}
               >
                 {value === 0 ? '' : value}
               </button>

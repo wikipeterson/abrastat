@@ -183,3 +183,11 @@ body {
   55%  { transform: scale(1.22); }
   100% { transform: scale(1);    }
 }
+@keyframes tile-pop {
+  0%   { transform: scale(1);    }
+  35%  { transform: scale(1.18); }
+  100% { transform: scale(1);    }
+}
+.animate-tile-pop {
+  animation: tile-pop 0.18s ease-out both;
+}

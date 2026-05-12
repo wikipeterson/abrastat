@@ -1598,6 +1598,8 @@ function Puzzle2048Board({
   const overlayShownRef = useRef(false)
   const mergedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
+  const wheelLocked = useRef(false)
+  const wheelTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const won = bestTile >= 2048
   const stuck = !canMove2048(board)
@@ -1636,6 +1638,19 @@ function Puzzle2048Board({
     setBoard(next)
     setScore(0)
     setBestTile(Math.max(...next))
+  }
+
+  function handleWheel(event: React.WheelEvent) {
+    if (wheelLocked.current) return
+    const { deltaX, deltaY } = event
+    if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 15) return
+    const direction: Direction2048 = Math.abs(deltaX) > Math.abs(deltaY)
+      ? (deltaX > 0 ? 'right' : 'left')
+      : (deltaY > 0 ? 'down' : 'up')
+    wheelLocked.current = true
+    handleMove(direction)
+    if (wheelTimer.current) clearTimeout(wheelTimer.current)
+    wheelTimer.current = setTimeout(() => { wheelLocked.current = false }, 200)
   }
 
   useEffect(() => {
@@ -1683,6 +1698,7 @@ function Puzzle2048Board({
       board={
         <div
           className="h-full w-full rounded-[1.6rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-3 shadow-inner"
+          onWheel={handleWheel}
           onTouchStart={(event) => {
             const touch = event.touches[0]
             if (!touch) return

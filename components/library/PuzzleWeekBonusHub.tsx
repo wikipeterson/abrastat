@@ -2923,6 +2923,32 @@ export function PuzzleWeekBonusHub() {
                 ))}
               </div>
             )}
+            {p.id === '2048' && (
+              <div className="flex items-center gap-1 mt-1.5">
+                {(['bronze', 'silver', 'gold'] as Game2048Medal[]).map(m => (
+                  <span
+                    key={m}
+                    title={`${GAME_2048_MEDALS[m].label}: ${game2048Medals.has(m) ? 'earned' : 'not yet earned'}`}
+                    className={`text-sm leading-none transition-opacity ${game2048Medals.has(m) ? 'opacity-100' : 'opacity-15'}`}
+                  >
+                    {GAME_2048_MEDALS[m].emoji}
+                  </span>
+                ))}
+              </div>
+            )}
+            {p.id === 'starbattle' && (
+              <div className="flex items-center gap-1 mt-1.5">
+                {(['easy', 'medium', 'hard'] as StarBattleLevel[]).map(l => (
+                  <span
+                    key={l}
+                    title={`${STAR_BATTLE_LABELS[l]}: ${starBattleMedals.has(l) ? 'earned' : 'not yet earned'}`}
+                    className={`text-sm leading-none transition-opacity ${starBattleMedals.has(l) ? 'opacity-100' : 'opacity-15'}`}
+                  >
+                    {STAR_BATTLE_MEDALS[l]}
+                  </span>
+                ))}
+              </div>
+            )}
             {!p.live && (
               <span className="mt-1.5 inline-block rounded-full bg-[var(--color-accent-light)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-accent)]">
                 Soon

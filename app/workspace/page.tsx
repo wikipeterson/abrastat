@@ -34,7 +34,7 @@ type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 
 const SIDEBAR_WIDTH_CLASS = 'md:w-48'
 const PUZZLE_WEEK_URL = 'https://puzzleweek.abrastat.com'
-const LOGIC_PUZZLES_URL = 'https://puzzleweek.abrastat.com/bonus'
+const LOGIC_PUZZLES_URL = 'https://puzzleweek.abrastat.com/puzzleweek/bonus'
 
 const EXPLORE_CARD_OPTIONS: CardOption[] = [
   { type: 'graph',      icon: '📈', label: 'Graph' },

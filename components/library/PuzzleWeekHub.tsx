@@ -513,10 +513,10 @@ export function PuzzleWeekHub() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-[var(--color-text)]">
-                  Try to earn all {TOTAL_BONUS_MEDALS} medals
+                  Bonus Puzzles: Try to earn all {TOTAL_BONUS_MEDALS} medals.
                 </p>
                 <p className="mt-1 text-xs text-[var(--color-muted)]">
-                  {bonusMedalCount} of {TOTAL_BONUS_MEDALS} earned across the logic puzzles.
+                  {bonusMedalCount} of {TOTAL_BONUS_MEDALS} earned across the bonus puzzles.
                 </p>
               </div>
               <Link

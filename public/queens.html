@@ -145,15 +145,67 @@ html, body {
 .puzzle-check { font-size: 10px; color: var(--accent); }
 .puzzle-item.current .puzzle-check { color: rgba(255,255,255,0.85); }
 
-.status-bar {
-  flex-shrink: 0; background: rgba(214,245,242,0.56); border: 1px solid var(--border);
-  border-radius: 18px; padding: 12px 14px; font-size: 13px;
-  display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px;
+.stat-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 10px;
+  flex-shrink: 0;
 }
-#status-msg { font-weight: 700; }
+
+.stat-card,
+.picker-card {
+  background: rgba(214,245,242,0.56);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 14px;
+}
+
+.stat-label,
+.picker-label {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 78px;
+}
+
+#status-msg {
+  font-size: clamp(16px, 1.6vw, 24px);
+  line-height: 1.15;
+  font-weight: 800;
+  color: var(--text);
+}
 #status-msg.conflict { color: #B22222; }
 #status-msg.solved   { color: #1A7A4A; }
-#status-count { color: var(--muted); font-size: 12px; white-space: nowrap; flex-shrink: 0; font-weight: 700; }
+#status-count {
+  font-size: clamp(15px, 1.35vw, 20px);
+  line-height: 1.15;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.picker-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.picker-trigger {
+  width: 100%;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 15px;
+  font-size: 15px;
+  font-weight: 800;
+}
 
 .board-wrap {
   flex: 1; min-height: 0;
@@ -281,7 +333,6 @@ html, body {
   #board {
     width: min(100%, calc(100dvh - 100px));
   }
-  #btn-picker { display: none; }
 }
 
 @media (max-width: 640px) {
@@ -297,6 +348,10 @@ html, body {
   .side-panel {
     gap: 8px;
     padding: 10px;
+  }
+
+  .stat-grid {
+    grid-template-columns: 1fr;
   }
 
   .mark {
@@ -318,7 +373,6 @@ html, body {
 @media (max-width: 719px) {
   .side-scroll { display: none; }
   .info-btn { display: flex; }
-  #status-count { display: none; }
 }
 
 .puzzle-inline-card {
@@ -451,13 +505,23 @@ html, body {
           <button class="diff-btn"        data-diff="hard">Hard</button>
         </div>
 
-        <div class="status-bar" id="status-bar">
-          <span id="status-msg"></span>
-          <span id="status-count"></span>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Status</div>
+            <span id="status-msg" class="status-msg">Tap a cell to begin</span>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Placed</div>
+            <span id="status-count">0 of 0 queens placed</span>
+          </div>
+        </div>
+
+        <div class="picker-card">
+          <div class="picker-label">Puzzle</div>
+          <button class="btn picker-trigger" id="btn-picker">#1</button>
         </div>
 
         <div class="btn-row">
-          <button class="btn"         id="btn-picker">#1</button>
           <button class="btn primary" id="btn-new">Restart</button>
         </div>
 

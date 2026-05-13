@@ -2743,11 +2743,16 @@ export function PuzzleWeekBonusHub() {
     applyStarBattleSolvedBoardState(localStarBattleState)
 
     if (!user || isGuest) return
+    const signedInUser = user
 
     let cancelled = false
-    void (async () => {
+    let syncing = false
+
+    async function syncRemoteProfile() {
+      if (cancelled || syncing) return
+      syncing = true
       try {
-        const remoteProfile = await getPuzzleWeekBonusMedals(puzzleWeekEventId, user)
+        const remoteProfile = await getPuzzleWeekBonusMedals(puzzleWeekEventId, signedInUser)
         if (cancelled) return
         const remoteState = bonusMedalsFromProfile(remoteProfile)
         const remoteQueensState = queensSolvedBoardsFromProfile(remoteProfile)
@@ -2765,17 +2770,36 @@ export function PuzzleWeekBonusHub() {
         ) {
           await savePuzzleWeekBonusMedals(
             puzzleWeekEventId,
-            user,
+            signedInUser,
             bonusMedalsToProfile(mergedState, mergedQueensState, mergedStarBattleState),
           )
         }
       } catch {
         // Keep local medals if the account sync fails.
+      } finally {
+        syncing = false
       }
-    })()
+    }
+
+    void syncRemoteProfile()
+
+    function handleWindowFocus() {
+      void syncRemoteProfile()
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        void syncRemoteProfile()
+      }
+    }
+
+    window.addEventListener('focus', handleWindowFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       cancelled = true
+      window.removeEventListener('focus', handleWindowFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [user, isGuest, puzzleWeekEventId])
 

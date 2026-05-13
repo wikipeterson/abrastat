@@ -76,14 +76,14 @@ html, body {
 }
 
 .game-title {
-  font-size: clamp(28px, 3vw, 44px);
-  line-height: 0.98;
-  font-weight: 800;
+  font-size: clamp(1.45rem, 1.9vw, 2.25rem);
+  line-height: 1.05;
+  font-weight: 700;
 }
 
 .game-subtitle {
-  font-size: clamp(16px, 1.35vw, 22px);
-  line-height: 1.2;
+  font-size: clamp(1rem, 1.2vw, 1.24rem);
+  line-height: 1.28;
   font-weight: 500;
   color: var(--muted);
 }
@@ -154,7 +154,7 @@ html, body {
 
 .stat-card,
 .picker-card {
-  background: rgba(214,245,242,0.56);
+  background: white;
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 12px 14px;
@@ -200,6 +200,8 @@ html, body {
 
 .picker-trigger {
   width: 100%;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   padding: 12px 14px;
   border-radius: 15px;
@@ -333,6 +335,7 @@ html, body {
   #board {
     width: min(100%, calc(100dvh - 100px));
   }
+
 }
 
 @media (max-width: 640px) {
@@ -348,10 +351,6 @@ html, body {
   .side-panel {
     gap: 8px;
     padding: 10px;
-  }
-
-  .stat-grid {
-    grid-template-columns: 1fr;
   }
 
   .mark {
@@ -506,7 +505,7 @@ html, body {
         </div>
 
         <div class="stat-grid">
-          <div class="stat-card">
+          <div class="stat-card" id="status-bar">
             <div class="stat-label">Status</div>
             <span id="status-msg" class="status-msg">Tap a cell to begin</span>
           </div>
@@ -518,7 +517,7 @@ html, body {
 
         <div class="picker-card">
           <div class="picker-label">Puzzle</div>
-          <button class="btn picker-trigger" id="btn-picker">#1</button>
+          <button class="btn picker-trigger" id="btn-picker">#1 <span style="color: var(--accent); font-size: 10px;">▾</span></button>
         </div>
 
         <div class="btn-row">

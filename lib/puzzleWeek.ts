@@ -18,7 +18,7 @@ export const PUZZLE_WEEK_PUZZLES: PuzzleWeekPuzzle[] = [
   { id: 'puzzle-1', title: 'Day 1: Trading Car[d]s', acceptedAnswers: ['SYDNEY'] },
   { id: 'puzzle-2', title: 'Day 2: It’s-a-me and My Friends', acceptedAnswers: ['MIYAMOTO'] },
   { id: 'puzzle-3', title: 'Day 3: Connect 4', acceptedAnswers: ['NICK FOLES'] },
-  { id: 'puzzle-4', title: 'Day 4: Development Review Boardn', acceptedAnswers: ['BULLDOG'] },
+  { id: 'puzzle-4', title: 'Day 4: Development Review Board', acceptedAnswers: ['BULLDOG'] },
   { id: 'puzzle-5', title: 'Day 5: Find the Math Teachers', acceptedAnswers: ['PRIME MERIDIAN'] },
   { id: 'puzzle-6', title: 'Day 6: Mischief Managed', acceptedAnswers: ['PRINCIPAL DONAGHY'] },
   { id: 'puzzle-7', title: 'Metapuzzle: Graph of the (Day, ?)', acceptedAnswers: ['AG CORNOG'] },

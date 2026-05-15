@@ -61,7 +61,7 @@ function emptyBonusMedals(): PuzzleWeekBonusMedals {
     queensSolvedOrderVersion: PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION,
     starBattle: [],
     starBattleSolved: { easy: [], medium: [], hard: [] },
-    starBattleSolvedVersion: 2,
+    starBattleSolvedVersion: 3,
   }
 }
 
@@ -107,7 +107,7 @@ function sanitizeStarBattleSolvedVersion(value: unknown, boards: PuzzleWeekQueen
   const raw = typeof value === 'number' ? value : Number(value)
   if (Number.isInteger(raw) && raw >= 1) return raw
   const hasAnySolvedBoards = boards.easy.length > 0 || boards.medium.length > 0 || boards.hard.length > 0
-  return hasAnySolvedBoards ? 1 : 2
+  return hasAnySolvedBoards ? 1 : 3
 }
 
 function sanitizeBonusMedals(data: Record<string, unknown> | PuzzleWeekBonusMedals | null | undefined): PuzzleWeekBonusMedals {

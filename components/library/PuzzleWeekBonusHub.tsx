@@ -63,7 +63,7 @@ const STAR_BATTLE_LABELS: Record<StarBattleLevel, string> = { easy: 'Easy', medi
 const STAR_BATTLE_MEDALS: Record<StarBattleLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
 const STAR_BATTLE_MEDALS_KEY = 'pw-starbattle-medals'
 const STAR_BATTLE_SOLVED_VERSION_KEY = 'pw-starbattle-solved-version'
-const PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION = 2
+const PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION = 3
 const STAR_BATTLE_SOLVED_KEYS: Record<StarBattleLevel, string> = {
   easy: 'pw-starbattle-solved-easy',
   medium: 'pw-starbattle-solved-medium',
@@ -73,7 +73,7 @@ const STAR_BATTLE_SOLVED_KEYS: Record<StarBattleLevel, string> = {
 // Each puzzle: size×size grid, regions[] maps cell index→region id (0-based), solution is Set of star indices
 type StarBattlePuzzle = { size: number; regions: number[]; solution: number[] }
 
-// 8×8, 8 regions, 2 stars per row/col/region — 10 verified unique-solution puzzles
+// 8×8, 8 regions, 2 stars per row/col/region — 5 verified unique-solution puzzles
 const SB_EASY: StarBattlePuzzle[] = [
   {
     size: 8,
@@ -120,34 +120,6 @@ const SB_EASY: StarBattlePuzzle[] = [
   {
     size: 8,
     regions: [
-      0,0,6,6,5,5,5,5,
-      0,0,6,6,7,7,7,7,
-      0,0,6,6,7,7,7,7,
-      0,0,6,6,4,4,4,4,
-      1,1,6,6,4,4,4,4,
-      1,1,1,1,3,3,3,4,
-      2,2,2,2,3,3,3,3,
-      2,2,2,2,3,3,3,3,
-    ],
-    solution: [4,6,8,10,20,22,24,26,37,39,41,43,53,55,57,59],
-  },
-  {
-    size: 8,
-    regions: [
-      1,1,1,1,3,3,5,5,
-      4,4,4,3,3,3,5,5,
-      4,4,4,4,3,3,5,5,
-      6,6,6,6,3,3,5,5,
-      6,6,6,6,3,3,2,2,
-      7,7,7,7,2,2,2,2,
-      7,7,7,7,7,0,0,0,
-      7,7,7,7,0,0,0,0,
-    ],
-    solution: [1,3,13,15,17,19,29,31,32,34,44,46,48,50,60,62],
-  },
-  {
-    size: 8,
-    regions: [
       1,1,1,5,5,5,5,5,
       1,1,1,3,0,0,0,0,
       7,1,1,3,0,0,0,0,
@@ -158,48 +130,6 @@ const SB_EASY: StarBattlePuzzle[] = [
       2,2,2,2,2,2,6,4,
     ],
     solution: [4,6,8,10,20,22,24,26,37,39,41,43,53,55,57,59],
-  },
-  {
-    size: 8,
-    regions: [
-      3,3,3,4,4,4,0,0,
-      3,3,3,4,4,4,0,0,
-      3,1,1,1,4,7,0,0,
-      1,1,6,7,7,7,7,2,
-      1,6,6,6,7,7,2,2,
-      1,1,6,6,7,7,2,2,
-      1,5,5,5,5,7,2,2,
-      5,5,5,5,5,5,2,2,
-    ],
-    solution: [4,6,8,10,20,22,24,26,37,39,41,43,53,55,57,59],
-  },
-  {
-    size: 8,
-    regions: [
-      5,5,5,5,3,3,4,4,
-      0,5,5,3,3,4,4,4,
-      0,0,5,3,3,7,4,4,
-      0,0,5,3,7,7,4,4,
-      2,0,5,5,7,7,4,6,
-      2,2,1,1,1,7,6,6,
-      2,2,1,1,1,7,6,6,
-      2,2,1,1,1,1,1,6,
-    ],
-    solution: [4,6,8,10,20,22,24,26,37,39,41,43,53,55,57,59],
-  },
-  {
-    size: 8,
-    regions: [
-      7,7,7,7,7,6,5,5,
-      7,7,3,3,6,6,6,5,
-      7,3,3,3,6,6,6,5,
-      1,3,3,4,6,6,5,5,
-      1,1,4,4,4,6,0,0,
-      1,1,1,4,4,0,0,0,
-      1,1,2,2,2,0,0,0,
-      1,1,1,2,2,0,0,0,
-    ],
-    solution: [1,3,13,15,17,19,29,31,32,34,44,46,48,50,60,62],
   },
   {
     size: 8,
@@ -2593,9 +2523,27 @@ function readLocalStarBattleSolvedBoardState(): StarBattleSolvedBoardState {
     const hasAny = state.easy.size > 0 || state.medium.size > 0 || state.hard.size > 0
     version = hasAny ? 1 : PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION
   }
-  if (version < PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION) {
+  if (version < 2) {
     state.hard = new Set(state.medium)
     state.medium = new Set()
+    version = 2
+  }
+  if (version < 3) {
+    const easyRemap = new Map<number, number>([
+      [0, 0],
+      [1, 1],
+      [2, 2],
+      [5, 3],
+      [9, 4],
+    ])
+    state.easy = new Set(
+      [...state.easy]
+        .map(idx => easyRemap.get(idx))
+        .filter((idx): idx is number => idx != null)
+    )
+    version = 3
+  }
+  if (version < PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION) {
     writeLocalStarBattleSolvedBoardState(state)
   }
   return state
@@ -2654,9 +2602,24 @@ function starBattleSolvedBoardsFromProfile(profile: PuzzleWeekBonusMedals): Star
     medium: new Set(sb.medium),
     hard: new Set(sb.hard),
   }
-  if ((profile.starBattleSolvedVersion ?? 1) < PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION) {
+  const version = profile.starBattleSolvedVersion ?? 1
+  if (version < 2) {
     state.hard = new Set(state.medium)
     state.medium = new Set()
+  }
+  if (version < 3) {
+    const easyRemap = new Map<number, number>([
+      [0, 0],
+      [1, 1],
+      [2, 2],
+      [5, 3],
+      [9, 4],
+    ])
+    state.easy = new Set(
+      [...state.easy]
+        .map(idx => easyRemap.get(idx))
+        .filter((idx): idx is number => idx != null)
+    )
   }
   return state
 }

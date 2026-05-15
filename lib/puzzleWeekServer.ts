@@ -127,6 +127,33 @@ function sanitizeBonusMedals(data: Record<string, unknown> | PuzzleWeekBonusMeda
   }
 }
 
+function mergeNumberArrays(a: number[], b: number[]) {
+  return [...new Set([...a, ...b])].sort((x, y) => x - y)
+}
+
+function mergeBonusMedals(server: PuzzleWeekBonusMedals, client: PuzzleWeekBonusMedals): PuzzleWeekBonusMedals {
+  return {
+    slider: sanitizeStringArray([...server.slider, ...client.slider], BONUS_TIER_VALUES),
+    lightsOut: sanitizeStringArray([...server.lightsOut, ...client.lightsOut], BONUS_TIER_VALUES),
+    netwalk: sanitizeStringArray([...server.netwalk, ...client.netwalk], BONUS_TIER_VALUES),
+    game2048: sanitizeStringArray([...server.game2048, ...client.game2048], BONUS_2048_VALUES),
+    queens: sanitizeStringArray([...server.queens, ...client.queens], BONUS_TIER_VALUES),
+    queensSolved: {
+      easy: mergeNumberArrays(server.queensSolved.easy, client.queensSolved.easy),
+      medium: mergeNumberArrays(server.queensSolved.medium, client.queensSolved.medium),
+      hard: mergeNumberArrays(server.queensSolved.hard, client.queensSolved.hard),
+    },
+    queensSolvedOrderVersion: Math.max(server.queensSolvedOrderVersion, client.queensSolvedOrderVersion),
+    starBattle: sanitizeStringArray([...server.starBattle, ...client.starBattle], BONUS_TIER_VALUES),
+    starBattleSolved: {
+      easy: mergeNumberArrays(server.starBattleSolved.easy, client.starBattleSolved.easy),
+      medium: mergeNumberArrays(server.starBattleSolved.medium, client.starBattleSolved.medium),
+      hard: mergeNumberArrays(server.starBattleSolved.hard, client.starBattleSolved.hard),
+    },
+    starBattleSolvedVersion: Math.max(server.starBattleSolvedVersion, client.starBattleSolvedVersion),
+  }
+}
+
 let cachedAccessToken: { token: string; expiresAt: number } | null = null
 
 function assertServerFirebaseConfig() {
@@ -1090,7 +1117,11 @@ export async function savePuzzleWeekBonusMedalsServer(
   user: VerifiedPuzzleWeekUser,
   medals: PuzzleWeekBonusMedals,
 ): Promise<void> {
-  const sanitized = sanitizeBonusMedals(medals)
+  const docId = `${eventId}__${user.uid}`
+  const incoming = sanitizeBonusMedals(medals)
+  const existingDoc = await getDocument<Record<string, unknown>>('puzzleWeekBonusMedals', docId)
+  const existing = existingDoc ? sanitizeBonusMedals(existingDoc) : emptyBonusMedals()
+  const sanitized = mergeBonusMedals(existing, incoming)
   await setDocument('puzzleWeekBonusMedals', `${eventId}__${user.uid}`, {
     eventId,
     userId: user.uid,

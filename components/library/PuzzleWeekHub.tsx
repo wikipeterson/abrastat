@@ -30,6 +30,8 @@ import {
   joinPuzzleWeekTeam,
   registerPuzzleWeekSolo,
   registerPuzzleWeekTeam,
+  PuzzleWeek2048MedalLevel,
+  PuzzleWeekBonusTier,
   submitPuzzleWeekAnswer,
   submitPuzzleWeekVote,
 } from '@/lib/puzzleWeek'
@@ -54,33 +56,41 @@ function topVotedIds(tally: Record<string, number>): Set<string> {
 const MAIN_PUZZLES = PUZZLE_WEEK_PUZZLES.slice(0, PUZZLE_WEEK_PUZZLES.length - 1)
 const META_PUZZLE = PUZZLE_WEEK_PUZZLES[PUZZLE_WEEK_PUZZLES.length - 1]
 const TOTAL_BONUS_MEDALS = 18
+const BONUS_TIER_VALUES = new Set<PuzzleWeekBonusTier>(['easy', 'medium', 'hard'])
+const BONUS_2048_VALUES = new Set<PuzzleWeek2048MedalLevel>(['bronze', 'silver', 'gold'])
 
 function countBonusMedals(medals: PuzzleWeekBonusMedals) {
   return (
-    medals.slider.length +
-    medals.lightsOut.length +
-    medals.netwalk.length +
-    medals.game2048.length +
-    medals.queens.length +
-    medals.starBattle.length
+    new Set(medals.slider.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier))).size +
+    new Set(medals.lightsOut.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier))).size +
+    new Set(medals.netwalk.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier))).size +
+    new Set(medals.game2048.filter((value): value is PuzzleWeek2048MedalLevel => BONUS_2048_VALUES.has(value as PuzzleWeek2048MedalLevel))).size +
+    new Set(medals.queens.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier))).size +
+    new Set(medals.starBattle.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier))).size
   )
 }
 
-function countLocalBonusMedals(): number {
-  function readCount(key: string): number {
-    try {
-      const stored = localStorage.getItem(key)
-      const parsed = stored ? JSON.parse(stored) : []
-      return Array.isArray(parsed) ? parsed.length : 0
-    } catch { return 0 }
+function readStoredValidatedCount<T extends string>(key: string, allowed: Set<T>): number {
+  try {
+    const stored = localStorage.getItem(key)
+    const parsed = stored ? JSON.parse(stored) : []
+    if (!Array.isArray(parsed)) return 0
+    return new Set(
+      parsed.filter((value): value is T => typeof value === 'string' && allowed.has(value as T)),
+    ).size
+  } catch {
+    return 0
   }
+}
+
+function countLocalBonusMedals(): number {
   return (
-    readCount('pw-slider-medals') +
-    readCount('pw-lightsout-medals') +
-    readCount('pw-netwalk-medals') +
-    readCount('pw-2048-medals') +
-    readCount('pw-queens-medals') +
-    readCount('pw-starbattle-medals')
+    readStoredValidatedCount('pw-slider-medals', BONUS_TIER_VALUES) +
+    readStoredValidatedCount('pw-lightsout-medals', BONUS_TIER_VALUES) +
+    readStoredValidatedCount('pw-netwalk-medals', BONUS_TIER_VALUES) +
+    readStoredValidatedCount('pw-2048-medals', BONUS_2048_VALUES) +
+    readStoredValidatedCount('pw-queens-medals', BONUS_TIER_VALUES) +
+    readStoredValidatedCount('pw-starbattle-medals', BONUS_TIER_VALUES)
   )
 }
 
@@ -198,15 +208,37 @@ export function PuzzleWeekHub() {
       setBonusMedalCount(0)
       return
     }
+    const signedInUser = user
     setBonusMedalCount(countLocalBonusMedals())
     let cancelled = false
-    void (async () => {
+    async function syncBonusCount() {
       try {
-        const medals = await getPuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, user)
-        if (!cancelled) setBonusMedalCount(c => Math.max(c, countBonusMedals(medals)))
+        const medals = await getPuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, signedInUser)
+        if (!cancelled) {
+          const remoteCount = countBonusMedals(medals)
+          setBonusMedalCount(current => Math.max(current, remoteCount))
+        }
       } catch { /* keep local count */ }
-    })()
-    return () => { cancelled = true }
+    }
+    void syncBonusCount()
+
+    function handleWindowFocus() {
+      void syncBonusCount()
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        void syncBonusCount()
+      }
+    }
+
+    window.addEventListener('focus', handleWindowFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      cancelled = true
+      window.removeEventListener('focus', handleWindowFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [user, isGuest])
 
   async function handleSaveVote() {

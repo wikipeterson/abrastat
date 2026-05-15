@@ -103,6 +103,7 @@ export interface PuzzleWeekBonusMedals {
   queensSolvedOrderVersion: number
   starBattle: PuzzleWeekBonusTier[]
   starBattleSolved: PuzzleWeekQueensSolvedBoards
+  starBattleSolvedVersion: number
 }
 
 export interface PuzzleWeekAdminEntry {

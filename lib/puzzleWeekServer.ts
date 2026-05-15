@@ -61,6 +61,7 @@ function emptyBonusMedals(): PuzzleWeekBonusMedals {
     queensSolvedOrderVersion: PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION,
     starBattle: [],
     starBattleSolved: { easy: [], medium: [], hard: [] },
+    starBattleSolvedVersion: 2,
   }
 }
 
@@ -102,8 +103,16 @@ function sanitizeQueensSolvedOrderVersion(value: unknown, boards: PuzzleWeekQuee
   return hasAnySolvedBoards ? 1 : PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION
 }
 
+function sanitizeStarBattleSolvedVersion(value: unknown, boards: PuzzleWeekQueensSolvedBoards): number {
+  const raw = typeof value === 'number' ? value : Number(value)
+  if (Number.isInteger(raw) && raw >= 1) return raw
+  const hasAnySolvedBoards = boards.easy.length > 0 || boards.medium.length > 0 || boards.hard.length > 0
+  return hasAnySolvedBoards ? 1 : 2
+}
+
 function sanitizeBonusMedals(data: Record<string, unknown> | PuzzleWeekBonusMedals | null | undefined): PuzzleWeekBonusMedals {
   const queensSolved = sanitizeQueensSolvedBoards(data?.queensSolved)
+  const starBattleSolved = sanitizeQueensSolvedBoards(data?.starBattleSolved)
   return {
     slider: sanitizeStringArray(data?.slider, BONUS_TIER_VALUES),
     lightsOut: sanitizeStringArray(data?.lightsOut, BONUS_TIER_VALUES),
@@ -113,7 +122,8 @@ function sanitizeBonusMedals(data: Record<string, unknown> | PuzzleWeekBonusMeda
     queensSolved,
     queensSolvedOrderVersion: sanitizeQueensSolvedOrderVersion(data?.queensSolvedOrderVersion, queensSolved),
     starBattle: sanitizeStringArray(data?.starBattle, BONUS_TIER_VALUES),
-    starBattleSolved: sanitizeQueensSolvedBoards(data?.starBattleSolved),
+    starBattleSolved,
+    starBattleSolvedVersion: sanitizeStarBattleSolvedVersion(data?.starBattleSolvedVersion, starBattleSolved),
   }
 }
 

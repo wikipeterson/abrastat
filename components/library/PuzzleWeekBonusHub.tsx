@@ -62,6 +62,8 @@ type StarBattleLevel = 'easy' | 'medium' | 'hard'
 const STAR_BATTLE_LABELS: Record<StarBattleLevel, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' }
 const STAR_BATTLE_MEDALS: Record<StarBattleLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
 const STAR_BATTLE_MEDALS_KEY = 'pw-starbattle-medals'
+const STAR_BATTLE_SOLVED_VERSION_KEY = 'pw-starbattle-solved-version'
+const PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION = 2
 const STAR_BATTLE_SOLVED_KEYS: Record<StarBattleLevel, string> = {
   easy: 'pw-starbattle-solved-easy',
   medium: 'pw-starbattle-solved-medium',
@@ -215,8 +217,162 @@ const SB_EASY: StarBattlePuzzle[] = [
   },
 ]
 
-// 10×10, 10 regions, 2 stars per row/col/region — 10 verified unique-solution puzzles
+// 9×9, 9 regions, 2 stars per row/col/region — 10 verified unique-solution puzzles
 const SB_MEDIUM: StarBattlePuzzle[] = [
+  {
+    size: 9,
+    regions: [
+      0,0,0,0,0,0,1,1,1,
+      0,2,2,2,2,2,1,1,1,
+      0,2,2,2,3,1,1,1,4,
+      0,5,5,2,3,3,3,4,4,
+      5,5,6,6,3,3,4,4,4,
+      5,6,6,6,6,3,3,3,4,
+      5,5,6,6,6,7,7,4,4,
+      5,5,8,8,8,8,7,7,7,
+      8,8,8,8,8,7,7,7,7,
+    ],
+    solution: [2, 4, 15, 17, 19, 21, 32, 34, 37, 39, 51, 53, 54, 58, 65, 70, 72, 77],
+  },
+  {
+    size: 9,
+    regions: [
+      0,1,1,1,1,2,2,2,2,
+      0,1,1,3,1,1,4,4,2,
+      0,0,3,3,3,1,4,4,2,
+      0,0,3,3,3,4,4,4,2,
+      0,0,3,3,5,5,5,4,2,
+      6,0,6,5,5,5,7,4,2,
+      6,6,6,5,8,5,7,7,7,
+      6,6,8,5,8,8,7,7,7,
+      6,6,8,8,8,8,8,7,7,
+    ],
+    solution: [0, 2, 13, 15, 19, 26, 31, 33, 38, 44, 45, 50, 57, 61, 64, 68, 75, 79],
+  },
+  {
+    size: 9,
+    regions: [
+      0,0,0,0,1,1,1,1,1,
+      0,0,0,1,1,1,1,2,2,
+      3,3,0,0,4,4,4,2,2,
+      3,5,5,5,4,4,4,4,2,
+      3,3,3,5,5,4,4,2,2,
+      3,3,5,5,5,6,2,2,7,
+      3,8,8,8,5,6,6,6,7,
+      8,8,8,6,6,6,6,6,7,
+      8,8,8,7,7,7,7,7,7,
+    ],
+    solution: [3, 8, 10, 15, 22, 26, 27, 29, 41, 43, 46, 48, 59, 61, 63, 65, 76, 78],
+  },
+  {
+    size: 9,
+    regions: [
+      0,0,1,1,1,1,1,2,2,
+      0,0,0,1,1,3,1,2,2,
+      0,0,0,3,1,3,2,2,2,
+      4,5,0,3,3,3,2,6,2,
+      4,5,3,3,3,7,7,6,6,
+      4,5,5,5,7,7,7,6,6,
+      4,5,5,8,7,7,7,6,6,
+      4,5,5,8,8,7,8,8,6,
+      4,4,4,4,8,8,8,8,6,
+    ],
+    solution: [1, 5, 12, 16, 19, 23, 30, 35, 36, 42, 47, 49, 54, 61, 65, 67, 78, 80],
+  },
+  {
+    size: 9,
+    regions: [
+      0,0,0,1,1,1,1,1,1,
+      0,0,0,2,2,2,2,2,1,
+      3,0,0,0,4,2,2,2,1,
+      3,3,4,4,4,2,5,5,1,
+      3,3,3,4,4,6,6,5,5,
+      3,4,4,4,6,6,6,6,5,
+      3,3,7,7,6,6,6,5,5,
+      7,7,7,8,8,8,8,5,5,
+      7,7,7,7,8,8,8,8,8,
+    ],
+    solution: [4, 6, 9, 11, 23, 25, 28, 30, 41, 43, 45, 47, 58, 62, 64, 69, 75, 80],
+  },
+  {
+    size: 9,
+    regions: [
+      0,0,0,0,1,1,1,1,1,
+      2,2,0,0,0,3,3,1,1,
+      2,2,0,0,3,3,3,3,1,
+      2,2,2,2,4,3,5,3,1,
+      2,6,6,4,4,3,5,5,5,
+      6,6,6,7,4,5,5,5,8,
+      6,6,6,7,4,4,5,5,8,
+      6,7,7,7,4,4,8,8,8,
+      7,7,7,7,4,8,8,8,8,
+    ],
+    solution: [1, 3, 15, 17, 18, 22, 29, 35, 40, 42, 45, 47, 59, 61, 64, 66, 77, 79],
+  },
+  {
+    size: 9,
+    regions: [
+      0,1,1,1,2,2,2,2,3,
+      0,0,1,1,1,2,2,2,3,
+      0,0,1,1,1,2,3,3,3,
+      0,0,0,0,4,2,3,3,3,
+      4,4,4,4,4,4,5,3,6,
+      7,4,4,8,5,5,5,5,6,
+      7,7,8,8,8,8,5,5,6,
+      7,7,8,8,8,5,5,6,6,
+      7,7,7,7,8,6,6,6,6,
+    ],
+    solution: [3, 6, 10, 17, 21, 23, 28, 35, 40, 42, 45, 47, 58, 61, 63, 65, 77, 79],
+  },
+  {
+    size: 9,
+    regions: [
+      0,0,0,0,1,2,2,2,2,
+      0,0,0,1,1,2,2,2,3,
+      0,4,4,1,1,2,3,3,3,
+      0,4,4,4,1,2,3,3,3,
+      4,4,4,5,1,1,3,3,6,
+      7,5,4,5,1,6,6,6,6,
+      7,5,5,5,5,8,8,6,6,
+      7,7,5,5,8,8,8,6,6,
+      7,7,7,7,7,8,8,8,8,
+    ],
+    solution: [1, 3, 14, 16, 19, 21, 33, 35, 38, 40, 45, 51, 58, 62, 63, 65, 77, 79],
+  },
+  {
+    size: 9,
+    regions: [
+      0,0,0,0,1,2,2,2,2,
+      0,0,3,3,1,1,1,2,2,
+      0,3,3,1,1,1,1,2,2,
+      0,3,3,3,3,1,4,4,2,
+      0,5,3,4,4,4,4,4,4,
+      5,5,5,6,4,7,7,7,7,
+      5,5,5,6,8,8,8,7,7,
+      5,6,6,6,8,8,8,7,7,
+      5,6,6,6,6,8,8,8,7,
+    ],
+    solution: [1, 3, 15, 17, 19, 22, 33, 35, 38, 40, 45, 52, 57, 59, 63, 70, 74, 77],
+  },
+  {
+    size: 9,
+    regions: [
+      0,0,0,0,0,1,1,1,1,
+      0,0,2,2,1,1,1,3,3,
+      0,2,2,2,2,1,1,3,3,
+      0,2,4,2,5,3,3,3,3,
+      4,4,4,2,5,5,6,6,3,
+      7,4,4,4,5,8,6,6,6,
+      7,4,4,5,5,8,6,6,6,
+      7,7,7,5,5,8,8,8,6,
+      7,7,7,7,5,8,8,8,8,
+    ],
+    solution: [5, 7, 9, 11, 22, 26, 27, 33, 38, 40, 51, 53, 55, 57, 68, 70, 73, 75],
+  },
+]
+
+// 10×10, 10 regions, 2 stars per row/col/region — 10 verified unique-solution puzzles
+const SB_HARD: StarBattlePuzzle[] = [
   {
     size: 10,
     regions: [
@@ -378,39 +534,6 @@ const SB_MEDIUM: StarBattlePuzzle[] = [
     solution: [1,3,17,19,22,25,30,38,42,44,50,56,64,68,71,76,83,89,95,97],
   },
 ]
-const SB_HARD: StarBattlePuzzle[] = [
-  { size: 10,
-    regions: [1,1,1,1,1,5,2,2,2,2,1,1,1,1,1,5,5,2,2,2,1,1,1,1,1,5,5,2,2,2,3,9,9,1,5,5,5,6,6,2,3,9,9,9,5,5,5,6,6,6,3,3,9,9,0,0,0,7,7,7,3,3,3,0,0,0,0,7,7,7,8,8,8,4,4,0,0,7,7,7,8,8,4,4,4,4,4,7,7,7,8,8,4,4,4,4,4,4,7,7],
-    solution: [2,5,17,19,23,25,31,37,43,49,50,56,62,64,70,78,84,86,91,98] },
-  { size: 10,
-    regions: [8,8,8,8,1,1,1,1,1,1,8,8,8,8,1,1,0,0,1,4,9,9,9,8,0,0,0,0,0,4,9,9,9,9,5,0,0,0,0,4,9,9,9,5,5,5,5,7,7,7,9,9,5,5,5,5,7,7,7,7,3,3,3,3,5,5,2,2,7,7,3,3,3,3,3,2,2,2,2,2,6,6,6,6,6,6,2,2,2,2,6,6,6,6,6,6,2,2,2,2],
-    solution: [5,7,11,19,23,25,37,39,42,44,50,56,64,68,70,72,86,88,91,93] },
-  { size: 10,
-    regions: [3,5,5,5,5,5,2,2,2,2,3,3,5,5,5,2,2,2,2,2,3,3,3,5,5,7,2,2,2,2,3,3,3,5,7,7,7,2,2,4,3,3,3,9,9,7,7,7,4,4,3,8,8,9,9,9,7,0,0,4,8,8,8,9,9,9,9,0,0,0,8,8,8,8,9,1,1,0,0,0,6,6,6,1,1,1,1,1,0,0,6,6,6,6,1,1,1,1,0,0],
-    solution: [4,8,10,12,25,27,31,39,43,45,57,59,60,62,74,76,81,88,93,96] },
-  { size: 10,
-    regions: [1,4,4,4,4,7,7,9,9,9,1,8,4,4,7,7,7,7,7,9,1,8,4,4,4,7,7,7,2,2,1,8,8,8,6,7,7,2,2,2,1,8,8,6,6,6,2,2,2,2,1,8,6,6,6,6,5,5,0,0,1,8,3,6,6,6,5,5,5,0,1,3,3,3,6,6,5,5,5,0,3,3,3,3,3,5,5,5,0,0,3,3,3,3,3,3,0,0,0,0],
-    solution: [4,7,12,19,25,27,31,33,46,48,50,52,64,66,70,79,83,85,91,98] },
-  { size: 10,
-    regions: [8,8,8,1,1,1,0,0,0,6,8,8,1,1,1,1,0,0,0,6,8,8,8,1,1,1,0,0,6,6,9,9,9,3,1,2,2,2,6,6,9,9,9,3,3,3,2,2,2,2,9,9,3,3,3,3,3,2,2,2,9,4,7,7,7,7,7,2,2,2,4,4,5,7,7,7,7,2,2,2,4,4,5,5,7,7,5,5,5,5,4,4,5,5,5,5,5,5,5,5],
-    solution: [5,7,10,19,22,26,34,38,40,42,54,56,61,69,73,77,81,85,93,98] },
-  { size: 10,
-    regions: [2,2,2,6,6,8,4,4,4,7,2,2,2,2,6,8,4,4,4,7,0,2,2,6,6,8,8,4,7,7,0,0,0,6,6,8,8,4,7,3,0,0,5,6,6,8,8,3,3,3,9,9,5,5,6,8,8,3,3,3,9,5,5,5,5,8,3,3,3,3,9,5,5,5,5,8,1,1,1,1,9,9,5,5,5,1,1,1,1,1,9,9,5,5,1,1,1,1,1,1],
-    solution: [6,9,11,13,27,29,32,34,40,48,54,56,62,68,70,75,83,87,91,95] },
-  { size: 10,
-    regions: [2,2,2,2,6,6,6,6,6,6,2,2,2,2,6,6,6,6,0,0,2,2,2,8,8,8,8,8,0,0,2,2,2,8,8,8,8,8,0,0,4,4,4,4,4,4,4,4,0,0,4,4,9,4,1,1,4,4,4,4,9,9,9,9,1,1,1,7,3,3,9,9,9,9,1,1,1,7,3,3,9,9,9,9,9,1,1,7,3,3,5,5,5,5,5,1,7,7,3,3],
-    solution: [4,6,12,18,20,25,33,38,40,46,52,54,67,69,71,75,87,89,91,93] },
-  { size: 10,
-    regions: [7,7,7,8,8,8,8,8,8,8,7,7,7,7,8,8,8,8,8,8,7,7,7,5,5,5,9,9,9,9,4,5,5,5,5,5,9,9,9,9,4,4,3,3,9,9,9,0,0,9,4,4,3,3,3,9,0,0,0,0,4,4,3,3,3,0,0,0,0,0,4,4,3,3,6,6,6,0,0,2,4,4,1,1,1,1,6,6,2,2,4,1,1,1,1,1,1,1,2,2],
-    solution: [5,7,11,13,26,28,32,34,40,48,54,56,60,62,75,79,83,87,91,99] },
-  { size: 10,
-    regions: [6,6,6,6,6,5,1,1,1,1,6,6,6,6,5,5,5,1,8,8,6,6,6,6,5,5,3,3,8,8,7,5,5,5,5,3,3,3,8,8,7,0,0,5,5,3,3,3,8,8,7,0,0,0,2,2,2,2,9,9,7,0,0,0,2,2,2,2,9,9,7,0,0,0,2,2,2,9,9,9,7,7,0,0,4,4,4,4,9,9,7,7,7,7,4,4,4,4,4,4],
-    solution: [6,8,11,13,27,29,31,35,43,48,50,55,62,69,74,77,80,82,94,96] },
-  { size: 10,
-    regions: [5,5,5,5,8,6,6,6,6,4,5,5,5,0,8,6,6,6,6,4,5,5,5,0,8,8,6,6,4,4,5,0,0,0,0,8,6,4,4,4,3,0,0,0,0,8,8,4,4,4,3,2,2,2,2,8,8,4,1,4,3,2,2,2,2,2,1,1,1,1,3,9,9,2,7,7,1,1,1,1,3,9,9,7,7,7,7,1,1,1,3,3,9,7,7,7,7,1,1,1],
-    solution: [3,7,11,19,25,27,32,39,44,46,50,58,63,65,71,78,84,86,90,92] },
-]
-
 const SB_PUZZLES: Record<StarBattleLevel, StarBattlePuzzle[]> = {
   easy: SB_EASY,
   medium: SB_MEDIUM,
@@ -2451,17 +2574,38 @@ function writeLocalQueensSolvedBoardState(state: QueensSolvedBoardState) {
 }
 
 function readLocalStarBattleSolvedBoardState(): StarBattleSolvedBoardState {
-  return {
+  const state = {
     easy: readStoredNumberSet(STAR_BATTLE_SOLVED_KEYS.easy),
     medium: readStoredNumberSet(STAR_BATTLE_SOLVED_KEYS.medium),
     hard: readStoredNumberSet(STAR_BATTLE_SOLVED_KEYS.hard),
   }
+  let version = PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION
+  try {
+    const storedVersion = localStorage.getItem(STAR_BATTLE_SOLVED_VERSION_KEY)
+    if (storedVersion != null) {
+      const parsed = Number(storedVersion)
+      if (Number.isInteger(parsed) && parsed >= 1) version = parsed
+    } else {
+      const hasAny = state.easy.size > 0 || state.medium.size > 0 || state.hard.size > 0
+      version = hasAny ? 1 : PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION
+    }
+  } catch {
+    const hasAny = state.easy.size > 0 || state.medium.size > 0 || state.hard.size > 0
+    version = hasAny ? 1 : PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION
+  }
+  if (version < PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION) {
+    state.hard = new Set(state.medium)
+    state.medium = new Set()
+    writeLocalStarBattleSolvedBoardState(state)
+  }
+  return state
 }
 
 function writeLocalStarBattleSolvedBoardState(state: StarBattleSolvedBoardState) {
   try { localStorage.setItem(STAR_BATTLE_SOLVED_KEYS.easy, JSON.stringify([...state.easy].sort((a, b) => a - b))) } catch {}
   try { localStorage.setItem(STAR_BATTLE_SOLVED_KEYS.medium, JSON.stringify([...state.medium].sort((a, b) => a - b))) } catch {}
   try { localStorage.setItem(STAR_BATTLE_SOLVED_KEYS.hard, JSON.stringify([...state.hard].sort((a, b) => a - b))) } catch {}
+  try { localStorage.setItem(STAR_BATTLE_SOLVED_VERSION_KEY, String(PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION)) } catch {}
 }
 
 function bonusMedalsFromProfile(profile: PuzzleWeekBonusMedals): BonusMedalState {
@@ -2505,11 +2649,16 @@ function queensSolvedBoardsToProfile(state: QueensSolvedBoardState): PuzzleWeekQ
 
 function starBattleSolvedBoardsFromProfile(profile: PuzzleWeekBonusMedals): StarBattleSolvedBoardState {
   const sb = profile.starBattleSolved ?? { easy: [], medium: [], hard: [] }
-  return {
+  const state = {
     easy: new Set(sb.easy),
     medium: new Set(sb.medium),
     hard: new Set(sb.hard),
   }
+  if ((profile.starBattleSolvedVersion ?? 1) < PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION) {
+    state.hard = new Set(state.medium)
+    state.medium = new Set()
+  }
+  return state
 }
 
 function starBattleSolvedBoardsToProfile(state: StarBattleSolvedBoardState): PuzzleWeekQueensSolvedBoards {
@@ -2531,6 +2680,7 @@ function bonusMedalsToProfile(state: BonusMedalState, queensSolved: QueensSolved
     queensSolvedOrderVersion: PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION,
     starBattle: [...state.starBattle],
     starBattleSolved: starBattleSolvedBoardsToProfile(starBattleSolved),
+    starBattleSolvedVersion: PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION,
   }
 }
 

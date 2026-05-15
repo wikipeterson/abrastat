@@ -32,6 +32,7 @@ import {
   registerPuzzleWeekTeam,
   PuzzleWeek2048MedalLevel,
   PuzzleWeekBonusTier,
+  savePuzzleWeekBonusMedals,
   submitPuzzleWeekAnswer,
   submitPuzzleWeekVote,
 } from '@/lib/puzzleWeek'
@@ -80,6 +81,30 @@ function readStoredValidatedCount<T extends string>(key: string, allowed: Set<T>
     ).size
   } catch {
     return 0
+  }
+}
+
+function readStoredValidatedSet<T extends string>(key: string, allowed: Set<T>): Set<T> {
+  try {
+    const stored = localStorage.getItem(key)
+    const parsed = stored ? JSON.parse(stored) : []
+    if (!Array.isArray(parsed)) return new Set()
+    return new Set(
+      parsed.filter((value): value is T => typeof value === 'string' && allowed.has(value as T)),
+    )
+  } catch {
+    return new Set()
+  }
+}
+
+function readLocalBonusMedalSets() {
+  return {
+    slider: readStoredValidatedSet('pw-slider-medals', BONUS_TIER_VALUES),
+    lightsOut: readStoredValidatedSet('pw-lightsout-medals', BONUS_TIER_VALUES),
+    netwalk: readStoredValidatedSet('pw-netwalk-medals', BONUS_TIER_VALUES),
+    game2048: readStoredValidatedSet('pw-2048-medals', BONUS_2048_VALUES),
+    queens: readStoredValidatedSet('pw-queens-medals', BONUS_TIER_VALUES),
+    starBattle: readStoredValidatedSet('pw-starbattle-medals', BONUS_TIER_VALUES),
   }
 }
 
@@ -214,9 +239,26 @@ export function PuzzleWeekHub() {
     async function syncBonusCount() {
       try {
         const medals = await getPuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, signedInUser)
+        const localSets = readLocalBonusMedalSets()
+        const merged = {
+          ...medals,
+          slider: [...new Set([...medals.slider.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...localSets.slider])],
+          lightsOut: [...new Set([...medals.lightsOut.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...localSets.lightsOut])],
+          netwalk: [...new Set([...medals.netwalk.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...localSets.netwalk])],
+          game2048: [...new Set([...medals.game2048.filter((value): value is PuzzleWeek2048MedalLevel => BONUS_2048_VALUES.has(value as PuzzleWeek2048MedalLevel)), ...localSets.game2048])],
+          queens: [...new Set([...medals.queens.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...localSets.queens])],
+          starBattle: [...new Set([...medals.starBattle.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...localSets.starBattle])],
+        }
+        const remoteCount = countBonusMedals(medals)
+        const mergedCount = countBonusMedals(merged)
+        if (
+          mergedCount !== remoteCount &&
+          !cancelled
+        ) {
+          await savePuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, signedInUser, merged)
+        }
         if (!cancelled) {
-          const remoteCount = countBonusMedals(medals)
-          setBonusMedalCount(current => Math.max(current, remoteCount))
+          setBonusMedalCount(current => Math.max(current, mergedCount))
         }
       } catch { /* keep local count */ }
     }

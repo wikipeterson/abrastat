@@ -108,6 +108,15 @@ function readLocalBonusMedalSets() {
   }
 }
 
+function writeLocalBonusMedalSets(sets: ReturnType<typeof readLocalBonusMedalSets>) {
+  try { localStorage.setItem('pw-slider-medals', JSON.stringify([...sets.slider])) } catch {}
+  try { localStorage.setItem('pw-lightsout-medals', JSON.stringify([...sets.lightsOut])) } catch {}
+  try { localStorage.setItem('pw-netwalk-medals', JSON.stringify([...sets.netwalk])) } catch {}
+  try { localStorage.setItem('pw-2048-medals', JSON.stringify([...sets.game2048])) } catch {}
+  try { localStorage.setItem('pw-queens-medals', JSON.stringify([...sets.queens])) } catch {}
+  try { localStorage.setItem('pw-starbattle-medals', JSON.stringify([...sets.starBattle])) } catch {}
+}
+
 function countLocalBonusMedals(): number {
   return (
     readStoredValidatedCount('pw-slider-medals', BONUS_TIER_VALUES) +
@@ -131,6 +140,17 @@ function mergeBonusMedalProfile(
     game2048: [...new Set([...profile.game2048.filter((value): value is PuzzleWeek2048MedalLevel => BONUS_2048_VALUES.has(value as PuzzleWeek2048MedalLevel)), ...local.game2048])],
     queens: [...new Set([...profile.queens.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...local.queens])],
     starBattle: [...new Set([...profile.starBattle.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...local.starBattle])],
+  }
+}
+
+function profileToLocalBonusMedalSets(profile: PuzzleWeekBonusMedals) {
+  return {
+    slider: new Set(profile.slider.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier))),
+    lightsOut: new Set(profile.lightsOut.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier))),
+    netwalk: new Set(profile.netwalk.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier))),
+    game2048: new Set(profile.game2048.filter((value): value is PuzzleWeek2048MedalLevel => BONUS_2048_VALUES.has(value as PuzzleWeek2048MedalLevel))),
+    queens: new Set(profile.queens.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier))),
+    starBattle: new Set(profile.starBattle.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier))),
   }
 }
 
@@ -261,6 +281,7 @@ export function PuzzleWeekHub() {
         const merged = mergeBonusMedalProfile(medals, localSets)
         const remoteCount = countBonusMedals(medals)
         const mergedCount = countBonusMedals(merged)
+        writeLocalBonusMedalSets(profileToLocalBonusMedalSets(merged))
         let displayedRemoteCount = remoteCount
         if (
           mergedCount !== remoteCount &&
@@ -307,6 +328,7 @@ export function PuzzleWeekHub() {
       await savePuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, user, merged)
       const refreshed = await getPuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, user)
       const nextCount = countBonusMedals(refreshed)
+      writeLocalBonusMedalSets(profileToLocalBonusMedalSets(refreshed))
       setRemoteBonusMedalCount(nextCount)
       setBonusMedalCount(current => Math.max(current, nextCount))
       setBonusSyncMessage(`Synced profile now has ${nextCount} medals.`)

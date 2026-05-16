@@ -160,6 +160,7 @@ export function PuzzleWeekHub() {
   const [bonusMedalCount, setBonusMedalCount] = useState(0)
   const [remoteBonusMedalCount, setRemoteBonusMedalCount] = useState(0)
   const [syncingBonusMedals, setSyncingBonusMedals] = useState(false)
+  const [bonusSyncMessage, setBonusSyncMessage] = useState<string | null>(null)
   const canRegister = canRegisterForPuzzleWeek(user)
   const canDownloadPacket = canDownloadPuzzleWeekPacketIdentity(user)
   const canManage = canManagePuzzleWeekIdentity(user)
@@ -260,14 +261,16 @@ export function PuzzleWeekHub() {
         const merged = mergeBonusMedalProfile(medals, localSets)
         const remoteCount = countBonusMedals(medals)
         const mergedCount = countBonusMedals(merged)
+        let displayedRemoteCount = remoteCount
         if (
           mergedCount !== remoteCount &&
           !cancelled
         ) {
           await savePuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, signedInUser, merged)
+          displayedRemoteCount = mergedCount
         }
         if (!cancelled) {
-          setRemoteBonusMedalCount(remoteCount)
+          setRemoteBonusMedalCount(displayedRemoteCount)
           setBonusMedalCount(current => Math.max(current, mergedCount))
         }
       } catch { /* keep local count */ }
@@ -297,15 +300,20 @@ export function PuzzleWeekHub() {
     if (!user || isGuest) return
     setSyncingBonusMedals(true)
     setError(null)
+    setBonusSyncMessage(null)
     try {
       const remote = await getPuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, user)
       const merged = mergeBonusMedalProfile(remote, readLocalBonusMedalSets())
       await savePuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, user, merged)
-      const nextCount = countBonusMedals(merged)
+      const refreshed = await getPuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, user)
+      const nextCount = countBonusMedals(refreshed)
       setRemoteBonusMedalCount(nextCount)
       setBonusMedalCount(current => Math.max(current, nextCount))
+      setBonusSyncMessage(`Synced profile now has ${nextCount} medals.`)
     } catch (err) {
-      setError(getErrorMessage(err, 'Could not sync bonus medals right now.'))
+      const message = getErrorMessage(err, 'Could not sync bonus medals right now.')
+      setError(message)
+      setBonusSyncMessage(message)
     } finally {
       setSyncingBonusMedals(false)
     }
@@ -652,22 +660,29 @@ export function PuzzleWeekHub() {
               />
             </div>
             {canManage && (
-              <div className="mt-3 flex flex-col gap-2 rounded-2xl border border-[var(--color-border)] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
-                    Admin bonus sync
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">
-                    This device: {countLocalBonusMedals()} medals. Synced profile: {remoteBonusMedalCount} medals.
-                  </p>
+              <div className="mt-3 rounded-2xl border border-[var(--color-border)] bg-white px-3 py-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
+                      Admin bonus sync
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--color-muted)]">
+                      This device: {countLocalBonusMedals()} medals. Synced profile: {remoteBonusMedalCount} medals.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleForceBonusSync}
+                    disabled={syncingBonusMedals}
+                    className="inline-flex flex-shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {syncingBonusMedals ? 'Syncing…' : 'Push This Device’s Medals'}
+                  </button>
                 </div>
-                <button
-                  onClick={handleForceBonusSync}
-                  disabled={syncingBonusMedals}
-                  className="inline-flex flex-shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {syncingBonusMedals ? 'Syncing…' : 'Push This Device’s Medals'}
-                </button>
+                {bonusSyncMessage && (
+                  <p className="mt-2 text-xs text-[var(--color-muted)]">
+                    {bonusSyncMessage}
+                  </p>
+                )}
               </div>
             )}
           </div>

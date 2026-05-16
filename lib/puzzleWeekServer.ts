@@ -40,6 +40,7 @@ type FirestoreValue =
   | { nullValue: null }
   | { timestampValue: string }
   | { arrayValue: { values?: FirestoreValue[] } }
+  | { mapValue: { fields?: Record<string, FirestoreValue> } }
 
 interface PuzzleWeekJoinCodeRecord {
   entryId: string
@@ -254,6 +255,9 @@ function encodeFirestoreValue(value: unknown): FirestoreValue {
   if (Array.isArray(value)) {
     return { arrayValue: { values: value.map(encodeFirestoreValue) } }
   }
+  if (typeof value === 'object') {
+    return { mapValue: { fields: encodeFirestoreFields(value as Record<string, unknown>) } }
+  }
   throw new Error(`Unsupported Firestore value: ${String(value)}`)
 }
 
@@ -268,6 +272,11 @@ function decodeFirestoreValue(value: FirestoreValue | undefined): unknown {
   if ('integerValue' in value) return Number(value.integerValue)
   if ('timestampValue' in value) return new Date(value.timestampValue)
   if ('arrayValue' in value) return (value.arrayValue.values ?? []).map(item => decodeFirestoreValue(item))
+  if ('mapValue' in value) {
+    return Object.fromEntries(
+      Object.entries(value.mapValue.fields ?? {}).map(([key, child]) => [key, decodeFirestoreValue(child)])
+    )
+  }
   return null
 }
 

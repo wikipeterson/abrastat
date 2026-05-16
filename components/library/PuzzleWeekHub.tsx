@@ -119,6 +119,21 @@ function countLocalBonusMedals(): number {
   )
 }
 
+function mergeBonusMedalProfile(
+  profile: PuzzleWeekBonusMedals,
+  local: ReturnType<typeof readLocalBonusMedalSets>,
+): PuzzleWeekBonusMedals {
+  return {
+    ...profile,
+    slider: [...new Set([...profile.slider.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...local.slider])],
+    lightsOut: [...new Set([...profile.lightsOut.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...local.lightsOut])],
+    netwalk: [...new Set([...profile.netwalk.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...local.netwalk])],
+    game2048: [...new Set([...profile.game2048.filter((value): value is PuzzleWeek2048MedalLevel => BONUS_2048_VALUES.has(value as PuzzleWeek2048MedalLevel)), ...local.game2048])],
+    queens: [...new Set([...profile.queens.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...local.queens])],
+    starBattle: [...new Set([...profile.starBattle.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...local.starBattle])],
+  }
+}
+
 export function PuzzleWeekHub() {
   const { user, loading, isGuest } = useAuth()
   const [entry, setEntry] = useState<PuzzleWeekEntry | null>(null)
@@ -143,6 +158,8 @@ export function PuzzleWeekHub() {
   const [voteSaved, setVoteSaved] = useState(false)
   const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number; started: boolean; ended: boolean } | null>(null)
   const [bonusMedalCount, setBonusMedalCount] = useState(0)
+  const [remoteBonusMedalCount, setRemoteBonusMedalCount] = useState(0)
+  const [syncingBonusMedals, setSyncingBonusMedals] = useState(false)
   const canRegister = canRegisterForPuzzleWeek(user)
   const canDownloadPacket = canDownloadPuzzleWeekPacketIdentity(user)
   const canManage = canManagePuzzleWeekIdentity(user)
@@ -240,15 +257,7 @@ export function PuzzleWeekHub() {
       try {
         const medals = await getPuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, signedInUser)
         const localSets = readLocalBonusMedalSets()
-        const merged = {
-          ...medals,
-          slider: [...new Set([...medals.slider.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...localSets.slider])],
-          lightsOut: [...new Set([...medals.lightsOut.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...localSets.lightsOut])],
-          netwalk: [...new Set([...medals.netwalk.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...localSets.netwalk])],
-          game2048: [...new Set([...medals.game2048.filter((value): value is PuzzleWeek2048MedalLevel => BONUS_2048_VALUES.has(value as PuzzleWeek2048MedalLevel)), ...localSets.game2048])],
-          queens: [...new Set([...medals.queens.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...localSets.queens])],
-          starBattle: [...new Set([...medals.starBattle.filter((value): value is PuzzleWeekBonusTier => BONUS_TIER_VALUES.has(value as PuzzleWeekBonusTier)), ...localSets.starBattle])],
-        }
+        const merged = mergeBonusMedalProfile(medals, localSets)
         const remoteCount = countBonusMedals(medals)
         const mergedCount = countBonusMedals(merged)
         if (
@@ -258,6 +267,7 @@ export function PuzzleWeekHub() {
           await savePuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, signedInUser, merged)
         }
         if (!cancelled) {
+          setRemoteBonusMedalCount(remoteCount)
           setBonusMedalCount(current => Math.max(current, mergedCount))
         }
       } catch { /* keep local count */ }
@@ -282,6 +292,24 @@ export function PuzzleWeekHub() {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [user, isGuest])
+
+  async function handleForceBonusSync() {
+    if (!user || isGuest) return
+    setSyncingBonusMedals(true)
+    setError(null)
+    try {
+      const remote = await getPuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, user)
+      const merged = mergeBonusMedalProfile(remote, readLocalBonusMedalSets())
+      await savePuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, user, merged)
+      const nextCount = countBonusMedals(merged)
+      setRemoteBonusMedalCount(nextCount)
+      setBonusMedalCount(current => Math.max(current, nextCount))
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not sync bonus medals right now.'))
+    } finally {
+      setSyncingBonusMedals(false)
+    }
+  }
 
   async function handleSaveVote() {
     if (!user || isGuest) return
@@ -623,6 +651,25 @@ export function PuzzleWeekHub() {
                 style={{ width: `${(bonusMedalCount / TOTAL_BONUS_MEDALS) * 100}%` }}
               />
             </div>
+            {canManage && (
+              <div className="mt-3 flex flex-col gap-2 rounded-2xl border border-[var(--color-border)] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
+                    Admin bonus sync
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--color-muted)]">
+                    This device: {countLocalBonusMedals()} medals. Synced profile: {remoteBonusMedalCount} medals.
+                  </p>
+                </div>
+                <button
+                  onClick={handleForceBonusSync}
+                  disabled={syncingBonusMedals}
+                  className="inline-flex flex-shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {syncingBonusMedals ? 'Syncing…' : 'Push This Device’s Medals'}
+                </button>
+              </div>
+            )}
           </div>
         </div>}
 

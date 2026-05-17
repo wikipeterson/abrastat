@@ -1099,7 +1099,7 @@ function SliderPuzzleBoard({
               🎉 {SLIDER_MEDALS[level]} {SLIDER_LABELS[level]} solved!
             </div>
           )}
-          <div className="hidden lg:flex lg:flex-col lg:gap-2.5">
+          <div className="hidden min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto lg:flex">
             <BonusInfoCard label="Goal">
               Arrange the numbered tiles from <strong>1</strong> up to the final tile so the empty space ends in the bottom-right corner.
             </BonusInfoCard>
@@ -1304,7 +1304,7 @@ function LightsOutBoard({
             </div>
           )}
 
-          <div className="hidden lg:flex lg:flex-col lg:gap-2.5">
+          <div className="hidden min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto lg:flex">
             <BonusInfoCard label="Goal">
               Make every circle go dark. When the whole board is dark, you've solved the puzzle and earned the medal for that difficulty.
             </BonusInfoCard>
@@ -1590,7 +1590,7 @@ function NetwalkBoard({
               🎉 {NETWALK_MEDALS[level]} {NETWALK_LABELS[level]} restored!
             </div>
           )}
-          <div className="hidden lg:flex lg:flex-col lg:gap-2.5">
+          <div className="hidden min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto lg:flex">
             <BonusInfoCard label="Goal">
               Rotate the pieces until every terminal is connected to the server and there are no loose wire ends anywhere in the network.
             </BonusInfoCard>

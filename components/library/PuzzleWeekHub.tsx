@@ -78,6 +78,15 @@ function getLeaderboardSolveMedal(solvedCount: number) {
   return null
 }
 
+function countLeaderboardParticipants(entries: PuzzleWeekLeaderboardEntry[]) {
+  return entries.reduce((total, entry) => {
+    if (entry.type === 'team') {
+      return total + Math.max(1, entry.memberNames?.length ?? 0)
+    }
+    return total + 1
+  }, 0)
+}
+
 function readStoredValidatedCount<T extends string>(key: string, allowed: Set<T>): number {
   try {
     const stored = localStorage.getItem(key)
@@ -767,7 +776,7 @@ export function PuzzleWeekHub() {
                   <Trophy className="h-4 w-4 text-[var(--color-accent)]" />
                   <span className="text-sm font-semibold text-[var(--color-text)]">Leaderboard</span>
                   {!loadingLeaderboard && leaderboard.length > 0 && (
-                    <span className="text-xs text-[var(--color-muted)]">{leaderboard.length}</span>
+                    <span className="text-xs text-[var(--color-muted)]">{countLeaderboardParticipants(leaderboard)}</span>
                   )}
                 </div>
                 <button
@@ -1291,7 +1300,7 @@ export function PuzzleWeekHub() {
               <h2 className="text-lg font-semibold text-[var(--color-text)]">Leaderboard</h2>
               {!loadingLeaderboard && (
                 <span className="text-sm text-[var(--color-muted)]">
-                  {leaderboard.length} {leaderboard.length === 1 ? 'entry' : 'entries'}
+                  {countLeaderboardParticipants(leaderboard)} {countLeaderboardParticipants(leaderboard) === 1 ? 'participant' : 'participants'}
                 </span>
               )}
             </div>

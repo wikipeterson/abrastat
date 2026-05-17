@@ -490,6 +490,7 @@ type NetwalkCell = {
 }
 
 type Direction2048 = 'up' | 'down' | 'left' | 'right'
+type Game2048StartMode = 0 | 512 | 1024
 
 // ---------- Lights Out logic ----------
 
@@ -620,7 +621,23 @@ function addRandom2048Tile(board: number[]) {
   return next
 }
 
-function create2048Board() {
+function addFixed2048Tile(board: number[], value: number) {
+  const empty = board
+    .map((cellValue, index) => ({ value: cellValue, index }))
+    .filter(cell => cell.value === 0)
+
+  if (!empty.length) return board
+
+  const pick = empty[Math.floor(Math.random() * empty.length)]!.index
+  const next = [...board]
+  next[pick] = value
+  return next
+}
+
+function create2048Board(startingTile = 0) {
+  if (startingTile > 0) {
+    return addRandom2048Tile(addFixed2048Tile(createEmpty2048Board(), startingTile))
+  }
   return addRandom2048Tile(addRandom2048Tile(createEmpty2048Board()))
 }
 
@@ -1642,6 +1659,7 @@ function Puzzle2048Board({
   medals: Set<Game2048Medal>
   onAwardMedal: (medal: Game2048Medal) => void
 }) {
+  const [startMode, setStartMode] = useState<Game2048StartMode>(0)
   const [board, setBoard] = useState<number[]>(() => create2048Board())
   const [score, setScore] = useState(0)
   const [bestTile, setBestTile] = useState(4)
@@ -1656,6 +1674,11 @@ function Puzzle2048Board({
 
   const won = bestTile >= 2048
   const stuck = !canMove2048(board)
+  const startOptions: Array<{ value: Game2048StartMode; label: string }> = [
+    { value: 0, label: 'Classic' },
+    ...(medals.has('bronze') || medals.has('silver') || medals.has('gold') ? [{ value: 512 as Game2048StartMode, label: 'Start 512' }] : []),
+    ...(medals.has('silver') || medals.has('gold') ? [{ value: 1024 as Game2048StartMode, label: 'Start 1024' }] : []),
+  ]
 
   useEffect(() => {
     if (won && !overlayShownRef.current) {
@@ -1687,7 +1710,7 @@ function Puzzle2048Board({
   }
 
   function handleReset() {
-    const next = create2048Board()
+    const next = create2048Board(startMode)
     setBoard(next)
     setScore(0)
     setBestTile(Math.max(...next))
@@ -1823,6 +1846,22 @@ function Puzzle2048Board({
             <BonusStatTile label="Score" value={score} />
             <BonusStatTile label="Best" value={bestTile} />
           </div>
+          <div className="flex flex-shrink-0 flex-wrap gap-2">
+            {startOptions.map(option => (
+              <button
+                key={option.label}
+                type="button"
+                onClick={() => setStartMode(option.value)}
+                className={`rounded-xl border px-3 py-2 text-xs font-semibold uppercase transition lg:text-sm ${
+                  startMode === option.value
+                    ? 'border-[var(--color-accent)] bg-[var(--color-accent)] text-white'
+                    : 'border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-slate-50'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
           <div className="hidden flex-shrink-0 flex-wrap gap-2 lg:flex">
             {(['left', 'up', 'down', 'right'] as Direction2048[]).map(direction => (
               <button
@@ -1859,11 +1898,14 @@ function Puzzle2048Board({
               <div className="text-[clamp(1.15rem,1.55vw,1.55rem)] font-bold leading-none text-[var(--color-text)]">
                 New Board
               </div>
+              <div className="mt-1 text-sm text-[var(--color-muted)]">
+                {startMode === 1024 ? 'Begins with a 1024 tile.' : startMode === 512 ? 'Begins with a 512 tile.' : 'Begins with the classic opening tiles.'}
+              </div>
             </button>
           </div>
           <div className="hidden lg:flex lg:flex-col lg:gap-2.5">
             <BonusInfoCard label="Goal">
-              Combine equal tiles to build larger values. Reach <strong>512</strong> for bronze, <strong>1024</strong> for silver, and <strong>2048</strong> for gold.
+              Combine equal tiles to build larger values. Reach <strong>512</strong> for bronze, <strong>1024</strong> for silver, and <strong>2048</strong> for gold. Bronze unlocks <strong>Start 512</strong>, and silver unlocks <strong>Start 1024</strong>.
             </BonusInfoCard>
             <BonusInfoCard label="How It Works">
               Swipe or use the arrow buttons to slide all tiles at once. Matching numbers merge when they collide.
@@ -1890,7 +1932,7 @@ function Puzzle2048Board({
                 </div>
                 <div className="flex flex-col gap-3">
                   <BonusInfoCard label="Goal">
-                    Combine equal tiles to build larger values. Reach <strong>512</strong> for bronze, <strong>1024</strong> for silver, and <strong>2048</strong> for gold.
+                    Combine equal tiles to build larger values. Reach <strong>512</strong> for bronze, <strong>1024</strong> for silver, and <strong>2048</strong> for gold. Bronze unlocks <strong>Start 512</strong>, and silver unlocks <strong>Start 1024</strong>.
                   </BonusInfoCard>
                   <BonusInfoCard label="How It Works">
                     Swipe or use the arrow buttons to slide all tiles at once. Matching numbers merge when they collide.

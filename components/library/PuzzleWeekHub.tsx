@@ -71,6 +71,13 @@ function countBonusMedals(medals: PuzzleWeekBonusMedals) {
   )
 }
 
+function getLeaderboardSolveMedal(solvedCount: number) {
+  if (solvedCount >= PUZZLE_WEEK_PUZZLES.length) return '🥇'
+  if (solvedCount >= 5) return '🥈'
+  if (solvedCount >= 1) return '🥉'
+  return null
+}
+
 function readStoredValidatedCount<T extends string>(key: string, allowed: Set<T>): number {
   try {
     const stored = localStorage.getItem(key)
@@ -784,7 +791,7 @@ export function PuzzleWeekHub() {
                   leaderboard.map((lb, i) => {
                     const isMe = lb.entryId === entry.id
                     const rank = i + 1
-                    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null
+                    const medal = getLeaderboardSolveMedal(lb.solvedCount)
                     return (
                       <div
                         key={lb.entryId}
@@ -1311,7 +1318,7 @@ export function PuzzleWeekHub() {
               leaderboard.map((lb, i) => {
                 const isMe = false
                 const rank = i + 1
-                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null
+                const medal = getLeaderboardSolveMedal(lb.solvedCount)
                 return (
                   <div
                     key={lb.entryId}

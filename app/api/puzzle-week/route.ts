@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
           queensSolvedOrderVersion: PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION,
           starBattle: [],
           starBattleSolved: { easy: [], medium: [], hard: [] },
-          starBattleSolvedVersion: 3,
+          starBattleSolvedVersion: 4,
         })
         return NextResponse.json({ ok: true })
       default:

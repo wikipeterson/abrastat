@@ -63,7 +63,7 @@ const STAR_BATTLE_LABELS: Record<StarBattleLevel, string> = { easy: 'Easy', medi
 const STAR_BATTLE_MEDALS: Record<StarBattleLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
 const STAR_BATTLE_MEDALS_KEY = 'pw-starbattle-medals'
 const STAR_BATTLE_SOLVED_VERSION_KEY = 'pw-starbattle-solved-version'
-const PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION = 3
+const PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION = 4
 const STAR_BATTLE_SOLVED_KEYS: Record<StarBattleLevel, string> = {
   easy: 'pw-starbattle-solved-easy',
   medium: 'pw-starbattle-solved-medium',
@@ -148,7 +148,7 @@ const SB_EASY: StarBattlePuzzle[] = [
 ]
 
 // 9×9, 9 regions, 2 stars per row/col/region — 10 verified unique-solution puzzles
-const SB_MEDIUM: StarBattlePuzzle[] = [
+const SB_MEDIUM_BASE: StarBattlePuzzle[] = [
   {
     size: 9,
     regions: [
@@ -300,6 +300,9 @@ const SB_MEDIUM: StarBattlePuzzle[] = [
     solution: [5, 7, 9, 11, 22, 26, 27, 33, 38, 40, 51, 53, 55, 57, 68, 70, 73, 75],
   },
 ]
+
+const SB_MEDIUM_ORDER = [1, 4, 0, 2, 3, 5, 6, 7, 8, 9] as const
+const SB_MEDIUM: StarBattlePuzzle[] = SB_MEDIUM_ORDER.map(index => SB_MEDIUM_BASE[index]!)
 
 // 10×10, 10 regions, 2 stars per row/col/region — 10 verified unique-solution puzzles
 const SB_HARD: StarBattlePuzzle[] = [
@@ -2585,6 +2588,26 @@ function readLocalStarBattleSolvedBoardState(): StarBattleSolvedBoardState {
     )
     version = 3
   }
+  if (version < 4) {
+    const mediumRemap = new Map<number, number>([
+      [0, 2],
+      [1, 0],
+      [2, 3],
+      [3, 4],
+      [4, 1],
+      [5, 5],
+      [6, 6],
+      [7, 7],
+      [8, 8],
+      [9, 9],
+    ])
+    state.medium = new Set(
+      [...state.medium]
+        .map(idx => mediumRemap.get(idx))
+        .filter((idx): idx is number => idx != null)
+    )
+    version = 4
+  }
   if (version < PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION) {
     writeLocalStarBattleSolvedBoardState(state)
   }
@@ -2660,6 +2683,25 @@ function starBattleSolvedBoardsFromProfile(profile: PuzzleWeekBonusMedals): Star
     state.easy = new Set(
       [...state.easy]
         .map(idx => easyRemap.get(idx))
+        .filter((idx): idx is number => idx != null)
+    )
+  }
+  if (version < 4) {
+    const mediumRemap = new Map<number, number>([
+      [0, 2],
+      [1, 0],
+      [2, 3],
+      [3, 4],
+      [4, 1],
+      [5, 5],
+      [6, 6],
+      [7, 7],
+      [8, 8],
+      [9, 9],
+    ])
+    state.medium = new Set(
+      [...state.medium]
+        .map(idx => mediumRemap.get(idx))
         .filter((idx): idx is number => idx != null)
     )
   }

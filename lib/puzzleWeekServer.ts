@@ -62,7 +62,7 @@ function emptyBonusMedals(): PuzzleWeekBonusMedals {
     queensSolvedOrderVersion: PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION,
     starBattle: [],
     starBattleSolved: { easy: [], medium: [], hard: [] },
-    starBattleSolvedVersion: 3,
+    starBattleSolvedVersion: 4,
   }
 }
 

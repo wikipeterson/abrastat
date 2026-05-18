@@ -14,7 +14,7 @@ import { PuzzleWeekPreview } from '@/components/library/PuzzleWeekPreview'
 import { DatasetListSkeleton } from '@/components/ui/Skeleton'
 import { GameHub } from '@/components/games/GameHub'
 import { useAuth } from '@/components/auth/AuthProvider'
-import { subscribeToMyDatasets, subscribeToPublicDatasets, deleteDataset, loadDataset } from '@/lib/firestore'
+import { fetchMyDatasets, fetchPublicDatasets, deleteDataset, loadDataset } from '@/lib/firestore'
 import { SAMPLE_DATASETS, getSampleDatasetById, getSampleDatasetId } from '@/lib/sampleData'
 import { useStore } from '@/lib/store'
 import { CardConfig } from '@/lib/exploreTypes'
@@ -66,6 +66,8 @@ const BASE_LIBRARY_ITEMS: { id: Exclude<LibrarySection, 'puzzle-week' | 'logic-p
 ]
 
 const PUBLIC_DATASET_CACHE_KEY = 'abrastat.publicDatasets.v1'
+const PUBLIC_DATASET_CACHE_TS_KEY = 'abrastat.publicDatasets.v1.ts'
+const PUBLIC_DATASET_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 const WORKSPACE_INTRO_DISMISSED_KEY = 'abrastat.workspaceIntro.dismissed'
 
 function serializeDatasetMeta(dataset: DatasetMeta) {
@@ -125,8 +127,28 @@ function writeCachedPublicDatasets(datasets: DatasetMeta[]) {
       PUBLIC_DATASET_CACHE_KEY,
       JSON.stringify(datasets.map(serializeDatasetMeta)),
     )
+    window.localStorage.setItem(PUBLIC_DATASET_CACHE_TS_KEY, String(Date.now()))
   } catch {
     // Ignore cache write failures.
+  }
+}
+
+function isPublicDatasetCacheFresh(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    const ts = Number(window.localStorage.getItem(PUBLIC_DATASET_CACHE_TS_KEY) ?? '0')
+    return Date.now() - ts < PUBLIC_DATASET_CACHE_TTL_MS
+  } catch {
+    return false
+  }
+}
+
+function invalidatePublicDatasetCache() {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(PUBLIC_DATASET_CACHE_TS_KEY)
+  } catch {
+    // ignore
   }
 }
 
@@ -381,27 +403,30 @@ function DatasetsBrowser({
 
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') return
-    const unsubPublic = subscribeToPublicDatasets(data => {
-      setPublicDatasets(data)
-      writeCachedPublicDatasets(data)
-      setLoading(false)
-    }, () => {
-      setPublicDatasets(readCachedPublicDatasets())
-      setLoading(false)
-    })
 
-    let unsubMine = () => {}
-    if (user && !isGuest) {
-      unsubMine = subscribeToMyDatasets(user.uid, setMyDatasets, () => {
-        setMyDatasets([])
-      })
+    const cached = readCachedPublicDatasets()
+    if (isPublicDatasetCacheFresh() && cached.length > 0) {
+      setPublicDatasets(cached)
+      setLoading(false)
     } else {
-      setMyDatasets([])
+      fetchPublicDatasets()
+        .then(data => {
+          setPublicDatasets(data)
+          writeCachedPublicDatasets(data)
+          setLoading(false)
+        })
+        .catch(() => {
+          setPublicDatasets(cached)
+          setLoading(false)
+        })
     }
 
-    return () => {
-      unsubPublic()
-      unsubMine()
+    if (user && !isGuest) {
+      fetchMyDatasets(user.uid)
+        .then(setMyDatasets)
+        .catch(() => setMyDatasets([]))
+    } else {
+      setMyDatasets([])
     }
   }, [user, isGuest])
 
@@ -795,6 +820,7 @@ function WorkspaceContent() {
     setShareIsPublic(isPublic)
     setShowShare(true)
     if (isPublic) {
+      invalidatePublicDatasetCache()
       void loadDataset(id).then(({ meta }) => {
         upsertCachedPublicDataset(meta)
       }).catch(() => {
@@ -951,6 +977,7 @@ function WorkspaceContent() {
           initialIsPublic={shareIsPublic}
           onVisibilityChange={(datasetId, isPublic) => {
             setShareIsPublic(isPublic)
+            invalidatePublicDatasetCache()
             if (!isPublic) return
             void loadDataset(datasetId).then(({ meta }) => {
               upsertCachedPublicDataset(meta)

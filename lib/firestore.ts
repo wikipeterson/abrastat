@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -9,8 +10,6 @@ import {
   where,
   orderBy,
   limit,
-  onSnapshot,
-  Unsubscribe,
   Timestamp,
 } from 'firebase/firestore'
 import { User } from 'firebase/auth'
@@ -121,53 +120,38 @@ export async function deleteDataset(datasetId: string): Promise<void> {
   await deleteDoc(doc(db, 'datasets', datasetId))
 }
 
-export function subscribeToMyDatasets(
-  userId: string,
-  callback: (datasets: DatasetMeta[]) => void,
-  onError?: (error: Error) => void,
-): Unsubscribe {
+export async function fetchMyDatasets(userId: string): Promise<DatasetMeta[]> {
   const q = query(
     collection(db, 'datasets'),
     where('ownerId', '==', userId),
     orderBy('updatedAt', 'desc')
   )
-  return onSnapshot(q, snap => {
-    const datasets = snap.docs.map(d => {
-      const data = d.data()
-      return {
-        ...data,
-        createdAt: (data.createdAt as Timestamp).toDate(),
-        updatedAt: (data.updatedAt as Timestamp).toDate(),
-      } as DatasetMeta
-    })
-    callback(datasets)
-  }, error => {
-    onError?.(error)
+  const snap = await getDocs(q)
+  return snap.docs.map(d => {
+    const data = d.data()
+    return {
+      ...data,
+      createdAt: (data.createdAt as Timestamp).toDate(),
+      updatedAt: (data.updatedAt as Timestamp).toDate(),
+    } as DatasetMeta
   })
 }
 
-export function subscribeToPublicDatasets(
-  callback: (datasets: DatasetMeta[]) => void,
-  onError?: (error: Error) => void,
-): Unsubscribe {
+export async function fetchPublicDatasets(): Promise<DatasetMeta[]> {
   const q = query(
     collection(db, 'datasets'),
     where('isPublic', '==', true),
     orderBy('updatedAt', 'desc'),
     limit(100)
   )
-  return onSnapshot(q, snap => {
-    const datasets = snap.docs.map(d => {
-      const data = d.data()
-      return {
-        ...data,
-        createdAt: (data.createdAt as Timestamp).toDate(),
-        updatedAt: (data.updatedAt as Timestamp).toDate(),
-      } as DatasetMeta
-    })
-    callback(datasets)
-  }, error => {
-    onError?.(error)
+  const snap = await getDocs(q)
+  return snap.docs.map(d => {
+    const data = d.data()
+    return {
+      ...data,
+      createdAt: (data.createdAt as Timestamp).toDate(),
+      updatedAt: (data.updatedAt as Timestamp).toDate(),
+    } as DatasetMeta
   })
 }
 

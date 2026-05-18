@@ -57,6 +57,7 @@ function topVotedIds(tally: Record<string, number>): Set<string> {
 const MAIN_PUZZLES = PUZZLE_WEEK_PUZZLES.slice(0, PUZZLE_WEEK_PUZZLES.length - 1)
 const META_PUZZLE = PUZZLE_WEEK_PUZZLES[PUZZLE_WEEK_PUZZLES.length - 1]
 const TOTAL_BONUS_MEDALS = 18
+const LOGIC_PUZZLE_MASTER_AWARD = '🏆 Logic Puzzle Master'
 const BONUS_TIER_VALUES = new Set<PuzzleWeekBonusTier>(['easy', 'medium', 'hard'])
 const BONUS_2048_VALUES = new Set<PuzzleWeek2048MedalLevel>(['bronze', 'silver', 'gold'])
 
@@ -683,6 +684,11 @@ export function PuzzleWeekHub() {
                 <p className="mt-1 text-xs text-[var(--color-muted)]">
                   {bonusMedalCount} of {TOTAL_BONUS_MEDALS} earned across the bonus puzzles.
                 </p>
+                {bonusMedalCount >= TOTAL_BONUS_MEDALS && (
+                  <div className="mt-2 inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                    {LOGIC_PUZZLE_MASTER_AWARD}
+                  </div>
+                )}
               </div>
               <Link
                 href="/puzzleweek/bonus"

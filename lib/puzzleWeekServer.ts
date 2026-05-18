@@ -62,7 +62,7 @@ function emptyBonusMedals(): PuzzleWeekBonusMedals {
     queensSolvedOrderVersion: PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION,
     starBattle: [],
     starBattleSolved: { easy: [], medium: [], hard: [] },
-    starBattleSolvedVersion: 10,
+    starBattleSolvedVersion: 11,
   }
 }
 
@@ -298,6 +298,7 @@ async function firestoreRequest<T = unknown>(path: string, init?: RequestInit) {
     },
   })
   if (!response.ok) {
+    if (response.status === 429) throw new Error('Service is temporarily busy — please try again in a moment.')
     const text = await response.text()
     throw new Error(text || `Firestore request failed (${response.status})`)
   }
@@ -577,6 +578,7 @@ async function getSolvedProgress(eventId: string, entryId: string) {
 }
 
 async function updateLeaderboardSnapshot(entry: PuzzleWeekEntry, solvedProgress: PuzzleWeekProgress[], active = true) {
+  leaderboardCache.delete(entry.eventId)
   const members = await getEntryMembers(entry.eventId, entry.id)
   const lastSolvedAt = solvedProgress.reduce<Date | null>((latest, item) => {
     if (!item.solvedAt) return latest
@@ -798,7 +800,14 @@ export async function getPuzzleWeekProgressServer(eventId: string, entryId: stri
   return rows.map(row => mapProgress(row.data, row.id))
 }
 
+const leaderboardCache = new Map<string, { data: PuzzleWeekLeaderboardEntry[]; fetchedAt: number }>()
+const LEADERBOARD_CACHE_TTL_MS = 60_000
+
 export async function getPuzzleWeekLeaderboardServer(eventId: string): Promise<PuzzleWeekLeaderboardEntry[]> {
+  const cached = leaderboardCache.get(eventId)
+  if (cached && Date.now() - cached.fetchedAt < LEADERBOARD_CACHE_TTL_MS) {
+    return cached.data
+  }
   const rows = await queryCollection<Record<string, unknown>>('puzzleWeekLeaderboard', [
     { field: 'eventId', value: eventId },
   ])
@@ -857,13 +866,15 @@ export async function getPuzzleWeekLeaderboardServer(eventId: string): Promise<P
     })
     .filter((item): item is PuzzleWeekLeaderboardEntry => item !== null)
 
-  return entries.sort((a, b) => {
+  const result = entries.sort((a, b) => {
     if (b.solvedCount !== a.solvedCount) return b.solvedCount - a.solvedCount
     if (!a.lastSolvedAt && !b.lastSolvedAt) return 0
     if (!a.lastSolvedAt) return 1
     if (!b.lastSolvedAt) return -1
     return a.lastSolvedAt.getTime() - b.lastSolvedAt.getTime()
   })
+  leaderboardCache.set(eventId, { data: result, fetchedAt: Date.now() })
+  return result
 }
 
 export async function submitPuzzleWeekAnswerServer(

@@ -63,7 +63,7 @@ const STAR_BATTLE_LABELS: Record<StarBattleLevel, string> = { easy: 'Easy', medi
 const STAR_BATTLE_MEDALS: Record<StarBattleLevel, string> = { easy: '🥉', medium: '🥈', hard: '🥇' }
 const STAR_BATTLE_MEDALS_KEY = 'pw-starbattle-medals'
 const STAR_BATTLE_SOLVED_VERSION_KEY = 'pw-starbattle-solved-version'
-const PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION = 8
+const PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION = 10
 const STAR_BATTLE_SOLVED_KEYS: Record<StarBattleLevel, string> = {
   easy: 'pw-starbattle-solved-easy',
   medium: 'pw-starbattle-solved-medium',
@@ -159,7 +159,7 @@ const SB_MEDIUM_BASE: StarBattlePuzzle[] = [
       2,2,3,3,3,4,5,5,5,
       2,2,2,3,4,4,5,5,5,
       6,7,2,7,4,4,4,4,5,
-      6,7,7,7,4,7,8,8,8,
+      6,7,7,7,4,4,8,8,8,
       6,6,6,6,6,6,8,8,8,
     ],
     solution: [0, 5, 11, 16, 18, 22, 33, 35, 37, 39, 50, 52, 55, 57, 69, 71, 74, 76],
@@ -173,7 +173,7 @@ const SB_MEDIUM_BASE: StarBattlePuzzle[] = [
       0,3,3,3,4,4,4,2,2,
       0,3,5,5,5,4,4,2,2,
       0,3,6,5,5,5,7,2,7,
-      6,6,6,5,8,5,7,7,7,
+      6,6,6,5,8,5,8,7,7,
       6,6,6,8,8,5,8,7,7,
       6,6,8,8,8,8,8,7,7,
     ],
@@ -2533,9 +2533,13 @@ function readLocalStarBattleSolvedBoardState(): StarBattleSolvedBoardState {
     )
     version = 4
   }
-  if (version < 8) {
+  if (version < 9) {
     state.medium.delete(0)
-    version = 8
+    version = 9
+  }
+  if (version < 10) {
+    state.medium.delete(1)
+    version = 10
   }
   if (version < PUZZLE_WEEK_STARBATTLE_SOLVED_VERSION) {
     writeLocalStarBattleSolvedBoardState(state)
@@ -2634,8 +2638,11 @@ function starBattleSolvedBoardsFromProfile(profile: PuzzleWeekBonusMedals): Star
         .filter((idx): idx is number => idx != null)
     )
   }
-  if (version < 8) {
+  if (version < 9) {
     state.medium.delete(0)
+  }
+  if (version < 10) {
+    state.medium.delete(1)
   }
   return state
 }

@@ -603,7 +603,7 @@ async function updateLeaderboardSnapshot(entry: PuzzleWeekEntry, solvedProgress:
   })
 }
 
-export async function getPuzzleWeekRegistrationServer(eventId: string, user: VerifiedPuzzleWeekUser) {
+async function getPuzzleWeekRegistrationServerUncached(eventId: string, user: VerifiedPuzzleWeekUser) {
   const membershipRecord = await getExistingMembership(eventId, user.uid)
   if (!membershipRecord) {
     return { entry: null, members: [] as PuzzleWeekMember[] }
@@ -620,6 +620,21 @@ export async function getPuzzleWeekRegistrationServer(eventId: string, user: Ver
     entry: { ...entry, joinCode },
     members,
   }
+}
+
+export async function getPuzzleWeekRegistrationServer(eventId: string, user: VerifiedPuzzleWeekUser) {
+  const key = `${eventId}__${user.uid}`
+  const cached = registrationCache.get(key)
+  if (cached && Date.now() - cached.fetchedAt < REGISTRATION_CACHE_TTL_MS) {
+    return cached.data
+  }
+  const data = await getPuzzleWeekRegistrationServerUncached(eventId, user)
+  registrationCache.set(key, { data, fetchedAt: Date.now() })
+  return data
+}
+
+export function invalidatePuzzleWeekRegistrationCache(eventId: string, userId: string) {
+  registrationCache.delete(`${eventId}__${userId}`)
 }
 
 export async function registerPuzzleWeekSoloServer(eventId: string, user: VerifiedPuzzleWeekUser) {
@@ -802,6 +817,12 @@ export async function getPuzzleWeekProgressServer(eventId: string, entryId: stri
 
 const leaderboardCache = new Map<string, { data: PuzzleWeekLeaderboardEntry[]; fetchedAt: number }>()
 const LEADERBOARD_CACHE_TTL_MS = 60_000
+
+const registrationCache = new Map<string, { data: Awaited<ReturnType<typeof getPuzzleWeekRegistrationServerUncached>>; fetchedAt: number }>()
+const REGISTRATION_CACHE_TTL_MS = 30_000
+
+const medalsCache = new Map<string, { data: PuzzleWeekBonusMedals; fetchedAt: number }>()
+const MEDALS_CACHE_TTL_MS = 120_000
 
 export async function getPuzzleWeekLeaderboardServer(eventId: string): Promise<PuzzleWeekLeaderboardEntry[]> {
   const cached = leaderboardCache.get(eventId)
@@ -1127,9 +1148,15 @@ export async function getPuzzleWeekBonusMedalsServer(
   eventId: string,
   user: VerifiedPuzzleWeekUser,
 ): Promise<PuzzleWeekBonusMedals> {
-  const data = await getDocument<Record<string, unknown>>('puzzleWeekBonusMedals', `${eventId}__${user.uid}`)
-  if (!data) return emptyBonusMedals()
-  return sanitizeBonusMedals(data)
+  const key = `${eventId}__${user.uid}`
+  const cached = medalsCache.get(key)
+  if (cached && Date.now() - cached.fetchedAt < MEDALS_CACHE_TTL_MS) {
+    return cached.data
+  }
+  const data = await getDocument<Record<string, unknown>>('puzzleWeekBonusMedals', key)
+  const medals = data ? sanitizeBonusMedals(data) : emptyBonusMedals()
+  medalsCache.set(key, { data: medals, fetchedAt: Date.now() })
+  return medals
 }
 
 export async function savePuzzleWeekBonusMedalsServer(
@@ -1139,15 +1166,18 @@ export async function savePuzzleWeekBonusMedalsServer(
 ): Promise<void> {
   const docId = `${eventId}__${user.uid}`
   const incoming = sanitizeBonusMedals(medals)
-  const existingDoc = await getDocument<Record<string, unknown>>('puzzleWeekBonusMedals', docId)
-  const existing = existingDoc ? sanitizeBonusMedals(existingDoc) : emptyBonusMedals()
+  const cachedMedals = medalsCache.get(docId)
+  const existing = cachedMedals ? cachedMedals.data : sanitizeBonusMedals(
+    await getDocument<Record<string, unknown>>('puzzleWeekBonusMedals', docId) ?? {}
+  )
   const sanitized = mergeBonusMedals(existing, incoming)
-  await setDocument('puzzleWeekBonusMedals', `${eventId}__${user.uid}`, {
+  await setDocument('puzzleWeekBonusMedals', docId, {
     eventId,
     userId: user.uid,
     ...sanitized,
     updatedAt: new Date(),
   })
+  medalsCache.set(docId, { data: sanitized, fetchedAt: Date.now() })
 }
 
 export async function verifyPuzzleWeekRequest(authHeader: string | null) {

@@ -134,17 +134,6 @@ function writeLocalBonusMedalSets(sets: ReturnType<typeof readLocalBonusMedalSet
   try { localStorage.setItem('pw-starbattle-medals', JSON.stringify([...sets.starBattle])) } catch {}
 }
 
-function countLocalBonusMedals(): number {
-  return (
-    readStoredValidatedCount('pw-slider-medals', BONUS_TIER_VALUES) +
-    readStoredValidatedCount('pw-lightsout-medals', BONUS_TIER_VALUES) +
-    readStoredValidatedCount('pw-netwalk-medals', BONUS_TIER_VALUES) +
-    readStoredValidatedCount('pw-2048-medals', BONUS_2048_VALUES) +
-    readStoredValidatedCount('pw-queens-medals', BONUS_TIER_VALUES) +
-    readStoredValidatedCount('pw-starbattle-medals', BONUS_TIER_VALUES)
-  )
-}
-
 function mergeBonusMedalProfile(
   profile: PuzzleWeekBonusMedals,
   local: ReturnType<typeof readLocalBonusMedalSets>,
@@ -171,6 +160,17 @@ function profileToLocalBonusMedalSets(profile: PuzzleWeekBonusMedals) {
   }
 }
 
+function countLocalBonusMedals(sets: ReturnType<typeof readLocalBonusMedalSets>) {
+  return (
+    sets.slider.size +
+    sets.lightsOut.size +
+    sets.netwalk.size +
+    sets.game2048.size +
+    sets.queens.size +
+    sets.starBattle.size
+  )
+}
+
 export function PuzzleWeekHub() {
   const { user, loading, isGuest } = useAuth()
   const [entry, setEntry] = useState<PuzzleWeekEntry | null>(null)
@@ -195,12 +195,9 @@ export function PuzzleWeekHub() {
   const [voteSaved, setVoteSaved] = useState(false)
   const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number; started: boolean; ended: boolean } | null>(null)
   const [bonusMedalCount, setBonusMedalCount] = useState(0)
-  const [remoteBonusMedalCount, setRemoteBonusMedalCount] = useState(0)
-  const [syncingBonusMedals, setSyncingBonusMedals] = useState(false)
-  const [bonusSyncMessage, setBonusSyncMessage] = useState<string | null>(null)
+  const canManage = canManagePuzzleWeekIdentity(user)
   const canRegister = canRegisterForPuzzleWeek(user)
   const canDownloadPacket = canDownloadPuzzleWeekPacketIdentity(user)
-  const canManage = canManagePuzzleWeekIdentity(user)
   const eligibilityMessage = getPuzzleWeekEligibilityMessage()
   const packetMessage = getPuzzleWeekPacketMessage(user)
   const solvedCount = Object.values(progress).filter(p => p.solved).length
@@ -258,13 +255,13 @@ export function PuzzleWeekHub() {
     async function loadProgress() {
       try {
         if (!user) return
-        const solved = await getPuzzleWeekProgress(CURRENT_PUZZLE_WEEK_EVENT.id, user)
+        const solved = await getPuzzleWeekProgress(CURRENT_PUZZLE_WEEK_EVENT.id, user, entryId)
         if (cancelled) return
         const next: Record<string, PuzzleWeekProgress> = {}
         solved.forEach(item => { next[item.puzzleId] = item })
         setProgress(next)
       } catch (err) {
-        if (!cancelled) setError(getErrorMessage(err, 'We couldn’t load your puzzle progress right now.'))
+        if (!cancelled) setError(getErrorMessage(err, "We couldn’t load your puzzle progress right now."))
       }
     }
     void loadProgress()
@@ -289,7 +286,7 @@ export function PuzzleWeekHub() {
       return
     }
     const signedInUser = user
-    setBonusMedalCount(countLocalBonusMedals())
+    setBonusMedalCount(countLocalBonusMedals(readLocalBonusMedalSets()))
     let cancelled = false
     async function syncBonusCount() {
       try {
@@ -308,7 +305,6 @@ export function PuzzleWeekHub() {
           displayedRemoteCount = mergedCount
         }
         if (!cancelled) {
-          setRemoteBonusMedalCount(displayedRemoteCount)
           setBonusMedalCount(current => Math.max(current, mergedCount))
         }
       } catch { /* keep local count */ }
@@ -333,30 +329,6 @@ export function PuzzleWeekHub() {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [user, isGuest])
-
-  async function handleForceBonusSync() {
-    if (!user || isGuest) return
-    setSyncingBonusMedals(true)
-    setError(null)
-    setBonusSyncMessage(null)
-    try {
-      const remote = await getPuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, user)
-      const merged = mergeBonusMedalProfile(remote, readLocalBonusMedalSets())
-      await savePuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, user, merged)
-      const refreshed = await getPuzzleWeekBonusMedals(CURRENT_PUZZLE_WEEK_EVENT.id, user)
-      const nextCount = countBonusMedals(refreshed)
-      writeLocalBonusMedalSets(profileToLocalBonusMedalSets(refreshed))
-      setRemoteBonusMedalCount(nextCount)
-      setBonusMedalCount(current => Math.max(current, nextCount))
-      setBonusSyncMessage(`Synced profile now has ${nextCount} medals.`)
-    } catch (err) {
-      const message = getErrorMessage(err, 'Could not sync bonus medals right now.')
-      setError(message)
-      setBonusSyncMessage(message)
-    } finally {
-      setSyncingBonusMedals(false)
-    }
-  }
 
   async function handleSaveVote() {
     if (!user || isGuest) return
@@ -465,7 +437,7 @@ export function PuzzleWeekHub() {
       )
       setAnswerMessages(current => ({ ...current, [puzzleId]: result }))
       if (result.correct) {
-        const solved = await getPuzzleWeekProgress(CURRENT_PUZZLE_WEEK_EVENT.id, user)
+        const solved = await getPuzzleWeekProgress(CURRENT_PUZZLE_WEEK_EVENT.id, user, entry?.id)
         const next: Record<string, PuzzleWeekProgress> = {}
         solved.forEach(item => { next[item.puzzleId] = item })
         setProgress(next)
@@ -703,32 +675,6 @@ export function PuzzleWeekHub() {
                 style={{ width: `${(bonusMedalCount / TOTAL_BONUS_MEDALS) * 100}%` }}
               />
             </div>
-            {canManage && (
-              <div className="mt-3 rounded-2xl border border-[var(--color-border)] bg-white px-3 py-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
-                      Admin bonus sync
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--color-muted)]">
-                      This device: {countLocalBonusMedals()} medals. Synced profile: {remoteBonusMedalCount} medals.
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleForceBonusSync}
-                    disabled={syncingBonusMedals}
-                    className="inline-flex flex-shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {syncingBonusMedals ? 'Syncing…' : 'Push This Device’s Medals'}
-                  </button>
-                </div>
-                {bonusSyncMessage && (
-                  <p className="mt-2 text-xs text-[var(--color-muted)]">
-                    {bonusSyncMessage}
-                  </p>
-                )}
-              </div>
-            )}
           </div>
         </div>}
 

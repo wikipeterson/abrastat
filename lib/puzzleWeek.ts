@@ -264,9 +264,11 @@ export async function resetPuzzleWeekRegistration(eventId: string, user: User) {
   })
 }
 
-export async function getPuzzleWeekProgress(eventId: string, user: User): Promise<PuzzleWeekProgress[]> {
+export async function getPuzzleWeekProgress(eventId: string, user: User, entryId?: string | null): Promise<PuzzleWeekProgress[]> {
+  const params = new URLSearchParams({ action: 'progress', eventId })
+  if (entryId) params.set('entryId', entryId)
   const data = await puzzleWeekRequest<PuzzleWeekProgress[]>(user, {
-    url: `/api/puzzle-week?action=progress&eventId=${encodeURIComponent(eventId)}`,
+    url: `/api/puzzle-week?${params.toString()}`,
     method: 'GET',
   })
   return mapProgress(data)

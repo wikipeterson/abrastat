@@ -9,6 +9,7 @@ import {
   getPuzzleWeekProgressServer,
   getPuzzleWeekRegistrationServer,
   getPuzzleWeekVotesServer,
+  invalidatePuzzleWeekRegistrationCache,
   joinPuzzleWeekTeamServer,
   registerPuzzleWeekSoloServer,
   registerPuzzleWeekTeamServer,
@@ -65,9 +66,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (action === 'progress') {
-      const registration = await getPuzzleWeekRegistrationServer(eventId, user)
-      const progress = registration.entry
-        ? await getPuzzleWeekProgressServer(eventId, registration.entry.id)
+      const entryId = request.nextUrl.searchParams.get('entryId')
+      const progress = entryId
+        ? await getPuzzleWeekProgressServer(eventId, entryId)
         : []
       return NextResponse.json(progress)
     }
@@ -106,15 +107,19 @@ export async function POST(request: NextRequest) {
     switch (body.action) {
       case 'registerSolo':
         await registerPuzzleWeekSoloServer(body.eventId, user)
+        invalidatePuzzleWeekRegistrationCache(body.eventId, user.uid)
         return NextResponse.json({ ok: true })
       case 'registerTeam':
         await registerPuzzleWeekTeamServer(body.eventId, user, body.teamName ?? '')
+        invalidatePuzzleWeekRegistrationCache(body.eventId, user.uid)
         return NextResponse.json({ ok: true })
       case 'joinTeam':
         await joinPuzzleWeekTeamServer(body.eventId, user, body.joinCode ?? '')
+        invalidatePuzzleWeekRegistrationCache(body.eventId, user.uid)
         return NextResponse.json({ ok: true })
       case 'resetRegistration':
         await resetPuzzleWeekRegistrationServer(body.eventId, user)
+        invalidatePuzzleWeekRegistrationCache(body.eventId, user.uid)
         return NextResponse.json({ ok: true })
       case 'adminRenameEntry':
         await adminRenamePuzzleWeekEntryServer(body.eventId, user, body.entryId ?? '', body.name ?? '')

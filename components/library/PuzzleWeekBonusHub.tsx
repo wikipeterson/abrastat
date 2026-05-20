@@ -2897,9 +2897,12 @@ export function PuzzleWeekBonusHub() {
 
     let cancelled = false
     let syncing = false
+    let lastSyncAt = 0
+    const SYNC_COOLDOWN_MS = 5 * 60 * 1000 // 5 minutes between focus-triggered syncs
 
-    async function syncRemoteProfile() {
+    async function syncRemoteProfile(forced = false) {
       if (cancelled || syncing) return
+      if (!forced && Date.now() - lastSyncAt < SYNC_COOLDOWN_MS) return
       syncing = true
       try {
         const remoteProfile = await getPuzzleWeekBonusMedals(puzzleWeekEventId, signedInUser)
@@ -2927,11 +2930,12 @@ export function PuzzleWeekBonusHub() {
       } catch {
         // Keep local medals if the account sync fails.
       } finally {
+        lastSyncAt = Date.now()
         syncing = false
       }
     }
 
-    void syncRemoteProfile()
+    void syncRemoteProfile(true)
 
     function handleWindowFocus() {
       void syncRemoteProfile()

@@ -108,6 +108,9 @@
         <button class="action-btn primary" onclick="exportPNG()">⬇ Export PNG</button>
         <button class="action-btn primary" onclick="exportJSON()">⬇ Export JSON</button>
         <label class="action-btn primary" style="cursor:pointer;text-align:center;">⬆ Upload JSON<input type="file" accept=".json" style="display:none" onchange="importJSON(event)"></label>
+        <button class="action-btn danger" onclick="clearObjects()">🪑 Clear objects</button>
+        <button class="action-btn danger" onclick="clearTeachers()">👤 Clear teachers</button>
+        <button class="action-btn danger" onclick="clearLetters()">🔤 Clear letters</button>
         <button class="action-btn danger" onclick="clearAll()">🗑 Clear all</button>
       </div>
     </div>
@@ -125,6 +128,13 @@
         <button class="toggle-btn" id="save-slot-4" onclick="switchSaveSlot(4)">Puzzle 4</button>
       </div>
       <button class="action-btn primary" style="width:100%;" onclick="saveLocal()">💾 Save Current Slot</button>
+      <div style="font-size:11px;color:#777;margin:10px 0 6px;">Copy current draft into:</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;" id="save-slot-copy-grid">
+        <button class="action-btn" onclick="saveToSlot(1)">Save to 1</button>
+        <button class="action-btn" onclick="saveToSlot(2)">Save to 2</button>
+        <button class="action-btn" onclick="saveToSlot(3)">Save to 3</button>
+        <button class="action-btn" onclick="saveToSlot(4)">Save to 4</button>
+      </div>
     </div>
     <div class="panel">
       <div class="panel-title">View</div>
@@ -833,6 +843,19 @@ function clearAll(){
   if(!confirm('Clear everything?'))return;
   applyData(createBlankData());
 }
+function clearObjects(){
+  objects=[];
+  draw();
+}
+function clearTeachers(){
+  teachers={};
+  renderTeacherGrid();
+  draw();
+}
+function clearLetters(){
+  cellLetter=Array.from({length:N},()=>Array(N).fill(''));
+  draw();
+}
 function saveLocal(){
   try{
     localStorage.setItem(getSaveSlotKey(currentSaveSlot), JSON.stringify(snapshotData()));
@@ -842,6 +865,18 @@ function saveLocal(){
     document.getElementById('status').textContent += `  Saved puzzle ${currentSaveSlot}.`;
   }catch(err){
     alert('Could not save this builder state: '+err.message);
+  }
+}
+function saveToSlot(slot){
+  try{
+    localStorage.setItem(getSaveSlotKey(slot), JSON.stringify(snapshotData()));
+    currentSaveSlot=slot;
+    localStorage.setItem(ACTIVE_SLOT_KEY, String(slot));
+    renderSaveSlots();
+    updateStatus();
+    document.getElementById('status').textContent += `  Saved and switched to puzzle ${slot}.`;
+  }catch(err){
+    alert('Could not save to that slot: '+err.message);
   }
 }
 function switchSaveSlot(slot){

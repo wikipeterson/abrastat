@@ -109,6 +109,7 @@
       <div class="panel-title">Actions</div>
       <div class="action-row">
         <button class="action-btn" onclick="autoColor()">✨ Auto-color regions</button>
+        <button class="action-btn primary" onclick="saveLocal()">💾 Save</button>
         <button class="action-btn primary" onclick="exportPNG()">⬇ Export PNG</button>
         <button class="action-btn primary" onclick="exportJSON()">⬇ Export JSON</button>
         <label class="action-btn primary" style="cursor:pointer;text-align:center;">⬆ Upload JSON<input type="file" accept=".json" style="display:none" onchange="importJSON(event)"></label>
@@ -140,6 +141,7 @@ const SITTABLE=new Set(['recliner','massage','floatie']);
 const BIG=new Set(['pool','massage']);
 const ALL_OBJS=['plant','shelf','recliner','tv','floatie','recycle','table','pool','massage'];
 const ALPHA='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const SAVE_KEY='abrastat-lounge-builder-save-v1';
 
 let hB=Array.from({length:N+1},()=>Array(N).fill(false));
 let vB=Array.from({length:N},()=>Array(N+1).fill(false));
@@ -154,6 +156,8 @@ let dragging=false,dragVal=true,hoverCell=null;
 let showLetters=true, showLabels=true;
 // label drag state
 let dragLabel=null, dragLabelOX=0, dragLabelOY=0;
+// teacher drag state
+let dragTeacher=null, dragTeacherOrigin=null;
 
 const canvas=document.getElementById('gc');
 canvas.width=W; canvas.height=W;
@@ -169,6 +173,11 @@ function getCellsFor(obj){return objCells(obj.r,obj.c,obj.orient||null);}
 function objectAt(r,c){return objects.find(o=>getCellsFor(o).some(({r:a,c:b})=>a===r&&b===c));}
 function cellHardBlocked(r,c){const o=objectAt(r,c);return o&&!SITTABLE.has(o.type);}
 function teacherAt(r,c){return Object.entries(teachers).find(([,p])=>p.r===r&&p.c===c)?.[0];}
+function canPlaceTeacherLabel(lbl,r,c){
+  if(cellHardBlocked(r,c)) return false;
+  const existing=teacherAt(r,c);
+  return !existing || existing===lbl;
+}
 function canPlaceObj(r,c,ori){
   return objCells(r,c,ori).every(({r:cr,c:cc})=>
     cr>=0&&cr<N&&cc>=0&&cc<N&&!objects.some(o=>getCellsFor(o).some(({r:a,c:b})=>a===cr&&b===cc)));
@@ -434,13 +443,17 @@ function draw(){
   // sittable objects first
   objects.forEach(o=>{if(SITTABLE.has(o.type))drawObj(o);});
   // teachers on top of sittable
-  Object.entries(teachers).forEach(([lbl,pos])=>{drawTeacher(OX+pos.c*CELL,OY+pos.r*CELL,lbl,TEACHER_LABELS.indexOf(lbl),1);});
+  Object.entries(teachers).forEach(([lbl,pos])=>{
+    if(dragTeacher===lbl) return;
+    drawTeacher(OX+pos.c*CELL,OY+pos.r*CELL,lbl,TEACHER_LABELS.indexOf(lbl),1);
+  });
   // non-sittable objects
   objects.forEach(o=>{if(!SITTABLE.has(o.type))drawObj(o);});
   // hover ghosts
   if(mode==='teacher'&&hoverCell){
-    const {r,c}=hoverCell,idx=TEACHER_LABELS.indexOf(selTeacher),blocked=cellHardBlocked(r,c);
-    drawTeacher(OX+c*CELL,OY+r*CELL,blocked?'✕':selTeacher,blocked?8:idx,0.5);
+    const activeTeacher=dragTeacher||selTeacher;
+    const {r,c}=hoverCell,idx=TEACHER_LABELS.indexOf(activeTeacher),blocked=!canPlaceTeacherLabel(activeTeacher,r,c);
+    drawTeacher(OX+c*CELL,OY+r*CELL,blocked?'✕':activeTeacher,blocked?8:idx,0.5);
   }
   if(mode==='obj'&&BIG.has(selObjType)&&hoverCell){
     const {r,c}=hoverCell,cells=objCells(r,c,orient),ok=canPlaceObj(r,c,orient);
@@ -567,6 +580,34 @@ function updateStatus(){
   if(mode==='teacher') renderTeacherGrid();
 }
 
+function snapshotData(){
+  return {
+    grid:N,
+    regions:REGIONS.map(r=>r.name),
+    cellRegion:cellReg,
+    cellLetter,
+    objects,
+    teachers,
+    labelPos,
+    hBorders:hB,
+    vBorders:vB,
+  };
+}
+
+function applyData(d){
+  if(d.hBorders) hB=d.hBorders;
+  if(d.vBorders) vB=d.vBorders;
+  if(d.cellRegion) cellReg=d.cellRegion;
+  if(d.cellLetter) cellLetter=d.cellLetter;
+  else cellLetter=Array.from({length:N},()=>Array(N).fill(''));
+  if(d.objects) objects=d.objects;
+  if(d.teachers) teachers=d.teachers;
+  if(d.labelPos) labelPos=d.labelPos;
+  else labelPos=Array(6).fill(null);
+  if(d.regions) d.regions.forEach((name,i)=>{if(REGIONS[i])REGIONS[i].name=name;});
+  renderRegionList();renderTeacherGrid();draw();
+}
+
 // ── interaction ───────────────────────────────────────────
 function getCell(x,y){const c=Math.floor((x-OX)/CELL),r=Math.floor((y-OY)/CELL);return(c>=0&&c<N&&r>=0&&r<N)?{r,c}:null;}
 function getEdge(x,y){
@@ -636,6 +677,22 @@ canvas.addEventListener('mousedown',e=>{
     const hi=hitLabel(x,y);
     if(hi>=0){dragLabel=hi;dragLabelOX=x-(getLabelPos(hi).x);dragLabelOY=y-(getLabelPos(hi).y);canvas.style.cursor='grabbing';return;}
   }
+  if(mode==='teacher'){
+    const cell=getCell(x,y);
+    if(cell){
+      const existing=teacherAt(cell.r,cell.c);
+      if(existing){
+        dragTeacher=existing;
+        dragTeacherOrigin={...teachers[existing]};
+        selTeacher=existing;
+        hoverCell=cell;
+        dragging=true;
+        renderTeacherGrid();
+        draw();
+        return;
+      }
+    }
+  }
   dragging=true;
   if(mode==='border'){const edge=getEdge(x,y);if(edge)dragVal=!(edge.type==='h'?hB[edge.r][edge.c]:vB[edge.r][edge.c]);}
   handleAt(x,y,true);
@@ -647,14 +704,39 @@ canvas.addEventListener('mousemove',e=>{
     labelPos[dragLabel]={x:x-dragLabelOX,y:y-dragLabelOY};
     draw();return;
   }
+  if(dragTeacher!==null){draw();return;}
   if(dragging) handleAt(x,y,false);
   else if(mode==='teacher'||(mode==='obj'&&BIG.has(selObjType))||mode==='letter') draw();
 });
 canvas.addEventListener('mouseup',()=>{
   dragging=false;
   if(dragLabel!==null){dragLabel=null;canvas.style.cursor='grab';}
+  if(dragTeacher!==null){
+    if(hoverCell&&canPlaceTeacherLabel(dragTeacher,hoverCell.r,hoverCell.c)){
+      const existing=teacherAt(hoverCell.r,hoverCell.c);
+      if(existing&&existing!==dragTeacher) delete teachers[existing];
+      teachers[dragTeacher]={r:hoverCell.r,c:hoverCell.c};
+    } else if(dragTeacherOrigin){
+      teachers[dragTeacher]={...dragTeacherOrigin};
+    }
+    dragTeacher=null;
+    dragTeacherOrigin=null;
+    renderTeacherGrid();
+    draw();
+  }
 });
-canvas.addEventListener('mouseleave',()=>{dragging=false;dragLabel=null;hoverCell=null;draw();});
+canvas.addEventListener('mouseleave',()=>{
+  dragging=false;
+  dragLabel=null;
+  hoverCell=null;
+  if(dragTeacher!==null&&dragTeacherOrigin){
+    teachers[dragTeacher]={...dragTeacherOrigin};
+    dragTeacher=null;
+    dragTeacherOrigin=null;
+    renderTeacherGrid();
+  }
+  draw();
+});
 
 // ── actions ───────────────────────────────────────────────
 function autoColor(){
@@ -684,8 +766,17 @@ function clearAll(){
   labelPos=Array(6).fill(null);
   objects=[];teachers={};renderTeacherGrid();draw();
 }
+function saveLocal(){
+  try{
+    localStorage.setItem(SAVE_KEY, JSON.stringify(snapshotData()));
+    updateStatus();
+    document.getElementById('status').textContent += '  Saved to this browser.';
+  }catch(err){
+    alert('Could not save this builder state: '+err.message);
+  }
+}
 function exportJSON(){
-  const data={grid:N,regions:REGIONS.map(r=>r.name),cellRegion:cellReg,cellLetter,objects,teachers,labelPos,hBorders:hB,vBorders:vB};
+  const data=snapshotData();
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
   a.download='faculty-lounge-puzzle.json';a.click();
@@ -698,17 +789,7 @@ function importJSON(event){
   reader.onload=e=>{
     try{
       const d=JSON.parse(e.target.result);
-      if(d.hBorders) hB=d.hBorders;
-      if(d.vBorders) vB=d.vBorders;
-      if(d.cellRegion) cellReg=d.cellRegion;
-      if(d.cellLetter) cellLetter=d.cellLetter;
-      else cellLetter=Array.from({length:N},()=>Array(N).fill(''));
-      if(d.objects) objects=d.objects;
-      if(d.teachers) teachers=d.teachers;
-      if(d.labelPos) labelPos=d.labelPos;
-      else labelPos=Array(6).fill(null);
-      if(d.regions) d.regions.forEach((name,i)=>{if(REGIONS[i])REGIONS[i].name=name;});
-      renderRegionList();renderTeacherGrid();draw();
+      applyData(d);
       event.target.value='';
     }catch(err){alert('Could not parse JSON file: '+err.message);}
   };
@@ -717,6 +798,10 @@ function importJSON(event){
 
 // init
 renderRegionList();renderLetterPicker();renderTeacherGrid();draw();
+try{
+  const saved=localStorage.getItem(SAVE_KEY);
+  if(saved) applyData(JSON.parse(saved));
+}catch{}
 </script>
 </body>
 </html>

@@ -95,7 +95,8 @@
       <div style="font-size:11px;color:#999;">Click a cell to assign this letter. Only cells that can hold a teacher get letters. Click an assigned cell again to clear it.</div>
     </div>
     <div class="panel" id="panel-teachers" style="display:none">
-      <div class="panel-title">Teachers (A–K)</div>
+      <div class="panel-title">Teachers (A–Z)</div>
+      <div id="teacher-count" style="font-size:11px;color:#777;margin-bottom:8px;">Used 0/26</div>
       <div class="teacher-grid" id="teacher-grid"></div>
       <div style="font-size:11px;color:#999;margin-top:8px;">Can sit on: recliners, massage tables, floaties.</div>
     </div>
@@ -137,8 +138,7 @@ const REGIONS=[
   {name:'Pool',             bg:'#B5D4F4',border:'#042C53',text:'#042C53',texture:'water'},
 ];
 
-const TEACHER_LABELS='ABCDEFGHIJK'.split('');
-const TEACHER_COLORS=['#7F77DD','#1D9E75','#D85A30','#D4537E','#378ADD','#639922','#BA7517','#E24B4A','#5F5E5A','#042C53','#993556'];
+const TEACHER_LABELS='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const SITTABLE=new Set(['recliner','massage','floatie']);
 const BIG=new Set(['pool','massage']);
 const ALL_OBJS=['plant','shelf','recliner','tv','floatie','recycle','table','pool','massage'];
@@ -179,6 +179,9 @@ function canPlaceTeacherLabel(lbl,r,c){
   if(cellHardBlocked(r,c)) return false;
   const existing=teacherAt(r,c);
   return !existing || existing===lbl;
+}
+function teacherColor(idx){
+  return `hsl(${(idx*137.508)%360} 58% 52%)`;
 }
 function canPlaceObj(r,c,ori){
   return objCells(r,c,ori).every(({r:cr,c:cc})=>
@@ -397,7 +400,7 @@ function drawTeacher(x,y,lbl,idx,alpha){
   ctx.globalAlpha=alpha;
   const R=CELL*0.27,cx=x+CELL/2,cy=y+CELL/2;
   ctx.fillStyle='rgba(255,255,255,0.75)';ctx.beginPath();ctx.arc(cx,cy,R+3,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle=TEACHER_COLORS[idx];ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=teacherColor(idx);ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle='rgba(0,0,0,0.25)';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
   ctx.fillStyle='#fff';ctx.font=`600 ${CELL*0.22}px 'Segoe UI',sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(lbl,cx,cy+1);
   ctx.globalAlpha=1;
@@ -575,11 +578,13 @@ function fillRemainingLetters(){
 }
 function renderTeacherGrid(){
   const g=document.getElementById('teacher-grid');g.querySelectorAll('.t-chip').forEach(x=>x.remove());
+  const usedCount=Object.keys(teachers).length;
+  document.getElementById('teacher-count').textContent=`Used ${usedCount}/${TEACHER_LABELS.length}`;
   TEACHER_LABELS.forEach((lbl,i)=>{
     const placed=teachers[lbl]!==undefined;
     const d=document.createElement('div');
     d.className='t-chip'+(lbl===selTeacher?' sel':'')+(placed?' placed':'');
-    d.style.background=TEACHER_COLORS[i];d.textContent=lbl;
+    d.style.background=teacherColor(i);d.textContent=lbl;
     d.title=placed?`${lbl} at row ${teachers[lbl].r+1}, col ${teachers[lbl].c+1}`:`${lbl} not placed`;
     d.onclick=()=>{selTeacher=lbl;renderTeacherGrid();};
     g.appendChild(d);
@@ -589,7 +594,7 @@ function updateStatus(){
   const placed=Object.keys(teachers).length;
   const objCounts={};objects.forEach(o=>{objCounts[o.type]=(objCounts[o.type]||0)+1;});
   const parts=Object.entries(objCounts).map(([k,v])=>`${k}×${v}`).join('  ');
-  document.getElementById('status').textContent=`Teachers: ${placed}/11  ${parts}`;
+  document.getElementById('status').textContent=`Teachers: ${placed}/${TEACHER_LABELS.length}  ${parts}`;
   if(mode==='teacher') renderTeacherGrid();
 }
 

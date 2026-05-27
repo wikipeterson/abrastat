@@ -11,6 +11,7 @@
   h1 span{color:#888;font-weight:400;font-size:13px;margin-left:8px;}
   #layout{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;}
   #sidebar{width:230px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;}
+  #rightbar{width:180px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;}
   .panel{background:#fff;border-radius:10px;padding:12px;border:1px solid #e0ddd8;}
   .panel-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:#888;margin-bottom:8px;}
   .mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
@@ -101,14 +102,6 @@
       <div style="font-size:11px;color:#999;margin-top:8px;">Can sit on: recliners, massage tables, floaties.</div>
     </div>
     <div class="panel">
-      <div class="panel-title">View</div>
-      <div id="toggle-row">
-        <button class="toggle-btn on" id="tog-teachers" onclick="toggleOverlay('teachers')">Teachers</button>
-        <button class="toggle-btn on" id="tog-letters" onclick="toggleOverlay('letters')">Letters</button>
-        <button class="toggle-btn on" id="tog-labels" onclick="toggleOverlay('labels')">Room labels</button>
-      </div>
-    </div>
-    <div class="panel">
       <div class="panel-title">Actions</div>
       <div class="action-row">
         <button class="action-btn" onclick="autoColor()">✨ Auto-color regions</button>
@@ -122,6 +115,16 @@
     <div id="status"></div>
   </div>
   <div id="canvas-wrap"><canvas id="gc"></canvas></div>
+  <div id="rightbar">
+    <div class="panel">
+      <div class="panel-title">View</div>
+      <div id="toggle-row">
+        <button class="toggle-btn on" id="tog-teachers" onclick="toggleOverlay('teachers')">Teachers</button>
+        <button class="toggle-btn on" id="tog-letters" onclick="toggleOverlay('letters')">Letters</button>
+        <button class="toggle-btn on" id="tog-labels" onclick="toggleOverlay('labels')">Room labels</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>

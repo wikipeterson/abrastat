@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fourth Floor Faculty Lounge Puzzle Builder</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0ede8;color:#1a1a1a;min-height:100vh;padding:16px;}
+  h1{font-size:18px;font-weight:600;letter-spacing:-0.3px;margin-bottom:14px;}
+  h1 span{color:#888;font-weight:400;font-size:13px;margin-left:8px;}
+  #layout{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;}
+  #sidebar{width:230px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;}
+  .panel{background:#fff;border-radius:10px;padding:12px;border:1px solid #e0ddd8;}
+  .panel-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:#888;margin-bottom:8px;}
+  .mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+  .mode-btn{padding:7px 6px;border-radius:7px;border:1.5px solid #e0ddd8;background:#faf9f7;color:#333;cursor:pointer;font-size:12px;font-weight:500;text-align:center;}
+  .mode-btn:hover{border-color:#bbb;background:#f0ede8;}
+  .mode-btn.active{border-color:#333;background:#1a1a1a;color:#fff;}
+  .region-list{display:flex;flex-direction:column;gap:4px;}
+  .region-item{display:flex;align-items:center;gap:6px;padding:5px 7px;border-radius:7px;border:1.5px solid transparent;cursor:pointer;}
+  .region-item.sel{border-color:rgba(0,0,0,0.35)!important;}
+  .region-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .region-item input{font-size:12px;font-weight:500;border:none;background:transparent;outline:none;flex:1;min-width:0;}
+  .obj-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+  .obj-btn{padding:6px 5px;border-radius:7px;border:1.5px solid #e0ddd8;background:#faf9f7;cursor:pointer;font-size:11px;text-align:center;line-height:1.3;}
+  .obj-btn:hover{border-color:#bbb;}
+  .obj-btn.sel{border-color:#333;background:#1a1a1a;color:#fff;}
+  .obj-btn .oj-emoji{font-size:15px;display:block;}
+  .obj-btn .oj-label{display:block;color:inherit;}
+  .obj-btn .oj-size{font-size:9px;opacity:0.6;}
+  .orient-row{display:flex;gap:5px;margin-top:6px;}
+  .orient-btn{flex:1;padding:5px;border-radius:6px;border:1.5px solid #e0ddd8;background:#faf9f7;font-size:12px;cursor:pointer;}
+  .orient-btn.active{border-color:#333;background:#1a1a1a;color:#fff;}
+  .teacher-grid{display:flex;flex-wrap:wrap;gap:5px;}
+  .t-chip{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;cursor:pointer;border:2px solid transparent;color:#fff;transition:transform 0.1s;}
+  .t-chip:hover{transform:scale(1.1);}
+  .t-chip.sel{border-color:#111;transform:scale(1.15);box-shadow:0 0 0 2px #fff,0 0 0 4px #111;}
+  .t-chip.placed{opacity:0.35;}
+  #status{font-size:12px;color:#666;min-height:18px;}
+  .action-row{display:flex;gap:5px;flex-direction:column;}
+  .action-btn{padding:8px 10px;border-radius:7px;border:1.5px solid #e0ddd8;background:#faf9f7;cursor:pointer;font-size:12px;font-weight:500;text-align:center;}
+  .action-btn:hover{border-color:#bbb;background:#f0ede8;}
+  .action-btn.primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a;}
+  .action-btn.primary:hover{background:#333;}
+  .action-btn.danger{color:#c0392b;}
+  canvas{display:block;border-radius:8px;border:2px solid #ccc;background:#fff;max-width:100%;}
+  #toggle-row{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;}
+  .toggle-btn{padding:4px 10px;border-radius:6px;border:1.5px solid #e0ddd8;background:#faf9f7;cursor:pointer;font-size:12px;}
+  .toggle-btn.on{border-color:#333;background:#1a1a1a;color:#fff;}
+</style>
+</head>
+<body>
+<h1>Fourth Floor Faculty Lounge Puzzle Builder <span>11×11 grid</span></h1>
+<div id="layout">
+  <div id="sidebar">
+    <div class="panel">
+      <div class="panel-title">Mode</div>
+      <div class="mode-grid">
+        <button class="mode-btn active" id="btn-border" onclick="setMode('border')">✏️ Borders</button>
+        <button class="mode-btn" id="btn-fill" onclick="setMode('fill')">🎨 Fill Region</button>
+        <button class="mode-btn" id="btn-obj" onclick="setMode('obj')">📦 Objects</button>
+        <button class="mode-btn" id="btn-teacher" onclick="setMode('teacher')">👤 Teachers</button>
+        <button class="mode-btn" id="btn-letter" onclick="setMode('letter')">🔤 Letters</button>
+        <button class="mode-btn" id="btn-label" onclick="setMode('label')">🏷 Move Labels</button>
+        <button class="mode-btn" id="btn-erase" onclick="setMode('erase')" style="grid-column:span 2">⌫ Erase</button>
+      </div>
+    </div>
+    <div class="panel" id="panel-regions">
+      <div class="panel-title">Regions</div>
+      <div class="region-list" id="region-list"></div>
+    </div>
+    <div class="panel" id="panel-objects" style="display:none">
+      <div class="panel-title">Objects</div>
+      <div class="obj-grid">
+        <div class="obj-btn sel" id="ob-plant" onclick="selObj('plant')"><span class="oj-emoji">🪴</span><span class="oj-label">Plant</span><span class="oj-size">1×1</span></div>
+        <div class="obj-btn" id="ob-shelf" onclick="selObj('shelf')"><span class="oj-emoji">📚</span><span class="oj-label">Bookshelf</span><span class="oj-size">1×1</span></div>
+        <div class="obj-btn" id="ob-recliner" onclick="selObj('recliner')"><span class="oj-emoji">🪑</span><span class="oj-label">Recliner</span><span class="oj-size">1×1</span></div>
+        <div class="obj-btn" id="ob-tv" onclick="selObj('tv')"><span class="oj-emoji">📺</span><span class="oj-label">TV</span><span class="oj-size">1×1</span></div>
+        <div class="obj-btn" id="ob-floatie" onclick="selObj('floatie')"><span class="oj-emoji">🩱</span><span class="oj-label">Floatie</span><span class="oj-size">1×1</span></div>
+        <div class="obj-btn" id="ob-recycle" onclick="selObj('recycle')"><span class="oj-emoji">🗑️</span><span class="oj-label">Recycle Bin</span><span class="oj-size">1×1</span></div>
+        <div class="obj-btn" id="ob-table" onclick="selObj('table')"><span class="oj-emoji">⬜</span><span class="oj-label">Table</span><span class="oj-size">1×1</span></div>
+        <div class="obj-btn" id="ob-pool" onclick="selObj('pool')"><span class="oj-emoji">🎱</span><span class="oj-label">Pool Table</span><span class="oj-size">1×2</span></div>
+        <div class="obj-btn" id="ob-massage" onclick="selObj('massage')"><span class="oj-emoji">🛏</span><span class="oj-label">Massage Table</span><span class="oj-size">1×2</span></div>
+      </div>
+      <div class="orient-row" id="orient-row" style="display:none">
+        <button class="orient-btn active" id="btn-h" onclick="setOrient('h')">↔ Horiz</button>
+        <button class="orient-btn" id="btn-v" onclick="setOrient('v')">↕ Vert</button>
+      </div>
+    </div>
+    <div class="panel" id="panel-letter" style="display:none">
+      <div class="panel-title">Extraction Letter</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;" id="letter-picker"></div>
+      <div style="font-size:11px;color:#999;">Click a cell to assign this letter. Only cells that can hold a teacher get letters. Click an assigned cell again to clear it.</div>
+    </div>
+    <div class="panel" id="panel-teachers" style="display:none">
+      <div class="panel-title">Teachers (A–K)</div>
+      <div class="teacher-grid" id="teacher-grid"></div>
+      <div style="font-size:11px;color:#999;margin-top:8px;">Can sit on: recliners, massage tables, floaties.</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">View</div>
+      <div id="toggle-row">
+        <button class="toggle-btn on" id="tog-letters" onclick="toggleOverlay('letters')">Letters</button>
+        <button class="toggle-btn on" id="tog-labels" onclick="toggleOverlay('labels')">Room labels</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Actions</div>
+      <div class="action-row">
+        <button class="action-btn" onclick="autoColor()">✨ Auto-color regions</button>
+        <button class="action-btn primary" onclick="exportPNG()">⬇ Export PNG</button>
+        <button class="action-btn primary" onclick="exportJSON()">⬇ Export JSON</button>
+        <label class="action-btn primary" style="cursor:pointer;text-align:center;">⬆ Upload JSON<input type="file" accept=".json" style="display:none" onchange="importJSON(event)"></label>
+        <button class="action-btn danger" onclick="clearAll()">🗑 Clear all</button>
+      </div>
+    </div>
+    <div id="status"></div>
+  </div>
+  <div id="canvas-wrap"><canvas id="gc"></canvas></div>
+</div>
+
+<script>
+const N=11, CELL=50, PAD=2;
+const W=PAD*2+N*CELL+2;
+const OX=PAD+1, OY=PAD+1;
+
+const REGIONS=[
+  {name:'The Main Area',    bg:'#FFF9C4',border:'#B8860B',text:'#7a5c00',texture:'smalltile'},
+  {name:'The Massage Room', bg:'#E1F5EE',border:'#0F6E56',text:'#085041',texture:'zen'},
+  {name:'The Game Room',    bg:'#EEEDFE',border:'#534AB7',text:'#26215C',texture:'hexdots'},
+  {name:'The Nail Salon',   bg:'#FBEAF0',border:'#993556',text:'#4B1528',texture:'bigtile'},
+  {name:'The Cafe',         bg:'#FAEEDA',border:'#BA7517',text:'#633806',texture:'woodgrain'},
+  {name:'Pool',             bg:'#B5D4F4',border:'#042C53',text:'#042C53',texture:'water'},
+];
+
+const TEACHER_LABELS='ABCDEFGHIJK'.split('');
+const TEACHER_COLORS=['#7F77DD','#1D9E75','#D85A30','#D4537E','#378ADD','#639922','#BA7517','#E24B4A','#5F5E5A','#042C53','#993556'];
+const SITTABLE=new Set(['recliner','massage','floatie']);
+const BIG=new Set(['pool','massage']);
+const ALL_OBJS=['plant','shelf','recliner','tv','floatie','recycle','table','pool','massage'];
+const ALPHA='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+let hB=Array.from({length:N+1},()=>Array(N).fill(false));
+let vB=Array.from({length:N},()=>Array(N+1).fill(false));
+let cellReg=Array.from({length:N},()=>Array(N).fill(-1));
+let cellLetter=Array.from({length:N},()=>Array(N).fill(''));  // extraction letters
+let objects=[], teachers={};
+// label positions: per region index, {x,y} in canvas pixels, null = auto
+let labelPos=Array(6).fill(null);
+
+let selReg=0,mode='border',selObjType='plant',orient='h',selTeacher='A',selLetter='A';
+let dragging=false,dragVal=true,hoverCell=null;
+let showLetters=true, showLabels=true;
+// label drag state
+let dragLabel=null, dragLabelOX=0, dragLabelOY=0;
+
+const canvas=document.getElementById('gc');
+canvas.width=W; canvas.height=W;
+const ctx=canvas.getContext('2d');
+
+// ── helpers ──────────────────────────────────────────────
+function objCells(r,c,ori){
+  if(!ori) return [{r,c}];
+  if(ori==='h') return [{r,c},{r,c:c+1}];
+  return [{r,c},{r:r+1,c}];
+}
+function getCellsFor(obj){return objCells(obj.r,obj.c,obj.orient||null);}
+function objectAt(r,c){return objects.find(o=>getCellsFor(o).some(({r:a,c:b})=>a===r&&b===c));}
+function cellHardBlocked(r,c){const o=objectAt(r,c);return o&&!SITTABLE.has(o.type);}
+function teacherAt(r,c){return Object.entries(teachers).find(([,p])=>p.r===r&&p.c===c)?.[0];}
+function canPlaceObj(r,c,ori){
+  return objCells(r,c,ori).every(({r:cr,c:cc})=>
+    cr>=0&&cr<N&&cc>=0&&cc<N&&!objects.some(o=>getCellsFor(o).some(({r:a,c:b})=>a===cr&&b===cc)));
+}
+function canHaveTeacher(r,c){return !cellHardBlocked(r,c);}
+
+function rr(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+}
+
+// ── textures ──────────────────────────────────────────────
+function drawTexture(tx,ty,tw,th,key,bg){
+  ctx.save();ctx.beginPath();ctx.rect(tx,ty,tw,th);ctx.clip();
+  ctx.fillStyle=bg;ctx.fillRect(tx,ty,tw,th);
+  if(key==='smalltile'){
+    const TS=13;ctx.strokeStyle='rgba(180,150,0,0.22)';ctx.lineWidth=0.7;
+    for(let x=tx;x<=tx+tw;x+=TS){ctx.beginPath();ctx.moveTo(x,ty);ctx.lineTo(x,ty+th);ctx.stroke();}
+    for(let y=ty;y<=ty+th;y+=TS){ctx.beginPath();ctx.moveTo(tx,y);ctx.lineTo(tx+tw,y);ctx.stroke();}
+  } else if(key==='bigtile'){
+    const TS=28,grout=2;
+    for(let x=tx;x<tx+tw;x+=TS) for(let y=ty;y<ty+th;y+=TS){
+      ctx.fillStyle='rgba(255,255,255,0.28)';
+      ctx.fillRect(x+grout/2,y+grout/2,Math.min(TS-grout,tx+tw-x-grout/2),Math.min(TS-grout,ty+th-y-grout/2));
+    }
+    ctx.strokeStyle='rgba(180,80,120,0.25)';ctx.lineWidth=grout;
+    for(let x=tx;x<=tx+tw;x+=TS){ctx.beginPath();ctx.moveTo(x,ty);ctx.lineTo(x,ty+th);ctx.stroke();}
+    for(let y=ty;y<=ty+th;y+=TS){ctx.beginPath();ctx.moveTo(tx,y);ctx.lineTo(tx+tw,y);ctx.stroke();}
+  } else if(key==='hexdots'){
+    const spacing=14,r2=3.5;ctx.fillStyle='rgba(83,74,183,0.18)';
+    for(let row=0;;row++){
+      const yy=ty+row*spacing*0.866;if(yy>ty+th+spacing)break;
+      const offset=row%2===0?0:spacing/2;
+      for(let xx=tx+offset;xx<tx+tw+spacing;xx+=spacing){ctx.beginPath();ctx.arc(xx,yy,r2,0,Math.PI*2);ctx.fill();}
+    }
+  } else if(key==='woodgrain'){
+    const plankH=16,plankColors=['rgba(186,117,23,0.12)','rgba(186,117,23,0.06)'];
+    for(let y=ty,pi=0;y<ty+th;y+=plankH,pi++){
+      ctx.fillStyle=plankColors[pi%2];ctx.fillRect(tx,y,tw,Math.min(plankH,ty+th-y));
+      ctx.strokeStyle='rgba(140,80,10,0.18)';ctx.lineWidth=0.8;
+      ctx.beginPath();ctx.moveTo(tx,y+plankH);ctx.lineTo(tx+tw,y+plankH);ctx.stroke();
+      ctx.strokeStyle='rgba(140,80,10,0.07)';ctx.lineWidth=0.5;
+      for(let g=3;g<plankH-2;g+=4){
+        ctx.beginPath();
+        for(let x=tx;x<=tx+tw;x+=6){const yw=y+g+Math.sin((x-tx)*0.15)*1.2;x===tx?ctx.moveTo(x,yw):ctx.lineTo(x,yw);}
+        ctx.stroke();
+      }
+    }
+  } else if(key==='zen'){
+    const gap=8;ctx.strokeStyle='rgba(15,110,86,0.15)';ctx.lineWidth=1;
+    for(let d=tx-th;d<=tx+tw+th;d+=gap){ctx.beginPath();ctx.moveTo(d,ty);ctx.lineTo(d+th,ty+th);ctx.stroke();}
+    ctx.strokeStyle='rgba(15,110,86,0.06)';ctx.lineWidth=0.6;
+    for(let d=ty-tw;d<=ty+th+tw;d+=gap*3){ctx.beginPath();ctx.moveTo(tx,d);ctx.lineTo(tx+tw,d+tw);ctx.stroke();}
+  } else if(key==='water'){
+    ctx.strokeStyle='rgba(24,95,165,0.22)';ctx.lineWidth=1.2;
+    for(let wy=ty+5;wy<ty+th;wy+=8){
+      ctx.beginPath();
+      for(let wx=tx;wx<=tx+tw;wx+=3){const wave=Math.sin((wx-tx)*0.38)*2.5;wx===tx?ctx.moveTo(wx,wy+wave):ctx.lineTo(wx,wy+wave);}
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+// ── object drawers ────────────────────────────────────────
+function drawPlant(x,y,s){
+  const cx=x+s/2;
+  const potW=s*0.44,potH=s*0.28,potX=cx-potW/2,potY=y+s*0.68;
+  ctx.fillStyle='#c25b2a';ctx.beginPath();ctx.moveTo(potX+potW*0.08,potY);ctx.lineTo(potX+potW*0.92,potY);ctx.lineTo(potX+potW,potY+potH);ctx.lineTo(potX,potY+potH);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#a0401a';rr(potX-s*0.03,potY-s*0.04,potW+s*0.06,s*0.07,s*0.03);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.18)';ctx.fillRect(potX+potW*0.15,potY+potH*0.15,potW*0.18,potH*0.5);
+  ctx.fillStyle='#4a2e14';rr(potX+s*0.01,potY+s*0.01,potW-s*0.02,s*0.05,s*0.02);ctx.fill();
+  ctx.strokeStyle='#3a7d2c';ctx.lineWidth=s*0.055;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(cx,potY);ctx.lineTo(cx,y+s*0.42);ctx.stroke();
+  const leaves=[
+    {ax:cx,ay:y+s*0.44,bx:cx-s*0.26,by:y+s*0.28,mx:cx-s*0.28,my:y+s*0.44},
+    {ax:cx,ay:y+s*0.44,bx:cx+s*0.26,by:y+s*0.28,mx:cx+s*0.28,my:y+s*0.44},
+    {ax:cx,ay:y+s*0.35,bx:cx-s*0.22,by:y+s*0.16,mx:cx-s*0.24,my:y+s*0.33},
+    {ax:cx,ay:y+s*0.35,bx:cx+s*0.22,by:y+s*0.16,mx:cx+s*0.24,my:y+s*0.33},
+    {ax:cx,ay:y+s*0.26,bx:cx,by:y+s*0.06,mx:cx+s*0.02,my:y+s*0.2},
+  ];
+  leaves.forEach(({ax,ay,bx,by,mx,my},i)=>{
+    ctx.fillStyle=i%2===0?'#3a8c2a':'#2d7020';
+    ctx.beginPath();ctx.moveTo(ax,ay);ctx.quadraticCurveTo(mx,my,bx,by);ctx.quadraticCurveTo(ax+(bx-ax)*0.1,ay+(by-ay)*0.5,ax,ay);ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.25)';ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.moveTo(ax,ay);ctx.quadraticCurveTo((ax+mx)/2,(ay+my)/2,bx,by);ctx.stroke();
+  });
+}
+function drawBookshelf(x,y,s){
+  const p=s*0.04,bw=s-p*2,bh=s-p*2,bx=x+p,by=y+p;
+  ctx.fillStyle='#8B5E3C';rr(bx,by,bw,bh,s*0.04);ctx.fill();
+  ctx.strokeStyle='#5C3A1E';ctx.lineWidth=1;rr(bx,by,bw,bh,s*0.04);ctx.stroke();
+  const shelves=3,shelfGap=bh/(shelves+0.5),shelfH=s*0.055;
+  const innerX=bx+s*0.07,innerW=bw-s*0.14;
+  const bookColors=['#c0392b','#2980b9','#27ae60','#e67e22','#8e44ad','#16a085','#d35400','#2c3e50'];
+  for(let si=0;si<shelves;si++){
+    const sy2=by+shelfGap*(si+0.6);
+    ctx.fillStyle='#6b4423';ctx.fillRect(innerX,sy2,innerW,shelfH);
+    ctx.fillStyle='rgba(0,0,0,0.2)';ctx.fillRect(innerX,sy2+shelfH-1,innerW,2);
+    let bkx=innerX+s*0.02,bi=si*3;
+    const bookTop=sy2-shelfGap*0.82,bookH=shelfGap*0.78;
+    while(bkx<innerX+innerW-s*0.04){
+      const bkw=s*(0.055+Math.sin(bi*2.3)*0.015);
+      ctx.fillStyle=bookColors[bi%bookColors.length];ctx.fillRect(bkx,bookTop,bkw-1,bookH);
+      ctx.fillStyle='rgba(255,255,255,0.15)';ctx.fillRect(bkx+1,bookTop+1,bkw*0.3,bookH*0.5);
+      ctx.fillStyle='rgba(255,255,255,0.5)';ctx.fillRect(bkx+bkw-2,bookTop+1,1.5,bookH-2);
+      bkx+=bkw;bi++;
+    }
+  }
+  ctx.fillStyle='#6b4423';
+  ctx.fillRect(bx,by,s*0.07,bh);ctx.fillRect(bx+bw-s*0.07,by,s*0.07,bh);
+  ctx.fillRect(bx,by,bw,s*0.055);ctx.fillRect(bx,by+bh-s*0.055,bw,s*0.055);
+  ctx.strokeStyle='#4a2e14';ctx.lineWidth=1.5;rr(bx,by,bw,bh,s*0.04);ctx.stroke();
+}
+function drawRecliner(x,y,s){
+  const p=s*0.06,W2=s-p*2,H=s-p*2,ox=x+p,oy=y+p;
+  const bodyColor='#8B5E3C',shadowColor='#5C3A1E',lightColor='#B8845A',darkColor='#4a2e14';
+  const backH=H*0.55,backW=W2*0.82,backX=ox+(W2-backW)/2;
+  ctx.fillStyle=bodyColor;rr(backX,oy,backW,backH,s*0.07);ctx.fill();
+  ctx.fillStyle=lightColor;rr(backX+backW*0.15,oy+backH*0.08,backW*0.7,backH*0.35,s*0.04);ctx.fill();
+  ctx.fillStyle=shadowColor;ctx.fillRect(backX,oy+backH*0.88,backW,backH*0.12);
+  const seatY=oy+backH+H*0.02,seatH=H*0.36,seatW=W2*0.88,seatX=ox+(W2-seatW)/2;
+  ctx.fillStyle=bodyColor;rr(seatX,seatY,seatW,seatH,s*0.06);ctx.fill();
+  ctx.fillStyle=lightColor;rr(seatX+seatW*0.1,seatY+seatH*0.1,seatW*0.8,seatH*0.4,s*0.03);ctx.fill();
+  const armW=W2*0.1,armH=backH*0.7,armY=oy+backH*0.25;
+  ctx.fillStyle=shadowColor;rr(ox,armY,armW,armH+seatH*0.5,s*0.04);ctx.fill();
+  ctx.fillStyle=lightColor;rr(ox+armW*0.2,armY,armW*0.6,armH*0.25,s*0.02);ctx.fill();
+  ctx.fillStyle=shadowColor;rr(ox+W2-armW,armY,armW,armH+seatH*0.5,s*0.04);ctx.fill();
+  ctx.fillStyle=lightColor;rr(ox+W2-armW+armW*0.2,armY,armW*0.6,armH*0.25,s*0.02);ctx.fill();
+  const legW=s*0.055,legH=s*0.07,legY=oy+H-legH*0.5;
+  ctx.fillStyle=darkColor;ctx.fillRect(seatX+seatW*0.15,legY,legW,legH);ctx.fillRect(seatX+seatW*0.85-legW,legY,legW,legH);
+  ctx.strokeStyle=darkColor;ctx.lineWidth=1;rr(backX,oy,backW,backH,s*0.07);ctx.stroke();rr(seatX,seatY,seatW,seatH,s*0.06);ctx.stroke();
+}
+function drawTV(x,y,s){
+  const p=s*0.06,tw=s-p*2,th=s*0.62,tx=x+p,ty=y+p;
+  ctx.fillStyle='#1a1a1a';rr(tx,ty,tw,th,s*0.06);ctx.fill();
+  ctx.fillStyle='#0a1628';rr(tx+s*0.06,ty+s*0.05,tw-s*0.12,th-s*0.1,s*0.03);ctx.fill();
+  ctx.fillStyle='#1a3a5c';ctx.fillRect(tx+s*0.09,ty+s*0.08,tw-s*0.18,th-s*0.16);
+  ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
+  for(let sy2=ty+s*0.1;sy2<ty+th-s*0.08;sy2+=3){ctx.beginPath();ctx.moveTo(tx+s*0.09,sy2);ctx.lineTo(tx+tw-s*0.09,sy2);ctx.stroke();}
+  ctx.fillStyle='rgba(255,255,255,0.07)';ctx.beginPath();ctx.moveTo(tx+s*0.1,ty+s*0.06);ctx.lineTo(tx+tw*0.5,ty+s*0.06);ctx.lineTo(tx+s*0.1,ty+th*0.45);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#2a2a2a';ctx.fillRect(x+s/2-s*0.05,ty+th,s*0.1,s*0.12);
+  ctx.fillStyle='#222';rr(x+s*0.22,ty+th+s*0.12,s*0.56,s*0.07,s*0.03);ctx.fill();
+}
+function drawFloatie(x,y,s){
+  const cx=x+s/2,cy=y+s/2,R=s*0.42,r2=s*0.2;
+  ctx.fillStyle='rgba(0,0,0,0.12)';ctx.beginPath();ctx.ellipse(cx+2,cy+3,R,R*0.85,0,0,Math.PI*2);ctx.fill();
+  const segs=8,colors=['#FF6B6B','#FFE66D','#FF6B6B','#FFE66D','#FF6B6B','#FFE66D','#FF6B6B','#FFE66D'];
+  for(let i=0;i<segs;i++){
+    const a0=i/segs*Math.PI*2-Math.PI/2,a1=(i+1)/segs*Math.PI*2-Math.PI/2;
+    ctx.fillStyle=colors[i];ctx.beginPath();ctx.arc(cx,cy,R,a0,a1);ctx.arc(cx,cy,r2,a1,a0,true);ctx.closePath();ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=0.8;ctx.stroke();
+  }
+  ctx.fillStyle='rgba(180,220,255,0.6)';ctx.beginPath();ctx.ellipse(cx,cy,r2,r2*0.9,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(cx,cy,r2,r2*0.9,0,0,Math.PI*2);ctx.stroke();
+  ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(cx,cy,R,R*0.9,0,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='#ddd';ctx.beginPath();ctx.arc(cx+R*0.7,cy,s*0.04,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#aaa';ctx.lineWidth=0.8;ctx.stroke();
+}
+function drawRecycleBin(x,y,s){
+  const cx=x+s/2,p=s*0.08;
+  const lidW=s*0.62,lidH=s*0.1,lidX=cx-lidW/2,lidY=y+p;
+  ctx.fillStyle='#4CAF50';rr(lidX,lidY,lidW,lidH,s*0.03);ctx.fill();ctx.strokeStyle='#388E3C';ctx.lineWidth=1;rr(lidX,lidY,lidW,lidH,s*0.03);ctx.stroke();
+  ctx.fillStyle='#388E3C';rr(cx-s*0.11,lidY-s*0.04,s*0.22,s*0.07,s*0.03);ctx.fill();
+  const topW=s*0.58,botW=s*0.5,bodyY=lidY+lidH+s*0.02,bodyH=s*0.72;
+  ctx.fillStyle='#66BB6A';ctx.beginPath();ctx.moveTo(cx-topW/2,bodyY);ctx.lineTo(cx+topW/2,bodyY);ctx.lineTo(cx+botW/2,bodyY+bodyH);ctx.lineTo(cx-botW/2,bodyY+bodyH);ctx.closePath();ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.08)';ctx.beginPath();ctx.moveTo(cx+topW/2,bodyY);ctx.lineTo(cx+botW/2,bodyY+bodyH);ctx.lineTo(cx+topW*0.3,bodyY);ctx.closePath();ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.18)';ctx.fillRect(cx-topW/2+s*0.05,bodyY+s*0.04,topW*0.18,bodyH*0.55);
+  ctx.strokeStyle='rgba(0,0,0,0.1)';ctx.lineWidth=1;
+  for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(cx-topW/2+(topW/3)*i,bodyY);ctx.lineTo(cx-botW/2+(botW/3)*i,bodyY+bodyH);ctx.stroke();}
+  const sy2=bodyY+bodyH*0.4,sr=s*0.14;
+  ctx.save();ctx.translate(cx,sy2);ctx.strokeStyle='rgba(255,255,255,0.8)';ctx.lineWidth=s*0.045;ctx.lineCap='round';ctx.lineJoin='round';
+  for(let i=0;i<3;i++){ctx.save();ctx.rotate(i*Math.PI*2/3);ctx.beginPath();ctx.moveTo(0,-sr);ctx.lineTo(sr*0.5,-sr*0.1);ctx.lineTo(0,sr*0.5);ctx.stroke();ctx.restore();}
+  ctx.restore();
+  ctx.strokeStyle='#388E3C';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(cx-topW/2,bodyY);ctx.lineTo(cx+topW/2,bodyY);ctx.lineTo(cx+botW/2,bodyY+bodyH);ctx.lineTo(cx-botW/2,bodyY+bodyH);ctx.closePath();ctx.stroke();
+}
+function drawTable(x,y,s){
+  const p=s*0.06,tw=s-p*2,ox=x+p,oy=y+p,topH=s*0.18;
+  ctx.fillStyle='#f5f5f5';rr(ox,oy+s*0.18,tw,topH,s*0.04);ctx.fill();ctx.strokeStyle='#ccc';ctx.lineWidth=1.2;rr(ox,oy+s*0.18,tw,topH,s*0.04);ctx.stroke();
+  ctx.fillStyle='#ddd';ctx.fillRect(ox+s*0.04,oy+s*0.18+topH-s*0.02,tw-s*0.08,s*0.03);
+  const legW=s*0.07,legH=s*0.46,legY=oy+s*0.18+topH;
+  [ox+s*0.1,ox+tw-s*0.1-legW].forEach(lx=>{ctx.fillStyle='#e0e0e0';ctx.fillRect(lx,legY,legW,legH);ctx.strokeStyle='#bbb';ctx.lineWidth=0.8;ctx.strokeRect(lx,legY,legW,legH);});
+  ctx.fillStyle='#e8e8e8';ctx.fillRect(ox+s*0.1+legW,legY+legH*0.5,tw-s*0.2-legW*2,s*0.06);ctx.strokeStyle='#ccc';ctx.lineWidth=0.8;ctx.strokeRect(ox+s*0.1+legW,legY+legH*0.5,tw-s*0.2-legW*2,s*0.06);
+  ctx.fillStyle='rgba(255,255,255,0.6)';rr(ox+tw*0.1,oy+s*0.2,tw*0.35,topH*0.35,s*0.02);ctx.fill();
+}
+function drawPoolTable(x,y,w,h){
+  ctx.fillStyle='#1a7a3a';ctx.fillRect(x+3,y+3,w-6,h-6);
+  ctx.strokeStyle='#8B4513';ctx.lineWidth=3.5;ctx.strokeRect(x+1.5,y+1.5,w-3,h-3);
+  [[0.18,0.5],[0.82,0.5],[0.5,0.2],[0.5,0.8]].forEach(([dx,dy])=>{ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x+dx*w,y+dy*h,2.5,0,Math.PI*2);ctx.fill();});
+  ctx.font=`${Math.min(w,h)*0.35}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🎱',x+w/2,y+h/2);
+}
+function drawMassageTable(x,y,w,h){
+  ctx.fillStyle='#c8a97e';ctx.fillRect(x+3,y+3,w-6,h-6);
+  ctx.strokeStyle='#7a5c2e';ctx.lineWidth=2.5;ctx.strokeRect(x+1.5,y+1.5,w-4,h-4);
+  const pw=w>h?w-12:Math.max(w-12,10),ph=w>h?Math.max(h-12,10):h-12;
+  ctx.fillStyle='#e8d5b0';ctx.fillRect(x+(w-pw)/2,y+(h-ph)/2,pw,ph);
+  ctx.font=`${Math.min(w,h)*0.3}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🛏',x+w/2,y+h/2);
+}
+function drawObj(obj){
+  const cells=getCellsFor(obj),x0=OX+cells[0].c*CELL,y0=OY+cells[0].r*CELL;
+  const w=obj.orient==='h'?CELL*2:CELL,h=obj.orient==='v'?CELL*2:CELL;
+  switch(obj.type){
+    case 'plant':drawPlant(x0,y0,CELL);break;case 'shelf':drawBookshelf(x0,y0,CELL);break;
+    case 'recliner':drawRecliner(x0,y0,CELL);break;case 'tv':drawTV(x0,y0,CELL);break;
+    case 'floatie':drawFloatie(x0,y0,CELL);break;case 'recycle':drawRecycleBin(x0,y0,CELL);break;
+    case 'table':drawTable(x0,y0,CELL);break;case 'pool':drawPoolTable(x0,y0,w,h);break;
+    case 'massage':drawMassageTable(x0,y0,w,h);break;
+  }
+}
+
+function drawTeacher(x,y,lbl,idx,alpha){
+  ctx.globalAlpha=alpha;
+  const R=CELL*0.27,cx=x+CELL/2,cy=y+CELL/2;
+  ctx.fillStyle='rgba(255,255,255,0.75)';ctx.beginPath();ctx.arc(cx,cy,R+3,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=TEACHER_COLORS[idx];ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,0.25)';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font=`600 ${CELL*0.22}px 'Segoe UI',sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(lbl,cx,cy+1);
+  ctx.globalAlpha=1;
+}
+
+// ── label positions ───────────────────────────────────────
+function getAutoLabelPos(ri){
+  // find top-left cell of region as default anchor
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    if(cellReg[r][c]===ri) return {x:OX+c*CELL+6, y:OY+r*CELL+14};
+  }
+  return null;
+}
+function getLabelPos(ri){
+  return labelPos[ri] || getAutoLabelPos(ri);
+}
+
+// ── main draw ─────────────────────────────────────────────
+function draw(){
+  ctx.clearRect(0,0,W,W);
+  // fills + textures
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    const ri=cellReg[r][c],x=OX+c*CELL,y=OY+r*CELL;
+    const reg=ri>=0?REGIONS[ri]:null;
+    drawTexture(x,y,CELL,CELL,reg?reg.texture:'none',reg?reg.bg:'#fafaf8');
+  }
+  // thin grid
+  ctx.strokeStyle='#ddd';ctx.lineWidth=0.5;
+  for(let r=0;r<=N;r++){ctx.beginPath();ctx.moveTo(OX,OY+r*CELL);ctx.lineTo(OX+N*CELL,OY+r*CELL);ctx.stroke();}
+  for(let c=0;c<=N;c++){ctx.beginPath();ctx.moveTo(OX+c*CELL,OY);ctx.lineTo(OX+c*CELL,OY+N*CELL);ctx.stroke();}
+  // thick borders
+  ctx.lineWidth=3.5;ctx.lineCap='square';
+  for(let r=0;r<=N;r++) for(let c=0;c<N;c++){
+    if(!hB[r][c]) continue;
+    const ri1=r>0?cellReg[r-1][c]:-1,ri2=r<N?cellReg[r][c]:-1,ri=ri1>=0?ri1:(ri2>=0?ri2:-1);
+    ctx.strokeStyle=ri>=0?REGIONS[ri].border:'#222';
+    ctx.beginPath();ctx.moveTo(OX+c*CELL,OY+r*CELL);ctx.lineTo(OX+(c+1)*CELL,OY+r*CELL);ctx.stroke();
+  }
+  for(let r=0;r<N;r++) for(let c=0;c<=N;c++){
+    if(!vB[r][c]) continue;
+    const ri1=c>0?cellReg[r][c-1]:-1,ri2=c<N?cellReg[r][c]:-1,ri=ri1>=0?ri1:(ri2>=0?ri2:-1);
+    ctx.strokeStyle=ri>=0?REGIONS[ri].border:'#222';
+    ctx.beginPath();ctx.moveTo(OX+c*CELL,OY+r*CELL);ctx.lineTo(OX+c*CELL,OY+(r+1)*CELL);ctx.stroke();
+  }
+  // sittable objects first
+  objects.forEach(o=>{if(SITTABLE.has(o.type))drawObj(o);});
+  // teachers on top of sittable
+  Object.entries(teachers).forEach(([lbl,pos])=>{drawTeacher(OX+pos.c*CELL,OY+pos.r*CELL,lbl,TEACHER_LABELS.indexOf(lbl),1);});
+  // non-sittable objects
+  objects.forEach(o=>{if(!SITTABLE.has(o.type))drawObj(o);});
+  // hover ghosts
+  if(mode==='teacher'&&hoverCell){
+    const {r,c}=hoverCell,idx=TEACHER_LABELS.indexOf(selTeacher),blocked=cellHardBlocked(r,c);
+    drawTeacher(OX+c*CELL,OY+r*CELL,blocked?'✕':selTeacher,blocked?8:idx,0.5);
+  }
+  if(mode==='obj'&&BIG.has(selObjType)&&hoverCell){
+    const {r,c}=hoverCell,cells=objCells(r,c,orient),ok=canPlaceObj(r,c,orient);
+    ctx.fillStyle=ok?'rgba(0,180,80,0.18)':'rgba(200,0,0,0.18)';
+    cells.forEach(({r:cr,c:cc})=>{if(cr>=0&&cr<N&&cc>=0&&cc<N)ctx.fillRect(OX+cc*CELL+1,OY+cr*CELL+1,CELL-2,CELL-2);});
+  }
+  // extraction letters overlay — on top of everything sittable
+  if(showLetters){
+    for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+      if(!canHaveTeacher(r,c)) continue;
+      const ltr=cellLetter[r][c];
+      if(ltr){
+        const x=OX+c*CELL,y=OY+r*CELL;
+        ctx.font=`700 ${CELL*0.68}px 'Segoe UI',sans-serif`;
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillStyle='rgba(255,255,255,0.55)';
+        ctx.fillText(ltr,x+CELL/2,y+CELL/2+2);
+      }
+    }
+  }
+  // letter mode: highlight selected letter cells and hover
+  if(mode==='letter'&&hoverCell){
+    const {r,c}=hoverCell;
+    if(canHaveTeacher(r,c)){
+      ctx.fillStyle='rgba(255,255,100,0.25)';
+      ctx.fillRect(OX+c*CELL+1,OY+r*CELL+1,CELL-2,CELL-2);
+    }
+  }
+  // region labels
+  if(showLabels){
+    for(let i=0;i<REGIONS.length;i++){
+      const hasAny=cellReg.some(row=>row.some(v=>v===i));
+      if(!hasAny) continue;
+      const pos=getLabelPos(i);
+      if(!pos) continue;
+      const name=REGIONS[i].name;
+      ctx.font=`600 11px 'Segoe UI',sans-serif`;
+      const tw=ctx.measureText(name).width;
+      // pill background
+      ctx.fillStyle='rgba(0,0,0,0.45)';
+      rr(pos.x-4,pos.y-11,tw+8,16,4);ctx.fill();
+      ctx.fillStyle='#fff';
+      ctx.textAlign='left';ctx.textBaseline='top';
+      ctx.fillText(name,pos.x,pos.y-10);
+      // drag handle indicator in label mode
+      if(mode==='label'){
+        ctx.strokeStyle='rgba(255,255,0,0.8)';ctx.lineWidth=1.5;
+        rr(pos.x-5,pos.y-12,tw+10,18,4);ctx.stroke();
+      }
+    }
+  }
+  updateStatus();
+}
+
+// ── UI ────────────────────────────────────────────────────
+function setMode(m){
+  mode=m;
+  ['border','fill','obj','teacher','letter','label','erase'].forEach(x=>{const b=document.getElementById('btn-'+x);if(b)b.classList.toggle('active',x===m);});
+  document.getElementById('panel-objects').style.display=m==='obj'?'block':'none';
+  document.getElementById('panel-teachers').style.display=m==='teacher'?'block':'none';
+  document.getElementById('panel-letter').style.display=m==='letter'?'block':'none';
+  if(m==='fill') renderRegionList();
+  // cursor
+  canvas.style.cursor=m==='label'?'grab':m==='letter'?'crosshair':'crosshair';
+  draw();
+}
+function selObj(t){
+  selObjType=t;
+  ALL_OBJS.forEach(x=>{const b=document.getElementById('ob-'+x);if(b)b.classList.toggle('sel',x===t);});
+  document.getElementById('orient-row').style.display=BIG.has(t)?'flex':'none';
+  setMode('obj');
+}
+function setOrient(o){
+  orient=o;
+  document.getElementById('btn-h').classList.toggle('active',o==='h');
+  document.getElementById('btn-v').classList.toggle('active',o==='v');
+  draw();
+}
+function toggleOverlay(which){
+  if(which==='letters'){showLetters=!showLetters;document.getElementById('tog-letters').classList.toggle('on',showLetters);}
+  else{showLabels=!showLabels;document.getElementById('tog-labels').classList.toggle('on',showLabels);}
+  draw();
+}
+function renderRegionList(){
+  const el=document.getElementById('region-list');el.innerHTML='';
+  REGIONS.forEach((r,i)=>{
+    const d=document.createElement('div');
+    d.className='region-item'+(i===selReg?' sel':'');
+    d.style.cssText=`background:${r.bg};border-color:${i===selReg?r.border:'transparent'}`;
+    d.onclick=()=>{selReg=i;renderRegionList();};
+    const dot=document.createElement('div');dot.className='region-dot';dot.style.background=r.border;
+    const inp=document.createElement('input');inp.value=r.name;inp.maxLength=22;inp.style.color=r.text;
+    inp.onclick=e=>e.stopPropagation();inp.oninput=e=>{REGIONS[i].name=e.target.value;draw();};
+    d.appendChild(dot);d.appendChild(inp);el.appendChild(d);
+  });
+}
+function renderLetterPicker(){
+  const el=document.getElementById('letter-picker');el.innerHTML='';
+  ALPHA.forEach(ltr=>{
+    const b=document.createElement('button');
+    b.textContent=ltr;
+    b.style.cssText=`width:26px;height:26px;border-radius:5px;border:1.5px solid #e0ddd8;background:${ltr===selLetter?'#1a1a1a':'#faf9f7'};color:${ltr===selLetter?'#fff':'#333'};cursor:pointer;font-size:12px;font-weight:600;padding:0;`;
+    b.onclick=()=>{selLetter=ltr;renderLetterPicker();};
+    el.appendChild(b);
+  });
+}
+function renderTeacherGrid(){
+  const g=document.getElementById('teacher-grid');g.querySelectorAll('.t-chip').forEach(x=>x.remove());
+  TEACHER_LABELS.forEach((lbl,i)=>{
+    const placed=teachers[lbl]!==undefined;
+    const d=document.createElement('div');
+    d.className='t-chip'+(lbl===selTeacher?' sel':'')+(placed?' placed':'');
+    d.style.background=TEACHER_COLORS[i];d.textContent=lbl;
+    d.title=placed?`${lbl} at row ${teachers[lbl].r+1}, col ${teachers[lbl].c+1}`:`${lbl} not placed`;
+    d.onclick=()=>{selTeacher=lbl;renderTeacherGrid();};
+    g.appendChild(d);
+  });
+}
+function updateStatus(){
+  const placed=Object.keys(teachers).length;
+  const objCounts={};objects.forEach(o=>{objCounts[o.type]=(objCounts[o.type]||0)+1;});
+  const parts=Object.entries(objCounts).map(([k,v])=>`${k}×${v}`).join('  ');
+  document.getElementById('status').textContent=`Teachers: ${placed}/11  ${parts}`;
+  if(mode==='teacher') renderTeacherGrid();
+}
+
+// ── interaction ───────────────────────────────────────────
+function getCell(x,y){const c=Math.floor((x-OX)/CELL),r=Math.floor((y-OY)/CELL);return(c>=0&&c<N&&r>=0&&r<N)?{r,c}:null;}
+function getEdge(x,y){
+  const T=8,fx=(x-OX)%CELL,fy=(y-OY)%CELL,c=Math.floor((x-OX)/CELL),r=Math.floor((y-OY)/CELL);
+  if(fy<T&&r>=0&&r<=N&&c>=0&&c<N)return{type:'h',r,c};
+  if(fy>CELL-T&&r>=0&&r<N&&c>=0&&c<N)return{type:'h',r:r+1,c};
+  if(fx<T&&r>=0&&r<N&&c>=0&&c<=N)return{type:'v',r,c};
+  if(fx>CELL-T&&r>=0&&r<N&&c<N)return{type:'v',r,c:c+1};
+  return null;
+}
+function toggleEdge(e,v){if(!e)return;if(e.type==='h')hB[e.r][e.c]=v;else vB[e.r][e.c]=v;}
+function evXY(e){
+  const rect=canvas.getBoundingClientRect();
+  return[(e.clientX-rect.left)*canvas.width/rect.width,(e.clientY-rect.top)*canvas.height/rect.height];
+}
+
+// label hit test
+function hitLabel(x,y){
+  ctx.font=`600 11px 'Segoe UI',sans-serif`;
+  for(let i=REGIONS.length-1;i>=0;i--){
+    const pos=getLabelPos(i); if(!pos) continue;
+    const name=REGIONS[i].name, tw=ctx.measureText(name).width;
+    if(x>=pos.x-5&&x<=pos.x+tw+5&&y>=pos.y-12&&y<=pos.y+6) return i;
+  }
+  return -1;
+}
+
+function handleAt(x,y,isDown){
+  const cell=getCell(x,y);
+  if(mode==='border'){const e=getEdge(x,y);if(e){toggleEdge(e,dragVal);draw();}}
+  else if(mode==='fill'){if(cell){cellReg[cell.r][cell.c]=selReg;draw();}}
+  else if(mode==='obj'&&isDown){
+    if(!cell)return;
+    if(BIG.has(selObjType)){if(canPlaceObj(cell.r,cell.c,orient)){objects.push({type:selObjType,r:cell.r,c:cell.c,orient});draw();}}
+    else{objects=objects.filter(o=>!(o.r===cell.r&&o.c===cell.c&&!BIG.has(o.type)));objects.push({type:selObjType,r:cell.r,c:cell.c});draw();}
+  }
+  else if(mode==='letter'&&isDown){
+    if(!cell||!canHaveTeacher(cell.r,cell.c))return;
+    // toggle: if same letter already there, clear; otherwise assign
+    if(cellLetter[cell.r][cell.c]===selLetter) cellLetter[cell.r][cell.c]='';
+    else cellLetter[cell.r][cell.c]=selLetter;
+    draw();
+  }
+  else if(mode==='teacher'&&isDown){
+    if(!cell||cellHardBlocked(cell.r,cell.c))return;
+    delete teachers[selTeacher];
+    const existing=teacherAt(cell.r,cell.c);if(existing)delete teachers[existing];
+    teachers[selTeacher]=cell;
+    const next=TEACHER_LABELS.find(l=>!teachers[l]);if(next)selTeacher=next;
+    renderTeacherGrid();draw();
+  }
+  else if(mode==='erase'){
+    if(cell){
+      cellReg[cell.r][cell.c]=-1;
+      cellLetter[cell.r][cell.c]='';
+      objects=objects.filter(o=>!getCellsFor(o).some(({r,c})=>r===cell.r&&c===cell.c));
+      const t=teacherAt(cell.r,cell.c);if(t)delete teachers[t];
+      draw();
+    }
+    const e=getEdge(x,y);if(e){toggleEdge(e,false);draw();}
+  }
+}
+
+canvas.addEventListener('mousedown',e=>{
+  const [x,y]=evXY(e);
+  if(mode==='label'){
+    const hi=hitLabel(x,y);
+    if(hi>=0){dragLabel=hi;dragLabelOX=x-(getLabelPos(hi).x);dragLabelOY=y-(getLabelPos(hi).y);canvas.style.cursor='grabbing';return;}
+  }
+  dragging=true;
+  if(mode==='border'){const edge=getEdge(x,y);if(edge)dragVal=!(edge.type==='h'?hB[edge.r][edge.c]:vB[edge.r][edge.c]);}
+  handleAt(x,y,true);
+});
+canvas.addEventListener('mousemove',e=>{
+  const [x,y]=evXY(e);
+  hoverCell=getCell(x,y);
+  if(dragLabel!==null){
+    labelPos[dragLabel]={x:x-dragLabelOX,y:y-dragLabelOY};
+    draw();return;
+  }
+  if(dragging) handleAt(x,y,false);
+  else if(mode==='teacher'||(mode==='obj'&&BIG.has(selObjType))||mode==='letter') draw();
+});
+canvas.addEventListener('mouseup',()=>{
+  dragging=false;
+  if(dragLabel!==null){dragLabel=null;canvas.style.cursor='grab';}
+});
+canvas.addEventListener('mouseleave',()=>{dragging=false;dragLabel=null;hoverCell=null;draw();});
+
+// ── actions ───────────────────────────────────────────────
+function autoColor(){
+  const vis=Array.from({length:N},()=>Array(N).fill(false));
+  cellReg=Array.from({length:N},()=>Array(N).fill(-1));let ri=0;
+  for(let sr=0;sr<N;sr++) for(let sc=0;sc<N;sc++){
+    if(vis[sr][sc])continue;
+    const q=[{r:sr,c:sc}];vis[sr][sc]=true;const cells=[];
+    while(q.length){
+      const{r,c}=q.shift();cells.push({r,c});
+      [[r-1,c,'h',r],[r+1,c,'h',r+1],[r,c-1,'v',c],[r,c+1,'v',c+1]].forEach(([nr,nc,t,bi])=>{
+        if(nr<0||nr>=N||nc<0||nc>=N||vis[nr][nc])return;
+        const bl=t==='h'?hB[bi][Math.min(c,nc)]:vB[Math.min(r,nr)][bi];
+        if(!bl){vis[nr][nc]=true;q.push({r:nr,c:nc});}
+      });
+    }
+    cells.forEach(({r,c})=>cellReg[r][c]=ri%6);ri++;
+  }
+  draw();
+}
+function clearAll(){
+  if(!confirm('Clear everything?'))return;
+  hB=Array.from({length:N+1},()=>Array(N).fill(false));
+  vB=Array.from({length:N},()=>Array(N+1).fill(false));
+  cellReg=Array.from({length:N},()=>Array(N).fill(-1));
+  cellLetter=Array.from({length:N},()=>Array(N).fill(''));
+  labelPos=Array(6).fill(null);
+  objects=[];teachers={};renderTeacherGrid();draw();
+}
+function exportJSON(){
+  const data={grid:N,regions:REGIONS.map(r=>r.name),cellRegion:cellReg,cellLetter,objects,teachers,labelPos,hBorders:hB,vBorders:vB};
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  a.download='faculty-lounge-puzzle.json';a.click();
+}
+function exportPNG(){const a=document.createElement('a');a.href=canvas.toDataURL();a.download='faculty-lounge-puzzle.png';a.click();}
+
+function importJSON(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      if(d.hBorders) hB=d.hBorders;
+      if(d.vBorders) vB=d.vBorders;
+      if(d.cellRegion) cellReg=d.cellRegion;
+      if(d.cellLetter) cellLetter=d.cellLetter;
+      else cellLetter=Array.from({length:N},()=>Array(N).fill(''));
+      if(d.objects) objects=d.objects;
+      if(d.teachers) teachers=d.teachers;
+      if(d.labelPos) labelPos=d.labelPos;
+      else labelPos=Array(6).fill(null);
+      if(d.regions) d.regions.forEach((name,i)=>{if(REGIONS[i])REGIONS[i].name=name;});
+      renderRegionList();renderTeacherGrid();draw();
+      event.target.value='';
+    }catch(err){alert('Could not parse JSON file: '+err.message);}
+  };
+  reader.readAsText(file);
+}
+
+// init
+renderRegionList();renderLetterPicker();renderTeacherGrid();draw();
+</script>
+</body>
+</html>

@@ -52,7 +52,7 @@
 </style>
 </head>
 <body>
-<h1>Fourth Floor Faculty Lounge Puzzle Builder <span>11×11 grid</span></h1>
+<h1>Fourth Floor Faculty Lounge Puzzle Builder <span id="grid-size-label">11×11 grid</span></h1>
 <div id="layout">
   <div id="sidebar">
     <div class="panel">
@@ -119,6 +119,22 @@
   <div id="canvas-wrap"><canvas id="gc"></canvas></div>
   <div id="rightbar">
     <div class="panel">
+      <div class="panel-title">Grid Size</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+        <select id="grid-size-select" style="flex:1;padding:8px 10px;border-radius:7px;border:1.5px solid #e0ddd8;background:#faf9f7;font-size:12px;">
+          <option value="8">8×8</option>
+          <option value="9">9×9</option>
+          <option value="10">10×10</option>
+          <option value="11" selected>11×11</option>
+          <option value="12">12×12</option>
+          <option value="13">13×13</option>
+          <option value="14">14×14</option>
+        </select>
+        <button class="action-btn" style="white-space:nowrap;" onclick="applyGridSizeSelection()">Use Size</button>
+      </div>
+      <div style="font-size:11px;color:#777;">Changing size starts a blank board in the current slot. Saved slots can each keep their own size.</div>
+    </div>
+    <div class="panel">
       <div class="panel-title">Save Slots</div>
       <div id="save-slot-count" style="font-size:11px;color:#777;margin-bottom:8px;">Active slot: 1</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;" id="save-slot-grid">
@@ -148,9 +164,8 @@
 </div>
 
 <script>
-const N=11, CELL=50, PAD=2;
-const W=PAD*2+N*CELL+2;
-const OX=PAD+1, OY=PAD+1;
+const CELL=50, PAD=2;
+let N=11, W=0, OX=0, OY=0;
 
 const REGIONS=[
   {name:'The Main Area',    bg:'#F5ED9A',border:'#B8860B',text:'#7a5c00',texture:'smalltile'},
@@ -176,7 +191,7 @@ let cellReg=Array.from({length:N},()=>Array(N).fill(-1));
 let cellLetter=Array.from({length:N},()=>Array(N).fill(''));  // extraction letters
 let objects=[], teachers={};
 // label positions: per region index, {x,y} in canvas pixels, null = auto
-let labelPos=Array(6).fill(null);
+let labelPos=Array(REGIONS.length).fill(null);
 
 let selReg=0,mode='border',selObjType='plant',orient='h',selTeacher='A',selLetter='A';
 let dragging=false,dragVal=true,hoverCell=null;
@@ -188,10 +203,36 @@ let dragLabel=null, dragLabelOX=0, dragLabelOY=0;
 let dragTeacher=null, dragTeacherOrigin=null;
 
 const canvas=document.getElementById('gc');
-canvas.width=W; canvas.height=W;
 const ctx=canvas.getContext('2d');
 
 // ── helpers ──────────────────────────────────────────────
+function clampGridSize(value){
+  const parsed=Number(value);
+  if(Number.isInteger(parsed) && parsed>=8 && parsed<=14) return parsed;
+  return 11;
+}
+function makeMatrix(rows, cols, fillValue){
+  return Array.from({length:rows},()=>Array(cols).fill(fillValue));
+}
+function coerceMatrix(source, rows, cols, fallbackValue){
+  return Array.from({length:rows},(_,r)=>
+    Array.from({length:cols},(_,c)=>{
+      const value=source?.[r]?.[c];
+      return value===undefined ? fallbackValue : value;
+    })
+  );
+}
+function updateGridGeometry(){
+  W=PAD*2+N*CELL+2;
+  OX=PAD+1;
+  OY=PAD+1;
+  canvas.width=W;
+  canvas.height=W;
+  const label=document.getElementById('grid-size-label');
+  if(label) label.textContent=`${N}×${N} grid`;
+  const select=document.getElementById('grid-size-select');
+  if(select) select.value=String(N);
+}
 function objCells(r,c,ori){
   if(!ori) return [{r,c}];
   if(ori==='h') return [{r,c},{r,c:c+1}];
@@ -627,21 +668,22 @@ function updateStatus(){
   const placed=Object.keys(teachers).length;
   const objCounts={};objects.forEach(o=>{objCounts[o.type]=(objCounts[o.type]||0)+1;});
   const parts=Object.entries(objCounts).map(([k,v])=>`${k}×${v}`).join('  ');
-  document.getElementById('status').textContent=`Slot ${currentSaveSlot}  Teachers: ${placed}/${TEACHER_LABELS.length}  ${parts}`;
+  document.getElementById('status').textContent=`Slot ${currentSaveSlot}  Grid: ${N}×${N}  Teachers: ${placed}/${TEACHER_LABELS.length}  ${parts}`;
   if(mode==='teacher') renderTeacherGrid();
 }
 
-function createBlankData(){
+function createBlankData(size=N){
+  const gridSize=clampGridSize(size);
   return {
-    grid:N,
+    grid:gridSize,
     regions:REGIONS.map(r=>r.name),
-    cellRegion:Array.from({length:N},()=>Array(N).fill(-1)),
-    cellLetter:Array.from({length:N},()=>Array(N).fill('')),
+    cellRegion:makeMatrix(gridSize,gridSize,-1),
+    cellLetter:makeMatrix(gridSize,gridSize,''),
     objects:[],
     teachers:{},
-    labelPos:Array(6).fill(null),
-    hBorders:Array.from({length:N+1},()=>Array(N).fill(false)),
-    vBorders:Array.from({length:N},()=>Array(N+1).fill(false)),
+    labelPos:Array(REGIONS.length).fill(null),
+    hBorders:makeMatrix(gridSize+1,gridSize,false),
+    vBorders:makeMatrix(gridSize,gridSize+1,false),
   };
 }
 
@@ -654,12 +696,20 @@ function renderSaveSlots(){
     const btn=document.getElementById(`save-slot-${slot}`);
     if(!btn) continue;
     let hasData=false;
+    let slotSize=null;
     try{hasData=!!localStorage.getItem(getSaveSlotKey(slot));}catch{}
+    try{
+      const raw=localStorage.getItem(getSaveSlotKey(slot));
+      if(raw){
+        const parsed=JSON.parse(raw);
+        slotSize=clampGridSize(parsed?.grid);
+      }
+    }catch{}
     btn.classList.toggle('on', slot===currentSaveSlot);
-    btn.textContent=`Puzzle ${slot}${hasData?' *':''}`;
+    btn.textContent=`Puzzle ${slot}${slotSize?` (${slotSize})`:''}${hasData?' *':''}`;
   }
   const label=document.getElementById('save-slot-count');
-  if(label) label.textContent=`Active slot: ${currentSaveSlot}`;
+  if(label) label.textContent=`Active slot: ${currentSaveSlot}  •  ${N}×${N}`;
 }
 
 function snapshotData(){
@@ -677,17 +727,50 @@ function snapshotData(){
 }
 
 function applyData(d){
-  if(d.hBorders) hB=d.hBorders;
-  if(d.vBorders) vB=d.vBorders;
-  if(d.cellRegion) cellReg=d.cellRegion;
-  if(d.cellLetter) cellLetter=d.cellLetter;
-  else cellLetter=Array.from({length:N},()=>Array(N).fill(''));
-  if(d.objects) objects=d.objects;
-  if(d.teachers) teachers=d.teachers;
-  if(d.labelPos) labelPos=d.labelPos;
-  else labelPos=Array(6).fill(null);
+  const size=clampGridSize(d?.grid);
+  N=size;
+  updateGridGeometry();
+  hB=coerceMatrix(d?.hBorders, N+1, N, false).map(row=>row.map(Boolean));
+  vB=coerceMatrix(d?.vBorders, N, N+1, false).map(row=>row.map(Boolean));
+  cellReg=coerceMatrix(d?.cellRegion, N, N, -1).map(row=>row.map(v=>Number.isInteger(v)?v:-1));
+  cellLetter=coerceMatrix(d?.cellLetter, N, N, '').map(row=>row.map(v=>typeof v==='string'?v:''));
+  objects=(Array.isArray(d?.objects)?d.objects:[]).filter(o=>{
+    const cells=getCellsFor(o);
+    return cells.every(({r,c})=>r>=0&&r<N&&c>=0&&c<N);
+  });
+  teachers=Object.fromEntries(
+    Object.entries(d?.teachers||{}).filter(([lbl,pos])=>
+      TEACHER_LABELS.includes(lbl) &&
+      pos &&
+      Number.isInteger(pos.r) &&
+      Number.isInteger(pos.c) &&
+      pos.r>=0 &&
+      pos.r<N &&
+      pos.c>=0 &&
+      pos.c<N
+    )
+  );
+  if(Array.isArray(d?.labelPos)){
+    labelPos=Array.from({length:REGIONS.length},(_,i)=>{
+      const pos=d.labelPos[i];
+      if(!pos || typeof pos.x!=='number' || typeof pos.y!=='number') return null;
+      return {x:pos.x,y:pos.y};
+    });
+  } else labelPos=Array(REGIONS.length).fill(null);
   if(d.regions) d.regions.forEach((name,i)=>{if(REGIONS[i])REGIONS[i].name=name;});
   renderRegionList();renderTeacherGrid();draw();
+}
+
+function applyGridSizeSelection(){
+  const selected=clampGridSize(document.getElementById('grid-size-select').value);
+  if(selected===N) return;
+  const ok=confirm(`Switch puzzle ${currentSaveSlot} to a blank ${selected}×${selected} grid?`);
+  if(!ok){
+    document.getElementById('grid-size-select').value=String(N);
+    return;
+  }
+  applyData(createBlankData(selected));
+  updateStatus();
 }
 
 // ── interaction ───────────────────────────────────────────
@@ -853,7 +936,7 @@ function clearTeachers(){
   draw();
 }
 function clearLetters(){
-  cellLetter=Array.from({length:N},()=>Array(N).fill(''));
+  cellLetter=makeMatrix(N,N,'');
   draw();
 }
 function saveLocal(){
@@ -914,6 +997,7 @@ function importJSON(event){
 }
 
 // init
+updateGridGeometry();
 renderRegionList();renderLetterPicker();renderTeacherGrid();draw();
 try{
   const active=Number(localStorage.getItem(ACTIVE_SLOT_KEY) || '1');

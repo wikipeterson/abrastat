@@ -101,6 +101,7 @@
     <div class="panel">
       <div class="panel-title">View</div>
       <div id="toggle-row">
+        <button class="toggle-btn on" id="tog-teachers" onclick="toggleOverlay('teachers')">Teachers</button>
         <button class="toggle-btn on" id="tog-letters" onclick="toggleOverlay('letters')">Letters</button>
         <button class="toggle-btn on" id="tog-labels" onclick="toggleOverlay('labels')">Room labels</button>
       </div>
@@ -153,7 +154,7 @@ let labelPos=Array(6).fill(null);
 
 let selReg=0,mode='border',selObjType='plant',orient='h',selTeacher='A',selLetter='A';
 let dragging=false,dragVal=true,hoverCell=null;
-let showLetters=true, showLabels=true;
+let showTeachers=true, showLetters=true, showLabels=true;
 // label drag state
 let dragLabel=null, dragLabelOX=0, dragLabelOY=0;
 // teacher drag state
@@ -443,10 +444,12 @@ function draw(){
   // sittable objects first
   objects.forEach(o=>{if(SITTABLE.has(o.type))drawObj(o);});
   // teachers on top of sittable
-  Object.entries(teachers).forEach(([lbl,pos])=>{
-    if(dragTeacher===lbl) return;
-    drawTeacher(OX+pos.c*CELL,OY+pos.r*CELL,lbl,TEACHER_LABELS.indexOf(lbl),1);
-  });
+  if(showTeachers){
+    Object.entries(teachers).forEach(([lbl,pos])=>{
+      if(dragTeacher===lbl) return;
+      drawTeacher(OX+pos.c*CELL,OY+pos.r*CELL,lbl,TEACHER_LABELS.indexOf(lbl),1);
+    });
+  }
   // non-sittable objects
   objects.forEach(o=>{if(!SITTABLE.has(o.type))drawObj(o);});
   // hover ghosts
@@ -533,7 +536,8 @@ function setOrient(o){
   draw();
 }
 function toggleOverlay(which){
-  if(which==='letters'){showLetters=!showLetters;document.getElementById('tog-letters').classList.toggle('on',showLetters);}
+  if(which==='teachers'){showTeachers=!showTeachers;document.getElementById('tog-teachers').classList.toggle('on',showTeachers);}
+  else if(which==='letters'){showLetters=!showLetters;document.getElementById('tog-letters').classList.toggle('on',showLetters);}
   else{showLabels=!showLabels;document.getElementById('tog-labels').classList.toggle('on',showLabels);}
   draw();
 }

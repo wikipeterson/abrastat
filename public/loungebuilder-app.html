@@ -105,7 +105,6 @@
       <div class="panel-title">Actions</div>
       <div class="action-row">
         <button class="action-btn" onclick="autoColor()">✨ Auto-color regions</button>
-        <button class="action-btn primary" onclick="saveLocal()">💾 Save</button>
         <button class="action-btn primary" onclick="exportPNG()">⬇ Export PNG</button>
         <button class="action-btn primary" onclick="exportJSON()">⬇ Export JSON</button>
         <label class="action-btn primary" style="cursor:pointer;text-align:center;">⬆ Upload JSON<input type="file" accept=".json" style="display:none" onchange="importJSON(event)"></label>
@@ -116,6 +115,17 @@
   </div>
   <div id="canvas-wrap"><canvas id="gc"></canvas></div>
   <div id="rightbar">
+    <div class="panel">
+      <div class="panel-title">Save Slots</div>
+      <div id="save-slot-count" style="font-size:11px;color:#777;margin-bottom:8px;">Active slot: 1</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;" id="save-slot-grid">
+        <button class="toggle-btn on" id="save-slot-1" onclick="switchSaveSlot(1)">Puzzle 1</button>
+        <button class="toggle-btn" id="save-slot-2" onclick="switchSaveSlot(2)">Puzzle 2</button>
+        <button class="toggle-btn" id="save-slot-3" onclick="switchSaveSlot(3)">Puzzle 3</button>
+        <button class="toggle-btn" id="save-slot-4" onclick="switchSaveSlot(4)">Puzzle 4</button>
+      </div>
+      <button class="action-btn primary" style="width:100%;" onclick="saveLocal()">💾 Save Current Slot</button>
+    </div>
     <div class="panel">
       <div class="panel-title">View</div>
       <div id="toggle-row">
@@ -146,7 +156,9 @@ const SITTABLE=new Set(['recliner','massage','floatie']);
 const BIG=new Set(['pool','massage']);
 const ALL_OBJS=['plant','shelf','recliner','tv','floatie','recycle','table','pool','massage'];
 const ALPHA='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-const SAVE_KEY='abrastat-lounge-builder-save-v1';
+const LEGACY_SAVE_KEY='abrastat-lounge-builder-save-v1';
+const SAVE_KEY_PREFIX='abrastat-lounge-builder-save-slot-';
+const ACTIVE_SLOT_KEY='abrastat-lounge-builder-active-slot';
 
 let hB=Array.from({length:N+1},()=>Array(N).fill(false));
 let vB=Array.from({length:N},()=>Array(N+1).fill(false));
@@ -159,6 +171,7 @@ let labelPos=Array(6).fill(null);
 let selReg=0,mode='border',selObjType='plant',orient='h',selTeacher='A',selLetter='A';
 let dragging=false,dragVal=true,hoverCell=null;
 let showTeachers=true, showLetters=true, showLabels=true;
+let currentSaveSlot=1;
 // label drag state
 let dragLabel=null, dragLabelOX=0, dragLabelOY=0;
 // teacher drag state
@@ -604,8 +617,39 @@ function updateStatus(){
   const placed=Object.keys(teachers).length;
   const objCounts={};objects.forEach(o=>{objCounts[o.type]=(objCounts[o.type]||0)+1;});
   const parts=Object.entries(objCounts).map(([k,v])=>`${k}×${v}`).join('  ');
-  document.getElementById('status').textContent=`Teachers: ${placed}/${TEACHER_LABELS.length}  ${parts}`;
+  document.getElementById('status').textContent=`Slot ${currentSaveSlot}  Teachers: ${placed}/${TEACHER_LABELS.length}  ${parts}`;
   if(mode==='teacher') renderTeacherGrid();
+}
+
+function createBlankData(){
+  return {
+    grid:N,
+    regions:REGIONS.map(r=>r.name),
+    cellRegion:Array.from({length:N},()=>Array(N).fill(-1)),
+    cellLetter:Array.from({length:N},()=>Array(N).fill('')),
+    objects:[],
+    teachers:{},
+    labelPos:Array(6).fill(null),
+    hBorders:Array.from({length:N+1},()=>Array(N).fill(false)),
+    vBorders:Array.from({length:N},()=>Array(N+1).fill(false)),
+  };
+}
+
+function getSaveSlotKey(slot){
+  return `${SAVE_KEY_PREFIX}${slot}`;
+}
+
+function renderSaveSlots(){
+  for(let slot=1;slot<=4;slot++){
+    const btn=document.getElementById(`save-slot-${slot}`);
+    if(!btn) continue;
+    let hasData=false;
+    try{hasData=!!localStorage.getItem(getSaveSlotKey(slot));}catch{}
+    btn.classList.toggle('on', slot===currentSaveSlot);
+    btn.textContent=`Puzzle ${slot}${hasData?' *':''}`;
+  }
+  const label=document.getElementById('save-slot-count');
+  if(label) label.textContent=`Active slot: ${currentSaveSlot}`;
 }
 
 function snapshotData(){
@@ -787,21 +831,31 @@ function autoColor(){
 }
 function clearAll(){
   if(!confirm('Clear everything?'))return;
-  hB=Array.from({length:N+1},()=>Array(N).fill(false));
-  vB=Array.from({length:N},()=>Array(N+1).fill(false));
-  cellReg=Array.from({length:N},()=>Array(N).fill(-1));
-  cellLetter=Array.from({length:N},()=>Array(N).fill(''));
-  labelPos=Array(6).fill(null);
-  objects=[];teachers={};renderTeacherGrid();draw();
+  applyData(createBlankData());
 }
 function saveLocal(){
   try{
-    localStorage.setItem(SAVE_KEY, JSON.stringify(snapshotData()));
+    localStorage.setItem(getSaveSlotKey(currentSaveSlot), JSON.stringify(snapshotData()));
+    localStorage.setItem(ACTIVE_SLOT_KEY, String(currentSaveSlot));
+    renderSaveSlots();
     updateStatus();
-    document.getElementById('status').textContent += '  Saved to this browser.';
+    document.getElementById('status').textContent += `  Saved puzzle ${currentSaveSlot}.`;
   }catch(err){
     alert('Could not save this builder state: '+err.message);
   }
+}
+function switchSaveSlot(slot){
+  currentSaveSlot=slot;
+  try{ localStorage.setItem(ACTIVE_SLOT_KEY, String(slot)); }catch{}
+  try{
+    const saved=localStorage.getItem(getSaveSlotKey(slot));
+    if(saved) applyData(JSON.parse(saved));
+    else applyData(createBlankData());
+  }catch{
+    applyData(createBlankData());
+  }
+  renderSaveSlots();
+  updateStatus();
 }
 function exportJSON(){
   const data=snapshotData();
@@ -827,9 +881,18 @@ function importJSON(event){
 // init
 renderRegionList();renderLetterPicker();renderTeacherGrid();draw();
 try{
-  const saved=localStorage.getItem(SAVE_KEY);
+  const active=Number(localStorage.getItem(ACTIVE_SLOT_KEY) || '1');
+  currentSaveSlot=(Number.isInteger(active)&&active>=1&&active<=4)?active:1;
+  const legacy=localStorage.getItem(LEGACY_SAVE_KEY);
+  const slotOne=localStorage.getItem(getSaveSlotKey(1));
+  if(legacy && !slotOne){
+    localStorage.setItem(getSaveSlotKey(1), legacy);
+  }
+  const saved=localStorage.getItem(getSaveSlotKey(currentSaveSlot));
   if(saved) applyData(JSON.parse(saved));
 }catch{}
+renderSaveSlots();
+updateStatus();
 </script>
 </body>
 </html>

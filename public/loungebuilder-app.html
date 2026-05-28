@@ -188,6 +188,7 @@ const SITTABLE=new Set(['recliner','massage','floatie','yoga']);
 const BIG=new Set(['pool','massage','yoga']);
 const ALL_OBJS=['plant','shelf','recliner','tv','floatie','recycle','table','pool','massage','dog','buddha','bonsai','yoga'];
 const ALPHA='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const LETTER_CHOICES=[...ALPHA,'?'];
 const LEGACY_SAVE_KEY='abrastat-lounge-builder-save-v1';
 const SAVE_KEY_PREFIX='abrastat-lounge-builder-save-slot-';
 const ACTIVE_SLOT_KEY='abrastat-lounge-builder-active-slot';
@@ -729,7 +730,7 @@ function renderRegionList(){
 }
 function renderLetterPicker(){
   const el=document.getElementById('letter-picker');el.innerHTML='';
-  ALPHA.forEach(ltr=>{
+  LETTER_CHOICES.forEach(ltr=>{
     const b=document.createElement('button');
     b.textContent=ltr;
     b.style.cssText=`width:26px;height:26px;border-radius:5px;border:1.5px solid #e0ddd8;background:${ltr===selLetter?'#1a1a1a':'#faf9f7'};color:${ltr===selLetter?'#fff':'#333'};cursor:pointer;font-size:12px;font-weight:600;padding:0;`;

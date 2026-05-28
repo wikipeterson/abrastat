@@ -83,6 +83,10 @@
         <div class="obj-btn" id="ob-table" onclick="selObj('table')"><span class="oj-emoji">⬜</span><span class="oj-label">Table</span><span class="oj-size">1×1</span></div>
         <div class="obj-btn" id="ob-pool" onclick="selObj('pool')"><span class="oj-emoji">🎱</span><span class="oj-label">Pool Table</span><span class="oj-size">1×2</span></div>
         <div class="obj-btn" id="ob-massage" onclick="selObj('massage')"><span class="oj-emoji">🛏</span><span class="oj-label">Massage Table</span><span class="oj-size">1×2</span></div>
+        <div class="obj-btn" id="ob-dog" onclick="selObj('dog')"><span class="oj-emoji">🐶</span><span class="oj-label">Dog</span><span class="oj-size">1×1</span></div>
+        <div class="obj-btn" id="ob-buddha" onclick="selObj('buddha')"><span class="oj-emoji">🪷</span><span class="oj-label">Buddha Statue</span><span class="oj-size">1×1</span></div>
+        <div class="obj-btn" id="ob-bonsai" onclick="selObj('bonsai')"><span class="oj-emoji">🌿</span><span class="oj-label">Bonsai</span><span class="oj-size">1×1</span></div>
+        <div class="obj-btn" id="ob-yoga" onclick="selObj('yoga')"><span class="oj-emoji">🧘</span><span class="oj-label">Yoga Mat</span><span class="oj-size">1×2</span></div>
       </div>
       <div class="orient-row" id="orient-row" style="display:none">
         <button class="orient-btn active" id="btn-h" onclick="setOrient('h')">↔ Horiz</button>
@@ -174,12 +178,15 @@ const REGIONS=[
   {name:'The Nail Salon',   bg:'#F2D9E4',border:'#993556',text:'#4B1528',texture:'bigtile'},
   {name:'The Cafe',         bg:'#F1DFC0',border:'#BA7517',text:'#633806',texture:'woodgrain'},
   {name:'Pool',             bg:'#98C2EA',border:'#042C53',text:'#042C53',texture:'water'},
+  {name:'Dog Therapy Corner', bg:'#F6D8B7',border:'#9B5A1A',text:'#5C3207',texture:'woodgrain'},
+  {name:'Zen Garden',       bg:'#D8EAC9',border:'#557A2E',text:'#355014',texture:'zen'},
+  {name:'Yoga Room',        bg:'#E0D4F4',border:'#6A3FA3',text:'#3B1E63',texture:'hexdots'},
 ];
 
 const TEACHER_LABELS='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const SITTABLE=new Set(['recliner','massage','floatie']);
-const BIG=new Set(['pool','massage']);
-const ALL_OBJS=['plant','shelf','recliner','tv','floatie','recycle','table','pool','massage'];
+const BIG=new Set(['pool','massage','yoga']);
+const ALL_OBJS=['plant','shelf','recliner','tv','floatie','recycle','table','pool','massage','dog','buddha','bonsai','yoga'];
 const ALPHA='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const LEGACY_SAVE_KEY='abrastat-lounge-builder-save-v1';
 const SAVE_KEY_PREFIX='abrastat-lounge-builder-save-slot-';
@@ -472,6 +479,64 @@ function drawMassageTable(x,y,w,h){
   ctx.restore();
   ctx.strokeStyle='#7a5c2e';ctx.lineWidth=2;rr(x+2,y+2,w-4,h-4,4);ctx.stroke();
 }
+function drawDog(x,y,s){
+  const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle='rgba(0,0,0,0.10)';ctx.beginPath();ctx.ellipse(cx+1,cy+s*0.2,s*0.24,s*0.09,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#c48a54';ctx.beginPath();ctx.ellipse(cx,cy+s*0.02,s*0.26,s*0.22,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy-s*0.12,s*0.16,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#9f6435';
+  ctx.beginPath();ctx.ellipse(cx-s*0.13,cy-s*0.18,s*0.07,s*0.12,-0.35,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(cx+s*0.13,cy-s*0.18,s*0.07,s*0.12,0.35,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#f4e0c7';ctx.beginPath();ctx.ellipse(cx,cy-s*0.03,s*0.11,s*0.08,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#2d1b12';
+  ctx.beginPath();ctx.arc(cx-s*0.05,cy-s*0.13,s*0.015,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(cx+s*0.05,cy-s*0.13,s*0.015,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy-s*0.05,s*0.022,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#2d1b12';ctx.lineWidth=1.2;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(cx-s*0.05,cy+s*0.18);ctx.lineTo(cx-s*0.05,cy+s*0.3);ctx.moveTo(cx+s*0.05,cy+s*0.18);ctx.lineTo(cx+s*0.05,cy+s*0.3);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx+s*0.22,cy+s*0.03);ctx.quadraticCurveTo(cx+s*0.34,cy-s*0.06,cx+s*0.29,cy-s*0.18);ctx.stroke();
+}
+function drawBuddha(x,y,s){
+  const cx=x+s/2;
+  ctx.fillStyle='#d4b16a';ctx.beginPath();ctx.arc(cx,y+s*0.26,s*0.1,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#b88e43';ctx.beginPath();ctx.arc(cx,y+s*0.22,s*0.04,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#c79f57';ctx.beginPath();ctx.moveTo(cx,y+s*0.33);ctx.quadraticCurveTo(cx-s*0.18,y+s*0.46,cx-s*0.12,y+s*0.67);ctx.lineTo(cx+s*0.12,y+s*0.67);ctx.quadraticCurveTo(cx+s*0.18,y+s*0.46,cx,y+s*0.33);ctx.fill();
+  ctx.fillStyle='#b48337';ctx.beginPath();ctx.moveTo(cx-s*0.15,y+s*0.71);ctx.quadraticCurveTo(cx,y+s*0.84,cx+s*0.15,y+s*0.71);ctx.quadraticCurveTo(cx,y+s*0.62,cx-s*0.15,y+s*0.71);ctx.fill();
+  ctx.fillStyle='#e7c97c';
+  ctx.beginPath();ctx.ellipse(cx-s*0.08,y+s*0.48,s*0.05,s*0.1,0.25,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(cx+s*0.08,y+s*0.48,s*0.05,s*0.1,-0.25,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#8c6427';ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(cx-s*0.16,y+s*0.73);ctx.quadraticCurveTo(cx,y+s*0.9,cx+s*0.16,y+s*0.73);ctx.stroke();
+}
+function drawBonsai(x,y,s){
+  const potW=s*0.46,potH=s*0.16,potX=x+s/2-potW/2,potY=y+s*0.7;
+  ctx.fillStyle='#7b4a2e';ctx.beginPath();ctx.moveTo(potX+potW*0.08,potY);ctx.lineTo(potX+potW*0.92,potY);ctx.lineTo(potX+potW,potY+potH);ctx.lineTo(potX,potY+potH);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#5c341f';ctx.fillRect(potX-1,potY-3,potW+2,4);
+  ctx.strokeStyle='#6f4328';ctx.lineWidth=3;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x+s*0.5,y+s*0.69);ctx.bezierCurveTo(x+s*0.44,y+s*0.56,x+s*0.44,y+s*0.38,x+s*0.54,y+s*0.26);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x+s*0.49,y+s*0.52);ctx.bezierCurveTo(x+s*0.4,y+s*0.46,x+s*0.34,y+s*0.38,x+s*0.31,y+s*0.28);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x+s*0.52,y+s*0.44);ctx.bezierCurveTo(x+s*0.61,y+s*0.4,x+s*0.66,y+s*0.34,x+s*0.68,y+s*0.24);ctx.stroke();
+  const tufts=[[0.54,0.23,0.13],[0.31,0.27,0.11],[0.68,0.23,0.1],[0.45,0.36,0.1]];
+  tufts.forEach(([dx,dy,rad],i)=>{
+    ctx.fillStyle=i%2===0?'#5f9b4c':'#4f883d';
+    ctx.beginPath();ctx.arc(x+s*dx,y+s*dy,s*rad,0,Math.PI*2);ctx.fill();
+  });
+}
+function drawYogaMat(x,y,w,h){
+  const horizontal=w>h;
+  ctx.fillStyle='#7c54b7';rr(x+3,y+3,w-6,h-6,6);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.18)';
+  if(horizontal) rr(x+10,y+8,w*0.45,h*0.18,4);
+  else rr(x+8,y+10,w*0.18,h*0.45,4);
+  ctx.fill();
+  ctx.strokeStyle='#593596';ctx.lineWidth=2;rr(x+3,y+3,w-6,h-6,6);ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,0.35)';ctx.lineWidth=1.2;
+  if(horizontal){
+    ctx.beginPath();ctx.moveTo(x+w*0.24,y+8);ctx.lineTo(x+w*0.24,y+h-8);ctx.moveTo(x+w*0.76,y+8);ctx.lineTo(x+w*0.76,y+h-8);ctx.stroke();
+  } else {
+    ctx.beginPath();ctx.moveTo(x+8,y+h*0.24);ctx.lineTo(x+w-8,y+h*0.24);ctx.moveTo(x+8,y+h*0.76);ctx.lineTo(x+w-8,y+h*0.76);ctx.stroke();
+  }
+}
 function drawObj(obj){
   const cells=getCellsFor(obj),x0=OX+cells[0].c*CELL,y0=OY+cells[0].r*CELL;
   const w=obj.orient==='h'?CELL*2:CELL,h=obj.orient==='v'?CELL*2:CELL;
@@ -480,7 +545,9 @@ function drawObj(obj){
     case 'recliner':drawRecliner(x0,y0,CELL);break;case 'tv':drawTV(x0,y0,CELL);break;
     case 'floatie':drawFloatie(x0,y0,CELL);break;case 'recycle':drawRecycleBin(x0,y0,CELL);break;
     case 'table':drawTable(x0,y0,CELL);break;case 'pool':drawPoolTable(x0,y0,w,h);break;
-    case 'massage':drawMassageTable(x0,y0,w,h);break;
+    case 'massage':drawMassageTable(x0,y0,w,h);break;case 'dog':drawDog(x0,y0,CELL);break;
+    case 'buddha':drawBuddha(x0,y0,CELL);break;case 'bonsai':drawBonsai(x0,y0,CELL);break;
+    case 'yoga':drawYogaMat(x0,y0,w,h);break;
   }
 }
 
@@ -932,7 +999,7 @@ function autoColor(){
         if(!bl){vis[nr][nc]=true;q.push({r:nr,c:nc});}
       });
     }
-    cells.forEach(({r,c})=>cellReg[r][c]=ri%6);ri++;
+    cells.forEach(({r,c})=>cellReg[r][c]=ri%REGIONS.length);ri++;
   }
   draw();
 }

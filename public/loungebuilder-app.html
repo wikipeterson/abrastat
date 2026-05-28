@@ -208,6 +208,8 @@ let currentSaveSlot=1;
 let dragLabel=null, dragLabelOX=0, dragLabelOY=0;
 // teacher drag state
 let dragTeacher=null, dragTeacherOrigin=null;
+// object drag state
+let dragObject=null, dragObjectOrigin=null;
 
 const canvas=document.getElementById('gc');
 const ctx=canvas.getContext('2d');
@@ -267,6 +269,10 @@ function teacherColor(idx){
 function canPlaceObj(r,c,ori){
   return objCells(r,c,ori).every(({r:cr,c:cc})=>
     cr>=0&&cr<N&&cc>=0&&cc<N&&!objects.some(o=>getCellsFor(o).some(({r:a,c:b})=>a===cr&&b===cc)));
+}
+function canPlaceDraggedObj(obj,r,c){
+  return objCells(r,c,obj.orient||null).every(({r:cr,c:cc})=>
+    cr>=0&&cr<N&&cc>=0&&cc<N&&!objects.some(o=>o!==obj&&getCellsFor(o).some(({r:a,c:b})=>a===cr&&b===cc)));
 }
 function canHaveTeacher(r,c){return !cellHardBlocked(r,c);}
 
@@ -550,6 +556,12 @@ function drawObj(obj){
     case 'yoga':drawYogaMat(x0,y0,w,h);break;
   }
 }
+function drawObjPreview(obj,alpha){
+  ctx.save();
+  ctx.globalAlpha=alpha;
+  drawObj(obj);
+  ctx.restore();
+}
 
 function drawTeacher(x,y,lbl,idx,alpha){
   ctx.globalAlpha=alpha;
@@ -617,10 +629,12 @@ function draw(){
     const {r,c}=hoverCell,idx=TEACHER_LABELS.indexOf(activeTeacher),blocked=!canPlaceTeacherLabel(activeTeacher,r,c);
     drawTeacher(OX+c*CELL,OY+r*CELL,blocked?'✕':activeTeacher,blocked?8:idx,0.5);
   }
-  if(mode==='obj'&&BIG.has(selObjType)&&hoverCell){
-    const {r,c}=hoverCell,cells=objCells(r,c,orient),ok=canPlaceObj(r,c,orient);
+  if(mode==='obj'&&hoverCell){
+    const activeObj=dragObject||{type:selObjType,orient:BIG.has(selObjType)?orient:null};
+    const {r,c}=hoverCell,cells=objCells(r,c,activeObj.orient||null),ok=dragObject?canPlaceDraggedObj(dragObject,r,c):canPlaceObj(r,c,activeObj.orient||null);
     ctx.fillStyle=ok?'rgba(0,180,80,0.18)':'rgba(200,0,0,0.18)';
     cells.forEach(({r:cr,c:cc})=>{if(cr>=0&&cr<N&&cc>=0&&cc<N)ctx.fillRect(OX+cc*CELL+1,OY+cr*CELL+1,CELL-2,CELL-2);});
+    if(ok) drawObjPreview({...activeObj,r,c},0.55);
   }
   // extraction letters overlay — on top of everything sittable
   if(showLetters){
@@ -939,6 +953,24 @@ canvas.addEventListener('mousedown',e=>{
       }
     }
   }
+  if(mode==='obj'){
+    const cell=getCell(x,y);
+    if(cell){
+      const existing=objectAt(cell.r,cell.c);
+      if(existing){
+        dragObject=existing;
+        dragObjectOrigin={...existing};
+        selObjType=existing.type;
+        orient=existing.orient||'h';
+        hoverCell={r:existing.r,c:existing.c};
+        dragging=true;
+        if(BIG.has(selObjType)) document.getElementById('orient-row').style.display='flex';
+        objects=objects.filter(o=>o!==existing);
+        draw();
+        return;
+      }
+    }
+  }
   dragging=true;
   if(mode==='border'){const edge=getEdge(x,y);if(edge)dragVal=!(edge.type==='h'?hB[edge.r][edge.c]:vB[edge.r][edge.c]);}
   handleAt(x,y,true);
@@ -951,8 +983,9 @@ canvas.addEventListener('mousemove',e=>{
     draw();return;
   }
   if(dragTeacher!==null){draw();return;}
+  if(dragObject!==null){draw();return;}
   if(dragging) handleAt(x,y,false);
-  else if(mode==='teacher'||(mode==='obj'&&BIG.has(selObjType))||mode==='letter') draw();
+  else if(mode==='teacher'||mode==='obj'||mode==='letter') draw();
 });
 canvas.addEventListener('mouseup',()=>{
   dragging=false;
@@ -970,6 +1003,21 @@ canvas.addEventListener('mouseup',()=>{
     renderTeacherGrid();
     draw();
   }
+  if(dragObject!==null){
+    if(hoverCell&&canPlaceDraggedObj(dragObject,hoverCell.r,hoverCell.c)){
+      dragObject.r=hoverCell.r;
+      dragObject.c=hoverCell.c;
+      objects.push(dragObject);
+    } else if(dragObjectOrigin){
+      dragObject.r=dragObjectOrigin.r;
+      dragObject.c=dragObjectOrigin.c;
+      dragObject.orient=dragObjectOrigin.orient;
+      objects.push(dragObject);
+    }
+    dragObject=null;
+    dragObjectOrigin=null;
+    draw();
+  }
 });
 canvas.addEventListener('mouseleave',()=>{
   dragging=false;
@@ -980,6 +1028,14 @@ canvas.addEventListener('mouseleave',()=>{
     dragTeacher=null;
     dragTeacherOrigin=null;
     renderTeacherGrid();
+  }
+  if(dragObject!==null&&dragObjectOrigin){
+    dragObject.r=dragObjectOrigin.r;
+    dragObject.c=dragObjectOrigin.c;
+    dragObject.orient=dragObjectOrigin.orient;
+    objects.push(dragObject);
+    dragObject=null;
+    dragObjectOrigin=null;
   }
   draw();
 });

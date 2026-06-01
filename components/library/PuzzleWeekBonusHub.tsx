@@ -403,6 +403,55 @@ const SB_REGION_COLORS = [
   '#fed7aa','#a7f3d0','#fbcfe8','#cffafe','#d1d5db',
 ]
 
+// ---------- queens puzzle data ----------
+
+const QN_REGION_COLORS = [
+  '#FFBDBD','#FFDBA8','#FEFDB5','#C6F7C6',
+  '#AEE0FF','#D5B9FF','#FFB9E9','#A8EEE8',
+  '#FFF1A8','#C9F1B0','#FFCFA8',
+]
+
+type QueensPuzzle = { n: number; regions: number[]; solution: number[] }
+
+const QN_PUZZLES: Record<QueensLevel, QueensPuzzle[]> = {
+  easy: [
+    { n: 6, regions: [1,0,0,0,0,0,1,1,1,0,0,0,2,1,1,0,0,0,2,2,1,3,3,3,5,3,3,3,3,4,5,5,5,4,4,4], solution: [4,8,12,21,29,31] },
+    { n: 6, regions: [0,0,1,1,1,1,0,1,1,1,1,1,0,0,1,2,2,1,3,0,0,2,2,1,3,3,5,2,4,4,3,3,5,5,5,4], solution: [1,11,15,18,28,32] },
+    { n: 6, regions: [0,0,0,0,0,0,1,0,0,0,2,0,1,1,0,2,2,0,1,1,3,4,4,0,5,5,3,3,4,4,5,5,3,3,4,4], solution: [3,6,16,20,29,31] },
+    { n: 6, regions: [3,0,0,1,1,1,3,3,0,1,1,1,3,3,1,1,1,2,3,3,3,1,2,2,3,5,3,1,4,4,3,5,5,5,5,4], solution: [1,9,17,18,28,32] },
+    { n: 6, regions: [1,1,0,0,0,0,1,1,0,2,0,0,1,1,0,2,2,0,4,1,0,3,3,3,4,4,0,5,3,3,4,4,4,5,5,5], solution: [2,6,15,23,25,34] },
+    { n: 6, regions: [3,1,1,0,0,0,3,1,1,1,0,2,3,1,3,3,0,2,3,3,3,3,2,2,5,5,3,3,4,4,5,5,3,3,3,4], solution: [3,7,17,20,28,30] },
+    { n: 6, regions: [2,2,0,0,3,3,2,2,0,1,1,3,2,2,2,4,1,3,2,2,4,4,4,3,5,4,4,5,4,4,5,5,5,5,4,4], solution: [2,10,12,23,25,33] },
+    { n: 6, regions: [1,1,1,0,0,4,1,3,1,2,0,4,3,3,2,2,0,4,3,3,4,4,4,4,5,3,4,4,4,4,5,5,5,4,4,4], solution: [4,6,15,19,29,32] },
+    { n: 6, regions: [3,3,0,0,1,1,3,3,0,0,4,1,5,3,2,2,4,4,5,3,2,4,4,4,5,5,4,4,4,4,5,5,5,4,4,4], solution: [2,11,15,19,28,30] },
+    { n: 6, regions: [1,1,0,0,2,2,1,3,0,0,2,2,3,3,0,4,2,4,3,3,5,4,4,4,3,5,5,4,4,4,3,5,5,4,4,4], solution: [3,6,16,19,29,32] },
+  ],
+  medium: [
+    { n: 7, regions: [0,0,0,0,1,1,1,2,2,3,0,3,3,1,2,2,3,3,3,3,3,2,3,3,3,3,3,3,2,4,3,3,3,3,3,4,4,4,5,5,3,6,4,4,4,5,5,6,6], solution: [2,13,14,25,29,38,47] },
+    { n: 7, regions: [0,0,0,0,3,1,1,0,0,0,3,3,3,1,2,3,3,3,3,3,3,2,2,3,3,3,3,3,4,4,6,3,3,3,3,4,4,6,3,5,3,3,4,6,6,5,5,5,5], solution: [3,13,14,26,29,39,44] },
+    { n: 7, regions: [0,0,0,1,1,1,1,0,0,0,1,1,1,1,2,2,1,1,1,1,1,2,2,3,1,4,1,1,2,2,3,5,4,4,1,2,2,3,5,5,6,6,2,3,3,6,6,6,6], solution: [1,11,14,23,33,38,48] },
+    { n: 7, regions: [2,2,2,1,0,0,5,2,1,1,1,0,5,5,2,1,1,5,5,5,5,4,4,4,3,3,5,5,4,4,4,3,5,5,5,6,6,6,3,5,5,5,6,6,5,5,5,5,5], solution: [5,10,14,25,30,41,43] },
+    { n: 7, regions: [0,0,0,1,1,1,1,0,0,1,1,1,1,1,0,0,1,1,2,2,1,0,3,1,1,1,2,2,0,3,3,1,4,4,2,6,6,6,5,5,4,4,6,6,6,6,5,4,4], solution: [2,13,18,22,33,38,42] },
+    { n: 7, regions: [1,1,0,0,0,0,0,1,1,0,2,0,0,0,2,2,0,2,2,0,3,2,2,2,2,2,3,3,2,4,4,4,5,5,5,2,2,2,4,5,6,5,2,2,4,4,6,6,5], solution: [2,7,17,26,29,41,46] },
+    { n: 7, regions: [0,0,1,1,1,1,1,2,0,1,1,1,1,5,2,0,1,1,1,1,5,2,2,2,3,3,1,5,2,4,4,3,6,5,5,4,4,6,6,6,5,5,4,4,6,6,6,6,6], solution: [1,12,14,25,30,41,45] },
+    { n: 7, regions: [1,0,0,0,0,0,6,1,1,2,2,0,0,6,3,3,4,2,6,6,6,3,3,4,2,2,6,6,4,4,4,2,2,6,6,4,4,5,5,5,6,6,4,4,5,6,6,6,6], solution: [5,8,17,21,30,39,48] },
+    { n: 7, regions: [2,2,0,0,1,1,1,2,2,0,1,1,3,1,2,3,3,3,3,3,3,3,3,4,3,3,5,5,6,3,4,4,4,5,5,6,6,6,6,5,5,5,6,6,6,6,5,5,5], solution: [3,13,14,25,30,40,43] },
+    { n: 7, regions: [0,0,0,0,1,1,1,0,2,2,1,1,1,1,0,2,1,1,4,3,1,5,5,4,4,4,3,3,5,5,5,5,4,6,6,5,5,5,5,6,6,6,5,5,5,5,6,6,6], solution: [0,10,15,27,32,37,47] },
+  ],
+  hard: [
+    { n: 9, regions: [0,0,0,0,0,0,0,0,2,0,0,0,0,1,1,0,2,2,0,0,0,0,1,0,0,2,2,3,0,0,0,0,0,0,0,0,3,0,0,4,0,5,0,0,0,3,0,6,4,4,5,5,0,0,3,6,6,6,0,0,0,0,0,3,8,8,7,7,0,0,0,0,3,3,8,7,7,0,0,0,0], solution: [7,14,26,27,39,51,55,67,74] },
+    { n: 9, regions: [2,0,0,1,1,1,1,1,1,2,0,0,1,1,1,1,1,1,2,2,0,1,1,1,1,1,1,0,0,0,0,3,1,1,1,1,4,0,0,0,3,3,7,7,1,4,4,4,5,5,7,7,7,7,5,5,5,5,6,6,7,7,7,5,5,5,8,8,6,8,7,7,5,5,5,8,8,8,8,7,7], solution: [2,16,19,31,36,48,59,71,78] },
+    { n: 9, regions: [0,0,0,1,1,1,3,3,3,0,2,2,1,1,1,3,3,3,0,4,2,2,6,1,3,3,3,4,4,6,6,6,3,3,5,5,4,6,6,6,6,5,5,5,5,6,6,6,6,6,5,5,5,5,6,6,6,6,6,5,5,5,5,8,6,6,6,6,6,7,5,7,8,8,6,6,6,6,7,7,7], solution: [2,14,21,33,36,52,58,71,73] },
+    { n: 9, regions: [2,0,0,4,4,4,4,4,1,2,2,0,3,4,4,4,4,1,2,2,3,3,4,4,4,1,1,5,5,3,3,4,4,4,4,1,5,5,5,3,4,4,4,4,4,5,5,5,5,5,5,4,4,4,5,5,5,6,6,7,7,4,4,5,5,5,8,6,7,7,4,4,5,5,5,8,8,8,7,4,4], solution: [1,17,18,29,43,50,57,69,76] },
+    { n: 9, regions: [2,2,2,0,0,0,1,1,1,2,2,2,2,0,1,1,1,1,2,2,2,2,2,1,1,1,1,2,4,4,2,2,1,1,1,3,5,5,4,4,1,1,1,1,3,5,5,1,1,1,1,3,3,3,5,6,6,1,1,1,3,3,3,5,8,6,1,1,1,7,7,7,8,8,8,1,1,7,7,7,7], solution: [5,16,22,35,39,45,56,69,73] },
+    { n: 9, regions: [1,1,2,2,0,0,0,0,3,1,1,2,2,0,0,0,0,3,2,2,2,2,2,2,2,3,3,2,2,2,2,2,2,3,3,3,5,5,5,4,4,3,3,3,3,5,5,5,4,4,3,3,3,3,8,8,8,6,6,6,3,3,3,7,8,8,6,6,6,6,3,3,7,7,8,8,6,6,6,6,6], solution: [7,10,24,35,40,47,59,63,75] },
+    { n: 9, regions: [1,1,1,1,1,1,0,0,0,1,1,1,1,1,2,2,0,0,1,3,3,3,3,3,2,8,8,3,3,3,3,3,8,8,8,8,3,3,3,3,4,4,8,8,8,3,3,3,3,3,4,8,8,5,6,6,3,3,3,4,8,8,5,6,6,7,3,3,3,8,5,5,7,7,7,3,3,8,8,8,5], solution: [7,12,24,28,40,53,54,65,77] },
+    { n: 9, regions: [2,2,2,0,0,1,1,1,1,2,4,4,4,0,1,1,1,1,2,2,4,4,1,1,1,1,1,2,2,4,4,4,4,1,1,3,2,4,4,4,4,4,4,3,3,2,4,4,4,5,5,3,3,3,2,6,4,4,7,5,3,3,3,6,6,6,8,7,7,3,3,3,8,8,8,8,8,8,3,3,3], solution: [3,16,18,35,42,49,55,68,74] },
+    { n: 9, regions: [2,2,2,0,0,0,1,1,1,2,2,2,2,0,0,1,1,1,6,6,6,2,2,1,1,1,1,3,3,6,2,2,2,1,1,1,3,6,6,4,2,2,1,1,1,6,6,6,4,4,7,5,5,1,8,6,6,4,4,7,5,5,5,8,8,8,4,4,7,7,5,5,8,4,4,4,4,7,5,5,5], solution: [5,17,22,28,39,52,56,69,72] },
+    { n: 9, regions: [1,0,0,0,3,3,3,3,3,1,1,2,0,3,3,3,3,3,2,2,2,5,5,5,3,3,3,4,4,5,5,5,5,3,3,3,4,4,5,5,5,5,5,6,3,7,7,7,5,5,6,6,6,6,7,7,7,7,7,7,8,8,6,7,7,7,7,7,7,7,8,8,7,7,7,7,7,7,8,8,8], solution: [3,9,20,33,37,49,62,68,79] },
+  ],
+}
+
 type Game2048Medal = 'bronze' | 'silver' | 'gold'
 const GAME_2048_MEDALS: Record<Game2048Medal, { threshold: number; emoji: string; label: string }> = {
   bronze: { threshold: 512, emoji: '🥉', label: 'Bronze' },
@@ -1943,6 +1992,375 @@ function sbIsSolved(stars: number[], puzzle: StarBattlePuzzle) {
 }
 
 // Cell state: 0 = empty, 1 = star, 2 = X marker
+// ---------- queens logic ----------
+
+function qnConflictSet(cells: number[], n: number, regions: number[]): Set<number> {
+  const queens: number[] = []
+  for (let i = 0; i < cells.length; i++) {
+    if (cells[i] === 2) queens.push(i)
+  }
+  const conflicts = new Set<number>()
+  for (let a = 0; a < queens.length; a++) {
+    for (let b = a + 1; b < queens.length; b++) {
+      const ia = queens[a], ib = queens[b]
+      const ra = Math.floor(ia / n), ca = ia % n
+      const rb = Math.floor(ib / n), cb = ib % n
+      if (ra === rb || ca === cb || regions[ia] === regions[ib] ||
+          (Math.abs(ra - rb) === 1 && Math.abs(ca - cb) === 1)) {
+        conflicts.add(ia)
+        conflicts.add(ib)
+      }
+    }
+  }
+  return conflicts
+}
+
+function qnIsSolved(cells: number[], n: number, regions: number[]): boolean {
+  const queens: number[] = []
+  for (let i = 0; i < cells.length; i++) {
+    if (cells[i] === 2) queens.push(i)
+  }
+  if (queens.length !== n) return false
+  const rows = new Set(queens.map(i => Math.floor(i / n)))
+  const cols = new Set(queens.map(i => i % n))
+  const regs = new Set(queens.map(i => regions[i]))
+  if (rows.size !== n || cols.size !== n || regs.size !== n) return false
+  return qnConflictSet(cells, n, regions).size === 0
+}
+
+// Cell state: 0 = blank, 1 = X, 2 = queen
+function QueensBoard({
+  medals,
+  solvedBoards,
+  onSolve,
+}: {
+  medals: Set<QueensLevel>
+  solvedBoards: Record<QueensLevel, Set<number>>
+  onSolve: (level: QueensLevel, puzzleIdx: number) => void
+}) {
+  const [level, setLevel] = useState<QueensLevel>('easy')
+  const [puzzleIdx, setPuzzleIdx] = useState(0)
+  const [cells, setCells] = useState<number[]>(() => Array(QN_PUZZLES['easy'][0].n ** 2).fill(0))
+  const [howToPlayOpen, setHowToPlayOpen] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [showOverlay, setShowOverlay] = useState(false)
+  const solvedRef = useRef(false)
+  const overlayShownRef = useRef(false)
+
+  const puzzle = QN_PUZZLES[level][puzzleIdx % QN_PUZZLES[level].length]
+  const { n, regions } = puzzle
+
+  const solved = qnIsSolved(cells, n, regions)
+  const conflicts = solved ? new Set<number>() : qnConflictSet(cells, n, regions)
+
+  useEffect(() => {
+    if (solved && !solvedRef.current) {
+      solvedRef.current = true
+      onSolve(level, puzzleIdx)
+    }
+    if (!solved) solvedRef.current = false
+  }, [solved, level, puzzleIdx, onSolve])
+
+  useEffect(() => {
+    if (solved && !overlayShownRef.current) {
+      overlayShownRef.current = true
+      const t = window.setTimeout(() => setShowOverlay(true), 380)
+      return () => window.clearTimeout(t)
+    }
+    if (!solved) { overlayShownRef.current = false; setShowOverlay(false) }
+  }, [solved])
+
+  function switchLevel(l: QueensLevel) {
+    setLevel(l)
+    setPuzzleIdx(0)
+    setCells(Array(QN_PUZZLES[l][0].n ** 2).fill(0))
+    solvedRef.current = false
+    setShowOverlay(false)
+  }
+
+  function selectPuzzle(idx: number) {
+    setPuzzleIdx(idx)
+    setCells(Array(QN_PUZZLES[level][idx].n ** 2).fill(0))
+    solvedRef.current = false
+    setShowOverlay(false)
+  }
+
+  function handleCell(idx: number) {
+    if (solved) return
+    setCells(prev => {
+      const next = [...prev]
+      next[idx] = next[idx] === 0 ? 1 : next[idx] === 1 ? 2 : 0
+      return next
+    })
+  }
+
+  const numQueens = cells.filter(v => v === 2).length
+
+  return (
+  <>
+    <BonusGameLayout
+      board={
+        <div className="h-full w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-2">
+          <div
+            className="grid h-full w-full"
+            style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${n}, minmax(0, 1fr))` }}
+          >
+            {cells.map((state, idx) => {
+              const region = regions[idx]
+              const row = Math.floor(idx / n)
+              const col = idx % n
+              const rightNeighbor = col < n - 1 ? regions[idx + 1] : -1
+              const bottomNeighbor = row < n - 1 ? regions[idx + n] : -1
+              const isConflict = conflicts.has(idx)
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleCell(idx)}
+                  aria-label={`Cell ${row + 1},${col + 1}`}
+                  className="relative flex items-center justify-center overflow-hidden transition-colors duration-100"
+                  style={{
+                    background: isConflict ? '#fecaca' : QN_REGION_COLORS[region % QN_REGION_COLORS.length],
+                    borderRight: rightNeighbor !== region ? '2px solid rgba(0,0,0,0.22)' : '1px solid rgba(0,0,0,0.07)',
+                    borderBottom: bottomNeighbor !== region ? '2px solid rgba(0,0,0,0.22)' : '1px solid rgba(0,0,0,0.07)',
+                    borderTop: row === 0 ? '2px solid rgba(0,0,0,0.22)' : undefined,
+                    borderLeft: col === 0 ? '2px solid rgba(0,0,0,0.22)' : undefined,
+                  }}
+                >
+                  {state === 2 && (
+                    <span
+                      className="select-none leading-none"
+                      style={{ fontSize: 'clamp(1rem,3.5vw,2rem)' }}
+                    >
+                      👑
+                    </span>
+                  )}
+                  {state === 1 && (
+                    <span
+                      className="select-none font-bold leading-none text-slate-400"
+                      style={{ fontSize: 'clamp(0.8rem,2.2vw,1.4rem)' }}
+                    >
+                      ✕
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      }
+      sidebar={
+        <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden lg:gap-2.5">
+          <div className="hidden flex-shrink-0 lg:block">
+            <p className="text-[clamp(1.45rem,1.9vw,2.25rem)] font-bold leading-[1.05] text-[var(--color-text)]">
+              Queens
+            </p>
+            <h2 className="mt-2 text-[clamp(1rem,1.2vw,1.24rem)] font-medium leading-[1.28] text-[var(--color-muted)]">
+              One queen per row, column &amp; region.
+            </h2>
+          </div>
+          <div className="flex flex-shrink-0 flex-wrap gap-2">
+            {(['easy', 'medium', 'hard'] as QueensLevel[]).map(l => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => switchLevel(l)}
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition lg:text-sm ${
+                  level === l
+                    ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                    : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                }`}
+              >
+                {QUEENS_LABELS[l]}
+                <span className={`leading-none transition-opacity ${medals.has(l) ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
+                  {QUEENS_MEDALS[l]}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Mobile-only: queens counter + puzzle picker button + how to play */}
+          <div className="flex flex-shrink-0 gap-2 lg:hidden">
+            <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5">
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">Queens</div>
+              <div className="text-lg font-bold leading-none text-[var(--color-text)]">{numQueens}/{n}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-slate-50"
+            >
+              #{puzzleIdx + 1}
+              <span className="text-[10px] text-[var(--color-accent)]">▾</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setHowToPlayOpen(true)}
+              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-slate-50"
+            >
+              How to play
+              <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">?</span>
+            </button>
+          </div>
+
+          {/* Desktop: scrollable area with stats, puzzle grid, messages, info */}
+          <div className="hidden min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto lg:flex">
+            <BonusStatTile label="Queens" value={`${numQueens}/${n}`} />
+            <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-muted)]">Puzzle</div>
+              <div className="grid grid-cols-5 gap-1.5">
+                {QN_PUZZLES[level].map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => selectPuzzle(i)}
+                    className={`flex h-8 items-center justify-center rounded-lg text-xs font-bold transition ${
+                      puzzleIdx === i
+                        ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                        : solvedBoards[level].has(i)
+                          ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                          : 'border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-slate-50'
+                    }`}
+                  >
+                    {solvedBoards[level].has(i) ? '✓' : i + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {numQueens === n && !solved && conflicts.size > 0 && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                A conflict detected — queens can&apos;t share a row, column, region, or be diagonally adjacent.
+              </div>
+            )}
+            <BonusInfoCard label="Goal">
+              Place exactly <strong>1 queen</strong> in every row, every column, and every colored region. Queens cannot be diagonally adjacent.
+            </BonusInfoCard>
+            <BonusInfoCard label="How It Works">
+              Click once to mark ✕ (a reminder it can&apos;t hold a queen), click again to place a 👑, click a third time to clear.
+            </BonusInfoCard>
+          </div>
+
+          {/* Mobile-only: error message */}
+          {numQueens === n && !solved && conflicts.size > 0 && (
+            <div className="flex-shrink-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 lg:hidden">
+              A conflict detected — queens can&apos;t share a row, column, region, or be diagonally adjacent.
+            </div>
+          )}
+
+          {/* Mobile picker drawer */}
+          {pickerOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 lg:hidden"
+              onClick={() => setPickerOpen(false)}
+            >
+              <div
+                className="flex w-full max-w-lg flex-col rounded-t-3xl bg-white px-4 pb-8 pt-5 shadow-xl max-h-[85dvh] overflow-y-auto"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-[var(--color-text)]">Select Puzzle</p>
+                  <button
+                    type="button"
+                    onClick={() => setPickerOpen(false)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-slate-50"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex gap-2 mb-4">
+                  {(['easy', 'medium', 'hard'] as QueensLevel[]).map(l => (
+                    <button
+                      key={l}
+                      type="button"
+                      onClick={() => switchLevel(l)}
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                        level === l
+                          ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                          : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                      }`}
+                    >
+                      {QUEENS_LABELS[l]}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {QN_PUZZLES[level].map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => { selectPuzzle(i); setPickerOpen(false) }}
+                      className={`flex h-10 items-center justify-center rounded-xl text-sm font-bold transition ${
+                        puzzleIdx === i
+                          ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                          : solvedBoards[level].has(i)
+                            ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                            : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                      }`}
+                    >
+                      {solvedBoards[level].has(i) ? '✓' : i + 1}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile how-to-play drawer */}
+          {howToPlayOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 lg:hidden"
+              onClick={() => setHowToPlayOpen(false)}
+            >
+              <div
+                className="flex w-full max-w-lg flex-col gap-3 rounded-t-3xl bg-white px-5 pb-8 pt-5 shadow-xl"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-[var(--color-text)]">How to Play</p>
+                  <button
+                    type="button"
+                    onClick={() => setHowToPlayOpen(false)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <BonusInfoCard label="Goal">
+                    Place exactly <strong>1 queen</strong> in every row, every column, and every colored region. Queens cannot be diagonally adjacent.
+                  </BonusInfoCard>
+                  <BonusInfoCard label="How It Works">
+                    Tap once to mark ✕, tap again to place a 👑, tap a third time to clear.
+                  </BonusInfoCard>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setHowToPlayOpen(false)}
+                  className="mt-1 w-full rounded-2xl bg-[var(--color-accent)] py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      }
+    />
+    {showOverlay && (
+      <SolvedOverlay
+        emoji="👑"
+        title="Puzzle solved!"
+        subtitle={`${QUEENS_LABELS[level]} #${puzzleIdx + 1}`}
+        medal={medals.has(level) ? undefined : `${QUEENS_MEDALS[level]} New medal earned!`}
+        onNewPuzzle={() => selectPuzzle((puzzleIdx + 1) % QN_PUZZLES[level].length)}
+        onAdmire={() => setShowOverlay(false)}
+      />
+    )}
+  </>
+  )
+}
+
+// Cell state: 0 = empty, 1 = star, 2 = X marker
 function StarBattleBoard({
   medals,
   solvedBoards,
@@ -2815,8 +3233,6 @@ export function PuzzleWeekBonusHub() {
   const queensSolvedBoardsRef = useRef<QueensSolvedBoardState>(createEmptyQueensSolvedBoardState())
   const [starBattleSolvedBoards, setStarBattleSolvedBoards] = useState<StarBattleSolvedBoardState>(createEmptyStarBattleSolvedBoardState())
   const starBattleSolvedBoardsRef = useRef<StarBattleSolvedBoardState>(createEmptyStarBattleSolvedBoardState())
-  const queensFrameRef = useRef<HTMLIFrameElement | null>(null)
-
   function getCurrentBonusMedalState(): BonusMedalState {
     return {
       slider: new Set(bonusMedalStateRef.current.slider),
@@ -2859,22 +3275,11 @@ export function PuzzleWeekBonusHub() {
     writeLocalStarBattleSolvedBoardState(next)
   }
 
-  function postQueensSync(next: QueensSolvedBoardState = getCurrentQueensSolvedBoardState()) {
-    queensFrameRef.current?.contentWindow?.postMessage({
-      type: 'queens-sync',
-      solvedBoards: {
-        ...queensSolvedBoardsToProfile(next),
-        version: PUZZLE_WEEK_QUEENS_SOLVED_ORDER_VERSION,
-      },
-    }, '*')
-  }
-
   function syncBonusProfile(nextMedals: BonusMedalState, nextQueensSolvedBoards: QueensSolvedBoardState, nextStarBattleSolvedBoards?: StarBattleSolvedBoardState) {
     const starBattleBoards = nextStarBattleSolvedBoards ?? getCurrentStarBattleSolvedBoardState()
     applyBonusMedalState(nextMedals)
     applyQueensSolvedBoardState(nextQueensSolvedBoards)
     applyStarBattleSolvedBoardState(starBattleBoards)
-    postQueensSync(nextQueensSolvedBoards)
     if (user && !isGuest) {
       void savePuzzleWeekBonusMedals(
         puzzleWeekEventId,
@@ -2985,11 +3390,16 @@ export function PuzzleWeekBonusHub() {
     syncBonusProfile(next, getCurrentQueensSolvedBoardState())
   }
 
-  function awardQueensMedal(level: QueensLevel) {
+  function awardQueensMedal(level: QueensLevel, puzzleIdx: number) {
     const current = getCurrentBonusMedalState()
-    if (current.queens.has(level)) return
-    const next = { ...current, queens: new Set(current.queens).add(level) }
-    syncBonusProfile(next, getCurrentQueensSolvedBoardState())
+    const currentBoards = getCurrentQueensSolvedBoardState()
+    const hasMedal = current.queens.has(level)
+    const hasPuzzle = currentBoards[level].has(puzzleIdx)
+    if (hasMedal && hasPuzzle) return
+    const nextMedals = hasMedal ? current : { ...current, queens: new Set(current.queens).add(level) }
+    const nextBoards = cloneQueensSolvedBoardState(currentBoards)
+    if (!hasPuzzle) nextBoards[level].add(puzzleIdx)
+    syncBonusProfile(nextMedals, nextBoards)
   }
 
   function awardStarBattleMedal(level: StarBattleLevel, puzzleIdx: number) {
@@ -3004,53 +3414,13 @@ export function PuzzleWeekBonusHub() {
     syncBonusProfile(nextMedals, getCurrentQueensSolvedBoardState(), nextBoards)
   }
 
-  // Listen for solve messages posted by the Queens iframe
-  useEffect(() => {
-    function onMessage(e: MessageEvent) {
-      if (e.data?.type === 'queens-request-sync') {
-        postQueensSync()
-        return
-      }
-      if (e.data?.type === 'queens-solved-board' && e.data?.difficulty && Number.isInteger(e.data?.index)) {
-        const difficulty = e.data.difficulty as QueensLevel
-        const index = Number(e.data.index)
-        if (!['easy', 'medium', 'hard'].includes(difficulty) || index < 0) return
-        const currentBoards = getCurrentQueensSolvedBoardState()
-        if (currentBoards[difficulty].has(index)) return
-        const nextBoards = cloneQueensSolvedBoardState(currentBoards)
-        nextBoards[difficulty].add(index)
-        syncBonusProfile(getCurrentBonusMedalState(), nextBoards)
-        return
-      }
-      if (e.data?.type === 'queens-solved' && e.data?.difficulty) {
-        awardQueensMedal(e.data.difficulty as QueensLevel)
-      }
-    }
-    window.addEventListener('message', onMessage)
-    return () => window.removeEventListener('message', onMessage)
-  }, [user, isGuest, puzzleWeekEventId])
-
-  useEffect(() => {
-    if (selectedId === 'queens') {
-      postQueensSync(queensSolvedBoards)
-    }
-  }, [selectedId, queensSolvedBoards])
-
   function renderGame() {
     switch (selectedId) {
       case 'slider':    return <SliderPuzzleBoard medals={sliderMedals} onSolve={awardSliderMedal} />
       case 'lightsout': return <LightsOutBoard medals={lightsOutMedals} onSolve={awardLightsOutMedal} />
       case 'netwalk':   return <NetwalkBoard medals={netwalkMedals} onSolve={awardNetwalkMedal} />
       case '2048':      return <Puzzle2048Board medals={game2048Medals} onAwardMedal={award2048Medal} />
-      case 'queens':    return (
-        <iframe
-          ref={queensFrameRef}
-          src="/queens.html"
-          className="h-full w-full border-0"
-          title="Queens Puzzle"
-          onLoad={() => postQueensSync()}
-        />
-      )
+      case 'queens':    return <QueensBoard medals={queensMedals} solvedBoards={queensSolvedBoards} onSolve={awardQueensMedal} />
       case 'starbattle': return <StarBattleBoard medals={starBattleMedals} solvedBoards={starBattleSolvedBoards} onSolve={awardStarBattleMedal} />
       default:          return null
     }

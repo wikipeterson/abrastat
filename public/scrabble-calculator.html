@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scrabble Score Calculator</title>
+<style>
+:root {
+  --pg: #1A0E05;
+  --card: #2C1A0A;
+  --surf: #3C2818;
+  --bdr: #5C3C20;
+  --t1: #F0E0C0;
+  --t2: #B09070;
+  --t3: #806040;
+  --gold: #F0A020;
+  --gold2: #C07810;
+  --ok: #7AB870;
+  --tb: #EDE0B0;
+  --tbdr: #C8A050;
+  --tsh: #987030;
+  --tt: #1A0800;
+  --tv: #5A3010;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--pg);color:var(--t1);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh;padding:24px 16px 60px}
+.hdr{text-align:center;margin-bottom:24px}
+.hdr h1{font-family:Georgia,serif;font-size:28px;font-weight:700;letter-spacing:10px;color:var(--gold);text-transform:uppercase}
+.hdr p{font-size:11px;letter-spacing:4px;color:var(--t3);margin-top:5px;text-transform:uppercase}
+.ctrls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:1020px;margin:0 auto 18px}
+button{padding:8px 16px;border:none;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.3px;transition:background .15s,transform .1s}
+button:active{transform:scale(.97)}
+.g{background:var(--gold);color:#1A0800}.g:hover{background:var(--gold2)}
+.d{background:var(--surf);color:var(--t1);border:1px solid var(--bdr)}.d:hover{background:#4C3020}
+.gh{background:transparent;color:var(--t2);border:1px solid var(--bdr)}.gh:hover{color:var(--t1);background:var(--surf)}
+.badge{display:none;align-items:center;gap:6px;padding:6px 12px;background:rgba(240,160,32,.1);border:1px solid var(--gold2);border-radius:5px;font-size:12px;color:var(--gold);cursor:pointer}
+.badge:hover{background:rgba(240,160,32,.18)}
+.badge.on{display:flex}
+.trash{display:flex;align-items:center;gap:8px;padding:7px 12px;border:1px dashed var(--bdr);border-radius:6px;background:rgba(255,255,255,.03);color:var(--t2);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:background .15s,border-color .15s,color .15s}
+.trash.hot{background:rgba(224,80,80,.12);border-color:#C85A5A;color:#F5B0B0}
+#trash-note{font-size:11px;color:var(--t3)}
+#saved{font-size:12px;color:var(--ok);opacity:0;transition:opacity .35s;padding:4px 0}
+#saved.on{opacity:1}
+.main{display:flex;gap:18px;justify-content:center;align-items:flex-start;flex-wrap:wrap;max-width:1020px;margin:0 auto}
+#grid{display:grid;grid-template-columns:repeat(15,44px);gap:2px;padding:8px;background:#3A2010;border-radius:8px;border:2px solid #5A3818;box-shadow:0 10px 40px rgba(0,0,0,.6);flex-shrink:0}
+.c{width:44px;height:44px;border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;user-select:none;transition:filter .12s;cursor:default}
+.c.can{cursor:pointer}.c.can:hover{filter:brightness(.80)}
+.c.dov{filter:brightness(1.25)!important;outline:2px solid rgba(255,255,255,.55);outline-offset:-1px}
+.c.ot{background:var(--tb);border:1px solid var(--tbdr);box-shadow:0 2px 0 var(--tsh),inset 0 1px 0 rgba(255,255,255,.35);cursor:grab}
+.c.ot:active{cursor:grabbing}
+.c.ot.hi{background:#FAD06A!important;border-color:#C09020;box-shadow:0 2px 0 #907010}
+.tl{font-family:Georgia,serif;font-size:20px;font-weight:700;color:var(--tt);line-height:1}
+.tv{position:absolute;bottom:2px;right:3px;font-size:8px;font-weight:700;color:var(--tv)}
+.tb-mark{position:absolute;top:2px;left:2px;font-size:7px;color:#9A7040;line-height:1}
+.sq{font-size:6.5px;font-weight:700;color:rgba(255,255,255,.95);text-align:center;line-height:1.3;text-shadow:0 1px 2px rgba(0,0,0,.4);padding:1px;white-space:pre-line}
+#panel{min-width:195px;max-width:225px;flex:1 1 195px}
+.pbox{background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:14px}
+.pempty{text-align:center;color:var(--t3);font-size:13px;line-height:2.1;padding:18px 12px}
+.ph{font-size:10px;letter-spacing:.1em;color:var(--t3);font-weight:700;text-transform:uppercase;margin-bottom:10px}
+.wlist{max-height:60vh;overflow-y:auto}
+.wrow{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--bdr)}
+.ww{font-family:Georgia,serif;font-size:14px;font-weight:700;letter-spacing:.07em}
+.wd{font-size:11px;color:var(--t3);margin-left:4px}
+.wa{font-size:10px;color:var(--t3);margin-left:3px}
+.wlnk{font-size:10px;color:var(--gold2);text-decoration:none;opacity:.6;margin-left:4px;vertical-align:middle}
+.wlnk:hover{opacity:1}
+.wpts{font-size:16px;font-weight:700;color:var(--gold);flex-shrink:0;margin-left:6px}
+.trow{display:flex;justify-content:space-between;align-items:baseline;padding-top:10px;margin-top:4px;border-top:1px solid var(--bdr)}
+.tlbl{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--t2);text-transform:uppercase}
+.tpts{font-family:Georgia,serif;font-size:30px;font-weight:700}
+.bank{max-width:1020px;margin:18px auto 0;padding-top:14px;border-top:1px solid var(--bdr)}
+.builder{max-width:1020px;margin:18px auto 0}
+.builder-box{background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:14px}
+.builder-head{font-size:10px;letter-spacing:.1em;color:var(--t3);font-weight:700;text-transform:uppercase;margin-bottom:10px}
+.builder-copy{font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:10px}
+#word-list{width:100%;min-height:124px;resize:vertical;background:var(--surf);color:var(--t1);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;font:600 13px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.builder-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+#word-build-status{font-size:12px;color:var(--t3)}
+.bhint{font-size:12px;color:var(--t3);margin-bottom:10px;line-height:1.5}
+#bk{display:flex;flex-wrap:wrap;gap:5px}
+.bkt{width:38px;height:42px;background:var(--tb);border:1px solid var(--tbdr);box-shadow:0 2px 0 var(--tsh),inset 0 1px 0 rgba(255,255,255,.3);border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;user-select:none;transition:filter .1s,transform .1s;flex-shrink:0}
+.bkt:hover{filter:brightness(1.06);transform:translateY(-2px)}
+.bkt:active{transform:translateY(0)}
+.bkt.sel{background:#FACC6A;border-color:#B08010;box-shadow:0 0 0 2px #B08010,0 2px 0 #807010}
+.bl{font-family:Georgia,serif;font-size:16px;font-weight:700;color:var(--tt);line-height:1}
+.bv{position:absolute;bottom:2px;right:3px;font-size:8px;font-weight:700;color:var(--tv)}
+.leg{display:flex;gap:12px;flex-wrap:wrap;align-items:center;max-width:1020px;margin:14px auto 0;padding:10px 14px;background:var(--card);border-radius:6px;border:1px solid var(--bdr)}
+.li{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--t2)}
+.ls{width:14px;height:14px;border-radius:2px;flex-shrink:0}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card);border:1px solid var(--bdr);border-radius:6px;padding:10px 20px;font-size:13px;color:var(--t1);box-shadow:0 4px 20px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;z-index:999}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>Scrabble</h1>
+  <p>Score Calculator &mdash; Full 15 &times; 15 Board</p>
+</div>
+
+<div class="ctrls">
+  <button class="g" onclick="doCalc()">Calculate score</button>
+  <button class="d" onclick="doClear()">Clear board</button>
+  <button class="d" onclick="doSave()">&#128190; Save board</button>
+  <button class="gh" onclick="doExport()">Export JSON</button>
+  <button class="gh" onclick="doImport()">Import JSON</button>
+  <div class="trash" id="trash" title="Drag a placed tile here to delete it">
+    <span>🗑</span>
+    <span>Trash</span>
+  </div>
+  <span id="saved">&#10003; Saved</span>
+  <span class="badge" id="badge" onclick="deselect()"></span>
+</div>
+
+<div class="main">
+  <div id="grid"></div>
+  <div id="panel"></div>
+</div>
+
+<div class="builder">
+  <div class="builder-box">
+    <div class="builder-head">Auto Place Words</div>
+    <div class="builder-copy">Type or paste one word per line, then let the page build the Scrabble board automatically.</div>
+    <textarea id="word-list" placeholder="EXAMPLE&#10;WORDS&#10;GO&#10;HERE"></textarea>
+    <div class="builder-actions">
+      <button class="g" onclick="buildFromWordList()">Build board from list</button>
+      <span id="word-build-status"></span>
+    </div>
+  </div>
+</div>
+
+<div class="bank">
+  <div class="bhint" id="hint">Select a tile below, then click a cell to place it &mdash; or drag tiles onto the board. Click any placed tile to remove it, or drag it into the trash. Tiles are unlimited.</div>
+  <div id="trash-note">Tip: drag a placed tile into the trash to delete it.</div>
+  <div id="bk"></div>
+</div>
+
+<div class="leg">
+  <span style="font-size:11px;color:var(--t3);font-weight:700">Legend:</span>
+  <span class="li"><span class="ls" style="background:#E24B4A"></span>Triple word (TWS)</span>
+  <span class="li"><span class="ls" style="background:#D4537E"></span>Double word (DWS / &#9733;)</span>
+  <span class="li"><span class="ls" style="background:#185FA5"></span>Triple letter (TLS)</span>
+  <span class="li"><span class="ls" style="background:#5599CC"></span>Double letter (DLS)</span>
+  <span class="li"><span class="ls" style="background:#D0BD98"></span>Standard</span>
+</div>
+
+<input type="file" id="file-in" accept=".json" style="display:none">
+<div id="toast"></div>
+
+<script>
+const R = 15, C = 15, LS_KEY = "scrabble-calculator-v3";
+
+// Full standard 15x15 Scrabble board premium squares (0-indexed)
+const PQ = {
+  // Triple Word Score
+  "0,0":"TWS",  "0,7":"TWS",  "0,14":"TWS",
+  "7,0":"TWS",                "7,14":"TWS",
+  "14,0":"TWS", "14,7":"TWS", "14,14":"TWS",
+  // Double Word Score (+ center star)
+  "1,1":"DWS",  "2,2":"DWS",  "3,3":"DWS",  "4,4":"DWS",
+  "1,13":"DWS", "2,12":"DWS", "3,11":"DWS", "4,10":"DWS",
+  "7,7":"STAR",
+  "10,4":"DWS", "11,3":"DWS", "12,2":"DWS", "13,1":"DWS",
+  "10,10":"DWS","11,11":"DWS","12,12":"DWS","13,13":"DWS",
+  // Triple Letter Score
+  "1,5":"TLS",  "1,9":"TLS",
+  "5,1":"TLS",  "5,5":"TLS",  "5,9":"TLS",  "5,13":"TLS",
+  "9,1":"TLS",  "9,5":"TLS",  "9,9":"TLS",  "9,13":"TLS",
+  "13,5":"TLS", "13,9":"TLS",
+  // Double Letter Score
+  "0,3":"DLS",  "0,11":"DLS",
+  "2,6":"DLS",  "2,8":"DLS",
+  "3,0":"DLS",  "3,7":"DLS",  "3,14":"DLS",
+  "6,2":"DLS",  "6,6":"DLS",  "6,8":"DLS",  "6,12":"DLS",
+  "7,3":"DLS",  "7,11":"DLS",
+  "8,2":"DLS",  "8,6":"DLS",  "8,8":"DLS",  "8,12":"DLS",
+  "11,0":"DLS", "11,7":"DLS", "11,14":"DLS",
+  "12,6":"DLS", "12,8":"DLS",
+  "14,3":"DLS", "14,11":"DLS"
+};
+
+const SQ_BG  = { TWS:"#E24B4A", DWS:"#D4537E", STAR:"#D4537E", TLS:"#185FA5", DLS:"#5599CC", plain:"#D0BD98" };
+const SQ_LBL = { TWS:"Triple\nWord\nScore", DWS:"Double\nWord\nScore", STAR:"★", TLS:"Triple\nLetter\nScore", DLS:"Double\nLetter\nScore" };
+
+const TV = { A:1,B:3,C:3,D:2,E:1,F:4,G:2,H:4,I:1,J:8,K:5,L:1,M:3,N:1,O:1,P:3,Q:10,R:1,S:1,T:1,U:1,V:4,W:4,X:8,Y:4,Z:10,"?":0 };
+const ALL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ?".split("");
+
+let brd = emptyBoard(), sel = null, drag = null, results = [];
+
+function emptyBoard() { return Array.from({length:R}, () => Array(C).fill(null)); }
+function isBlank(t)   { return t && t === t.toLowerCase() && t !== "?"; }
+function dispOf(t)    { return isBlank(t) ? t.toUpperCase() : (t || ""); }
+function valOf(t)     { return isBlank(t) ? 0 : (TV[t] ?? 0); }
+function boardChar(r,c){ return brd[r][c] ? dispOf(brd[r][c]) : null; }
+function cellEmpty(r,c){ return !brd[r][c]; }
+
+function placeOn(r, c, letter) {
+  if (brd[r][c]) return false;
+  if (letter === "?") {
+    const inp = prompt("Enter the letter this blank represents (scores 0 pts):", "A");
+    if (!inp) return false;
+    const ch = inp.trim().toUpperCase()[0];
+    if (!ch || !/[A-Z]/.test(ch)) return false;
+    brd[r][c] = ch.toLowerCase();
+  } else {
+    brd[r][c] = letter;
+  }
+  return true;
+}
+
+function parseWordList(raw) {
+  return raw
+    .split(/\n+/)
+    .map(line => line.trim().toUpperCase().replace(/[^A-Z]/g, ""))
+    .filter(Boolean);
+}
+
+function canPlaceWord(word, row, col, dir, requireOverlap) {
+  const dr = dir === "h" ? 0 : 1;
+  const dc = dir === "h" ? 1 : 0;
+  const endRow = row + dr * (word.length - 1);
+  const endCol = col + dc * (word.length - 1);
+  if (row < 0 || col < 0 || endRow >= R || endCol >= C) return null;
+
+  const beforeRow = row - dr;
+  const beforeCol = col - dc;
+  const afterRow = endRow + dr;
+  const afterCol = endCol + dc;
+  if (beforeRow >= 0 && beforeCol >= 0 && beforeRow < R && beforeCol < C && !cellEmpty(beforeRow, beforeCol)) return null;
+  if (afterRow >= 0 && afterCol >= 0 && afterRow < R && afterCol < C && !cellEmpty(afterRow, afterCol)) return null;
+
+  let overlaps = 0;
+  let newTiles = 0;
+  for (let i = 0; i < word.length; i++) {
+    const rr = row + dr * i;
+    const cc = col + dc * i;
+    const existing = boardChar(rr, cc);
+    if (existing) {
+      if (existing !== word[i]) return null;
+      overlaps++;
+      continue;
+    }
+    newTiles++;
+    if (dir === "h") {
+      if ((rr > 0 && !cellEmpty(rr - 1, cc)) || (rr < R - 1 && !cellEmpty(rr + 1, cc))) return null;
+    } else {
+      if ((cc > 0 && !cellEmpty(rr, cc - 1)) || (cc < C - 1 && !cellEmpty(rr, cc + 1))) return null;
+    }
+  }
+  if (newTiles === 0) return null;
+  if (requireOverlap && overlaps === 0) return null;
+  return { overlaps, newTiles };
+}
+
+function placeWord(word, row, col, dir) {
+  const dr = dir === "h" ? 0 : 1;
+  const dc = dir === "h" ? 1 : 0;
+  for (let i = 0; i < word.length; i++) {
+    const rr = row + dr * i;
+    const cc = col + dc * i;
+    if (!brd[rr][cc]) brd[rr][cc] = word[i];
+  }
+}
+
+function findPlacement(word, requireOverlap) {
+  const tries = [];
+  const seen = new Set();
+  for (let r = 0; r < R; r++) {
+    for (let c = 0; c < C; c++) {
+      const existing = boardChar(r, c);
+      if (!existing) continue;
+      for (let i = 0; i < word.length; i++) {
+        if (word[i] !== existing) continue;
+        for (const dir of ["h", "v"]) {
+          const row = dir === "h" ? r : r - i;
+          const col = dir === "h" ? c - i : c;
+          const key = `${row},${col},${dir}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const fit = canPlaceWord(word, row, col, dir, requireOverlap);
+          if (!fit) continue;
+          const centerBias = Math.abs((row + (dir === "v" ? (word.length - 1) / 2 : 0)) - 7) + Math.abs((col + (dir === "h" ? (word.length - 1) / 2 : 0)) - 7);
+          const score = fit.overlaps * 100 - fit.newTiles * 3 - centerBias;
+          tries.push({ row, col, dir, score });
+        }
+      }
+    }
+  }
+  if (!tries.length && !requireOverlap) {
+    for (const dir of ["h", "v"]) {
+      for (let r = 0; r < R; r++) {
+        for (let c = 0; c < C; c++) {
+          const fit = canPlaceWord(word, r, c, dir, false);
+          if (!fit) continue;
+          const centerBias = Math.abs((r + (dir === "v" ? (word.length - 1) / 2 : 0)) - 7) + Math.abs((c + (dir === "h" ? (word.length - 1) / 2 : 0)) - 7);
+          const score = -fit.newTiles * 3 - centerBias;
+          tries.push({ row: r, col: c, dir, score });
+        }
+      }
+    }
+  }
+  tries.sort((a, b) => b.score - a.score);
+  return tries[0] || null;
+}
+
+function setWordBuildStatus(msg, tone = "muted") {
+  const el = document.getElementById("word-build-status");
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = tone === "warn" ? "#F5B070" : tone === "ok" ? "var(--ok)" : "var(--t3)";
+}
+
+function buildFromWordList() {
+  const raw = document.getElementById("word-list").value;
+  const words = parseWordList(raw);
+  if (!words.length) {
+    setWordBuildStatus("Enter at least one word first.", "warn");
+    toast("No words to place");
+    return;
+  }
+  const tooLong = words.find(word => word.length > 15);
+  if (tooLong) {
+    setWordBuildStatus(`"${tooLong}" is too long for a 15×15 board.`, "warn");
+    return;
+  }
+
+  brd = emptyBoard();
+  results = [];
+  sel = null;
+  drag = null;
+  document.getElementById("badge").classList.remove("on");
+
+  const queue = [...words].sort((a, b) => b.length - a.length);
+  const placed = [];
+  const failed = [];
+  const first = queue.shift();
+  const startCol = Math.max(0, Math.floor((C - first.length) / 2));
+  placeWord(first, 7, startCol, "h");
+  placed.push(first);
+
+  for (const word of queue) {
+    let placement = findPlacement(word, true);
+    if (!placement) placement = findPlacement(word, false);
+    if (!placement) {
+      failed.push(word);
+      continue;
+    }
+    placeWord(word, placement.row, placement.col, placement.dir);
+    placed.push(word);
+  }
+
+  autoSave();
+  rBoard();
+  rBank();
+  rPanel();
+
+  if (failed.length) {
+    setWordBuildStatus(`Placed ${placed.length}/${words.length}. Could not place: ${failed.join(", ")}`, "warn");
+    toast(`Placed ${placed.length} words; ${failed.length} did not fit`);
+  } else {
+    setWordBuildStatus(`Placed all ${placed.length} words.`, "ok");
+    toast(`Placed ${placed.length} words`);
+  }
+}
+
+// ── Board render ──────────────────────────────────────────────────────────────
+function rBoard() {
+  const g = document.getElementById("grid");
+  const hl = new Set(results.flatMap(w => w.cells.map(([r,c]) => `${r},${c}`)));
+  g.innerHTML = "";
+  for (let r = 0; r < R; r++) {
+    for (let c = 0; c < C; c++) {
+      const key = `${r},${c}`, t = brd[r][c], sqType = PQ[key] || "plain", hi = hl.has(key);
+      const el = document.createElement("div");
+      el.className = "c" + (t ? " ot" + (hi ? " hi" : "") : (sel ? " can" : ""));
+      el.style.background = t ? (hi ? "#FAD06A" : "#EDE0B0") : SQ_BG[sqType];
+      if (t) {
+        const lb = document.createElement("span"); lb.className = "tl"; lb.textContent = dispOf(t); el.appendChild(lb);
+        const vl = document.createElement("span"); vl.className = "tv"; vl.textContent = valOf(t); el.appendChild(vl);
+        if (isBlank(t)) { const bm = document.createElement("span"); bm.className = "tb-mark"; bm.textContent = "☆"; el.appendChild(bm); }
+        el.draggable = true;
+        el.addEventListener("dragstart", e => { drag = {letter:t, src:`board:${r},${c}`}; e.dataTransfer.effectAllowed = "move"; });
+        el.addEventListener("dragend", () => { drag = null; });
+      } else {
+        const lbl = SQ_LBL[sqType];
+        if (lbl) {
+          const sp = document.createElement("span"); sp.className = "sq";
+          if (sqType === "STAR") { sp.style.fontSize = "20px"; sp.style.lineHeight = "1"; }
+          sp.textContent = lbl;
+          el.appendChild(sp);
+        }
+      }
+      el.title = t
+        ? `${dispOf(t)} (${valOf(t)} pts)${isBlank(t) ? " [blank]" : ""} — click to remove`
+        : (sqType !== "plain" ? SQ_LBL[sqType]?.replace(/\n/g," ") : `Row ${r+1}, Col ${c+1}`);
+      el.addEventListener("click", () => {
+        if (brd[r][c]) { brd[r][c] = null; results = []; autoSave(); rBoard(); rPanel(); }
+        else if (sel && placeOn(r, c, sel)) { results = []; autoSave(); rBoard(); rPanel(); }
+      });
+      el.addEventListener("dragover", e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; el.classList.add("dov"); });
+      el.addEventListener("dragleave", () => el.classList.remove("dov"));
+      el.addEventListener("drop", e => {
+        e.preventDefault(); el.classList.remove("dov");
+        if (!drag) return;
+        const {letter, src} = drag;
+        if (brd[r][c] && src !== `board:${r},${c}`) { drag = null; return; }
+        if (src.startsWith("board:")) {
+          const [sr, sc] = src.slice(6).split(",").map(Number);
+          if (sr === r && sc === c) { drag = null; return; }
+          brd[sr][sc] = null; brd[r][c] = letter;
+          drag = null; results = []; autoSave(); rBoard(); rPanel();
+        } else {
+          if (placeOn(r, c, letter)) { drag = null; results = []; autoSave(); rBoard(); rPanel(); }
+          else drag = null;
+        }
+      });
+      g.appendChild(el);
+    }
+  }
+}
+
+// ── Bank render ───────────────────────────────────────────────────────────────
+function rBank() {
+  const bk = document.getElementById("bk");
+  bk.innerHTML = "";
+  for (const letter of ALL) {
+    const isSel = sel === letter;
+    const el = document.createElement("div");
+    el.className = "bkt" + (isSel ? " sel" : "");
+    el.title = letter === "?" ? "Blank tile (0 pts)" : `${letter} — ${TV[letter]} pts`;
+    const lb = document.createElement("span"); lb.className = "bl"; lb.textContent = letter; el.appendChild(lb);
+    const vl = document.createElement("span"); vl.className = "bv"; vl.textContent = TV[letter] ?? 0; el.appendChild(vl);
+    el.draggable = true;
+    el.addEventListener("dragstart", e => { drag = {letter, src:"bank"}; e.dataTransfer.effectAllowed = "move"; });
+    el.addEventListener("dragend", () => { drag = null; });
+    el.addEventListener("click", () => {
+      sel = isSel ? null : letter;
+      const badge = document.getElementById("badge"), hint = document.getElementById("hint");
+      if (sel) {
+        badge.textContent = `"${sel}" selected — click to deselect`; badge.classList.add("on");
+        hint.textContent = `"${sel}" selected. Click an empty cell to place it.`;
+      } else {
+        badge.classList.remove("on");
+        hint.textContent = "Select a tile below, then click a cell to place it — or drag tiles onto the board. Click any placed tile to remove it. Tiles are unlimited.";
+      }
+      rBank(); rBoard();
+    });
+    bk.appendChild(el);
+  }
+}
+
+function deselect() {
+  sel = null;
+  document.getElementById("badge").classList.remove("on");
+  document.getElementById("hint").textContent = "Select a tile below, then click a cell to place it — or drag tiles onto the board. Click any placed tile to remove it, or drag it into the trash. Tiles are unlimited.";
+  rBank(); rBoard();
+}
+
+function bindTrash() {
+  const trash = document.getElementById("trash");
+  if (!trash) return;
+  trash.addEventListener("dragover", e => {
+    if (!drag || !drag.src.startsWith("board:")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    trash.classList.add("hot");
+  });
+  trash.addEventListener("dragleave", () => trash.classList.remove("hot"));
+  trash.addEventListener("drop", e => {
+    e.preventDefault();
+    trash.classList.remove("hot");
+    if (!drag || !drag.src.startsWith("board:")) {
+      drag = null;
+      return;
+    }
+    const [sr, sc] = drag.src.slice(6).split(",").map(Number);
+    brd[sr][sc] = null;
+    drag = null;
+    results = [];
+    autoSave();
+    rBoard();
+    rPanel();
+    toast("Tile deleted");
+  });
+}
+
+// ── Scoring ───────────────────────────────────────────────────────────────────
+function scoreWord(cells) {
+  let base = 0, wm = 1;
+  for (const [r, c] of cells) {
+    const t = brd[r][c]; if (!t) continue;
+    const v = valOf(t), sq = PQ[`${r},${c}`];
+    if      (sq === "DLS")                base += v * 2;
+    else if (sq === "TLS")                base += v * 3;
+    else if (sq === "DWS" || sq==="STAR") { base += v; wm *= 2; }
+    else if (sq === "TWS")                { base += v; wm *= 3; }
+    else                                  base += v;
+  }
+  return base * wm;
+}
+
+function findWords() {
+  const ws = [];
+  for (let r = 0; r < R; r++) {
+    let st = -1;
+    for (let c = 0; c <= C; c++) {
+      if (c < C && brd[r][c]) { if (st < 0) st = c; }
+      else if (st >= 0) {
+        if (c - st >= 2) {
+          const cells = Array.from({length:c-st}, (_,i) => [r,st+i]);
+          ws.push({word:cells.map(([rr,cc])=>dispOf(brd[rr][cc])).join(""), cells, score:scoreWord(cells), dir:"→", hasBlank:cells.some(([rr,cc])=>isBlank(brd[rr][cc]))});
+        }
+        st = -1;
+      }
+    }
+  }
+  for (let c = 0; c < C; c++) {
+    let st = -1;
+    for (let r = 0; r <= R; r++) {
+      if (r < R && brd[r][c]) { if (st < 0) st = r; }
+      else if (st >= 0) {
+        if (r - st >= 2) {
+          const cells = Array.from({length:r-st}, (_,i) => [st+i,c]);
+          ws.push({word:cells.map(([rr,cc])=>dispOf(brd[rr][cc])).join(""), cells, score:scoreWord(cells), dir:"↓", hasBlank:cells.some(([rr,cc])=>isBlank(brd[rr][cc]))});
+        }
+        st = -1;
+      }
+    }
+  }
+  return ws;
+}
+
+// ── Panel render ──────────────────────────────────────────────────────────────
+function rPanel() {
+  const p = document.getElementById("panel");
+  if (!results.length) {
+    p.innerHTML = `<div class="pbox pempty">Place tiles on the board,<br>then click<br><strong style="color:var(--gold)">Calculate score</strong><br>to see word scores.<br><br><span style="font-size:11px;color:var(--t3)">Scored words highlight in gold</span></div>`;
+    return;
+  }
+  const total = results.reduce((s,w) => s + w.score, 0);
+  const rows = results.map(w => {
+    const mwLink = `https://www.merriam-webster.com/dictionary/${w.word.toLowerCase()}`;
+    return `<div class="wrow">
+      <div>
+        <span class="ww">${w.word}</span>
+        <span class="wd">${w.dir}</span>
+        ${w.hasBlank ? '<span class="wa">[blank]</span>' : ""}
+        <a class="wlnk" href="${mwLink}" target="_blank" rel="noopener" title="Look up in Merriam-Webster">&#8599;</a>
+      </div>
+      <span class="wpts">${w.score}</span>
+    </div>`;
+  }).join("");
+  p.innerHTML = `<div class="pbox"><div class="ph">Words found (${results.length})</div><div class="wlist">${rows}</div><div class="trow"><span class="tlbl">Total</span><span class="tpts">${total}</span></div></div>`;
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+function doCalc() {
+  results = findWords(); rBoard(); rPanel();
+  if (!results.length) toast("No words found — need 2+ consecutive tiles in a row or column");
+}
+function doClear() {
+  if (brd.some(row => row.some(Boolean)) && !confirm("Clear all tiles from the board?")) return;
+  brd = emptyBoard(); sel = null; drag = null; results = [];
+  document.getElementById("badge").classList.remove("on");
+  document.getElementById("hint").textContent = "Select a tile below, then click a cell to place it — or drag tiles onto the board. Click any placed tile to remove it, or drag it into the trash. Tiles are unlimited.";
+  autoSave(); rBoard(); rBank(); rPanel();
+}
+function autoSave() { try { localStorage.setItem(LS_KEY, JSON.stringify({board:brd, ts:Date.now()})); } catch(e) {} }
+function doSave() {
+  autoSave();
+  const el = document.getElementById("saved"); el.classList.add("on");
+  setTimeout(() => el.classList.remove("on"), 2000);
+}
+function loadSaved() {
+  try {
+    const s = localStorage.getItem(LS_KEY); if (!s) return false;
+    const d = JSON.parse(s);
+    if (d.board && d.board.length === R && d.board.every(row => row.length === C)) { brd = d.board; return true; }
+  } catch(e) {}
+  return false;
+}
+function doExport() {
+  const state = {board:brd, version:3, savedAt:new Date().toISOString(), note:"Scrabble Score Calculator — 15×15 board"};
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `scrabble-board-${new Date().toISOString().slice(0,16).replace(/[T:]/g,"-")}.json`; a.click();
+  URL.revokeObjectURL(url); toast("Board exported");
+}
+function doImport() {
+  const inp = document.getElementById("file-in"); inp.value = "";
+  inp.onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if (d.board && d.board.length === R && d.board.every(r => r.length === C)) {
+          brd = d.board; results = []; autoSave(); rBoard(); rBank(); rPanel(); toast("Board imported ✓");
+        } else { alert("Invalid board file — expected a 15×15 board."); }
+      } catch(ex) { alert("Could not read file: " + ex.message); }
+    };
+    rd.readAsText(f);
+  };
+  inp.click();
+}
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById("toast"); el.textContent = msg; el.classList.add("show");
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2500);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+const restored = loadSaved();
+rBoard(); rBank(); rPanel();
+bindTrash();
+if (restored && brd.some(row => row.some(Boolean))) toast("Board restored from last session");
+</script>
+</body>
+</html>

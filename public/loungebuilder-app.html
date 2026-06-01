@@ -646,12 +646,11 @@ function draw(){
         const x=OX+c*CELL,y=OY+r*CELL;
         ctx.font=`700 ${CELL*0.68}px 'Segoe UI',sans-serif`;
         ctx.textAlign='center';ctx.textBaseline='middle';
-        ctx.lineJoin='round';
-        ctx.lineWidth=Math.max(2, CELL*0.09);
-        ctx.strokeStyle='rgba(28,18,8,0.72)';
-        ctx.strokeText(ltr,x+CELL/2,y+CELL/2+2);
-        ctx.fillStyle='rgba(255,250,236,0.98)';
+        ctx.shadowColor='rgba(255,255,255,0.55)';
+        ctx.shadowBlur=Math.max(2, CELL*0.08);
+        ctx.fillStyle='rgba(255,250,236,1)';
         ctx.fillText(ltr,x+CELL/2,y+CELL/2+2);
+        ctx.shadowBlur=0;
       }
     }
   }

@@ -124,6 +124,7 @@ button:active{transform:scale(.97)}
     <textarea id="word-list" placeholder="EXAMPLE&#10;WORDS&#10;GO&#10;HERE"></textarea>
     <div class="builder-actions">
       <button class="g" onclick="buildFromWordList()">Build board from list</button>
+      <button class="d" onclick="randomizeWordsAndBuild()">Randomize order &amp; try again</button>
       <span id="word-build-status"></span>
     </div>
   </div>
@@ -213,6 +214,15 @@ function parseWordList(raw) {
     .split(/\n+/)
     .map(line => line.trim().toUpperCase().replace(/[^A-Z]/g, ""))
     .filter(Boolean);
+}
+
+function shuffleWords(words) {
+  const copy = [...words];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 
 function canPlaceWord(word, row, col, dir, requireOverlap) {
@@ -312,7 +322,10 @@ function setWordBuildStatus(msg, tone = "muted") {
 
 function buildFromWordList() {
   const raw = document.getElementById("word-list").value;
-  const words = parseWordList(raw);
+  return buildBoardFromWords(parseWordList(raw));
+}
+
+function buildBoardFromWords(words) {
   if (!words.length) {
     setWordBuildStatus("Enter at least one word first.", "warn");
     toast("No words to place");
@@ -330,7 +343,7 @@ function buildFromWordList() {
   drag = null;
   document.getElementById("badge").classList.remove("on");
 
-  const queue = [...words].sort((a, b) => b.length - a.length);
+  const queue = [...words];
   const placed = [];
   const failed = [];
   const first = queue.shift();
@@ -361,6 +374,19 @@ function buildFromWordList() {
     setWordBuildStatus(`Placed all ${placed.length} words.`, "ok");
     toast(`Placed ${placed.length} words`);
   }
+}
+
+function randomizeWordsAndBuild() {
+  const textarea = document.getElementById("word-list");
+  const words = parseWordList(textarea.value);
+  if (!words.length) {
+    setWordBuildStatus("Enter at least one word first.", "warn");
+    toast("No words to place");
+    return;
+  }
+  const shuffled = shuffleWords(words);
+  textarea.value = shuffled.join("\n");
+  buildBoardFromWords(shuffled);
 }
 
 // ── Board render ──────────────────────────────────────────────────────────────

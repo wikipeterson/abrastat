@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import type { Data, Layout, Config } from 'plotly.js'
-import { basePlotlyLayout, plotlyConfig } from '@/lib/plotlyTheme'
+import { basePlotlyLayout, plotlyConfig, getChartColorway } from '@/lib/plotlyTheme'
 
 const Plot = dynamic(() => import('react-plotly.js'), {
   ssr: false,
@@ -84,6 +84,7 @@ export function PlotlyChart({ data, layout, title, height = 360, mode = 'fill' }
 
   const mergedLayout: Partial<Layout> = {
     ...basePlotlyLayout,
+    colorway: getChartColorway(),
     ...layout,
     font: {
       ...basePlotlyLayout.font,

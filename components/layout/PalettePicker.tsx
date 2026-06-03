@@ -5,31 +5,35 @@ import { useEffect, useState } from 'react'
 const STORAGE_KEY = 'abrastat.palette'
 
 const PALETTES = [
-  { id: 'abra',     label: 'Abra',     swatch: '#2EC4B6' },
-  { id: 'midnight', label: 'Midnight', swatch: '#38BDF8' },
-  { id: 'ocean',    label: 'Ocean',    swatch: '#2F80ED' },
-  { id: 'indigo',   label: 'Indigo',   swatch: '#6366F1' },
-  { id: 'grape',    label: 'Grape',    swatch: '#A855F7' },
-  { id: 'rose',     label: 'Rose',     swatch: '#F43F5E' },
-  { id: 'ember',    label: 'Ember',    swatch: '#EA580C' },
-  { id: 'citrus',   label: 'Citrus',   swatch: '#F4A300' },
-  { id: 'sage',     label: 'Sage',     swatch: '#16A34A' },
-  { id: 'classic',  label: 'Classic',  swatch: '#2F7D73' },
+  { id: 'abra',      label: 'Abra',      swatch: '#16A89B' },
+  { id: 'midnight',  label: 'Midnight',  swatch: '#38BDF8' },
+  { id: 'ocean',     label: 'Ocean',     swatch: '#2F80ED' },
+  { id: 'indigo',    label: 'Indigo',    swatch: '#6366F1' },
+  { id: 'grape',     label: 'Grape',     swatch: '#A855F7' },
+  { id: 'rose',      label: 'Rose',      swatch: '#F43F5E' },
+  { id: 'ember',     label: 'Ember',     swatch: '#EA580C' },
+  { id: 'citrus',    label: 'Citrus',    swatch: '#F4A300' },
+  { id: 'sage',      label: 'Sage',      swatch: '#16A34A' },
+  { id: 'classic',   label: 'Classic',   swatch: '#2F7D73' },
+  { id: 'classroom', label: 'Classroom', swatch: '#0C8074' },
 ] as const
 
 type PaletteId = (typeof PALETTES)[number]['id']
 
 const PALETTE_VARS: Record<PaletteId, Record<string, string>> = {
   abra: {
-    '--color-bg': '#E8FAF8',
+    '--color-bg': '#F7FAF9',
     '--color-surface': '#FFFFFF',
-    '--color-text': '#0D4F49',
-    '--color-muted': '#1A8C80',
-    '--color-accent': '#2EC4B6',
-    '--color-accent-light': '#D6F5F2',
-    '--color-border': '#7FD9D3',
-    '--color-grid-header': '#0D4F49',
-    '--color-grid-selected': '#D6F5F2',
+    '--color-text': '#0E3D38',
+    '--color-muted': '#5A726E',
+    '--color-accent': '#16A89B',
+    '--color-accent-light': '#E2F4F1',
+    '--color-border': '#DCE6E3',
+    '--color-grid-header': '#0E3D38',
+    '--color-grid-selected': '#E2F4F1',
+    '--color-accent-strong': '#0D6E64',
+    '--color-gold': '#E8920C',
+    '--color-gold-light': '#FBEFD6',
   },
   midnight: {
     '--color-bg': '#0F172A',
@@ -41,6 +45,9 @@ const PALETTE_VARS: Record<PaletteId, Record<string, string>> = {
     '--color-border': '#334155',
     '--color-grid-header': '#1E293B',
     '--color-grid-selected': '#1E3A5F',
+    '--color-accent-strong': '#0369A1',
+    '--color-gold': '#F0A93A',
+    '--color-gold-light': '#3A2A08',
   },
   ocean: {
     '--color-bg': '#EAF3FF',
@@ -52,6 +59,9 @@ const PALETTE_VARS: Record<PaletteId, Record<string, string>> = {
     '--color-border': '#A9CFF5',
     '--color-grid-header': '#18324A',
     '--color-grid-selected': '#DCEBFF',
+    '--color-accent-strong': '#1C5BC0',
+    '--color-gold': '#E8920C',
+    '--color-gold-light': '#FBEFD6',
   },
   indigo: {
     '--color-bg': '#EEF2FF',
@@ -63,6 +73,9 @@ const PALETTE_VARS: Record<PaletteId, Record<string, string>> = {
     '--color-border': '#A5B4FC',
     '--color-grid-header': '#1E1B4B',
     '--color-grid-selected': '#E0E7FF',
+    '--color-accent-strong': '#4338CA',
+    '--color-gold': '#E8920C',
+    '--color-gold-light': '#FBEFD6',
   },
   grape: {
     '--color-bg': '#FAF5FF',
@@ -74,6 +87,9 @@ const PALETTE_VARS: Record<PaletteId, Record<string, string>> = {
     '--color-border': '#D8B4FE',
     '--color-grid-header': '#3B0764',
     '--color-grid-selected': '#F3E8FF',
+    '--color-accent-strong': '#7E22CE',
+    '--color-gold': '#E8920C',
+    '--color-gold-light': '#FBEFD6',
   },
   rose: {
     '--color-bg': '#FFF1F2',
@@ -85,6 +101,9 @@ const PALETTE_VARS: Record<PaletteId, Record<string, string>> = {
     '--color-border': '#FECDD3',
     '--color-grid-header': '#4C0519',
     '--color-grid-selected': '#FFE4E8',
+    '--color-accent-strong': '#BE123C',
+    '--color-gold': '#E8920C',
+    '--color-gold-light': '#FBEFD6',
   },
   ember: {
     '--color-bg': '#FFF7ED',
@@ -96,6 +115,9 @@ const PALETTE_VARS: Record<PaletteId, Record<string, string>> = {
     '--color-border': '#FED7AA',
     '--color-grid-header': '#431407',
     '--color-grid-selected': '#FEF3C7',
+    '--color-accent-strong': '#C2410C',
+    '--color-gold': '#C9820A',
+    '--color-gold-light': '#FBEFD6',
   },
   citrus: {
     '--color-bg': '#FFF6E8',
@@ -107,6 +129,9 @@ const PALETTE_VARS: Record<PaletteId, Record<string, string>> = {
     '--color-border': '#F2C970',
     '--color-grid-header': '#3F3020',
     '--color-grid-selected': '#FFF0CC',
+    '--color-accent-strong': '#92600A',
+    '--color-gold': '#0E8C7F',
+    '--color-gold-light': '#DBF1ED',
   },
   sage: {
     '--color-bg': '#F0FDF4',
@@ -118,6 +143,9 @@ const PALETTE_VARS: Record<PaletteId, Record<string, string>> = {
     '--color-border': '#86EFAC',
     '--color-grid-header': '#14532D',
     '--color-grid-selected': '#DCFCE7',
+    '--color-accent-strong': '#166534',
+    '--color-gold': '#E8920C',
+    '--color-gold-light': '#FBEFD6',
   },
   classic: {
     '--color-bg': '#F6F2EA',
@@ -129,6 +157,23 @@ const PALETTE_VARS: Record<PaletteId, Record<string, string>> = {
     '--color-border': '#B7D1CA',
     '--color-grid-header': '#24312F',
     '--color-grid-selected': '#E5F0EC',
+    '--color-accent-strong': '#235D54',
+    '--color-gold': '#E8920C',
+    '--color-gold-light': '#FBEFD6',
+  },
+  classroom: {
+    '--color-bg': '#FFFFFF',
+    '--color-surface': '#FFFFFF',
+    '--color-text': '#082621',
+    '--color-muted': '#3A4D49',
+    '--color-accent': '#0C8074',
+    '--color-accent-light': '#C6ECE7',
+    '--color-border': '#94A8A3',
+    '--color-grid-header': '#082621',
+    '--color-grid-selected': '#FFE08A',
+    '--color-accent-strong': '#0A6A60',
+    '--color-gold': '#D97706',
+    '--color-gold-light': '#FFE08A',
   },
 }
 

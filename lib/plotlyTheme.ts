@@ -13,7 +13,24 @@ export const CHART_SEQUENTIAL = [
   '#E2F4F1','#B6E4DE','#7FD0C7','#46B5A9','#16A89B','#0D6E64','#0A4A43',
 ]
 
+// Classroom / projector ramp — more saturated, maximally hue-separated for washed-out displays
+export const CHART_CATEGORICAL_CLASSROOM = [
+  '#0C8074', // teal
+  '#D97706', // amber
+  '#DC2626', // red
+  '#2563EB', // blue
+  '#7C3AED', // violet
+  '#475569', // slate
+]
+
 export const ABRA_COLORS = CHART_CATEGORICAL
+
+export function getChartColorway(): string[] {
+  if (typeof document !== 'undefined' && document.documentElement.dataset.palette === 'classroom') {
+    return CHART_CATEGORICAL_CLASSROOM
+  }
+  return CHART_CATEGORICAL
+}
 
 export const COLOR_PALETTES = {
   default:    ['#0F766E', '#D97706', '#2563EB', '#7C3AED', '#DC2626', '#059669', '#EA580C', '#BE185D'],

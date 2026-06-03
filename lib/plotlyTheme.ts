@@ -1,13 +1,19 @@
-export const ABRA_COLORS = [
-  '#0F766E',   // deep teal
-  '#D97706',   // amber
-  '#2563EB',   // blue
-  '#7C3AED',   // violet
-  '#DC2626',   // red
-  '#059669',   // emerald
-  '#EA580C',   // orange
-  '#BE185D',   // magenta
+// Categorical ramp — brand-anchored, distinct on white, ordered for legibility
+export const CHART_CATEGORICAL = [
+  '#16A89B', // teal
+  '#E8920C', // gold
+  '#E15B4C', // coral
+  '#4C6EF5', // indigo
+  '#9C5CF0', // violet
+  '#5A726E', // slate
 ]
+
+// Sequential ramp — for density / count / heat (single variable)
+export const CHART_SEQUENTIAL = [
+  '#E2F4F1','#B6E4DE','#7FD0C7','#46B5A9','#16A89B','#0D6E64','#0A4A43',
+]
+
+export const ABRA_COLORS = CHART_CATEGORICAL
 
 export const COLOR_PALETTES = {
   default:    ['#0F766E', '#D97706', '#2563EB', '#7C3AED', '#DC2626', '#059669', '#EA580C', '#BE185D'],
@@ -22,10 +28,10 @@ export type PaletteName = keyof typeof COLOR_PALETTES
 const axis = {
   showgrid: false,
   showline: true,
-  linecolor: '#0D4F49',
+  linecolor: '#0E3D38',
   linewidth: 1.5,
   ticks: 'outside' as const,
-  tickcolor: '#0D4F49',
+  tickcolor: '#0E3D38',
   ticklen: 5,
   zeroline: false,
   automargin: true,
@@ -36,18 +42,18 @@ export const basePlotlyLayout = {
   plot_bgcolor: '#FFFFFF',
   font: {
     family: 'DM Sans, sans-serif',
-    color: '#0D4F49',
+    color: '#0E3D38',
     size: 12,
   },
   margin: { t: 36, r: 24, b: 56, l: 60 },
   hoverlabel: {
-    bgcolor: '#0D4F49',
+    bgcolor: '#0E3D38',
     font: { color: '#FFFFFF', family: 'DM Sans, sans-serif', size: 12 },
-    bordercolor: '#0D4F49',
+    bordercolor: '#0E3D38',
   },
   xaxis: axis,
   yaxis: axis,
-  colorway: ABRA_COLORS,
+  colorway: CHART_CATEGORICAL,
 }
 
 export const plotlyConfig = {

@@ -48,7 +48,7 @@ export function Header({
   useEffect(() => {
     if (!showUserMenu) return
 
-    function handlePointerDown(event: MouseEvent) {
+    function handlePointerDown(event: PointerEvent) {
       if (!userMenuRef.current?.contains(event.target as Node)) {
         setShowUserMenu(false)
       }
@@ -60,10 +60,10 @@ export function Header({
       }
     }
 
-    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('pointerdown', handlePointerDown)
     document.addEventListener('keydown', handleEscape)
     return () => {
-      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('pointerdown', handlePointerDown)
       document.removeEventListener('keydown', handleEscape)
     }
   }, [showUserMenu])

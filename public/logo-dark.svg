@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 64" fill="none">
+  <rect x="6"  y="39" width="8.4" height="16" rx="2.6" fill="#3FD0C2" opacity="0.50"/>
+  <rect x="17" y="29" width="8.4" height="26" rx="2.6" fill="#3FD0C2" opacity="0.66"/>
+  <rect x="28" y="18" width="8.4" height="37" rx="2.6" fill="#3FD0C2" opacity="0.82"/>
+  <rect x="39" y="9"  width="8.4" height="46" rx="2.6" fill="#F7B43C"/>
+  <text x="58" y="45" font-family="'Fraunces', Georgia, serif" font-style="italic" font-weight="600" font-size="40" letter-spacing="-0.3">
+    <tspan fill="#EAF8F6">Abra</tspan><tspan fill="#3FD0C2">Stat</tspan>
+  </text>
+</svg>

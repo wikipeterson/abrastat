@@ -42,8 +42,17 @@ export function Header({
   const { user, isGuest } = useAuth()
   const { isDirty, clearGrid } = useStore()
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [paletteId, setPaletteId] = useState<string>('abra')
   const userMenuRef = useRef<HTMLDivElement | null>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    const root = document.documentElement
+    setPaletteId(root.dataset.palette ?? 'abra')
+    const mo = new MutationObserver(() => setPaletteId(root.dataset.palette ?? 'abra'))
+    mo.observe(root, { attributes: true, attributeFilter: ['data-palette'] })
+    return () => mo.disconnect()
+  }, [])
 
   useEffect(() => {
     if (!showUserMenu) return
@@ -93,7 +102,11 @@ export function Header({
             aria-label="AbraStat logo"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(110px, 20vw, 220px)', height: 'auto' }} />
+            <img
+              src={paletteId === 'midnight' || paletteId === 'classroom' ? '/logo-dark.svg' : '/logo.svg'}
+              alt="AbraStat"
+              style={{ width: 'clamp(110px, 20vw, 220px)', height: 'auto' }}
+            />
           </Link>
 
           {(leadingNav || modeTabs?.length) && (

@@ -48,6 +48,22 @@ interface GraphCardProps {
   hideHeader?: boolean
 }
 
+interface CustomizeDraft {
+  title: string
+  xLabel: string
+  yLabel: string
+  xAxisMin: string
+  xAxisMax: string
+  yAxisMin: string
+  yAxisMax: string
+  colorPalette: string
+  dotSize: 'small' | 'medium' | 'large'
+  showMeans: boolean
+  showMedian: boolean
+  showOutlierFences: boolean
+  bestFitMode: 'none' | 'overall' | 'group'
+}
+
 export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTitle, onSetXLabel, onSetYLabel, onSetXAxisMin, onSetXAxisMax, onSetYAxisMin, onSetYAxisMax, onSetColorPalette, onSetDotSize, onSetShowMeans, onSetShowMedian, onSetShowOutlierFences, onSetBestFitMode, onSetBarValueMode, onAssignZone, onRemove, hideHeader }: GraphCardProps) {
   const { grid } = useStore()
   const [manualTableGraphType, setManualTableGraphType] = useState<'segmented' | 'sidebyside' | 'mosaic'>('segmented')
@@ -60,9 +76,32 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
   const customizeRef = useRef<HTMLDivElement | null>(null)
   const customizeButtonRef = useRef<HTMLButtonElement | null>(null)
   const [customizePos, setCustomizePos] = useState<{ top: number; left: number } | null>(null)
+  const [customizeWasDragged, setCustomizeWasDragged] = useState(false)
+  const customizeDragRef = useRef<{
+    pointerId: number
+    startX: number
+    startY: number
+    startTop: number
+    startLeft: number
+  } | null>(null)
   const bestFitMode = config.bestFitMode ?? 'none'
   const activeColors = COLOR_PALETTES[(config.colorPalette as PaletteName) ?? 'default'] ?? COLOR_PALETTES.default
   const dotSize = config.dotSize ?? 'medium'
+  const [customizeDraft, setCustomizeDraft] = useState<CustomizeDraft>({
+    title: config.title ?? '',
+    xLabel: config.xLabel ?? '',
+    yLabel: config.yLabel ?? '',
+    xAxisMin: config.xAxisMin ?? '',
+    xAxisMax: config.xAxisMax ?? '',
+    yAxisMin: config.yAxisMin ?? '',
+    yAxisMax: config.yAxisMax ?? '',
+    colorPalette: config.colorPalette ?? 'default',
+    dotSize,
+    showMeans: config.showMeans ?? false,
+    showMedian: config.showMedian ?? false,
+    showOutlierFences: config.showOutlierFences ?? false,
+    bestFitMode,
+  })
 
   const xCol = !manualTable && !manualScatter && config.xColId ? (grid.columns.find(c => c.id === config.xColId) ?? null) : null
   const yCol = !manualTable && !manualScatter && config.yColId ? (grid.columns.find(c => c.id === config.yColId) ?? null) : null
@@ -401,6 +440,62 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
   const showDirectChart       = !isBlank && !activeTransition && !isCustomRendered
 
   useEffect(() => {
+    if (!showCustomize) {
+      setCustomizeWasDragged(false)
+      customizeDragRef.current = null
+    }
+  }, [showCustomize])
+
+  useEffect(() => {
+    if (!showCustomize) return
+    setCustomizeDraft({
+      title: config.title ?? '',
+      xLabel: config.xLabel ?? '',
+      yLabel: config.yLabel ?? '',
+      xAxisMin: config.xAxisMin ?? '',
+      xAxisMax: config.xAxisMax ?? '',
+      yAxisMin: config.yAxisMin ?? '',
+      yAxisMax: config.yAxisMax ?? '',
+      colorPalette: config.colorPalette ?? 'default',
+      dotSize,
+      showMeans: config.showMeans ?? false,
+      showMedian: config.showMedian ?? false,
+      showOutlierFences: config.showOutlierFences ?? false,
+      bestFitMode,
+    })
+  }, [showCustomize, config, dotSize, bestFitMode])
+
+  function applyCustomizeDraft() {
+    onSetTitle(customizeDraft.title)
+    onSetXLabel(customizeDraft.xLabel)
+    onSetYLabel(customizeDraft.yLabel)
+    onSetXAxisMin(customizeDraft.xAxisMin)
+    onSetXAxisMax(customizeDraft.xAxisMax)
+    onSetYAxisMin(customizeDraft.yAxisMin)
+    onSetYAxisMax(customizeDraft.yAxisMax)
+    onSetColorPalette(customizeDraft.colorPalette)
+    onSetDotSize(customizeDraft.dotSize)
+    onSetShowMeans(customizeDraft.showMeans)
+    onSetShowMedian(customizeDraft.showMedian)
+    onSetShowOutlierFences(customizeDraft.showOutlierFences)
+    onSetBestFitMode(customizeDraft.bestFitMode)
+    setShowCustomize(false)
+  }
+
+  function handleCustomizeDragStart(event: React.PointerEvent<HTMLDivElement>) {
+    if (!customizePos) return
+    event.preventDefault()
+    customizeDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startTop: customizePos.top,
+      startLeft: customizePos.left,
+    }
+    setCustomizeWasDragged(true)
+  }
+
+  useEffect(() => {
     function updateCustomizePosition() {
       const rect = customizeButtonRef.current?.getBoundingClientRect()
       if (!rect) return
@@ -415,17 +510,45 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
         setShowCustomize(false)
       }
     }
+
+    function handlePointerMove(event: PointerEvent) {
+      const drag = customizeDragRef.current
+      if (!drag || drag.pointerId !== event.pointerId) return
+      const panelWidth = customizeRef.current?.offsetWidth ?? 320
+      const panelHeight = customizeRef.current?.offsetHeight ?? 0
+      const nextLeft = drag.startLeft + (event.clientX - drag.startX)
+      const nextTop = drag.startTop + (event.clientY - drag.startY)
+      const maxLeft = Math.max(12, window.innerWidth - panelWidth - 12)
+      const maxTop = Math.max(12, window.innerHeight - panelHeight - 12)
+      setCustomizePos({
+        left: Math.min(maxLeft, Math.max(12, nextLeft)),
+        top: Math.min(maxTop, Math.max(12, nextTop)),
+      })
+    }
+
+    function handlePointerUp(event: PointerEvent) {
+      if (customizeDragRef.current?.pointerId === event.pointerId) {
+        customizeDragRef.current = null
+      }
+    }
+
     if (!showCustomize) return
-    updateCustomizePosition()
+    if (!customizeWasDragged) {
+      updateCustomizePosition()
+    }
     document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('pointermove', handlePointerMove)
+    document.addEventListener('pointerup', handlePointerUp)
     window.addEventListener('resize', updateCustomizePosition)
     window.addEventListener('scroll', updateCustomizePosition, true)
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('pointermove', handlePointerMove)
+      document.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('resize', updateCustomizePosition)
       window.removeEventListener('scroll', updateCustomizePosition, true)
     }
-  }, [showCustomize])
+  }, [showCustomize, customizeWasDragged])
 
   const inner = (
     <div className="flex flex-col h-full">
@@ -541,12 +664,19 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
             {showCustomize && customizePos && typeof document !== 'undefined' && createPortal(
               <div ref={customizeRef} className="fixed z-[1200] w-80 rounded-xl border border-[var(--color-border)] bg-white p-3 shadow-lg" style={{ top: customizePos.top, left: customizePos.left }}>
                 <div className="space-y-3">
+                  <div
+                    onPointerDown={handleCustomizeDragStart}
+                    className="flex cursor-move items-center justify-between rounded-lg border border-dashed border-[var(--color-border)] bg-slate-50 px-2.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--color-muted)]"
+                  >
+                    <span>Customize Graph</span>
+                    <span>Drag</span>
+                  </div>
                   <label className="block text-xs text-[var(--color-muted)]">
                     <span className="mb-1 block font-medium">Title</span>
                     <input
                       type="text"
-                      value={config.title ?? ''}
-                      onChange={e => onSetTitle(e.target.value)}
+                      value={customizeDraft.title}
+                      onChange={e => setCustomizeDraft(draft => ({ ...draft, title: e.target.value }))}
                       placeholder="optional"
                       className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-2 text-sm text-[var(--color-text)]"
                     />
@@ -560,10 +690,10 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                         return (
                           <button
                             key={name}
-                            onClick={() => onSetColorPalette(name)}
+                            onClick={() => setCustomizeDraft(draft => ({ ...draft, colorPalette: name }))}
                             title={name.charAt(0).toUpperCase() + name.slice(1)}
                             className={`flex items-center gap-0.5 p-1 rounded-lg border-2 transition-colors ${
-                              active ? 'border-[var(--color-accent)]' : 'border-transparent hover:border-slate-200'
+                              (customizeDraft.colorPalette ?? 'default') === name ? 'border-[var(--color-accent)]' : 'border-transparent hover:border-slate-200'
                             }`}
                           >
                             {pal.slice(0, 5).map((c, i) => (
@@ -586,9 +716,9 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                         ] as const).map(([size, label]) => (
                           <button
                             key={size}
-                            onClick={() => onSetDotSize(size)}
+                            onClick={() => setCustomizeDraft(draft => ({ ...draft, dotSize: size }))}
                             className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                              dotSize === size
+                              customizeDraft.dotSize === size
                                 ? 'bg-[var(--color-accent)] text-white'
                                 : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
                             }`}
@@ -604,8 +734,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                     <label className="flex items-center gap-2 text-sm text-[var(--color-text)] select-none">
                       <input
                         type="checkbox"
-                        checked={config.showMeans ?? false}
-                        onChange={e => onSetShowMeans(e.target.checked)}
+                        checked={customizeDraft.showMeans}
+                        onChange={e => setCustomizeDraft(draft => ({ ...draft, showMeans: e.target.checked }))}
                         className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                       />
                       <span>Show means</span>
@@ -617,8 +747,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                       <label className="flex items-center gap-2 text-sm text-[var(--color-text)] select-none">
                         <input
                           type="checkbox"
-                          checked={config.showMeans ?? false}
-                          onChange={e => onSetShowMeans(e.target.checked)}
+                          checked={customizeDraft.showMeans}
+                          onChange={e => setCustomizeDraft(draft => ({ ...draft, showMeans: e.target.checked }))}
                           className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                         />
                         <span>Plot mean</span>
@@ -626,8 +756,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                       <label className="flex items-center gap-2 text-sm text-[var(--color-text)] select-none">
                         <input
                           type="checkbox"
-                          checked={config.showMedian ?? false}
-                          onChange={e => onSetShowMedian(e.target.checked)}
+                          checked={customizeDraft.showMedian}
+                          onChange={e => setCustomizeDraft(draft => ({ ...draft, showMedian: e.target.checked }))}
                           className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                         />
                         <span>Plot median</span>
@@ -639,8 +769,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                     <label className="flex items-center gap-2 text-sm text-[var(--color-text)] select-none">
                       <input
                         type="checkbox"
-                        checked={config.showOutlierFences ?? false}
-                        onChange={e => onSetShowOutlierFences(e.target.checked)}
+                        checked={customizeDraft.showOutlierFences}
+                        onChange={e => setCustomizeDraft(draft => ({ ...draft, showOutlierFences: e.target.checked }))}
                         className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                       />
                       <span>Use fences to identify outliers</span>
@@ -657,8 +787,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                             {defaults.xLabel !== '' && (
                               <input
                                 type="text"
-                                value={config.xLabel ?? ''}
-                                onChange={e => onSetXLabel(e.target.value)}
+                                value={customizeDraft.xLabel}
+                                onChange={e => setCustomizeDraft(draft => ({ ...draft, xLabel: e.target.value }))}
                                 placeholder={defaults.xLabel}
                                 className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]"
                               />
@@ -666,8 +796,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                             {defaults.yLabel !== '' && (
                               <input
                                 type="text"
-                                value={config.yLabel ?? ''}
-                                onChange={e => onSetYLabel(e.target.value)}
+                                value={customizeDraft.yLabel}
+                                onChange={e => setCustomizeDraft(draft => ({ ...draft, yLabel: e.target.value }))}
                                 placeholder={defaults.yLabel}
                                 className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]"
                               />
@@ -682,10 +812,10 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                     <div className="space-y-2">
                       <span className="block text-xs font-medium text-[var(--color-muted)]">Axis range</span>
                       <div className="grid grid-cols-2 gap-1.5">
-                        <input type="number" value={config.xAxisMin ?? ''} onChange={e => onSetXAxisMin(e.target.value)} placeholder="X min" className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]" />
-                        <input type="number" value={config.xAxisMax ?? ''} onChange={e => onSetXAxisMax(e.target.value)} placeholder="X max" className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]" />
-                        <input type="number" value={config.yAxisMin ?? ''} onChange={e => onSetYAxisMin(e.target.value)} placeholder="Y min" className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]" />
-                        <input type="number" value={config.yAxisMax ?? ''} onChange={e => onSetYAxisMax(e.target.value)} placeholder="Y max" className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]" />
+                        <input type="number" value={customizeDraft.xAxisMin} onChange={e => setCustomizeDraft(draft => ({ ...draft, xAxisMin: e.target.value }))} placeholder="X min" className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]" />
+                        <input type="number" value={customizeDraft.xAxisMax} onChange={e => setCustomizeDraft(draft => ({ ...draft, xAxisMax: e.target.value }))} placeholder="X max" className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]" />
+                        <input type="number" value={customizeDraft.yAxisMin} onChange={e => setCustomizeDraft(draft => ({ ...draft, yAxisMin: e.target.value }))} placeholder="Y min" className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]" />
+                        <input type="number" value={customizeDraft.yAxisMax} onChange={e => setCustomizeDraft(draft => ({ ...draft, yAxisMax: e.target.value }))} placeholder="Y max" className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-sm text-[var(--color-text)]" />
                       </div>
                       <p className="text-[10px] text-[var(--color-muted)]">Leave blank to use automatic axis ranges.</p>
                     </div>
@@ -696,19 +826,19 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                       <label className="flex items-center gap-2 text-sm text-[var(--color-text)] select-none">
                         <input
                           type="checkbox"
-                          checked={bestFitMode !== 'none'}
-                          onChange={e => onSetBestFitMode(e.target.checked ? (groupCol?.type === 'categorical' ? 'group' : 'overall') : 'none')}
+                          checked={customizeDraft.bestFitMode !== 'none'}
+                          onChange={e => setCustomizeDraft(draft => ({ ...draft, bestFitMode: e.target.checked ? (groupCol?.type === 'categorical' ? 'group' : 'overall') : 'none' }))}
                           className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                         />
                         <span>Show best-fit line</span>
                       </label>
 
-                      {bestFitMode !== 'none' && groupCol?.type === 'categorical' && (
+                      {customizeDraft.bestFitMode !== 'none' && groupCol?.type === 'categorical' && (
                         <label className="block text-xs text-[var(--color-muted)]">
                           <span className="mb-1 block font-medium">Fit scope</span>
                           <select
-                            value={bestFitMode === 'group' ? 'group' : 'overall'}
-                            onChange={e => onSetBestFitMode(e.target.value as 'overall' | 'group')}
+                            value={customizeDraft.bestFitMode === 'group' ? 'group' : 'overall'}
+                            onChange={e => setCustomizeDraft(draft => ({ ...draft, bestFitMode: e.target.value as 'overall' | 'group' }))}
                             className="w-full rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-2 text-sm text-[var(--color-text)]"
                           >
                             <option value="overall">Overall</option>
@@ -718,6 +848,22 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                       )}
                     </div>
                   )}
+                  <div className="flex items-center justify-end gap-2 border-t border-[var(--color-border)] pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomize(false)}
+                      className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] transition-colors hover:border-slate-300"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={applyCustomizeDraft}
+                      className="rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:brightness-105"
+                    >
+                      Update
+                    </button>
+                  </div>
                 </div>
               </div>,
               document.body

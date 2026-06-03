@@ -1,5 +1,7 @@
 import { parsedRowsToGrid } from './gridHelpers'
 import { DatasetVariableInfo, GridState } from '@/types'
+import { MTCARS_HEADERS, MTCARS_META, MTCARS_ROWS } from './sampleMtcars'
+import { OLD_FAITHFUL_HEADERS, OLD_FAITHFUL_META, OLD_FAITHFUL_ROWS } from './sampleOldFaithful'
 import { IRIS_HEADERS, IRIS_META, IRIS_ROWS } from './sampleIris'
 import { PENGUINS_HEADERS, PENGUINS_META, PENGUINS_ROWS } from './samplePenguins'
 import { TITANIC_STUDENT_HEADERS, TITANIC_STUDENT_META, TITANIC_STUDENT_ROWS } from './sampleTitanic'
@@ -94,6 +96,48 @@ export const SAMPLE_DATASETS: SampleDataset[] = [
       { name: 'year', description: 'Year of observation.' },
     ],
     grid: parsedRowsToGrid([...PENGUINS_HEADERS], PENGUINS_ROWS.map(row => [...row] as unknown[])),
+  },
+  {
+    id: 'sample:old-faithful',
+    name: 'Old Faithful Geyser',
+    emoji: '🌋',
+    description: OLD_FAITHFUL_META.description,
+    tags: [...OLD_FAITHFUL_META.tags],
+    source: OLD_FAITHFUL_META.source,
+    sourceUrl: OLD_FAITHFUL_META.sourceUrl,
+    citation: OLD_FAITHFUL_META.citation,
+    notes: OLD_FAITHFUL_META.notes,
+    variableInfo: [
+      { name: 'eruptions', description: 'Duration of the eruption in minutes.' },
+      { name: 'waiting', description: 'Waiting time to the next eruption in minutes.' },
+    ],
+    grid: parsedRowsToGrid([...OLD_FAITHFUL_HEADERS], OLD_FAITHFUL_ROWS.map(row => [...row] as unknown[])),
+  },
+  {
+    id: 'sample:mtcars',
+    name: 'Motor Trend Cars',
+    emoji: '🚗',
+    description: MTCARS_META.description,
+    tags: [...MTCARS_META.tags],
+    source: MTCARS_META.source,
+    sourceUrl: MTCARS_META.sourceUrl,
+    citation: MTCARS_META.citation,
+    notes: MTCARS_META.notes,
+    variableInfo: [
+      { name: 'model', description: 'Car model name.' },
+      { name: 'mpg', description: 'Miles per gallon.' },
+      { name: 'cyl', description: 'Number of cylinders.' },
+      { name: 'disp', description: 'Displacement in cubic inches.' },
+      { name: 'hp', description: 'Gross horsepower.' },
+      { name: 'drat', description: 'Rear axle ratio.' },
+      { name: 'wt', description: 'Weight in thousands of pounds.' },
+      { name: 'qsec', description: 'Quarter-mile time in seconds.' },
+      { name: 'vs', description: 'Engine shape: 0 for V-shaped, 1 for straight.' },
+      { name: 'am', description: 'Transmission: 0 for automatic, 1 for manual.' },
+      { name: 'gear', description: 'Number of forward gears.' },
+      { name: 'carb', description: 'Number of carburetors.' },
+    ],
+    grid: parsedRowsToGrid([...MTCARS_HEADERS], MTCARS_ROWS.map(row => [...row] as unknown[])),
   },
   {
     id: 'sample:anscombe',

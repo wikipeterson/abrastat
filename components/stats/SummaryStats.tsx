@@ -93,7 +93,7 @@ export function SummaryStats() {
               {selectedColumns.map(col => (
                 <div
                   key={col.id}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--color-gold-light)] text-[#5A3A00] shadow-[inset_0_0_0_2px_var(--color-gold)] text-sm font-medium"
                 >
                   <span className="opacity-70 text-xs font-mono">{col.type === 'numeric' ? '#' : 'A'}</span>
                   <span>{col.name}</span>
@@ -136,11 +136,13 @@ export function SummaryStats() {
               className={`flex flex-wrap gap-2 min-h-[44px] p-2 rounded-xl border-2 transition-colors ${
                 groupDragOver
                   ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
-                  : 'border-dashed border-[var(--color-border)] bg-slate-50'
+                  : groupCol
+                    ? 'border-[var(--color-gold)] bg-[var(--color-gold-light)]'
+                    : 'border-dashed border-[var(--color-border)] bg-slate-50'
               }`}
             >
               {groupCol ? (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-600 text-white text-sm font-medium">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--color-gold-light)] text-[#5A3A00] shadow-[inset_0_0_0_2px_var(--color-gold)] text-sm font-medium">
                   <span className="opacity-70 text-xs font-mono">A</span>
                   <span>{groupCol.name}</span>
                   <button

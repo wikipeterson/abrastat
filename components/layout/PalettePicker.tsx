@@ -22,7 +22,7 @@ type PaletteId = (typeof PALETTES)[number]['id']
 
 const PALETTE_VARS: Record<PaletteId, Record<string, string>> = {
   abra: {
-    '--color-bg': '#F7FAF9',
+    '--color-bg': '#F7F2E8',
     '--color-surface': '#FFFFFF',
     '--color-text': '#0E3D38',
     '--color-muted': '#5A726E',

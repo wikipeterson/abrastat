@@ -52,7 +52,7 @@ interface StatRowProps {
 function StatRow({ label, value, highlight }: StatRowProps) {
   return (
     <div
-      className={`flex justify-between items-center px-3 py-1.5 text-sm rounded ${highlight ? 'bg-[var(--color-accent-light)]' : ''}`}
+      className={`flex justify-between items-center px-3 py-1.5 text-sm rounded ${highlight ? 'bg-[var(--color-gold-light)]' : ''}`}
       title={STAT_TOOLTIPS[label] ?? ''}
     >
       <span className="text-[var(--color-muted)] cursor-help">{label}</span>
@@ -166,7 +166,7 @@ export function LinearRegressionCard({ xName, yName, xs, ys }: { xName: string; 
           Copy as Table
         </button>
       </div>
-      <div className="font-mono text-lg font-medium text-[var(--color-text)] mb-4 bg-[var(--color-accent-light)] rounded-lg px-4 py-2">
+      <div className="font-mono text-lg font-medium text-[var(--color-text)] mb-4 bg-[var(--color-gold-light)] rounded-lg px-4 py-2">
         ŷ = {fmt(slope)}x {interceptSign} {fmt(Math.abs(intercept))}
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -483,7 +483,7 @@ export function NumericStatsTable({
                 {STAT_COLS.map(c => (
                   <td
                     key={c.key}
-                    className={`px-3 py-2 text-right font-mono text-[var(--color-text)] whitespace-nowrap ${c.highlight ? 'bg-[var(--color-accent-light)]' : ''}`}
+                    className={`px-3 py-2 text-right font-mono text-[var(--color-text)] whitespace-nowrap ${c.highlight ? 'bg-[var(--color-gold-light)]' : ''}`}
                   >
                     {fmt(c.get(row.summary!))}
                   </td>

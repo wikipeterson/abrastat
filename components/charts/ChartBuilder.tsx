@@ -131,7 +131,9 @@ export function ChartBuilder() {
               className={`rounded-xl border-2 p-3 min-h-[76px] flex flex-col gap-2 transition-colors ${
                 isTarget
                   ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
-                  : 'border-dashed border-[var(--color-border)] bg-slate-50'
+                  : assignedCol
+                    ? 'border-[var(--color-gold)] bg-[var(--color-gold-light)]'
+                    : 'border-dashed border-[var(--color-border)] bg-slate-50'
               }`}
             >
               <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide leading-none">
@@ -145,7 +147,7 @@ export function ChartBuilder() {
                     e.dataTransfer.effectAllowed = 'move'
                   }}
                   onDragEnd={() => {}}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium self-start cursor-grab active:cursor-grabbing"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--color-gold-light)] text-[#5A3A00] shadow-[inset_0_0_0_2px_var(--color-gold)] text-sm font-medium self-start cursor-grab active:cursor-grabbing"
                 >
                   <span className="opacity-70 text-xs font-mono">{assignedCol.type === 'numeric' ? '#' : 'A'}</span>
                   <span>{assignedCol.name}</span>
@@ -175,7 +177,7 @@ export function ChartBuilder() {
               onClick={() => setChartOverride({ type: ct, forKey: colKey })}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
                 currentChart === ct
-                  ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+                  ? 'border-[var(--color-gold)] bg-[var(--color-gold-light)] text-[#5A3A00]'
                   : 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-slate-300'
               }`}
             >

@@ -33,7 +33,7 @@ const PALETTE_VARS: Record<PaletteId, Record<string, string>> = {
     '--color-grid-selected': '#E2F4F1',
     '--color-accent-strong': '#0D6E64',
     '--color-gold': '#E8920C',
-    '--color-gold-light': '#FBEFD6',
+    '--color-gold-light': '#FBEAC9',
   },
   midnight: {
     '--color-bg': '#0F172A',

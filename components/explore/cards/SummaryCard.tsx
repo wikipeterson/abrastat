@@ -43,11 +43,7 @@ function MultiVarDropZone({ id, varCols, onClearVar }: {
           varCols.map(col => (
             <span
               key={col.id}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                col.type === 'numeric'
-                  ? 'bg-teal-100 text-teal-800 border border-teal-200'
-                  : 'bg-slate-100 text-slate-700 border border-slate-200'
-              }`}
+              className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-[var(--color-gold-light)] text-[#5A3A00] ring-2 ring-inset ring-[var(--color-gold)]"
             >
               <span className="font-mono opacity-60">{col.type === 'numeric' ? '#' : 'A'}</span>
               {col.name}

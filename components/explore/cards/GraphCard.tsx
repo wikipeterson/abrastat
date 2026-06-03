@@ -608,7 +608,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                   onClick={() => onSetChartType(ct)}
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
                     currentChart === ct
-                      ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+                      ? 'border-[var(--color-gold)] bg-[var(--color-gold-light)] text-[#5A3A00]'
                       : 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-slate-300'
                   }`}
                 >
@@ -624,7 +624,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                 type="checkbox"
                 checked={bestFitMode !== 'none'}
                 onChange={e => onSetBestFitMode(e.target.checked ? (groupCol?.type === 'categorical' ? 'group' : 'overall') : 'none')}
-                className="h-3.5 w-3.5 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                className="h-3.5 w-3.5 rounded border-[var(--color-border)] text-[var(--color-gold)] focus:ring-[var(--color-gold)]"
               />
               <span>Show best-fit line</span>
             </label>
@@ -828,7 +828,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                           type="checkbox"
                           checked={customizeDraft.bestFitMode !== 'none'}
                           onChange={e => setCustomizeDraft(draft => ({ ...draft, bestFitMode: e.target.checked ? (groupCol?.type === 'categorical' ? 'group' : 'overall') : 'none' }))}
-                          className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                          className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-gold)] focus:ring-[var(--color-gold)]"
                         />
                         <span>Show best-fit line</span>
                       </label>

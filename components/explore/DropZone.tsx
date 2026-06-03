@@ -65,7 +65,7 @@ export function DropZone({ id, label, hint, assignedCol, onClear, variant = 'hor
                 transform: 'rotate(180deg)',
                 animation: swapAnimation ?? 'chip-to-vertical 0.28s ease-out',
               }}
-              className="flex items-center gap-1.5 px-2 py-2.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium cursor-grab active:cursor-grabbing"
+              className="flex items-center gap-1.5 px-2 py-2.5 rounded-lg bg-[var(--color-gold-light)] text-[#5A3A00] ring-2 ring-inset ring-[var(--color-gold)] text-sm font-medium cursor-grab active:cursor-grabbing"
             >
               <span className="opacity-70 text-[10px] font-mono">{assignedCol.type === 'numeric' ? '#' : 'A'}</span>
               <span>{assignedCol.name}</span>
@@ -117,7 +117,7 @@ export function DropZone({ id, label, hint, assignedCol, onClear, variant = 'hor
           }}
           {...listeners}
           {...attributes}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium cursor-grab active:cursor-grabbing select-none transition-opacity ${
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--color-gold-light)] text-[#5A3A00] ring-2 ring-inset ring-[var(--color-gold)] text-sm font-medium cursor-grab active:cursor-grabbing select-none transition-opacity ${
             isDragging ? 'opacity-30' : 'opacity-100'
           }`}
         >

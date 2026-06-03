@@ -75,7 +75,7 @@ const CARD_OPTION_GROUPS = [
 
 function GhostChip({ col }: { col: GridColumn }) {
   return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium shadow-lg rotate-1 cursor-grabbing">
+    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--color-gold-light)] text-[#5A3A00] ring-2 ring-inset ring-[var(--color-gold)] text-sm font-medium shadow-lg rotate-1 cursor-grabbing">
       <span className="opacity-70 text-xs font-mono">{col.type === 'numeric' ? '#' : 'A'}</span>
       <span>{col.name}</span>
     </div>

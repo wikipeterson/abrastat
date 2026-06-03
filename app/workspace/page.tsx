@@ -291,9 +291,7 @@ function VariableSidebar({
                 title="Click to select for stats"
                 className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer select-none transition-colors ${
                   isSelected
-                    ? isNumeric
-                      ? 'bg-[var(--color-accent)] text-white'
-                      : 'bg-slate-600 text-white'
+                    ? 'bg-[var(--color-gold-light)] text-[#5A3A00] ring-2 ring-inset ring-[var(--color-gold)]'
                     : isNumeric
                       ? 'bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100'
                       : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200'

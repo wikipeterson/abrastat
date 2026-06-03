@@ -608,19 +608,19 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone }: Props)
 
         <div className="flex flex-wrap items-center gap-3 pt-1">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₀: μ₁−μ₂=</span>
+            <span className="text-xs font-semibold text-[var(--color-muted)] tracking-wide">H₀: μ₁ − μ₂ =</span>
             <input type="number" step="any" value={nullDiff} onChange={e => setNullDiff(e.target.value)}
               className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white" />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₁</span>
+            <span className="text-xs font-semibold text-[var(--color-muted)] tracking-wide">Hₐ:</span>
+            <span className="text-sm font-mono font-medium text-[var(--color-text)]">μ₁ − μ₂</span>
             <select value={alternative} onChange={e => setAlternative(e.target.value as Alternative)}
               className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white">
               <option value="less">&lt;</option>
               <option value="greater">&gt;</option>
               <option value="two">≠</option>
             </select>
-            <span className="text-sm font-mono font-medium text-[var(--color-text)]">μ₁ − μ₂</span>
             <span className="text-sm font-mono font-medium text-[var(--color-text)]">{nullDiff}</span>
           </div>
           <button onClick={handleLaunch} disabled={!data}

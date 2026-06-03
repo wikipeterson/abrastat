@@ -89,7 +89,7 @@ export function NumericStatCard({ result }: { result: SummaryResult }) {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+    <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] p-4">
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-semibold text-[var(--color-text)] truncate">{result.column}</h3>
         <button onClick={() => void copyAsTable()} className="text-xs text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors ml-2 flex-shrink-0">
@@ -157,7 +157,7 @@ export function LinearRegressionCard({ xName, yName, xs, ys }: { xName: string; 
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:col-span-2 xl:col-span-3">
+    <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] p-4 md:col-span-2 xl:col-span-3">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-[var(--color-text)]">
           Linear Regression — <span className="text-[var(--color-accent)]">{yName}</span> vs <span className="text-[var(--color-accent)]">{xName}</span>
@@ -328,7 +328,7 @@ export function TwoWayTableCard({
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:col-span-2 xl:col-span-3">
+    <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] p-4 md:col-span-2 xl:col-span-3">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h3 className="font-semibold text-[var(--color-text)]">
           Two-Way Table — <span className="text-[var(--color-accent)]">{displayAName}</span> × <span className="text-[var(--color-accent)]">{displayBName}</span>
@@ -439,7 +439,7 @@ export function NumericStatsTable({
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] overflow-hidden">
       <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
         <div>
           <h3 className="font-semibold text-[var(--color-text)]">{colName}</h3>
@@ -464,7 +464,7 @@ export function NumericStatsTable({
               {STAT_COLS.map(c => (
                 <th
                   key={c.key}
-                  className={`px-3 py-2 text-right font-medium whitespace-nowrap ${c.highlight ? 'bg-[#1e3a5f]' : ''}`}
+                  className={`px-3 py-2 text-right font-medium whitespace-nowrap ${c.highlight ? 'border-b-2 border-[var(--color-gold)]' : ''}`}
                   title={STAT_TOOLTIPS[c.label] ?? ''}
                 >
                   {c.label}
@@ -499,7 +499,7 @@ export function NumericStatsTable({
 
 export function CategoricalStatCard({ column, rows }: { column: string; rows: FrequencyRow[] }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+    <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] p-4">
       <h3 className="font-semibold text-[var(--color-text)] mb-3">{column} <span className="text-xs font-normal text-[var(--color-muted)]">(categorical)</span></h3>
       <div className="space-y-1">
         {rows.slice(0, 10).map(r => (

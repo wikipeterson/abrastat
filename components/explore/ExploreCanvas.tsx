@@ -864,7 +864,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                     }}
                     className="group"
                   >
-                    <div className="relative h-full bg-white rounded-2xl shadow-sm border border-slate-100">
+                    <div className="relative h-full bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)]">
 
                       {/* Inner clip layer */}
                       <div className="absolute inset-0 rounded-2xl overflow-hidden flex flex-col">

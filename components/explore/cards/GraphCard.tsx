@@ -866,7 +866,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
         <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">Graph</span>
         <button onClick={onRemove} className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none">×</button>

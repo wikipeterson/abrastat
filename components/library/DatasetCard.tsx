@@ -119,7 +119,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, onExport
 
   if (view === 'card') {
     return (
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-col gap-3 hover:shadow-md transition-shadow cursor-pointer group" onClick={() => onOpen(dataset.id)}>
+      <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] p-4 flex flex-col gap-3 hover:shadow-md transition-shadow cursor-pointer group" onClick={() => onOpen(dataset.id)}>
         <div className="flex items-start justify-between">
           <DatasetCoverThumb cover={dataset.emoji} size="md" />
           <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all">

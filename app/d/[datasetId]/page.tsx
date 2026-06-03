@@ -41,7 +41,7 @@ export default function ShareLinkPage() {
   if (status === 'error') {
     return (
       <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--color-bg)' }}>
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 max-w-sm w-full text-center space-y-4">
+        <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] p-8 max-w-sm w-full text-center space-y-4">
           <div className="text-4xl">🔒</div>
           <h2 className="font-semibold text-[var(--color-text)]">Dataset unavailable</h2>
           <p className="text-sm text-[var(--color-muted)]">

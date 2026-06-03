@@ -482,7 +482,7 @@ function DatasetsBrowser({
             {search ? 'No datasets match your search.' : 'No datasets yet. Add sample datasets or start a new one.'}
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-[var(--color-border)]">
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] divide-y divide-[var(--color-border)]">
             {filtered.map(dataset => (
               <DatasetCard
                 key={dataset.id}
@@ -542,7 +542,7 @@ function AppletsBrowser() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Link
             href="/applets/dice-roller"
-            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
+            className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start gap-4">
               <div className="text-3xl leading-none">🎲</div>
@@ -560,7 +560,7 @@ function AppletsBrowser() {
 
           <Link
             href="/applets/coin-flipper"
-            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
+            className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start gap-4">
               <div className="text-3xl leading-none">🔀</div>
@@ -578,7 +578,7 @@ function AppletsBrowser() {
 
           <Link
             href="/applets/random-number-generator"
-            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
+            className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start gap-4">
               <div className="text-3xl leading-none">🎛️</div>
@@ -596,7 +596,7 @@ function AppletsBrowser() {
 
           <Link
             href="/applets/spinner"
-            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
+            className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start gap-4">
               <div className="text-3xl leading-none">🎡</div>
@@ -614,7 +614,7 @@ function AppletsBrowser() {
 
           <Link
             href="/applets/galton-board"
-            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
+            className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start gap-4">
               <div className="text-3xl leading-none">🟢</div>

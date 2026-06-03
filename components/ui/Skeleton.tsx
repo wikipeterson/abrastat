@@ -6,7 +6,7 @@ export function Skeleton({ className = '' }: { className?: string }) {
 
 export function DatasetListSkeleton() {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-[var(--color-border)]">
+    <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] divide-y divide-[var(--color-border)]">
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={i} className="flex items-center gap-3 py-3 px-4">
           <Skeleton className="w-8 h-8 rounded-lg flex-shrink-0" />

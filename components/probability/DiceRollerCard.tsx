@@ -583,7 +583,7 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   if (hideHeader) return inner
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden h-full flex flex-col">
+    <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] overflow-hidden h-full flex flex-col">
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
         <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">
           Dice Roller

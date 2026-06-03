@@ -131,7 +131,7 @@ export function GameHub({ onChromeChange }: GameHubProps) {
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {GAMES.map(game => (
-              <div key={game.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+              <div key={game.id} className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] overflow-hidden flex flex-col">
                 {/* Game card header */}
                 <div className="p-4 flex items-center gap-3 border-b border-[var(--color-border)]">
                   <span className="text-2xl flex-shrink-0">{game.icon}</span>
@@ -167,7 +167,7 @@ export function GameHub({ onChromeChange }: GameHubProps) {
       : 'max-w-lg mx-auto py-6 px-4 space-y-4'
     return (
       <div className={containerClass}>
-        <div className="w-full bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+        <div className="w-full bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] p-4">
           {state.gameId === GAME_IDS.guessCorrelation && (
             <GuessCorrelation onDone={s => handleDone(state.gameId, s)} />
           )}
@@ -194,7 +194,7 @@ export function GameHub({ onChromeChange }: GameHubProps) {
     : 'max-w-lg mx-auto py-6 px-4 space-y-4'
   return (
     <div className={doneContainerClass}>
-      <div className="w-full bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+      <div className="w-full bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] p-5">
         {state.submittedInitials === null ? (
           <ScoreEntry
             score={state.score}

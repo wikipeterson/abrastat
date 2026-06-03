@@ -73,7 +73,7 @@ function ManualInput({
     'w-20 text-center rounded border border-slate-200 px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:border-[var(--color-accent)]'
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-5">
+    <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] p-4 space-y-5">
       {/* Variable name inputs */}
       <div className="flex flex-wrap gap-4">
         <div>
@@ -545,7 +545,7 @@ export function TwoWayTable({
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 overflow-x-auto">
+      <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] p-4 overflow-x-auto">
         <OutputTable data={data} view={tableView} />
       </div>
 

@@ -23,7 +23,7 @@ export function TableCard({ cardId, config, onClearZone, onRemove, hideHeader }:
   const colsCol = !manualTable && config.colsColId ? (grid.columns.find(c => c.id === config.colsColId) ?? null) : null
 
   return (
-    <div className={hideHeader ? '' : 'bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden'}>
+    <div className={hideHeader ? '' : 'bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] overflow-hidden'}>
       {!hideHeader && (
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
           <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">Two-Way Table</span>

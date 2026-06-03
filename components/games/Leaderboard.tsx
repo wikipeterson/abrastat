@@ -35,7 +35,7 @@ export function Leaderboard({ gameId, highlightInitials, compact }: LeaderboardP
   const canExpand = entries.length > 3
 
   return (
-    <div className={compact ? '' : 'bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden'}>
+    <div className={compact ? '' : 'bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] overflow-hidden'}>
       {!compact && (
         <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
           <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">

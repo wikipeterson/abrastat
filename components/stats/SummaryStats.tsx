@@ -93,7 +93,7 @@ export function SummaryStats() {
               {selectedColumns.map(col => (
                 <div
                   key={col.id}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--color-gold-light)] text-[#5A3A00] shadow-[inset_0_0_0_2px_var(--color-gold)] text-sm font-medium"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--color-accent-light)] text-[var(--color-text)] shadow-[inset_0_0_0_1px_var(--color-border)] text-sm font-medium"
                 >
                   <span className="opacity-70 text-xs font-mono">{col.type === 'numeric' ? '#' : 'A'}</span>
                   <span>{col.name}</span>

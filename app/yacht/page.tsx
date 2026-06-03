@@ -44,13 +44,13 @@ function YachtPageContent() {
       <main className="flex-1 overflow-y-auto bg-[var(--color-bg)]">
         {state.view === 'playing' ? (
           <div className="w-full max-w-[98vw] 2xl:max-w-[1880px] mx-auto py-6 px-3 space-y-4">
-            <div className="w-full bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+            <div className="w-full bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] p-4">
               <Yacht onDone={score => setState({ view: 'done', score, submittedInitials: null })} />
             </div>
           </div>
         ) : (
           <div className="w-full max-w-[98vw] 2xl:max-w-[1880px] mx-auto py-6 px-3 space-y-4">
-            <div className="w-full bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div className="w-full bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] p-5">
               {state.submittedInitials === null ? (
                 <ScoreEntry
                   score={state.score}

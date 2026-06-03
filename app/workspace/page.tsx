@@ -10,7 +10,6 @@ import { ExploreCanvas } from '@/components/explore/ExploreCanvas'
 import { SaveDatasetModal } from '@/components/library/SaveDatasetModal'
 import { ShareDatasetModal } from '@/components/library/ShareDatasetModal'
 import { DatasetCard } from '@/components/library/DatasetCard'
-import { PuzzleWeekPreview } from '@/components/library/PuzzleWeekPreview'
 import { DatasetListSkeleton } from '@/components/ui/Skeleton'
 import { GameHub } from '@/components/games/GameHub'
 import { useAuth } from '@/components/auth/AuthProvider'
@@ -29,11 +28,10 @@ interface CardOption {
 }
 
 type WorkspaceMode = 'library' | 'lab'
-type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls' | 'puzzle-week' | 'logic-puzzles'
+type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls' | 'logic-puzzles'
 type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 
 const SIDEBAR_WIDTH_CLASS = 'md:w-48'
-const PUZZLE_WEEK_URL = 'https://puzzleweek.abrastat.com'
 const LOGIC_PUZZLES_URL = 'https://puzzleweek.abrastat.com/puzzleweek/bonus'
 
 const EXPLORE_CARD_OPTIONS: CardOption[] = [
@@ -57,7 +55,7 @@ const INFERENCE_CARD_OPTIONS: CardOption[] = [
   { type: 'two-prop-randomization',  icon: '🎲', label: 'Two-Prop Randomization Test' },
 ]
 
-const BASE_LIBRARY_ITEMS: { id: Exclude<LibrarySection, 'puzzle-week' | 'logic-puzzles'>; label: string; soon?: boolean }[] = [
+const BASE_LIBRARY_ITEMS: { id: Exclude<LibrarySection, 'logic-puzzles'>; label: string; soon?: boolean }[] = [
   { id: 'all', label: 'Public Datasets' },
   { id: 'mine', label: 'My Datasets' },
   { id: 'games', label: 'Games' },
@@ -702,7 +700,7 @@ function WorkspaceContent() {
   const initialMode = searchParams.get('mode') === 'library' ? 'library' : 'lab'
   const initialLibrarySection = (() => {
     const section = searchParams.get('section')
-    return section === 'all' || section === 'mine' || section === 'games' || section === 'applets' || section === 'polls' || section === 'puzzle-week'
+    return section === 'all' || section === 'mine' || section === 'games' || section === 'applets' || section === 'polls'
       ? section
       : 'all'
   })()
@@ -721,19 +719,16 @@ function WorkspaceContent() {
   const { user } = useAuth()
   const showPuzzleWeek = canAccessPuzzleWeek(user)
   const libraryItems: { id: LibrarySection; label: string; soon?: boolean }[] = showPuzzleWeek
-    ? [...BASE_LIBRARY_ITEMS, { id: 'puzzle-week', label: 'Puzzle Week' }, { id: 'logic-puzzles', label: 'Logic Puzzles' }]
+    ? [...BASE_LIBRARY_ITEMS, { id: 'logic-puzzles', label: 'Logic Puzzles' }]
     : BASE_LIBRARY_ITEMS
 
   useEffect(() => {
-    if ((librarySection === 'puzzle-week' || librarySection === 'logic-puzzles') && !showPuzzleWeek) {
+    if (librarySection === 'logic-puzzles' && !showPuzzleWeek) {
       setLibrarySection('all')
     }
   }, [librarySection, showPuzzleWeek])
 
   useEffect(() => {
-    if (mode === 'library' && librarySection === 'puzzle-week' && showPuzzleWeek) {
-      window.location.href = PUZZLE_WEEK_URL
-    }
     if (mode === 'library' && librarySection === 'logic-puzzles' && showPuzzleWeek) {
       window.location.href = LOGIC_PUZZLES_URL
     }
@@ -790,10 +785,6 @@ function WorkspaceContent() {
   }
 
   function handleLibrarySectionChange(nextSection: LibrarySection) {
-    if (nextSection === 'puzzle-week') {
-      window.location.href = PUZZLE_WEEK_URL
-      return
-    }
     if (nextSection === 'logic-puzzles') {
       window.location.href = LOGIC_PUZZLES_URL
       return
@@ -886,9 +877,6 @@ function WorkspaceContent() {
     }
     if (librarySection === 'applets') {
       return <AppletsBrowser />
-    }
-    if (librarySection === 'puzzle-week') {
-      return <PuzzleWeekPreview />
     }
     return <PollsPlaceholder />
   }

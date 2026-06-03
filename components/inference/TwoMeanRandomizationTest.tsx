@@ -202,7 +202,7 @@ function MeanNullDistPlot({ values, diffObs, alternative, showNormalCurve = fals
   const clipId = useId()
   const SVG_W = 760
   const MG = { t: 14, r: 16, b: 30, l: 16 }
-  const plotHeight = 150
+  const plotHeight = 320
   const SVG_H = plotHeight + MG.t + MG.b
   const PW = SVG_W - MG.l - MG.r, PH = SVG_H - MG.t - MG.b
 
@@ -217,19 +217,15 @@ function MeanNullDistPlot({ values, diffObs, alternative, showNormalCurve = fals
   const xRange = xHi - xLo
   const xOf    = (v: number) => ((v - xLo) / xRange) * PW
 
-  const normalizedValues = values.map(v => Number(v.toFixed(6)))
-  const uniqueValues = Array.from(new Set(normalizedValues)).sort((a, b) => a - b)
-  const inferredStep = uniqueValues.length < 2
-    ? xRange * 0.05
-    : uniqueValues.slice(1).reduce((minGap, value, index) => {
-        const gap = value - uniqueValues[index]
-        return gap > 0 ? Math.min(minGap, gap) : minGap
-      }, Number.POSITIVE_INFINITY)
-  const bucket = Number.isFinite(inferredStep) && inferredStep > 0 ? inferredStep : xRange * 0.05
+  const targetBins = Math.max(28, Math.min(72, Math.round(PW / 12)))
+  const bucket = Math.max(xRange / targetBins, 1e-6)
+  const binOf = (v: number) => Math.round((v - xLo) / bucket)
+  const binCenter = (bin: number) => xLo + bin * bucket
 
   const stackCounts = new Map<number, number>()
-  normalizedValues.forEach(v => {
-    stackCounts.set(v, (stackCounts.get(v) ?? 0) + 1)
+  values.forEach(v => {
+    const bin = binOf(v)
+    stackCounts.set(bin, (stackCounts.get(bin) ?? 0) + 1)
   })
   const maxStack = Math.max(1, ...Array.from(stackCounts.values()))
 
@@ -248,8 +244,7 @@ function MeanNullDistPlot({ values, diffObs, alternative, showNormalCurve = fals
     return { mean, sd, samples }
   })()
 
-  const maxCurveCountRaw = normalStats ? Math.max(...normalStats.samples.map(s => s.expectedCount)) : 0
-  const maxCurveCount = Math.min(maxCurveCountRaw, Math.max(maxStack * 1.35, 1))
+  const maxCurveCount = normalStats ? Math.max(...normalStats.samples.map(s => s.expectedCount)) : 0
   const topPad = 10
   const yMaxCount = Math.max(maxStack, maxCurveCount) * 1.12
   const yScale = (PH - topPad) / Math.max(1, yMaxCount)
@@ -258,9 +253,10 @@ function MeanNullDistPlot({ values, diffObs, alternative, showNormalCurve = fals
   const dotStep = Math.min(6, yScale)
   const dotR = Math.max(0.55, Math.min(2.6, dotStep / 2 - 0.15))
   const circles = values.map(v => {
-    const si = seenC2.get(v) ?? 0
-    seenC2.set(v, si + 1)
-    return { cx: xOf(v), cy: PH - (si + 1) * dotStep + dotStep / 2, extreme: isExtremeResult(v, diffObs, alternative) }
+    const bin = binOf(v)
+    const si = seenC2.get(bin) ?? 0
+    seenC2.set(bin, si + 1)
+    return { cx: xOf(binCenter(bin)), cy: PH - (si + 1) * dotStep + dotStep / 2, extreme: isExtremeResult(v, diffObs, alternative) }
   })
 
   const normalPath = (() => {

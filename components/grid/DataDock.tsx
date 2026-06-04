@@ -7,121 +7,87 @@ import { DataGrid } from './DataGrid'
 import { ImportPanel } from '@/components/import/ImportPanel'
 import { DataOperationsModal } from './DataOperationsModal'
 
-const STATE_KEY = 'abrastat.dock.state'
+export type DockState = 'collapsed' | 'default' | 'maximized'
+
 const HEIGHT_KEY = 'abrastat.dock.height'
-const DEFAULT_HEIGHT = 340
 const MIN_HEIGHT = 120
 
-type DockState = 'collapsed' | 'default' | 'maximized'
+interface DataDockProps {
+  dockState: DockState
+  onStateChange: (s: DockState) => void
+}
 
-export function DataDock() {
-  const { activeFilters, setRowFilters, grid, activeDatasetName, exploreCards } = useStore()
-  const [dockState, setDockState] = useState<DockState>('default')
-  const [height, setHeight] = useState(DEFAULT_HEIGHT)
+export function DataDock({ dockState, onStateChange }: DataDockProps) {
+  const { activeFilters, setRowFilters, grid, activeDatasetName } = useStore()
+  const [savedHeight, setSavedHeight] = useState(340)
+  const [isResizing, setIsResizing] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [showData, setShowData] = useState(false)
-  const heightRef = useRef(DEFAULT_HEIGHT)
+  const savedHeightRef = useRef(340)
+  // remembers which expanded state to restore to when un-collapsing
   const prevExpandedRef = useRef<'default' | 'maximized'>('default')
-  const prevCardCountRef = useRef<number | null>(null)
-  const dockRef = useRef<HTMLDivElement | null>(null)
 
-  const nonDataGridCards = exploreCards.filter(c => c.config.type !== 'data-grid')
-
-  // Initialize from localStorage; start maximized when no cards exist
   useEffect(() => {
-    const storedHeight = localStorage.getItem(HEIGHT_KEY)
-    if (storedHeight !== null) {
-      const h = Number(storedHeight)
-      setHeight(h)
-      heightRef.current = h
+    const stored = localStorage.getItem(HEIGHT_KEY)
+    if (stored !== null) {
+      const h = Number(stored)
+      setSavedHeight(h)
+      savedHeightRef.current = h
     } else {
-      const h = Math.max(MIN_HEIGHT, Math.round(window.innerHeight * 0.38))
-      setHeight(h)
-      heightRef.current = h
+      const h = Math.max(MIN_HEIGHT, Math.round((window.innerHeight - 72) * 0.4))
+      setSavedHeight(h)
+      savedHeightRef.current = h
     }
+  }, [])
 
-    const storedState = localStorage.getItem(STATE_KEY) as DockState | null
-    if (storedState === 'collapsed' || storedState === 'default' || storedState === 'maximized') {
-      setDockState(storedState)
-      if (storedState !== 'collapsed') prevExpandedRef.current = storedState
-    } else if (nonDataGridCards.length === 0) {
-      setDockState('maximized')
-      prevExpandedRef.current = 'maximized'
-    }
+  useEffect(() => { savedHeightRef.current = savedHeight }, [savedHeight])
 
-    prevCardCountRef.current = nonDataGridCards.length
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // 0 → 1 card: drop dock to default so the new card is visible
+  // Track the last non-collapsed state so the chevron can restore correctly
   useEffect(() => {
-    if (prevCardCountRef.current === null) {
-      prevCardCountRef.current = nonDataGridCards.length
-      return
-    }
-    const prev = prevCardCountRef.current
-    const curr = nonDataGridCards.length
-    prevCardCountRef.current = curr
-    if (prev === 0 && curr === 1) {
-      setDockState('default')
-      prevExpandedRef.current = 'default'
-      localStorage.setItem(STATE_KEY, 'default')
-    }
-  }, [nonDataGridCards.length]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => { heightRef.current = height }, [height])
+    if (dockState !== 'collapsed') prevExpandedRef.current = dockState
+  }, [dockState])
 
   const filledRowCount = grid.rows.filter(row => Object.values(row).some(v => String(v).trim())).length
   const columnCount = grid.columns.length
 
-  function getMaxHeight() {
-    if (typeof window === 'undefined') return DEFAULT_HEIGHT
-    return (dockRef.current?.parentElement?.offsetHeight ?? window.innerHeight) - 72
-  }
-
-  function getDisplayHeight() {
+  function getDockHeight(): number | string {
     if (dockState === 'collapsed') return 40
-    if (dockState === 'maximized') return getMaxHeight()
-    return height
+    if (dockState === 'maximized') return 'calc(100vh - 4.5rem)'
+    return savedHeight
   }
 
   function toggleCollapsed() {
     if (dockState === 'collapsed') {
-      const next = prevExpandedRef.current
-      setDockState(next)
-      localStorage.setItem(STATE_KEY, next)
+      onStateChange(prevExpandedRef.current)
     } else {
-      prevExpandedRef.current = dockState === 'maximized' ? 'maximized' : 'default'
-      setDockState('collapsed')
-      localStorage.setItem(STATE_KEY, 'collapsed')
+      onStateChange('collapsed')
     }
   }
 
   function toggleMaximized() {
     if (dockState === 'maximized') {
-      setDockState('default')
-      prevExpandedRef.current = 'default'
-      localStorage.setItem(STATE_KEY, 'default')
+      onStateChange('default')
     } else if (dockState === 'default') {
-      setDockState('maximized')
-      prevExpandedRef.current = 'maximized'
-      localStorage.setItem(STATE_KEY, 'maximized')
+      onStateChange('maximized')
     }
   }
 
   function startResize(e: React.PointerEvent) {
-    if (dockState !== 'default') return
     e.preventDefault()
+    setIsResizing(true)
     const startY = e.clientY
-    const startHeight = heightRef.current
+    const startH = savedHeightRef.current
+    const maxH = window.innerHeight - 72
 
     function onMove(ev: PointerEvent) {
-      const next = Math.min(getMaxHeight(), Math.max(MIN_HEIGHT, startHeight - (ev.clientY - startY)))
-      heightRef.current = next
-      setHeight(next)
+      const next = Math.min(maxH, Math.max(MIN_HEIGHT, startH - (ev.clientY - startY)))
+      savedHeightRef.current = next
+      setSavedHeight(next)
     }
 
     function onUp() {
-      localStorage.setItem(HEIGHT_KEY, String(heightRef.current))
+      setIsResizing(false)
+      localStorage.setItem(HEIGHT_KEY, String(savedHeightRef.current))
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
     }
@@ -132,15 +98,14 @@ export function DataDock() {
 
   return (
     <div
-      ref={dockRef}
       className="flex-shrink-0 bg-[var(--color-surface)] border-t border-[var(--color-border)] flex flex-col"
       style={{
-        height: getDisplayHeight(),
+        height: getDockHeight(),
         boxShadow: '0 -8px 24px -16px rgba(8,38,33,0.25)',
-        transition: 'height 220ms cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: isResizing ? 'none' : 'height 220ms cubic-bezier(0.4, 0, 0.2, 1)',
       }}
     >
-      {/* Resize handle — only in default state, double-click to maximize */}
+      {/* Resize handle — only active in default state; double-click toggles maximized */}
       <div
         onPointerDown={dockState === 'default' ? startResize : undefined}
         onDoubleClick={dockState !== 'collapsed' ? toggleMaximized : undefined}
@@ -153,6 +118,7 @@ export function DataDock() {
 
       {/* Header bar — always visible */}
       <div className="h-10 flex-shrink-0 flex items-center gap-2 px-3 overflow-x-auto">
+        {/* Left group */}
         <button
           onClick={toggleCollapsed}
           className="flex-shrink-0 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
@@ -165,11 +131,11 @@ export function DataDock() {
           DATA
         </span>
 
-        {activeDatasetName ? (
+        {activeDatasetName && (
           <span className="text-sm font-medium text-[var(--color-text)] truncate max-w-[200px]">
             {activeDatasetName}
           </span>
-        ) : null}
+        )}
 
         <span className="flex-shrink-0 text-xs text-[var(--color-muted)] whitespace-nowrap">
           {columnCount} variable{columnCount === 1 ? '' : 's'}, {filledRowCount} case{filledRowCount === 1 ? '' : 's'}
@@ -177,33 +143,35 @@ export function DataDock() {
 
         <div className="flex-1 min-w-4" />
 
-        <div className="flex-shrink-0 flex items-center gap-0.5 whitespace-nowrap">
+        {/* Right group */}
+        {dockState !== 'collapsed' && (
           <button
-            onClick={() => setShowData(true)}
-            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"
+            onClick={toggleMaximized}
+            className="p-1 rounded text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-slate-100 transition-colors flex-shrink-0"
+            aria-label={dockState === 'maximized' ? 'Restore dock' : 'Maximize dock'}
           >
-            <Database size={13} /> Transform
+            {dockState === 'maximized' ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
           </button>
-          <div className="w-px h-4 bg-[var(--color-border)] mx-1" />
-          <button
-            onClick={() => setShowImport(true)}
-            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"
-          >
-            <ArrowDownToLine size={13} /> Import
-          </button>
-          {dockState !== 'collapsed' && (
-            <button
-              onClick={toggleMaximized}
-              className="ml-1 p-1 rounded text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-slate-100 transition-colors"
-              aria-label={dockState === 'maximized' ? 'Restore dock' : 'Maximize dock'}
-            >
-              {dockState === 'maximized' ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-            </button>
-          )}
-        </div>
+        )}
+
+        <button
+          onClick={() => setShowData(true)}
+          className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors flex-shrink-0"
+        >
+          <Database size={13} /> Transform
+        </button>
+
+        <div className="w-px h-4 bg-[var(--color-border)] flex-shrink-0" />
+
+        <button
+          onClick={() => setShowImport(true)}
+          className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors flex-shrink-0"
+        >
+          <ArrowDownToLine size={13} /> Import
+        </button>
       </div>
 
-      {/* Expanded body */}
+      {/* Grid body */}
       {dockState !== 'collapsed' && (
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {activeFilters.length > 0 && (
@@ -229,16 +197,10 @@ export function DataDock() {
                   </span>
                 )
               })}
-              <button
-                onClick={() => setRowFilters([])}
-                className="text-[11px] text-[var(--color-muted)] hover:text-red-500 ml-1"
-              >
+              <button onClick={() => setRowFilters([])} className="text-[11px] text-[var(--color-muted)] hover:text-red-500 ml-1">
                 Clear all
               </button>
-              <button
-                onClick={() => setShowData(true)}
-                className="text-[11px] text-[var(--color-accent)] hover:underline ml-1"
-              >
+              <button onClick={() => setShowData(true)} className="text-[11px] text-[var(--color-accent)] hover:underline ml-1">
                 Edit filters
               </button>
             </div>

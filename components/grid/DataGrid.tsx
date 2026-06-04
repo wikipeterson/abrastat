@@ -340,10 +340,9 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
           {/* Ghost "+Variable" column */}
           <div
             onClick={() => addColumn()}
-            className="flex-1 min-w-[120px] flex items-center justify-center gap-1 h-8 bg-[var(--color-surface)] border-l border-dashed border-[var(--color-border)] cursor-pointer text-[var(--color-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] transition-colors select-none group/ghostcol"
+            className="flex-1 min-w-[120px] flex items-center justify-center h-8 bg-[var(--color-surface)] border-l border-dashed border-[var(--color-border)] cursor-pointer text-[var(--color-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] transition-colors select-none"
             title="Add variable"
           >
-            <Plus size={11} className="flex-shrink-0" />
             <span className="text-[11px] font-medium">+ Variable</span>
           </div>
         </div>

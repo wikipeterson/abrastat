@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Plus } from 'lucide-react'
@@ -20,7 +20,7 @@ import { CardConfig } from '@/lib/exploreTypes'
 import { DatasetMeta } from '@/types'
 import { exportGridAsCsv, exportGridAsXlsx } from '@/lib/datasetExport'
 import { canAccessPuzzleWeek } from '@/lib/featureFlags'
-import { DataDock } from '@/components/grid/DataDock'
+import { DataDock, DockState } from '@/components/grid/DataDock'
 
 interface CardOption {
   type: CardConfig['type']
@@ -717,6 +717,20 @@ function WorkspaceContent() {
   const { isDirty, clearGrid, activeDatasetId, activeDatasetName, addExploreCard, exploreCards, setGrid, setActiveDatasetId, setActiveDatasetName } = useStore()
   const hasOnlyDataGrid = exploreCards.every(card => card.config.type === 'data-grid')
   const { user, isGuest } = useAuth()
+
+  const nonDataGridCount = exploreCards.filter(c => c.config.type !== 'data-grid').length
+  const prevNonDataGridCountRef = useRef(nonDataGridCount)
+  const [dockState, setDockState] = useState<DockState>(() => {
+    if (typeof window === 'undefined') return 'default'
+    const stored = localStorage.getItem('abrastat.dock.state') as DockState | null
+    if (stored === 'collapsed' || stored === 'default' || stored === 'maximized') return stored
+    return nonDataGridCount === 0 ? 'maximized' : 'default'
+  })
+
+  function handleDockStateChange(s: DockState) {
+    setDockState(s)
+    localStorage.setItem('abrastat.dock.state', s)
+  }
   const showPuzzleWeek = canAccessPuzzleWeek(user)
   const libraryItems: { id: LibrarySection; label: string; soon?: boolean }[] = showPuzzleWeek
     ? [...BASE_LIBRARY_ITEMS, { id: 'logic-puzzles', label: 'Logic Puzzles' }]
@@ -744,6 +758,16 @@ function WorkspaceContent() {
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [isDirty])
+
+  // First card added: drop dock from maximized → default so the card is visible
+  useEffect(() => {
+    const prev = prevNonDataGridCountRef.current
+    prevNonDataGridCountRef.current = nonDataGridCount
+    if (prev === 0 && nonDataGridCount === 1) {
+      handleDockStateChange('default')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nonDataGridCount])
 
   useEffect(() => {
     try {
@@ -928,7 +952,10 @@ function WorkspaceContent() {
         showHomeLink={false}
       />
 
-      <div className="flex flex-1 min-h-0">
+      <div
+        className="flex flex-1 min-h-0"
+        style={mode === 'lab' && dockState === 'maximized' ? { display: 'none' } : undefined}
+      >
         {mode === 'lab' ? (
           <VariableSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         ) : (
@@ -950,7 +977,9 @@ function WorkspaceContent() {
         </div>
       </div>
 
-      {mode === 'lab' && <DataDock />}
+      {mode === 'lab' && (
+        <DataDock dockState={dockState} onStateChange={handleDockStateChange} />
+      )}
 
       {confirmNew && (
         <UnsavedGuard

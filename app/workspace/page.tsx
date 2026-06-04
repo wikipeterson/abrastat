@@ -20,6 +20,7 @@ import { CardConfig } from '@/lib/exploreTypes'
 import { DatasetMeta } from '@/types'
 import { exportGridAsCsv, exportGridAsXlsx } from '@/lib/datasetExport'
 import { canAccessPuzzleWeek } from '@/lib/featureFlags'
+import { DataDock } from '@/components/grid/DataDock'
 
 interface CardOption {
   type: CardConfig['type']
@@ -938,12 +939,14 @@ function WorkspaceContent() {
 
         <div className={`flex-1 min-h-0 flex flex-col bg-[var(--color-bg)] ${mode === 'lab' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           {mode === 'lab' ? (
-            <ExploreCanvas onShareDataset={handleShareClick} />
+            <ExploreCanvas />
           ) : (
             renderLibraryContent()
           )}
         </div>
       </div>
+
+      {mode === 'lab' && <DataDock onShare={handleShareClick} />}
 
       {confirmNew && (
         <UnsavedGuard

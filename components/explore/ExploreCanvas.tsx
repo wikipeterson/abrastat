@@ -34,8 +34,6 @@ import { CompareNormalsCard } from '@/components/probability/CompareNormalsCard'
 import { DiceRollerCard } from '@/components/probability/DiceRollerCard'
 import { SimResultsCard } from '@/components/probability/SimResultsCard'
 import { SimulationCard } from '@/components/probability/SimulationCard'
-import { GridToolbar } from '@/components/grid/GridToolbar'
-import { DataGrid } from '@/components/grid/DataGrid'
 
 interface CardOption {
   type: CardConfig['type']
@@ -86,7 +84,6 @@ function GhostChip({ col }: { col: GridColumn }) {
 
 function cardLabel(type: CardConfig['type']): string {
   switch (type) {
-    case 'data-grid':    return 'Data Grid'
     case 'graph':        return 'Graph'
     case 'summary':      return 'Summary Statistics'
     case 'table':        return 'Two-Way Table'
@@ -169,10 +166,10 @@ function WorkspaceContextMenu({
 
 // ─── Main canvas ──────────────────────────────────────────────────────────────
 
-export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void }) {
+export function ExploreCanvas() {
   const {
     grid, addExploreCard,
-    exploreCards, removeExploreCard, updateExploreCard, purgeExploreStaleIds, ensureDataGridCard, addLinkedGraphCard, addLinkedTableCard,
+    exploreCards, removeExploreCard, updateExploreCard, purgeExploreStaleIds, addLinkedGraphCard, addLinkedTableCard,
   } = useStore()
 
   const cards = exploreCards
@@ -243,10 +240,6 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
   }, [])
 
   useEffect(() => {
-    ensureDataGridCard()
-  }, [ensureDataGridCard])
-
-  useEffect(() => {
     const currentIds = cards.map(card => card.id)
 
     if (!hasMountedRef.current) {
@@ -266,18 +259,6 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
       centerCardInView(addedCard)
     })
   }, [cards, centerCardInView])
-
-  useEffect(() => {
-    const dataGridCard = cards.find(card => card.config.type === 'data-grid')
-    if (!dataGridCard) return
-    const desiredWidth = Math.max(
-      620,
-      48 + grid.columns.reduce((sum, col) => sum + (col.width ?? 140), 0) + 32,
-    )
-    if (dataGridCard.width < desiredWidth) {
-      updateCard(dataGridCard.id, { width: desiredWidth })
-    }
-  }, [cards, grid.columns, updateCard])
 
   const normalizeGraphConfig = useCallback((cfg: GraphCardConfig): GraphCardConfig => {
     if (cfg.manualScatter) {
@@ -672,7 +653,6 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
   // ─── Card resize ──────────────────────────────────────────────────────────
   function getCardMinSize(card: ExploreCard) {
     switch (card.config.type) {
-      case 'data-grid':    return { minWidth: 420, minHeight: 620 }
       case 'graph':        return { minWidth: 520, minHeight: 460 }
       case 'summary':      return { minWidth: 700, minHeight: 620 }
       case 'table':        return { minWidth: 920, minHeight: 700 }
@@ -828,8 +808,6 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
   }
 
   const activeCol = activeColId ? (grid.columns.find(c => c.id === activeColId) ?? null) : null
-  const filledRowCount = grid.rows.filter(row => Object.values(row).some(v => String(v).trim())).length
-  const columnCount = grid.columns.length
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <SwapAnimContext.Provider value={swapAnim}>
@@ -847,7 +825,7 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
               className="relative rounded-lg"
               style={{ width: canvasWidth * zoom, minWidth: canvasWidth * zoom, height: canvasHeight * zoom, minHeight: canvasHeight * zoom }}
             >
-              {cards.map(card => {
+              {cards.filter(c => c.config.type !== 'data-grid').map(card => {
                 const cardH = card.height ?? 520
                 const isMinimized = !!card.minimized
                 const displayHeight = isMinimized ? MINIMIZED_HEIGHT : cardH
@@ -877,11 +855,6 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                             <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">
                               {getVisibleCardLabel(card)}
                             </span>
-                            {card.config.type === 'data-grid' && (
-                              <span className="text-xs text-[var(--color-muted)] whitespace-nowrap">
-                                {filledRowCount} rows {columnCount} columns
-                              </span>
-                            )}
                             {card.config.type === 'table' && (() => {
                               const tableConfig = card.config
                               return (
@@ -985,29 +958,19 @@ export function ExploreCanvas({ onShareDataset }: { onShareDataset?: () => void 
                             >
                               {isMinimized ? '▢' : '−'}
                             </button>
-                            {card.config.type !== 'data-grid' && (
-                              <button
-                                onPointerDown={e => e.stopPropagation()}
-                                onClick={() => removeCard(card.id)}
-                                className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none"
-                              >
-                                ×
-                              </button>
-                            )}
+                            <button
+                              onPointerDown={e => e.stopPropagation()}
+                              onClick={() => removeCard(card.id)}
+                              className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none"
+                            >
+                              ×
+                            </button>
                           </div>
                         </div>
 
                         {/* Card content */}
                         {!isMinimized && (
-                        <div className={`flex-1 min-h-0 overflow-hidden ${card.config.type === 'data-grid' ? '' : 'p-4'}`}>
-                          {card.config.type === 'data-grid' && (
-                            <div className="h-full flex flex-col">
-                              <GridToolbar onShare={onShareDataset} />
-                              <div className="flex-1 min-h-0 overflow-hidden p-2">
-                                <DataGrid fillHeight />
-                              </div>
-                            </div>
-                          )}
+                        <div className="flex-1 min-h-0 overflow-hidden p-4">
                           {card.config.type === 'graph' && (
                             <GraphCard
                               cardId={card.id}

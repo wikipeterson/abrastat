@@ -2360,7 +2360,42 @@ function QueensBoard({
   )
 }
 
-// Cell state: 0 = empty, 1 = star, 2 = X marker
+function sbAutoBlockedCells(stars: number[], size: number, regions: number[]) {
+  const blocked = new Set<number>()
+  const starSet = new Set(stars)
+  const rowCounts = Array<number>(size).fill(0)
+  const colCounts = Array<number>(size).fill(0)
+  const regionCounts: Record<number, number> = {}
+
+  for (const s of stars) {
+    const r = Math.floor(s / size)
+    const c = s % size
+    rowCounts[r]++
+    colCounts[c]++
+    regionCounts[regions[s]] = (regionCounts[regions[s]] ?? 0) + 1
+
+    for (let rr = Math.max(0, r - 1); rr <= Math.min(size - 1, r + 1); rr++) {
+      for (let cc = Math.max(0, c - 1); cc <= Math.min(size - 1, c + 1); cc++) {
+        const idx = rr * size + cc
+        if (!starSet.has(idx)) blocked.add(idx)
+      }
+    }
+  }
+
+  for (let idx = 0; idx < size * size; idx++) {
+    if (starSet.has(idx)) continue
+    const row = Math.floor(idx / size)
+    const col = idx % size
+    const region = regions[idx]
+    if (rowCounts[row] >= 2 || colCounts[col] >= 2 || (regionCounts[region] ?? 0) >= 2) {
+      blocked.add(idx)
+    }
+  }
+
+  return blocked
+}
+
+// Cell state: 0 = empty, 1 = star, 2 = manual X marker
 function StarBattleBoard({
   medals,
   solvedBoards,
@@ -2383,6 +2418,7 @@ function StarBattleBoard({
   const { size, regions } = puzzle
 
   const stars = cells.reduce<number[]>((acc, v, i) => { if (v === 1) acc.push(i); return acc }, [])
+  const autoBlocked = sbAutoBlockedCells(stars, size, regions)
   const solved = sbIsSolved(stars, puzzle)
 
   useEffect(() => {
@@ -2421,7 +2457,15 @@ function StarBattleBoard({
     if (solved) return
     setCells(prev => {
       const next = [...prev]
-      next[idx] = next[idx] === 0 ? 2 : next[idx] === 2 ? 1 : 0
+      const state = prev[idx]
+      const isAutoBlocked = state === 0 && autoBlocked.has(idx)
+      if (state === 1) {
+        next[idx] = 0
+      } else if (state === 2 || isAutoBlocked) {
+        next[idx] = 1
+      } else {
+        next[idx] = 2
+      }
       return next
     })
   }
@@ -2444,6 +2488,7 @@ function StarBattleBoard({
               const col = idx % size
               const rightNeighbor = col < size - 1 ? regions[idx + 1] : -1
               const bottomNeighbor = row < size - 1 ? regions[idx + size] : -1
+              const showAutoX = state === 0 && autoBlocked.has(idx)
               return (
                 <button
                   key={idx}
@@ -2462,8 +2507,8 @@ function StarBattleBoard({
                   {state === 1 && (
                     <span className="select-none text-[clamp(1rem,3vw,2rem)] leading-none drop-shadow-sm">⭐</span>
                   )}
-                  {state === 2 && (
-                    <span className="select-none text-[clamp(0.8rem,2.2vw,1.4rem)] font-bold leading-none text-slate-400">✕</span>
+                  {(state === 2 || showAutoX) && (
+                    <span className={`select-none text-[clamp(0.8rem,2.2vw,1.4rem)] font-bold leading-none ${state === 2 ? 'text-slate-500' : 'text-slate-300'}`}>✕</span>
                   )}
                 </button>
               )
@@ -2559,7 +2604,7 @@ function StarBattleBoard({
               Place exactly <strong>2 stars</strong> in every row, every column, and every colored region. Stars cannot touch each other — not even diagonally.
             </BonusInfoCard>
             <BonusInfoCard label="How It Works">
-              Click once to mark a cell ✕ (a reminder it can&apos;t hold a star), click again to place a ⭐, click a third time to clear it.
+              Click once to mark a cell ✕, click again to place a ⭐, click a third time to clear it. Stars also place helpful automatic ✕ marks in cells they rule out.
             </BonusInfoCard>
           </div>
 
@@ -2653,7 +2698,7 @@ function StarBattleBoard({
                     Place exactly <strong>2 stars</strong> in every row, every column, and every colored region. Stars cannot touch — not even diagonally.
                   </BonusInfoCard>
                   <BonusInfoCard label="How It Works">
-                    Tap once to mark ✕, tap again to place a ⭐, tap a third time to clear.
+                    Tap once to mark ✕, tap again to place a ⭐, tap a third time to clear. Stars also add helpful automatic ✕ marks.
                   </BonusInfoCard>
                 </div>
                 <button

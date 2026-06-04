@@ -20,7 +20,7 @@ import { CardConfig } from '@/lib/exploreTypes'
 import { DatasetMeta } from '@/types'
 import { exportGridAsCsv, exportGridAsXlsx } from '@/lib/datasetExport'
 import { canAccessPuzzleWeek } from '@/lib/featureFlags'
-import { DataDock, DockState } from '@/components/grid/DataDock'
+import { DataDock, DockState, computeSnaps } from '@/components/grid/DataDock'
 
 interface CardOption {
   type: CardConfig['type']
@@ -720,17 +720,21 @@ function WorkspaceContent() {
 
   const nonDataGridCount = exploreCards.filter(c => c.config.type !== 'data-grid').length
   const prevNonDataGridCountRef = useRef(nonDataGridCount)
-  const [dockState, setDockState] = useState<DockState>(() => {
-    if (typeof window === 'undefined') return 'default'
-    const stored = localStorage.getItem('abrastat.dock.state') as DockState | null
-    if (stored === 'collapsed' || stored === 'default' || stored === 'maximized') return stored
-    return nonDataGridCount === 0 ? 'maximized' : 'default'
-  })
+  const upperRegionRef = useRef<HTMLDivElement>(null)
 
-  function handleDockStateChange(s: DockState) {
-    setDockState(s)
-    localStorage.setItem('abrastat.dock.state', s)
-  }
+  const [dockState, setDockState] = useState<DockState>(() => {
+    if (typeof window === 'undefined') return 'half'
+    const stored = localStorage.getItem('abrastat.dock.state') as DockState | null
+    if (stored === 'collapsed' || stored === 'half' || stored === 'full') return stored
+    return nonDataGridCount === 0 ? 'full' : 'half'
+  })
+  const [dockHeight, setDockHeight] = useState<number>(() => {
+    if (typeof window === 'undefined') return 200
+    const snaps = computeSnaps()
+    const stored = localStorage.getItem('abrastat.dock.state') as DockState | null
+    if (stored === 'collapsed' || stored === 'half' || stored === 'full') return snaps[stored]
+    return nonDataGridCount === 0 ? snaps.full : snaps.half
+  })
   const showPuzzleWeek = canAccessPuzzleWeek(user)
   const libraryItems: { id: LibrarySection; label: string; soon?: boolean }[] = showPuzzleWeek
     ? [...BASE_LIBRARY_ITEMS, { id: 'logic-puzzles', label: 'Logic Puzzles' }]
@@ -759,12 +763,15 @@ function WorkspaceContent() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [isDirty])
 
-  // First card added: drop dock from maximized → default so the card is visible
+  // First card added: drop dock from full → half so the card is visible
   useEffect(() => {
     const prev = prevNonDataGridCountRef.current
     prevNonDataGridCountRef.current = nonDataGridCount
     if (prev === 0 && nonDataGridCount === 1) {
-      handleDockStateChange('default')
+      const snaps = computeSnaps()
+      setDockState('half')
+      setDockHeight(snaps.half)
+      localStorage.setItem('abrastat.dock.state', 'half')
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nonDataGridCount])
@@ -953,8 +960,9 @@ function WorkspaceContent() {
       />
 
       <div
+        ref={upperRegionRef}
         className="flex flex-1 min-h-0"
-        style={mode === 'lab' && dockState === 'maximized' ? { display: 'none' } : undefined}
+        style={mode === 'lab' && dockState === 'full' ? { display: 'none' } : undefined}
       >
         {mode === 'lab' ? (
           <VariableSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -978,7 +986,13 @@ function WorkspaceContent() {
       </div>
 
       {mode === 'lab' && (
-        <DataDock dockState={dockState} onStateChange={handleDockStateChange} />
+        <DataDock
+          state={dockState}
+          setState={setDockState}
+          height={dockHeight}
+          setHeight={setDockHeight}
+          upperRef={upperRegionRef}
+        />
       )}
 
       {confirmNew && (

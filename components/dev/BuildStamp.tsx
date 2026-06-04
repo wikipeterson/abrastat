@@ -1,5 +1,6 @@
 'use client'
 
+import { usePathname } from 'next/navigation'
 import { BUILD_COMMIT, BUILD_STAMP_ISO } from '@/lib/buildStamp.generated'
 import { useAuth } from '@/components/auth/AuthProvider'
 
@@ -17,6 +18,7 @@ const formatter = new Intl.DateTimeFormat('en-US', {
 
 export function BuildStamp() {
   const { user, loading, isGuest } = useAuth()
+  const pathname = usePathname()
   const builtAt = formatter.format(new Date(BUILD_STAMP_ISO))
   const deployedCommit =
     process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ||
@@ -27,6 +29,7 @@ export function BuildStamp() {
   const canSeeBuildStamp = !loading && !isGuest && !!email && BUILD_STAMP_ALLOWED_EMAILS.has(email)
 
   if (!canSeeBuildStamp) return null
+  if (pathname?.includes('/workspace')) return null
 
   return (
     <div

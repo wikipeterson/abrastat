@@ -128,7 +128,7 @@ export function DataDock() {
         ) : null}
 
         <span className="flex-shrink-0 text-xs text-[var(--color-muted)] whitespace-nowrap">
-          {filledRowCount} × {columnCount}
+          {columnCount} variable{columnCount === 1 ? '' : 's'}, {filledRowCount} case{filledRowCount === 1 ? '' : 's'}
         </span>
 
         <div className="flex-1 min-w-4" />

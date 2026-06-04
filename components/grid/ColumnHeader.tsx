@@ -81,7 +81,7 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
             className={`text-[10px] px-1 rounded cursor-pointer font-bold ${isNumeric ? 'bg-[var(--color-accent)] text-white' : 'bg-slate-500 text-slate-200'}`}
             title={isNumeric ? 'Numeric — click to toggle' : 'Categorical — click to toggle'}
           >
-            {isNumeric ? '#' : 'A'}
+            {isNumeric ? '#' : 'C'}
           </span>
         )}
 

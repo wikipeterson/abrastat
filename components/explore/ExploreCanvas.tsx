@@ -808,6 +808,7 @@ export function ExploreCanvas() {
   }
 
   const activeCol = activeColId ? (grid.columns.find(c => c.id === activeColId) ?? null) : null
+  const visibleCards = cards.filter(c => c.config.type !== 'data-grid')
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <SwapAnimContext.Provider value={swapAnim}>
@@ -819,13 +820,20 @@ export function ExploreCanvas() {
             onContextMenu={handleWorkspaceContextMenu}
             className="flex-1 overflow-auto bg-[var(--color-bg)] p-2 relative cursor-grab"
           >
+            {visibleCards.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                <p className="text-[var(--color-muted)] text-sm font-medium select-none">
+                  Add a card to start analyzing
+                </p>
+              </div>
+            )}
             <div
               ref={innerRef}
               onPointerDown={startPan}
               className="relative rounded-lg"
               style={{ width: canvasWidth * zoom, minWidth: canvasWidth * zoom, height: canvasHeight * zoom, minHeight: canvasHeight * zoom }}
             >
-              {cards.filter(c => c.config.type !== 'data-grid').map(card => {
+              {visibleCards.map(card => {
                 const cardH = card.height ?? 520
                 const isMinimized = !!card.minimized
                 const displayHeight = isMinimized ? MINIMIZED_HEIGHT : cardH

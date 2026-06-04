@@ -2508,7 +2508,7 @@ function StarBattleBoard({
                     <span className="select-none text-[clamp(1rem,3vw,2rem)] leading-none drop-shadow-sm">⭐</span>
                   )}
                   {(state === 2 || showAutoX) && (
-                    <span className={`select-none text-[clamp(0.8rem,2.2vw,1.4rem)] font-bold leading-none ${state === 2 ? 'text-slate-500' : 'text-slate-300'}`}>✕</span>
+                    <span className={`select-none text-[clamp(0.8rem,2.2vw,1.4rem)] font-bold leading-none ${state === 2 ? 'text-slate-500' : 'text-slate-400'}`}>✕</span>
                   )}
                 </button>
               )

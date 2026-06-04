@@ -114,7 +114,6 @@ function ExportButton({
 export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, onExport, view = 'list' }: DatasetCardProps) {
   const isOwner = dataset.ownerId === currentUserId
   const canDelete = isOwner && onDelete
-  const canCopyLink = !dataset.id.startsWith('sample:')
   const isSample = dataset.id.startsWith('sample:')
 
   if (view === 'card') {
@@ -124,7 +123,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, onExport
           <DatasetCoverThumb cover={dataset.emoji} size="md" />
           <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all">
             {onExport && <ExportButton dataset={dataset} onExport={onExport} />}
-            {canCopyLink && <CopyLinkButton datasetId={dataset.id} />}
+            <CopyLinkButton datasetId={dataset.id} />
             {canDelete && (
               <button
                 onClick={e => { e.stopPropagation(); onDelete!(dataset.id) }}
@@ -171,7 +170,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, onExport
       </div>
       <div className="flex sm:opacity-0 sm:group-hover:opacity-100 items-center gap-1 transition-all">
         {onExport && <ExportButton dataset={dataset} onExport={onExport} />}
-        {canCopyLink && <CopyLinkButton datasetId={dataset.id} />}
+        <CopyLinkButton datasetId={dataset.id} />
         {canDelete && (
           <button
             onClick={e => { e.stopPropagation(); onDelete!(dataset.id) }}

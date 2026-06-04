@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { loadDataset } from '@/lib/firestore'
+import { getSampleDatasetById } from '@/lib/sampleData'
 import { useStore } from '@/lib/store'
 
 type Status = 'loading' | 'error' | 'done'
@@ -20,6 +21,22 @@ export default function ShareLinkPage() {
 
   useEffect(() => {
     if (authLoading) return
+
+    if (datasetId.startsWith('sample:')) {
+      const sample = getSampleDatasetById(datasetId)
+      if (!sample) {
+        setErrorMsg('Sample dataset not found.')
+        setStatus('error')
+        return
+      }
+
+      setGrid(sample.grid)
+      setActiveDatasetId(null)
+      setActiveDatasetName(`${sample.name} (Copy)`)
+      setStatus('done')
+      router.replace('/workspace')
+      return
+    }
 
     loadDataset(datasetId)
       .then(({ meta, grid }) => {

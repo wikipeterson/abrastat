@@ -49,6 +49,7 @@ const COL_WIDTH = 140
 const ROW_NUM_WIDTH = 48
 const DRAG_PREVIEW_ROWS = 6
 const MIN_COL_WIDTH = 92
+const GHOST_COL_WIDTH = 130
 
 function createColumnDragPreview(columnName: string, values: Array<string | number>) {
   const preview = document.createElement('div')
@@ -249,8 +250,9 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
       style={fillHeight ? undefined : { maxHeight: 'calc(100vh - 220px)', width: 'fit-content' }}
     >
       <div
-        className={fillHeight ? 'min-w-full' : undefined}
-        style={{ minWidth: ROW_NUM_WIDTH + totalColumnWidth }}
+        style={{
+          [fillHeight ? 'width' : 'minWidth']: ROW_NUM_WIDTH + totalColumnWidth + GHOST_COL_WIDTH,
+        }}
       >
         {/* Header row */}
         <div className="flex sticky top-0 z-20 bg-[var(--color-surface)]">
@@ -337,13 +339,27 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
             )
           })}
 
-          {/* Ghost "+Variable" column */}
+          {/* Ghost "+Variable" column header */}
           <div
             onClick={() => addColumn()}
-            className="flex-1 min-w-[120px] flex items-center justify-center h-8 bg-[var(--color-surface)] border-l border-dashed border-[var(--color-border)] cursor-pointer text-[var(--color-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] transition-colors select-none"
+            className="flex flex-shrink-0 items-center gap-2 px-3 cursor-pointer select-none hover:brightness-95 transition-[filter]"
+            style={{
+              width: GHOST_COL_WIDTH,
+              minWidth: GHOST_COL_WIDTH,
+              backgroundColor: 'var(--color-accent-light)',
+              borderLeft: '1px dashed var(--color-accent)',
+            }}
             title="Add variable"
           >
-            <span className="text-[11px] font-medium">+ Variable</span>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+              backgroundColor: 'var(--color-accent)', color: 'white',
+              fontSize: 12, fontWeight: 700, lineHeight: 1,
+            }}>+</span>
+            <span style={{ color: 'var(--color-accent-strong)', fontSize: 12, fontWeight: 600 }}>
+              Variable
+            </span>
           </div>
         </div>
 
@@ -383,6 +399,16 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
                 />
               </div>
             ))}
+            {/* Ghost column body cell */}
+            <div
+              onClick={() => addColumn()}
+              className="flex-shrink-0 cursor-pointer border-b border-[var(--color-border)] bg-[rgba(22,168,155,0.04)] hover:bg-[var(--color-accent-light)] transition-colors"
+              style={{
+                width: GHOST_COL_WIDTH,
+                minWidth: GHOST_COL_WIDTH,
+                borderLeft: '1px dashed var(--color-accent)',
+              }}
+            />
           </div>
         ))}
       </div>

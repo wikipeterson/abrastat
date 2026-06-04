@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { ArrowDownToLine, Database, X, ChevronDown, ChevronRight } from 'lucide-react'
+import { ArrowDownToLine, Database, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { DataGrid } from './DataGrid'
 import { ImportPanel } from '@/components/import/ImportPanel'
@@ -22,6 +22,12 @@ export function computeSnaps() {
   }
 }
 
+const CYCLE_BTN: Record<DockState, { label: string; icon: string; next: DockState }> = {
+  collapsed: { label: 'Show',    icon: '▴', next: 'half'      },
+  half:      { label: 'Full',    icon: '▢', next: 'full'      },
+  full:      { label: 'Restore', icon: '▭', next: 'collapsed' },
+}
+
 interface DataDockProps {
   state: DockState
   setState: (s: DockState) => void
@@ -38,6 +44,7 @@ export function DataDock({ state, setState, height, setHeight, upperRef }: DataD
   const [gripHover, setGripHover] = useState(false)
 
   const dockRef = useRef<HTMLDivElement>(null)
+  const gridBodyRef = useRef<HTMLDivElement>(null)
   const stateRef = useRef(state)
   const heightRef = useRef(height)
 
@@ -52,14 +59,14 @@ export function DataDock({ state, setState, height, setHeight, upperRef }: DataD
     const h = snaps[st]
     const dockEl = dockRef.current
     const upperEl = upperRef?.current
+    const gridBodyEl = gridBodyRef.current
 
     if (dockEl) {
-      if (animate) dockEl.style.transition = 'height 220ms cubic-bezier(0.4, 0, 0.2, 1)'
+      if (animate) dockEl.style.transition = 'height 260ms cubic-bezier(.22,.7,.25,1)'
       dockEl.style.height = h + 'px'
     }
-    if (upperEl) {
-      upperEl.style.display = st === 'full' ? 'none' : ''
-    }
+    if (upperEl) upperEl.style.display = st === 'full' ? 'none' : 'flex'
+    if (gridBodyEl) gridBodyEl.style.display = st === 'collapsed' ? 'none' : ''
 
     setState(st)
     setHeight(h)
@@ -67,11 +74,8 @@ export function DataDock({ state, setState, height, setHeight, upperRef }: DataD
     if (st === 'half') localStorage.setItem(HEIGHT_KEY, String(h))
   }, [setState, setHeight, upperRef])
 
-  // Window resize: recompute snaps, re-apply current state
   useEffect(() => {
-    function onResize() {
-      applyState(stateRef.current, false)
-    }
+    function onResize() { applyState(stateRef.current, false) }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [applyState])
@@ -83,39 +87,37 @@ export function DataDock({ state, setState, height, setHeight, upperRef }: DataD
     const el = dockEl
     setIsDragging(true)
     el.style.transition = 'none'
+    document.body.style.userSelect = 'none'
 
     const startY = e.clientY
     const startH = heightRef.current
 
     function onMove(ev: PointerEvent) {
       const snaps = computeSnaps()
-      let h = Math.min(snaps.full, Math.max(HEAD, startH - (ev.clientY - startY)))
+      let h = Math.min(snaps.full, Math.max(HEAD, startH + (startY - ev.clientY)))
 
-      // Magnetism: snap points within 26px attract the handle
       for (const pt of [snaps.collapsed, snaps.half, snaps.full]) {
-        if (Math.abs(h - pt) < 26) {
-          h = pt + (h - pt) * 0.25
-        }
+        if (Math.abs(h - pt) < 26) h = pt + (h - pt) * 0.25
       }
 
       el.style.height = h + 'px'
       heightRef.current = h
 
-      // Live-hide/show upper region when near full
       const upperEl = upperRef?.current
-      if (upperEl) {
-        upperEl.style.display = h >= snaps.full - 4 ? 'none' : ''
-      }
+      if (upperEl) upperEl.style.display = h >= snaps.full - 8 ? 'none' : 'flex'
+
+      const gridBodyEl = gridBodyRef.current
+      if (gridBodyEl) gridBodyEl.style.display = h <= HEAD + 4 ? 'none' : ''
     }
 
     function onUp() {
       setIsDragging(false)
+      document.body.style.userSelect = ''
       const snaps = computeSnaps()
       const h = heightRef.current
       const pts: DockState[] = ['collapsed', 'half', 'full']
       const best = pts.reduce<DockState>((prev, cur) =>
-        Math.abs(snaps[cur] - h) < Math.abs(snaps[prev] - h) ? cur : prev
-      , 'collapsed')
+        Math.abs(snaps[cur] - h) < Math.abs(snaps[prev] - h) ? cur : prev, 'collapsed')
       applyState(best)
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
@@ -127,12 +129,14 @@ export function DataDock({ state, setState, height, setHeight, upperRef }: DataD
 
   function handleDoubleClick() {
     const cycle: DockState[] = ['collapsed', 'half', 'full']
-    const idx = cycle.indexOf(state)
-    applyState(cycle[(idx + 1) % 3])
+    applyState(cycle[(cycle.indexOf(state) + 1) % 3])
   }
 
   const gripWidth = isDragging ? 72 : gripHover ? 60 : 46
-  const gripBg = isDragging || gripHover ? 'var(--color-accent)' : 'var(--color-border)'
+  const gripBg = isDragging
+    ? 'var(--color-accent-strong)'
+    : gripHover ? 'var(--color-accent)' : 'var(--color-border)'
+  const btn = CYCLE_BTN[state]
 
   return (
     <div
@@ -140,11 +144,11 @@ export function DataDock({ state, setState, height, setHeight, upperRef }: DataD
       className="flex-shrink-0 bg-[var(--color-surface)] border-t border-[var(--color-border)] flex flex-col relative"
       style={{
         height,
-        boxShadow: '0 -8px 24px -16px rgba(8,38,33,0.25)',
-        transition: isDragging ? 'none' : 'height 220ms cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: '0 -8px 24px -16px rgba(8,38,33,0.28)',
+        transition: isDragging ? 'none' : 'height 260ms cubic-bezier(.22,.7,.25,1)',
       }}
     >
-      {/* Grab handle — straddles the top edge */}
+      {/* Grab handle — straddles top edge */}
       <div
         onPointerDown={startDrag}
         onDoubleClick={handleDoubleClick}
@@ -153,27 +157,17 @@ export function DataDock({ state, setState, height, setHeight, upperRef }: DataD
         className="absolute left-0 right-0 flex items-center justify-center cursor-ns-resize z-[5]"
         style={{ top: 0, height: 14, transform: 'translateY(-50%)' }}
       >
-        <div
-          style={{
-            width: gripWidth,
-            height: 4,
-            borderRadius: 2,
-            backgroundColor: gripBg,
-            transition: isDragging ? 'none' : 'width 120ms ease, background-color 120ms ease',
-          }}
-        />
+        <div style={{
+          width: gripWidth,
+          height: 5,
+          borderRadius: 999,
+          backgroundColor: gripBg,
+          transition: isDragging ? 'none' : 'width 150ms ease, background-color 150ms ease',
+        }} />
       </div>
 
       {/* Header bar — always visible */}
       <div className="flex-shrink-0 flex items-center gap-2 px-3 overflow-x-auto" style={{ height: HEAD }}>
-        <button
-          onClick={() => applyState(state === 'collapsed' ? 'half' : 'collapsed')}
-          className="flex-shrink-0 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
-          aria-label={state === 'collapsed' ? 'Expand data dock' : 'Collapse data dock'}
-        >
-          {state === 'collapsed' ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
-        </button>
-
         <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-widest bg-[var(--color-grid-header)] text-white">
           DATA
         </span>
@@ -185,14 +179,14 @@ export function DataDock({ state, setState, height, setHeight, upperRef }: DataD
         )}
 
         <span className="flex-shrink-0 text-xs text-[var(--color-muted)] whitespace-nowrap">
-          {columnCount} variable{columnCount === 1 ? '' : 's'}, {filledRowCount} case{filledRowCount === 1 ? '' : 's'}
+          {columnCount} variable{columnCount === 1 ? '' : 's'} · {filledRowCount} case{filledRowCount === 1 ? '' : 's'}
         </span>
 
         <div className="flex-1 min-w-4" />
 
         <button
           onClick={() => setShowData(true)}
-          className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors flex-shrink-0"
+          className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-accent-light)] transition-colors flex-shrink-0"
         >
           <Database size={13} /> Transform
         </button>
@@ -201,51 +195,63 @@ export function DataDock({ state, setState, height, setHeight, upperRef }: DataD
 
         <button
           onClick={() => setShowImport(true)}
-          className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors flex-shrink-0"
+          className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-accent-light)] transition-colors flex-shrink-0"
         >
           <ArrowDownToLine size={13} /> Import
         </button>
+
+        <div className="w-px h-4 bg-[var(--color-border)] flex-shrink-0" />
+
+        {/* State cycle button */}
+        <button
+          onClick={() => applyState(btn.next)}
+          title={`${btn.label} data panel`}
+          className="flex-shrink-0 flex items-center gap-1 text-[var(--color-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] transition-colors"
+          style={{
+            border: '1px solid var(--color-border)',
+            borderRadius: 7,
+            padding: '4px 8px',
+            fontSize: 11,
+            fontWeight: 600,
+            background: 'var(--color-surface)',
+            lineHeight: 1,
+          }}
+        >
+          <span>{btn.icon}</span>
+          <span>{btn.label}</span>
+        </button>
       </div>
 
-      {/* Grid body */}
-      {state !== 'collapsed' && (
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-          {activeFilters.length > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 flex-wrap border-b border-[var(--color-border)]">
-              <span className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide mr-0.5">Filters:</span>
-              {activeFilters.map(f => {
-                const label = f.op === 'between'
-                  ? `${f.colName} between ${f.value} and ${f.value2 ?? '?'}`
-                  : `${f.colName} ${f.op} ${f.value}`
-                return (
-                  <span
-                    key={f.id}
-                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--color-accent-light)] text-[var(--color-accent)] border border-[var(--color-accent)]/30"
-                  >
-                    {label}
-                    <button
-                      onClick={() => setRowFilters(activeFilters.filter(x => x.id !== f.id))}
-                      className="hover:text-teal-800 ml-0.5"
-                      aria-label="Remove filter"
-                    >
-                      <X size={10} />
-                    </button>
-                  </span>
-                )
-              })}
-              <button onClick={() => setRowFilters([])} className="text-[11px] text-[var(--color-muted)] hover:text-red-500 ml-1">
-                Clear all
-              </button>
-              <button onClick={() => setShowData(true)} className="text-[11px] text-[var(--color-accent)] hover:underline ml-1">
-                Edit filters
-              </button>
-            </div>
-          )}
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <DataGrid fillHeight />
+      {/* Grid body — always in DOM; display controlled via ref in applyState/onMove */}
+      <div
+        ref={gridBodyRef}
+        className="flex-1 min-h-0 flex flex-col overflow-hidden"
+        style={{ display: state === 'collapsed' ? 'none' : undefined }}
+      >
+        {activeFilters.length > 0 && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 flex-wrap border-b border-[var(--color-border)]">
+            <span className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide mr-0.5">Filters:</span>
+            {activeFilters.map(f => {
+              const label = f.op === 'between'
+                ? `${f.colName} between ${f.value} and ${f.value2 ?? '?'}`
+                : `${f.colName} ${f.op} ${f.value}`
+              return (
+                <span key={f.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--color-accent-light)] text-[var(--color-accent)] border border-[var(--color-accent)]/30">
+                  {label}
+                  <button onClick={() => setRowFilters(activeFilters.filter(x => x.id !== f.id))} className="hover:text-teal-800 ml-0.5" aria-label="Remove filter">
+                    <X size={10} />
+                  </button>
+                </span>
+              )
+            })}
+            <button onClick={() => setRowFilters([])} className="text-[11px] text-[var(--color-muted)] hover:text-red-500 ml-1">Clear all</button>
+            <button onClick={() => setShowData(true)} className="text-[11px] text-[var(--color-accent)] hover:underline ml-1">Edit filters</button>
           </div>
+        )}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <DataGrid fillHeight />
         </div>
-      )}
+      </div>
 
       <ImportPanel open={showImport} onClose={() => setShowImport(false)} />
       <DataOperationsModal

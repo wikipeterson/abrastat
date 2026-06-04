@@ -1,15 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Columns, ArrowDownToLine, Database, Share2, X } from 'lucide-react'
+import { ArrowDownToLine, Database, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { ImportPanel } from '@/components/import/ImportPanel'
 import { DataOperationsModal } from './DataOperationsModal'
-import { useAuth } from '@/components/auth/AuthProvider'
 
-export function GridToolbar({ onShare }: { onShare?: () => void }) {
-  const { addRow, addColumn, activeFilters, setRowFilters } = useStore()
-  const { isGuest } = useAuth()
+export function GridToolbar() {
+  const { activeFilters, setRowFilters } = useStore()
   const [showImport, setShowImport] = useState(false)
   const [showData, setShowData] = useState(false)
 
@@ -19,22 +17,10 @@ export function GridToolbar({ onShare }: { onShare?: () => void }) {
         <div className="overflow-x-auto">
           <div className="flex min-w-max items-center gap-1 px-2 py-1.5 whitespace-nowrap">
             <button
-              onClick={() => addRow()}
-              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"
-            >
-              <Plus size={14} /> Row
-            </button>
-            <button
-              onClick={() => addColumn()}
-              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"
-            >
-              <Columns size={14} /> New Variable
-            </button>
-            <button
               onClick={() => setShowData(true)}
               className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"
             >
-              <Database size={14} /> Data
+              <Database size={14} /> Transform
             </button>
             <div className="w-px h-4 bg-[var(--color-border)] mx-1" />
             <button
@@ -43,14 +29,6 @@ export function GridToolbar({ onShare }: { onShare?: () => void }) {
             >
               <ArrowDownToLine size={14} /> Import
             </button>
-            {!isGuest && onShare && (
-              <button
-                onClick={onShare}
-                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"
-              >
-                <Share2 size={14} /> Share
-              </button>
-            )}
           </div>
         </div>
 

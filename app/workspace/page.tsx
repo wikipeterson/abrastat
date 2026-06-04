@@ -707,6 +707,7 @@ function WorkspaceContent() {
   const [confirmNew, setConfirmNew] = useState(false)
   const [showSave, setShowSave] = useState(false)
   const [showShare, setShowShare] = useState(false)
+  const [saveForShare, setSaveForShare] = useState(false)
   const [showIntro, setShowIntro] = useState(false)
   const [shareDatasetId, setShareDatasetId] = useState<string | null>(null)
   const [shareIsPublic, setShareIsPublic] = useState(false)
@@ -715,7 +716,7 @@ function WorkspaceContent() {
   const [gameChrome, setGameChrome] = useState<{ title: string; onBack: () => void } | null>(null)
   const { isDirty, clearGrid, activeDatasetId, activeDatasetName, addExploreCard, exploreCards, setGrid, setActiveDatasetId, setActiveDatasetName } = useStore()
   const hasOnlyDataGrid = exploreCards.every(card => card.config.type === 'data-grid')
-  const { user } = useAuth()
+  const { user, isGuest } = useAuth()
   const showPuzzleWeek = canAccessPuzzleWeek(user)
   const libraryItems: { id: LibrarySection; label: string; soon?: boolean }[] = showPuzzleWeek
     ? [...BASE_LIBRARY_ITEMS, { id: 'logic-puzzles', label: 'Logic Puzzles' }]
@@ -796,11 +797,13 @@ function WorkspaceContent() {
   }
 
   function handleShareClick() {
+    if (!user || isGuest) { window.location.href = '/'; return }
     if (activeDatasetId) {
       setShareDatasetId(activeDatasetId)
       setShareIsPublic(false)
       setShowShare(true)
     } else {
+      setSaveForShare(true)
       setShowSave(true)
     }
   }
@@ -898,6 +901,7 @@ function WorkspaceContent() {
       <Header
         onNew={mode === 'lab' ? handleNewDataset : undefined}
         onSave={mode === 'lab' ? handleSaveClick : undefined}
+        onShare={mode === 'lab' ? handleShareClick : undefined}
         onToggleSidebar={() => setSidebarOpen(v => !v)}
         datasetName={mode === 'lab' ? activeDatasetName : undefined}
         centerTitle={mode === 'library' && librarySection === 'games' ? gameChrome?.title ?? null : null}
@@ -946,7 +950,7 @@ function WorkspaceContent() {
         </div>
       </div>
 
-      {mode === 'lab' && <DataDock onShare={handleShareClick} />}
+      {mode === 'lab' && <DataDock />}
 
       {confirmNew && (
         <UnsavedGuard
@@ -957,7 +961,12 @@ function WorkspaceContent() {
 
       {showIntro && <WorkspaceIntroModal onClose={handleCloseIntro} />}
 
-      <SaveDatasetModal open={showSave} onClose={() => setShowSave(false)} onSaved={handleSaved} />
+      <SaveDatasetModal
+        open={showSave}
+        onClose={() => { setShowSave(false); setSaveForShare(false) }}
+        onSaved={handleSaved}
+        saveLabel={saveForShare ? 'Save & get share link' : undefined}
+      />
       {shareDatasetId && (
         <ShareDatasetModal
           open={showShare}

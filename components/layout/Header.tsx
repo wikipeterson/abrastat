@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { ReactNode, useEffect, useRef, useState } from 'react'
-import { Save, Library, LogOut, ChevronDown, FilePlus } from 'lucide-react'
+import { Save, Library, LogOut, ChevronDown, FilePlus, Share2 } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { signOut } from '@/lib/auth'
 import { useAuth } from '@/components/auth/AuthProvider'
@@ -13,6 +13,7 @@ import { PalettePicker } from '@/components/layout/PalettePicker'
 interface HeaderProps {
   onNew?: () => void
   onSave?: () => void
+  onShare?: () => void
   onToggleSidebar?: () => void
   datasetName?: string
   centerTitle?: string | null
@@ -28,6 +29,7 @@ interface HeaderProps {
 export function Header({
   onNew,
   onSave,
+  onShare,
   onToggleSidebar,
   datasetName,
   centerTitle,
@@ -159,20 +161,29 @@ export function Header({
           {labActions}
 
           {!isGuest && showSave && (
-            <>
-              <button
-                onClick={onSave}
-                className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  isDirty
-                    ? 'text-[var(--color-accent)] hover:bg-[var(--color-accent-light)]'
-                    : 'text-[var(--color-muted)] hover:bg-slate-100'
-                }`}
-                aria-label="Save dataset"
-              >
-                <Save size={14} />
-                <span className="hidden sm:inline">Save Data</span>
-              </button>
-            </>
+            <button
+              onClick={onSave}
+              className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                isDirty
+                  ? 'text-[var(--color-accent)] hover:bg-[var(--color-accent-light)]'
+                  : 'text-[var(--color-muted)] hover:bg-slate-100'
+              }`}
+              aria-label="Save dataset"
+            >
+              <Save size={14} />
+              <span className="hidden sm:inline">Save Data</span>
+            </button>
+          )}
+
+          {onShare && (
+            <button
+              onClick={onShare}
+              className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-slate-100 transition-colors"
+              aria-label="Share dataset"
+            >
+              <Share2 size={14} />
+              <span className="hidden sm:inline">Share</span>
+            </button>
           )}
 
           {onNew && (

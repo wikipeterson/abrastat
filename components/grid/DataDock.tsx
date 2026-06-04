@@ -1,26 +1,26 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Columns, ArrowDownToLine, Database, Share2, X, ChevronDown, ChevronRight } from 'lucide-react'
+import { ArrowDownToLine, Database, X, ChevronDown, ChevronRight } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { DataGrid } from './DataGrid'
 import { ImportPanel } from '@/components/import/ImportPanel'
 import { DataOperationsModal } from './DataOperationsModal'
-import { useAuth } from '@/components/auth/AuthProvider'
 
 const COLLAPSED_KEY = 'abrastat.dock.collapsed'
 const HEIGHT_KEY = 'abrastat.dock.height'
 const DEFAULT_HEIGHT = 340
 const MIN_HEIGHT = 120
 
-export function DataDock({ onShare }: { onShare?: () => void }) {
-  const { addRow, addColumn, activeFilters, setRowFilters, grid, activeDatasetName } = useStore()
-  const { isGuest } = useAuth()
+export function DataDock() {
+  const { activeFilters, setRowFilters, grid, activeDatasetName } = useStore()
   const [collapsed, setCollapsed] = useState(false)
   const [height, setHeight] = useState(DEFAULT_HEIGHT)
   const [showImport, setShowImport] = useState(false)
   const [showData, setShowData] = useState(false)
   const heightRef = useRef(DEFAULT_HEIGHT)
+  const prevHeightRef = useRef<number | null>(null)
+  const dockRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const storedCollapsed = localStorage.getItem(COLLAPSED_KEY)
@@ -48,14 +48,17 @@ export function DataDock({ onShare }: { onShare?: () => void }) {
     localStorage.setItem(COLLAPSED_KEY, String(next))
   }
 
+  function getMaxHeight() {
+    return (dockRef.current?.parentElement?.offsetHeight ?? window.innerHeight) - 72
+  }
+
   function startResize(e: React.PointerEvent) {
     e.preventDefault()
     const startY = e.clientY
     const startHeight = heightRef.current
 
     function onMove(ev: PointerEvent) {
-      const maxH = window.innerHeight * 0.70
-      const next = Math.min(maxH, Math.max(MIN_HEIGHT, startHeight - (ev.clientY - startY)))
+      const next = Math.min(getMaxHeight(), Math.max(MIN_HEIGHT, startHeight - (ev.clientY - startY)))
       heightRef.current = next
       setHeight(next)
     }
@@ -70,18 +73,36 @@ export function DataDock({ onShare }: { onShare?: () => void }) {
     window.addEventListener('pointerup', onUp)
   }
 
+  function handleResizeDoubleClick() {
+    const maxH = getMaxHeight()
+    if (heightRef.current >= maxH - 4) {
+      const restore = prevHeightRef.current ?? DEFAULT_HEIGHT
+      prevHeightRef.current = null
+      heightRef.current = restore
+      setHeight(restore)
+      localStorage.setItem(HEIGHT_KEY, String(restore))
+    } else {
+      prevHeightRef.current = heightRef.current
+      heightRef.current = maxH
+      setHeight(maxH)
+      localStorage.setItem(HEIGHT_KEY, String(maxH))
+    }
+  }
+
   return (
     <div
+      ref={dockRef}
       className="flex-shrink-0 bg-[var(--color-surface)] border-t border-[var(--color-border)] flex flex-col"
       style={{
         height: collapsed ? 40 : height,
         boxShadow: '0 -8px 24px -16px rgba(8,38,33,0.25)',
       }}
     >
-      {/* Resize handle — drag upward to expand */}
+      {/* Resize handle — drag upward to expand, double-click to maximize/restore */}
       {!collapsed && (
         <div
           onPointerDown={startResize}
+          onDoubleClick={handleResizeDoubleClick}
           className="h-1.5 flex-shrink-0 cursor-ns-resize hover:bg-[var(--color-accent-light)] transition-colors"
         />
       )}
@@ -114,22 +135,10 @@ export function DataDock({ onShare }: { onShare?: () => void }) {
 
         <div className="flex-shrink-0 flex items-center gap-0.5 whitespace-nowrap">
           <button
-            onClick={() => addRow()}
-            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"
-          >
-            <Plus size={13} /> Row
-          </button>
-          <button
-            onClick={() => addColumn()}
-            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"
-          >
-            <Columns size={13} /> Variable
-          </button>
-          <button
             onClick={() => setShowData(true)}
             className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"
           >
-            <Database size={13} /> Data
+            <Database size={13} /> Transform
           </button>
           <div className="w-px h-4 bg-[var(--color-border)] mx-1" />
           <button
@@ -138,14 +147,6 @@ export function DataDock({ onShare }: { onShare?: () => void }) {
           >
             <ArrowDownToLine size={13} /> Import
           </button>
-          {!isGuest && onShare && (
-            <button
-              onClick={onShare}
-              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"
-            >
-              <Share2 size={13} /> Share
-            </button>
-          )}
         </div>
       </div>
 

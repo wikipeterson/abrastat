@@ -153,7 +153,14 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
       const nav: Record<string, () => void> = {
         Tab:         () => setActiveCell(col + 1 < numCols ? { row, col: col + 1 } : viewIdx + 1 < numRows ? { row: nextRow(1), col: 0 } : activeCell),
         'Shift+Tab': () => setActiveCell(col > 0 ? { row, col: col - 1 } : viewIdx > 0 ? { row: nextRow(-1), col: numCols - 1 } : activeCell),
-        Enter:       () => setActiveCell({ row: nextRow(1), col }),
+        Enter:       () => {
+          if (viewIdx < numRows - 1) {
+            setActiveCell({ row: nextRow(1), col })
+          } else if (completeFilters.length === 0) {
+            addRow()
+            setActiveCell({ row: row + 1, col })
+          }
+        },
         'Shift+Enter': () => setActiveCell({ row: nextRow(-1), col }),
         ArrowRight:  () => setActiveCell(col + 1 < numCols ? { row, col: col + 1 } : activeCell),
         ArrowLeft:   () => setActiveCell(col > 0 ? { row, col: col - 1 } : activeCell),
@@ -169,7 +176,7 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [activeCell, columns.length, displayRows, undo])
+  }, [activeCell, columns.length, displayRows, undo, addRow, completeFilters])
 
   function handleRowContextMenu(e: React.MouseEvent, rowIndex: number) {
     e.preventDefault()
@@ -246,10 +253,10 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
         style={{ minWidth: ROW_NUM_WIDTH + totalColumnWidth }}
       >
         {/* Header row */}
-        <div className="flex">
+        <div className="flex sticky top-0 z-20 bg-[var(--color-surface)]">
           <div
-            className="flex-shrink-0 bg-[var(--color-grid-header)]"
-            style={{ width: ROW_NUM_WIDTH }}
+            className="flex-shrink-0 bg-[var(--color-grid-header)] sticky left-0 z-40"
+            style={{ width: ROW_NUM_WIDTH, boxShadow: '2px 0 4px -2px rgba(8,38,33,0.18)' }}
           />
           {columns.map((col, colIndex) => {
             const isTarget = dropTargetIdx === colIndex && dragColIdx !== null && dragColIdx !== colIndex
@@ -259,7 +266,11 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
             return (
               <div
                 key={col.id}
-                style={{ width: columnWidth, minWidth: columnWidth }}
+                style={{
+                  width: columnWidth,
+                  minWidth: columnWidth,
+                  ...(colIndex === 0 ? { position: 'sticky', left: ROW_NUM_WIDTH, zIndex: 30, boxShadow: '2px 0 4px -2px rgba(8,38,33,0.18)' } : {}),
+                }}
                 className={`group/col relative transition-[transform,opacity,box-shadow] duration-200 ease-out ${
                   isTarget ? 'z-10' : ''
                 }`}
@@ -329,11 +340,11 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
           {/* Ghost "+Variable" column */}
           <div
             onClick={() => addColumn()}
-            className="flex-1 min-w-[80px] flex items-center justify-center gap-1 h-8 bg-[var(--color-grid-header)] border-l border-slate-600 cursor-pointer text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors select-none group/ghostcol"
+            className="flex-1 min-w-[120px] flex items-center justify-center gap-1 h-8 bg-[var(--color-surface)] border-l border-dashed border-[var(--color-border)] cursor-pointer text-[var(--color-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] transition-colors select-none group/ghostcol"
             title="Add variable"
           >
             <Plus size={11} className="flex-shrink-0" />
-            <span className="text-[11px] font-medium">Variable</span>
+            <span className="text-[11px] font-medium">+ Variable</span>
           </div>
         </div>
 
@@ -342,8 +353,8 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
           <div key={originalIdx} className="flex group">
             {/* Row number */}
             <div
-              style={{ width: ROW_NUM_WIDTH, minWidth: ROW_NUM_WIDTH }}
-              className={`flex-shrink-0 flex items-center justify-center text-xs border-r border-b border-[var(--color-border)] cursor-pointer select-none ${selectedRows.has(originalIdx) ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-accent-light)] text-[var(--color-muted)]'}`}
+              style={{ width: ROW_NUM_WIDTH, minWidth: ROW_NUM_WIDTH, boxShadow: '2px 0 4px -2px rgba(8,38,33,0.18)' }}
+              className={`flex-shrink-0 sticky left-0 z-10 flex items-center justify-center text-xs border-r border-b border-[var(--color-border)] cursor-pointer select-none ${selectedRows.has(originalIdx) ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-accent-light)] text-[var(--color-muted)]'}`}
               onClick={() => handleRowClick(originalIdx)}
               onContextMenu={e => handleRowContextMenu(e, originalIdx)}
             >
@@ -358,8 +369,9 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
                   minWidth: col.width ?? COL_WIDTH,
                   transform: `translateX(${getColumnShift(colIndex)}px)`,
                   opacity: dragColIdx === colIndex ? 0.18 : 1,
+                  ...(colIndex === 0 ? { position: 'sticky', left: ROW_NUM_WIDTH, zIndex: 10, boxShadow: '2px 0 4px -2px rgba(8,38,33,0.18)' } : {}),
                 }}
-                className="transition-[transform,opacity] duration-200 ease-out"
+                className={`transition-[transform,opacity] duration-200 ease-out${colIndex === 0 ? ' bg-[var(--color-surface)]' : ''}`}
               >
                 <EditableCell
                   value={row[col.id] ?? ''}

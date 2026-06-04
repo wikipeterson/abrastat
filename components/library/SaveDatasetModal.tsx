@@ -13,9 +13,10 @@ interface SaveDatasetModalProps {
   open: boolean
   onClose: () => void
   onSaved?: (id: string, isPublic: boolean) => void
+  saveLabel?: string
 }
 
-export function SaveDatasetModal({ open, onClose, onSaved }: SaveDatasetModalProps) {
+export function SaveDatasetModal({ open, onClose, onSaved, saveLabel }: SaveDatasetModalProps) {
   const { user, grid, activeDatasetId, setActiveDatasetId, markClean } = useStore()
   const [cover, setCover] = useState(() => randomCoverId())
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -134,7 +135,7 @@ export function SaveDatasetModal({ open, onClose, onSaved }: SaveDatasetModalPro
               disabled={saving || !name.trim()}
               className="px-4 py-2 rounded-lg text-sm bg-[var(--color-accent)] text-white font-medium disabled:opacity-50"
             >
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? 'Saving…' : (saveLabel ?? 'Save')}
             </button>
           </div>
         </div>

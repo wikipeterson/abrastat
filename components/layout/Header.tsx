@@ -103,7 +103,7 @@ export function Header({
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={paletteId === 'midnight' || paletteId === 'classroom' ? '/logo-dark.svg' : '/logo.svg'}
+              src={paletteId === 'midnight' ? '/logo-dark.svg' : '/logo.svg'}
               alt="AbraStat"
               style={{ width: 'clamp(110px, 20vw, 220px)', height: 'auto' }}
             />

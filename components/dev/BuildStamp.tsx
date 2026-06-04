@@ -1,4 +1,12 @@
+'use client'
+
 import { BUILD_COMMIT, BUILD_STAMP_ISO } from '@/lib/buildStamp.generated'
+import { useAuth } from '@/components/auth/AuthProvider'
+
+const BUILD_STAMP_ALLOWED_EMAILS = new Set([
+  'speterson@haverfordsd.net',
+  'peterson.steve@gmail.com',
+])
 
 const formatter = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -8,11 +16,17 @@ const formatter = new Intl.DateTimeFormat('en-US', {
 })
 
 export function BuildStamp() {
+  const { user, loading, isGuest } = useAuth()
   const builtAt = formatter.format(new Date(BUILD_STAMP_ISO))
   const deployedCommit =
     process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ||
     process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ||
     BUILD_COMMIT
+
+  const email = user?.email?.toLowerCase() ?? null
+  const canSeeBuildStamp = !loading && !isGuest && !!email && BUILD_STAMP_ALLOWED_EMAILS.has(email)
+
+  if (!canSeeBuildStamp) return null
 
   return (
     <div

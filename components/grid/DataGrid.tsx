@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { RowFilter, FilterOp } from '@/types'
 import { EditableCell } from './EditableCell'
@@ -97,7 +98,7 @@ function createColumnDragPreview(columnName: string, values: Array<string | numb
 }
 
 export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
-  const { grid, updateCell, addRow, deleteRows, undo, reorderColumns, setColumnWidth, activeFilters } = useStore()
+  const { grid, updateCell, addRow, addColumn, deleteRows, undo, reorderColumns, setColumnWidth, activeFilters } = useStore()
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null)
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; rowIndex: number } | null>(null)
@@ -234,10 +235,16 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
   return (
     <div
       ref={containerRef}
-      className="overflow-auto border border-[var(--color-border)] rounded-lg inline-block max-w-full"
-      style={fillHeight ? { height: '100%', width: 'fit-content' } : { maxHeight: 'calc(100vh - 220px)', width: 'fit-content' }}
+      className={fillHeight
+        ? 'w-full h-full overflow-auto'
+        : 'overflow-auto border border-[var(--color-border)] rounded-lg inline-block max-w-full'
+      }
+      style={fillHeight ? undefined : { maxHeight: 'calc(100vh - 220px)', width: 'fit-content' }}
     >
-      <div style={{ minWidth: ROW_NUM_WIDTH + totalColumnWidth }}>
+      <div
+        className={fillHeight ? 'min-w-full' : undefined}
+        style={{ minWidth: ROW_NUM_WIDTH + totalColumnWidth }}
+      >
         {/* Header row */}
         <div className="flex">
           <div
@@ -318,6 +325,16 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
               </div>
             )
           })}
+
+          {/* Ghost "+Variable" column */}
+          <div
+            onClick={() => addColumn()}
+            className="flex-1 min-w-[80px] flex items-center justify-center gap-1 h-8 bg-[var(--color-grid-header)] border-l border-slate-600 cursor-pointer text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors select-none group/ghostcol"
+            title="Add variable"
+          >
+            <Plus size={11} className="flex-shrink-0" />
+            <span className="text-[11px] font-medium">Variable</span>
+          </div>
         </div>
 
         {/* Data rows */}
@@ -357,6 +374,22 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
             ))}
           </div>
         ))}
+      </div>
+
+      {/* Ghost "+Row" */}
+      <div
+        onClick={() => addRow()}
+        className="flex cursor-pointer group/ghostrow text-[var(--color-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-light)] transition-colors"
+      >
+        <div
+          style={{ width: ROW_NUM_WIDTH, minWidth: ROW_NUM_WIDTH }}
+          className="flex-shrink-0 flex items-center justify-center h-8 border-r border-b border-dashed border-[var(--color-border)]"
+        >
+          <Plus size={11} className="opacity-40 group-hover/ghostrow:opacity-100 transition-opacity" />
+        </div>
+        <div className="flex-1 flex items-center h-8 px-3 border-b border-dashed border-[var(--color-border)] text-xs font-medium">
+          + row
+        </div>
       </div>
 
       {/* Context menu */}

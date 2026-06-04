@@ -30,6 +30,10 @@ export function DataDock({ onShare }: { onShare?: () => void }) {
       const h = Number(storedHeight)
       setHeight(h)
       heightRef.current = h
+    } else {
+      const h = Math.max(MIN_HEIGHT, Math.min(window.innerHeight * 0.70, Math.round(window.innerHeight * 0.38)))
+      setHeight(h)
+      heightRef.current = h
     }
   }, [])
 
@@ -185,7 +189,7 @@ export function DataDock({ onShare }: { onShare?: () => void }) {
               </button>
             </div>
           )}
-          <div className="flex-1 min-h-0 overflow-auto p-2">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <DataGrid fillHeight />
           </div>
         </div>

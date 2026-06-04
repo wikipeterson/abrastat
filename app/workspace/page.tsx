@@ -262,7 +262,7 @@ function VariableSidebar({
 
       <aside className={`
         flex-shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col
-        md:relative ${SIDEBAR_WIDTH_CLASS} md:translate-x-0 md:z-auto
+        md:relative md:h-full ${SIDEBAR_WIDTH_CLASS} md:translate-x-0 md:z-auto
         fixed inset-y-0 left-0 z-30 w-56 transition-transform duration-200
         ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>

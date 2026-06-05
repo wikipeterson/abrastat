@@ -284,9 +284,9 @@ export function suggestAnalyses(selectedCols: SelectedAnalysisColumn[]): Suggest
     return [
       {
         type: 'graph',
-        label: 'Histogram',
-        icon: '📊',
-        chartTypeHint: 'histogram',
+        label: 'Dot Plot',
+        icon: '⚫',
+        chartTypeHint: 'dot',
         recommended: true,
         reason: `See the shape, center and spread of ${formatName(first.name)}.`,
       },
@@ -299,7 +299,7 @@ export function suggestAnalyses(selectedCols: SelectedAnalysisColumn[]): Suggest
       },
       {
         type: 'summary',
-        label: 'Summary',
+        label: 'Summary Statistics',
         icon: '📋',
         reason: 'Mean, SD, min, median and max.',
       },
@@ -318,7 +318,7 @@ export function suggestAnalyses(selectedCols: SelectedAnalysisColumn[]): Suggest
       },
       {
         type: 'summary',
-        label: 'Summary',
+        label: 'Summary Statistics',
         icon: '📋',
         reason: `A frequency table for ${formatName(first.name)}.`,
       },
@@ -343,7 +343,7 @@ export function suggestAnalyses(selectedCols: SelectedAnalysisColumn[]): Suggest
       },
       {
         type: 'summary',
-        label: 'Summary',
+        label: 'Summary Statistics',
         icon: '📋',
         reason: 'Mean, SD, min, median and max.',
       },
@@ -369,7 +369,7 @@ export function suggestAnalyses(selectedCols: SelectedAnalysisColumn[]): Suggest
       },
       {
         type: 'summary',
-        label: 'Summary',
+        label: 'Summary Statistics',
         icon: '📋',
         reason: `Mean and SD of ${formatName(firstNum?.name)} for each ${formatName(firstCat?.name)}.`,
       },
@@ -411,7 +411,7 @@ export function suggestAnalyses(selectedCols: SelectedAnalysisColumn[]): Suggest
     return [
       {
         type: 'summary',
-        label: 'Summary',
+        label: 'Summary Statistics',
         icon: '📋',
         recommended: true,
         reason: 'Mean, SD, min, median and max.',

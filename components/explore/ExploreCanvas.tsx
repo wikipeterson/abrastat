@@ -115,6 +115,29 @@ function StripOptionCard({
   )
 }
 
+function CompactCatalogRow({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: string
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-accent-light)]"
+    >
+      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-bg)] text-base leading-none">
+        {icon}
+      </span>
+      <span className="truncate">{label}</span>
+    </button>
+  )
+}
+
 function GhostChip({ col }: { col: GridColumn }) {
   return (
     <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--color-gold-light)] text-[#5A3A00] ring-2 ring-inset ring-[var(--color-gold)] text-sm font-medium shadow-lg rotate-1 cursor-grabbing">
@@ -752,6 +775,7 @@ export function ExploreCanvas({
   function startPan(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return
     setContextMenu(null)
+    onCloseAddCardCatalog?.()
     const target = e.target as HTMLElement
     if (
       target.closest('[data-card-id]') ||
@@ -889,29 +913,26 @@ export function ExploreCanvas({
                   Using: {selectedCols.map(col => col.name).join(' × ')}
                 </div>
               )}
-              <div className="space-y-5 overflow-y-auto pb-1">
+              <div className="max-h-[260px] overflow-y-auto overflow-x-hidden pr-1">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 {CARD_OPTION_GROUPS.map(group => (
-                  <div key={group.id}>
+                  <div key={group.id} className="min-w-0">
                     <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">
                       {group.label}
                     </div>
-                    <div className="flex gap-3 overflow-x-auto pb-1">
+                    <div className="space-y-1">
                       {group.options.map(option => (
-                        <StripOptionCard
+                        <CompactCatalogRow
                           key={option.type}
                           icon={option.icon}
                           label={option.label}
-                          reason={
-                            selectedCols.length > 0
-                              ? `Build a ${option.label.toLowerCase()} card using the current variable selection.`
-                              : `Create an empty ${option.label.toLowerCase()} card.`
-                          }
                           onClick={() => handleCatalogAdd(option)}
                         />
                       ))}
                     </div>
                   </div>
                 ))}
+                </div>
               </div>
             </div>
           ) : selectedCols.length > 0 && suggestionReadingLine && suggestions.length > 0 ? (

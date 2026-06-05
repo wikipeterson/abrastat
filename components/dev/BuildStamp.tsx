@@ -1,6 +1,5 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
 import { BUILD_COMMIT, BUILD_STAMP_ISO } from '@/lib/buildStamp.generated'
 import { useAuth } from '@/components/auth/AuthProvider'
 
@@ -17,7 +16,6 @@ const formatter = new Intl.DateTimeFormat('en-US', {
 
 export function BuildStamp() {
   const { user, loading, isGuest } = useAuth()
-  const pathname = usePathname()
   const builtAt = formatter.format(new Date(BUILD_STAMP_ISO))
   const deployedCommit =
     process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ||
@@ -28,14 +26,13 @@ export function BuildStamp() {
   const canSeeBuildStamp = !loading && !isGuest && !!email && BUILD_STAMP_ALLOWED_EMAILS.has(email)
 
   if (!canSeeBuildStamp) return null
-  if (pathname?.includes('/workspace')) return null
 
   return (
     <div
-      className="fixed left-3 bottom-3 z-50 pointer-events-none hidden sm:block"
+      className="hidden sm:block"
       title="Deployment build stamp"
     >
-      <div className="rounded-md border border-slate-200 bg-white/90 px-2 py-1 text-[11px] text-slate-500 shadow-sm backdrop-blur-sm">
+      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] text-[var(--color-muted)] shadow-sm whitespace-nowrap">
         Build {builtAt} · {deployedCommit}
       </div>
     </div>

@@ -659,22 +659,20 @@ function WorkspaceContent() {
   const { user, isGuest } = useAuth()
   const [addCardCatalogOpen, setAddCardCatalogOpen] = useState(false)
 
-  const nonDataGridCount = exploreCards.filter(c => c.config.type !== 'data-grid').length
-  const prevNonDataGridCountRef = useRef(nonDataGridCount)
   const upperRegionRef = useRef<HTMLDivElement>(null)
 
   const [dockState, setDockState] = useState<DockState>(() => {
     if (typeof window === 'undefined') return 'half'
     const stored = localStorage.getItem('abrastat.dock.state') as DockState | null
     if (stored === 'collapsed' || stored === 'half' || stored === 'full') return stored
-    return nonDataGridCount === 0 ? 'full' : 'half'
+    return 'full'
   })
   const [dockHeight, setDockHeight] = useState<number>(() => {
     if (typeof window === 'undefined') return 200
     const snaps = computeSnaps()
     const stored = localStorage.getItem('abrastat.dock.state') as DockState | null
     if (stored === 'collapsed' || stored === 'half' || stored === 'full') return snaps[stored]
-    return nonDataGridCount === 0 ? snaps.full : snaps.half
+    return snaps.full
   })
   const showPuzzleWeek = canAccessPuzzleWeek(user)
   const libraryItems: { id: LibrarySection; label: string; soon?: boolean }[] = showPuzzleWeek
@@ -703,19 +701,6 @@ function WorkspaceContent() {
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [isDirty])
-
-  // First card added: drop dock from full → half so the card is visible
-  useEffect(() => {
-    const prev = prevNonDataGridCountRef.current
-    prevNonDataGridCountRef.current = nonDataGridCount
-    if (prev === 0 && nonDataGridCount === 1) {
-      const snaps = computeSnaps()
-      setDockState('half')
-      setDockHeight(snaps.half)
-      localStorage.setItem('abrastat.dock.state', 'half')
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nonDataGridCount])
 
   useEffect(() => {
     try {
@@ -767,6 +752,21 @@ function WorkspaceContent() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [addCardCatalogOpen])
+
+  function handleToggleAddCardCatalog() {
+    setAddCardCatalogOpen(open => {
+      const nextOpen = !open
+      if (nextOpen) {
+        const snaps = computeSnaps()
+        setDockState('collapsed')
+        setDockHeight(snaps.collapsed)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('abrastat.dock.state', 'collapsed')
+        }
+      }
+      return nextOpen
+    })
+  }
 
   function handleLibrarySectionChange(nextSection: LibrarySection) {
     if (nextSection === 'logic-puzzles') {
@@ -907,7 +907,7 @@ function WorkspaceContent() {
         ]}
         activeModeId={mode}
         onModeChange={handleModeChange}
-        labActions={mode === 'lab' ? <GroupedAddCardMenu open={addCardCatalogOpen} onToggle={() => setAddCardCatalogOpen(open => !open)} highlight={hasOnlyDataGrid} /> : libraryHeaderActions}
+        labActions={mode === 'lab' ? <GroupedAddCardMenu open={addCardCatalogOpen} onToggle={handleToggleAddCardCatalog} highlight={hasOnlyDataGrid} /> : libraryHeaderActions}
         showSave={mode === 'lab'}
         showHomeLink={false}
       />

@@ -5,7 +5,6 @@ import { BUILD_COMMIT, BUILD_STAMP_ISO } from '@/lib/buildStamp.generated'
 import { useAuth } from '@/components/auth/AuthProvider'
 
 const BUILD_STAMP_ALLOWED_EMAILS = new Set([
-  'speterson@haverfordsd.net',
   'peterson.steve@gmail.com',
 ])
 

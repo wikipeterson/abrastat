@@ -1,2 +1,2 @@
-export const BUILD_STAMP_ISO = "2026-06-04T17:23:18.140Z"
-export const BUILD_COMMIT = "9b21899"
+export const BUILD_STAMP_ISO = "2026-06-05T12:41:53.462Z"
+export const BUILD_COMMIT = "e381534"

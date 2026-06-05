@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import type { WheelEvent as ReactWheelEvent } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, Sparkles } from 'lucide-react'
 import {
   DndContext,
   DragEndEvent,
@@ -15,8 +15,9 @@ import {
 import { useStore } from '@/lib/store'
 import { GridColumn } from '@/types'
 import { CardConfig, GraphCardConfig, MeansCardConfig, ExploreCard, ManualTwoWayTableSnapshot, TwoPropRandomizationCardConfig, TwoMeanRandomizationCardConfig, OnePropRandomizationCardConfig } from '@/lib/exploreTypes'
-import { ChartType, inferCharts } from '@/lib/chartHelpers'
+import { ChartType } from '@/lib/chartHelpers'
 import { SwapAnimContext, SwapAnimState } from '@/lib/swapAnimContext'
+import { buildInitialConfig, getSuggestionReadingLine, normalizeGraphConfigForColumns, suggestAnalyses } from '@/lib/suggest'
 import { GraphCard } from './cards/GraphCard'
 import { SummaryCard } from './cards/SummaryCard'
 import { RegressionCard } from './cards/RegressionCard'
@@ -74,7 +75,7 @@ const CARD_OPTION_GROUPS = [
 function GhostChip({ col }: { col: GridColumn }) {
   return (
     <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--color-gold-light)] text-[#5A3A00] ring-2 ring-inset ring-[var(--color-gold)] text-sm font-medium shadow-lg rotate-1 cursor-grabbing">
-      <span className="opacity-70 text-xs font-mono">{col.type === 'numeric' ? '#' : 'A'}</span>
+      <span className="opacity-70 text-xs font-mono">{col.type === 'numeric' ? '#' : 'C'}</span>
       <span>{col.name}</span>
     </div>
   )
@@ -169,6 +170,7 @@ function WorkspaceContextMenu({
 export function ExploreCanvas() {
   const {
     grid, addExploreCard,
+    selectedColumnIds,
     exploreCards, removeExploreCard, updateExploreCard, purgeExploreStaleIds, addLinkedGraphCard, addLinkedTableCard,
   } = useStore()
 
@@ -261,33 +263,32 @@ export function ExploreCanvas() {
   }, [cards, centerCardInView])
 
   const normalizeGraphConfig = useCallback((cfg: GraphCardConfig): GraphCardConfig => {
-    if (cfg.manualScatter) {
-      return { ...cfg, chartType: 'scatter', bestFitMode: cfg.bestFitMode ?? 'none', barValueMode: cfg.barValueMode ?? 'count', dotSize: cfg.dotSize ?? 'medium', showMeans: cfg.showMeans ?? false, showMedian: cfg.showMedian ?? false, showOutlierFences: cfg.showOutlierFences ?? false }
-    }
-    const xType = cfg.xColId ? (grid.columns.find(c => c.id === cfg.xColId)?.type ?? null) : null
-    const yType = cfg.yColId ? (grid.columns.find(c => c.id === cfg.yColId)?.type ?? null) : null
-    const usesAxisGrouping =
-      (xType === 'numeric' && yType === 'categorical') ||
-      (xType === 'categorical' && yType === 'numeric')
-    const normalizedGroupColId = usesAxisGrouping ? null : cfg.groupColId
-    const groupType = normalizedGroupColId ? (grid.columns.find(c => c.id === normalizedGroupColId)?.type ?? null) : null
-    const { primary, alternatives } = inferCharts(xType, yType, groupType)
-    const valid = primary ? [primary, ...alternatives] : []
-    const baseCfg = usesAxisGrouping && cfg.groupColId !== null
-      ? { ...cfg, groupColId: null }
-      : cfg
-
-    if (!baseCfg.chartType) {
-      return { ...baseCfg, chartType: primary, bestFitMode: baseCfg.bestFitMode ?? 'none', barValueMode: baseCfg.barValueMode ?? 'count', dotSize: baseCfg.dotSize ?? 'medium', showMeans: baseCfg.showMeans ?? false, showMedian: baseCfg.showMedian ?? false, showOutlierFences: baseCfg.showOutlierFences ?? false }
-    }
-    if (valid.length > 0 && !valid.includes(baseCfg.chartType)) {
-      return { ...baseCfg, chartType: primary, bestFitMode: baseCfg.bestFitMode ?? 'none', barValueMode: baseCfg.barValueMode ?? 'count', dotSize: baseCfg.dotSize ?? 'medium', showMeans: baseCfg.showMeans ?? false, showMedian: baseCfg.showMedian ?? false, showOutlierFences: baseCfg.showOutlierFences ?? false }
-    }
-    if (valid.length === 0 && baseCfg.chartType) {
-      return { ...baseCfg, chartType: null, bestFitMode: baseCfg.bestFitMode ?? 'none', barValueMode: baseCfg.barValueMode ?? 'count', dotSize: baseCfg.dotSize ?? 'medium', showMeans: baseCfg.showMeans ?? false, showMedian: baseCfg.showMedian ?? false, showOutlierFences: baseCfg.showOutlierFences ?? false }
-    }
-    return { ...baseCfg, bestFitMode: baseCfg.bestFitMode ?? 'none', barValueMode: baseCfg.barValueMode ?? 'count', dotSize: baseCfg.dotSize ?? 'medium', showMeans: baseCfg.showMeans ?? false, showMedian: baseCfg.showMedian ?? false, showOutlierFences: baseCfg.showOutlierFences ?? false }
+    return normalizeGraphConfigForColumns(cfg, grid.columns)
   }, [grid.columns])
+
+  const selectedCols = useMemo(
+    () =>
+      selectedColumnIds
+        .map(id => grid.columns.find(col => col.id === id))
+        .filter((col): col is GridColumn => !!col)
+        .map(col => ({ id: col.id, name: col.name, type: col.type })),
+    [grid.columns, selectedColumnIds],
+  )
+
+  const suggestionSelection = useMemo(
+    () => selectedCols.slice(-2),
+    [selectedCols],
+  )
+
+  const suggestionReadingLine = useMemo(
+    () => getSuggestionReadingLine(suggestionSelection),
+    [suggestionSelection],
+  )
+
+  const suggestions = useMemo(
+    () => suggestAnalyses(suggestionSelection),
+    [suggestionSelection],
+  )
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -803,8 +804,14 @@ export function ExploreCanvas() {
 
   function handleContextAdd(type: CardConfig['type']) {
     if (!contextMenu) return
-    addExploreCard(type, { x: contextMenu.worldX, y: contextMenu.worldY })
+    addExploreCard(type, { position: { x: contextMenu.worldX, y: contextMenu.worldY } })
     setContextMenu(null)
+  }
+
+  function handleSuggestionAdd(type: CardConfig['type'], chartTypeHint?: ChartType) {
+    const sourceCols = type === 'summary' ? selectedCols : suggestionSelection
+    const initialConfig = buildInitialConfig(type, sourceCols, { chartTypeHint })
+    addExploreCard(type, { initialConfig })
   }
 
   const activeCol = activeColId ? (grid.columns.find(c => c.id === activeColId) ?? null) : null
@@ -814,6 +821,43 @@ export function ExploreCanvas() {
       <SwapAnimContext.Provider value={swapAnim}>
       <div className="flex h-full min-h-0">
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+          {selectedCols.length > 0 && suggestionReadingLine && suggestions.length > 0 && (
+            <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+              <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">
+                <Sparkles size={14} className="text-[var(--color-accent)]" />
+                <span>Smart Suggest</span>
+              </div>
+              <div className="mb-3 text-sm font-medium text-[var(--color-text)]">
+                {suggestionReadingLine}
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {suggestions.map((suggestion, index) => (
+                  <button
+                    key={`${suggestion.type}-${suggestion.chartTypeHint ?? 'default'}-${index}`}
+                    onClick={() => handleSuggestionAdd(suggestion.type, suggestion.chartTypeHint)}
+                    className={`min-w-[220px] max-w-[280px] rounded-2xl border px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                      suggestion.recommended
+                        ? 'border-[var(--color-gold)] bg-[var(--color-gold-light)]'
+                        : 'border-[var(--color-border)] bg-[var(--color-bg)]'
+                    }`}
+                  >
+                    <div className="mb-2 flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg leading-none">{suggestion.icon}</span>
+                        <span className="text-sm font-semibold text-[var(--color-text)]">{suggestion.label}</span>
+                      </div>
+                      {suggestion.recommended && (
+                        <span className="rounded-full border border-[var(--color-gold)] bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#5A3A00]">
+                          Recommended
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm leading-5 text-[var(--color-muted)]">{suggestion.reason}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div
             ref={scrollRef}
             onWheel={handleWheel}

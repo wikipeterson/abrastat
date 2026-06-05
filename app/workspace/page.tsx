@@ -17,6 +17,7 @@ import { fetchMyDatasets, fetchPublicDatasets, deleteDataset, loadDataset } from
 import { SAMPLE_DATASETS, getSampleDatasetById, getSampleDatasetId } from '@/lib/sampleData'
 import { useStore } from '@/lib/store'
 import { CardConfig } from '@/lib/exploreTypes'
+import { buildInitialConfig } from '@/lib/suggest'
 import { DatasetMeta } from '@/types'
 import { exportGridAsCsv, exportGridAsXlsx } from '@/lib/datasetExport'
 import { canAccessPuzzleWeek } from '@/lib/featureFlags'
@@ -187,11 +188,20 @@ function GroupedAddCardMenu({
   highlight = false,
   className = '',
 }: {
-  onAdd: (type: CardConfig['type']) => void
+  onAdd: (type: CardConfig['type'], initialConfig?: Partial<CardConfig> | null) => void
   highlight?: boolean
   className?: string
 }) {
   const [open, setOpen] = useState(false)
+  const { grid, selectedColumnIds } = useStore()
+
+  const selectedCols = selectedColumnIds
+    .map(id => grid.columns.find(col => col.id === id))
+    .filter((col): col is typeof grid.columns[number] => !!col)
+    .map(col => ({ id: col.id, name: col.name, type: col.type }))
+  const usingText = selectedCols.length > 0
+    ? selectedCols.map(col => col.name).join(' × ')
+    : null
 
   const groups = [
     { id: 'explore',     label: 'Explore',     options: EXPLORE_CARD_OPTIONS },
@@ -219,6 +229,16 @@ function GroupedAddCardMenu({
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full mt-2 z-[70] bg-[var(--color-surface)] rounded-2xl shadow-xl border border-[var(--color-border)] overflow-hidden min-w-[260px]">
+            {usingText && (
+              <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-accent-light)]">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                  Using
+                </div>
+                <div className="mt-1 text-sm font-medium text-[var(--color-text)]">
+                  {usingText}
+                </div>
+              </div>
+            )}
             {groups.map(group => (
               <div key={group.id} className="border-b border-[var(--color-border)] last:border-b-0">
                 <div className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
@@ -228,7 +248,11 @@ function GroupedAddCardMenu({
                   {group.options.map(option => (
                     <button
                       key={option.type}
-                      onClick={() => { onAdd(option.type); setOpen(false) }}
+                      onClick={() => {
+                        const initialConfig = buildInitialConfig(option.type, selectedCols)
+                        onAdd(option.type, initialConfig)
+                        setOpen(false)
+                      }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--color-accent-light)] text-left transition-colors"
                     >
                       <span className="text-base leading-none">{option.icon}</span>
@@ -299,7 +323,7 @@ function VariableSidebar({
                 }`}
               >
                 <span className={`text-[10px] font-mono font-bold flex-shrink-0 ${isSelected ? 'opacity-70' : 'opacity-50'}`}>
-                  {isNumeric ? '#' : 'A'}
+                  {isNumeric ? '#' : 'C'}
                 </span>
                 <span className="truncate flex-1">{col.name}</span>
               </div>
@@ -954,7 +978,7 @@ function WorkspaceContent() {
         ]}
         activeModeId={mode}
         onModeChange={handleModeChange}
-        labActions={mode === 'lab' ? <GroupedAddCardMenu onAdd={type => addExploreCard(type)} highlight={hasOnlyDataGrid} /> : libraryHeaderActions}
+        labActions={mode === 'lab' ? <GroupedAddCardMenu onAdd={(type, initialConfig) => addExploreCard(type, { initialConfig })} highlight={hasOnlyDataGrid} /> : libraryHeaderActions}
         showSave={mode === 'lab'}
         showHomeLink={false}
       />

@@ -6,6 +6,7 @@ import { ExploreCard, CardConfig, DistributionPreFill, GraphCardConfig, SimResul
 import { createEmptyGrid } from './gridHelpers'
 import { computeColumnValues } from './formulaEval'
 import { sortCategoryValues } from './categoryOrder'
+import { normalizeGraphConfigForColumns } from './suggest'
 
 function getDataGridCardWidth(columnCount: number) {
   return Math.max(620, 48 + columnCount * 140 + 32)
@@ -190,7 +191,10 @@ interface AbraStatStore {
 
   // Explore canvas
   exploreCards: ExploreCard[]
-  addExploreCard: (type: CardConfig['type'], position?: { x: number; y: number }) => void
+  addExploreCard: (
+    type: CardConfig['type'],
+    opts?: { position?: { x: number; y: number }; initialConfig?: Partial<CardConfig> | null }
+  ) => void
   ensureDataGridCard: () => void
   removeExploreCard: (id: string) => void
   updateExploreCard: (id: string, updates: Partial<Omit<ExploreCard, 'id'>>) => void
@@ -613,10 +617,10 @@ export const useStore = create<AbraStatStore>((set) => ({
 
   // ─── Explore canvas ──────────────────────────────────────────────────────────
   exploreCards: [createDataGridCard()],
-  addExploreCard: (type, position) => set(state => {
+  addExploreCard: (type, opts) => set(state => {
     const analysisCards = state.exploreCards.filter(card => card.config.type !== 'data-grid')
     const idx = analysisCards.length
-    const config: CardConfig =
+    const defaultConfig: CardConfig =
       type === 'data-grid'    ? { type: 'data-grid' } :
       type === 'graph'        ? { type: 'graph',       xColId: null, yColId: null, groupColId: null, title: '', bestFitMode: 'none', barValueMode: 'count', dotSize: 'medium', showMeans: false, showMedian: false, showOutlierFences: false } :
       type === 'summary'      ? { type: 'summary',     variableColIds: [], groupColId: null } :
@@ -635,6 +639,12 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'dice-roller'  ? { type: 'dice-roller', linkedResultsCardId: null, trackedMode: 'sum' } :
       type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', valueMode: 'count', thresholdOp: '>=', thresholdValue: 1, supportsDifference: false, minValue: 1, maxValue: 6, rolls: [], values: [] } :
                                  { type: 'simulation', linkedResultsCardId: null }
+    const mergedConfig = opts?.initialConfig
+      ? ({ ...defaultConfig, ...opts.initialConfig } as CardConfig)
+      : defaultConfig
+    const config = mergedConfig.type === 'graph'
+      ? normalizeGraphConfigForColumns(mergedConfig as GraphCardConfig, state.grid.columns)
+      : mergedConfig
     const { width, height } =
       type === 'summary'     ? { width: 700, height: 620 } :
       type === 'table'       ? { width: 960, height: 740 } :
@@ -649,8 +659,8 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'dice-roller' ? { width: 760, height: 700 } :
                            { width: 620, height: 520 }
     const rightmostX = state.exploreCards.reduce((max, card) => Math.max(max, card.x + card.width), 20)
-    const startX = position?.x ?? Math.max(1040 + (idx % 2) * 500, rightmostX + 40)
-    const startY = position?.y ?? 24 + Math.floor(idx / 2) * 520
+    const startX = opts?.position?.x ?? Math.max(1040 + (idx % 2) * 500, rightmostX + 40)
+    const startY = opts?.position?.y ?? 24 + Math.floor(idx / 2) * 520
     const { x, y } = findOpenCardPosition(state.exploreCards, startX, startY, width, height)
     return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width, height }] }
   }),

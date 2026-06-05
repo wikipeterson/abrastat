@@ -17,17 +17,10 @@ import { fetchMyDatasets, fetchPublicDatasets, deleteDataset, loadDataset } from
 import { SAMPLE_DATASETS, getSampleDatasetById, getSampleDatasetId } from '@/lib/sampleData'
 import { useStore } from '@/lib/store'
 import { CardConfig } from '@/lib/exploreTypes'
-import { buildInitialConfig } from '@/lib/suggest'
 import { DatasetMeta } from '@/types'
 import { exportGridAsCsv, exportGridAsXlsx } from '@/lib/datasetExport'
 import { canAccessPuzzleWeek } from '@/lib/featureFlags'
 import { DataDock, DockState, computeSnaps } from '@/components/grid/DataDock'
-
-interface CardOption {
-  type: CardConfig['type']
-  icon: string
-  label: string
-}
 
 type WorkspaceMode = 'library' | 'lab'
 type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls' | 'logic-puzzles'
@@ -35,27 +28,6 @@ type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 
 const SIDEBAR_WIDTH_CLASS = 'md:w-48'
 const LOGIC_PUZZLES_URL = 'https://puzzleweek.abrastat.com/puzzleweek/bonus'
-
-const EXPLORE_CARD_OPTIONS: CardOption[] = [
-  { type: 'graph',      icon: '📈', label: 'Graph' },
-  { type: 'summary',    icon: '📊', label: 'Summary Statistics' },
-  { type: 'table',      icon: '⊞',  label: 'Two-Way Table' },
-  { type: 'regression', icon: '📉', label: 'Regression' },
-  { type: 'regression-by-eye', icon: '✏️', label: 'Regression by Eye' },
-]
-
-const PROBABILITY_CARD_OPTIONS: CardOption[] = [
-  { type: 'distribution',    icon: '🔔', label: 'Distribution Calculators' },
-  { type: 'compare-normals', icon: '⚖️', label: 'Compare Normals' },
-]
-
-const INFERENCE_CARD_OPTIONS: CardOption[] = [
-  { type: 'means',                   icon: '📐', label: 'Means' },
-  { type: 'proportions',             icon: '⚖️', label: 'Proportions' },
-  { type: 'one-prop-randomization',  icon: '🎯', label: 'One-Proportion Randomization Test' },
-  { type: 'two-mean-randomization',  icon: '📏', label: 'Two-Mean Randomization Test' },
-  { type: 'two-prop-randomization',  icon: '🎲', label: 'Two-Prop Randomization Test' },
-]
 
 const BASE_LIBRARY_ITEMS: { id: Exclude<LibrarySection, 'logic-puzzles'>; label: string; soon?: boolean }[] = [
   { id: 'all', label: 'Public Datasets' },
@@ -184,35 +156,20 @@ function sampleDatasetToMeta(sample: (typeof SAMPLE_DATASETS)[number]): DatasetM
 }
 
 function GroupedAddCardMenu({
-  onAdd,
+  open,
+  onToggle,
   highlight = false,
   className = '',
 }: {
-  onAdd: (type: CardConfig['type'], initialConfig?: Partial<CardConfig> | null) => void
+  open: boolean
+  onToggle: () => void
   highlight?: boolean
   className?: string
 }) {
-  const [open, setOpen] = useState(false)
-  const { grid, selectedColumnIds } = useStore()
-
-  const selectedCols = selectedColumnIds
-    .map(id => grid.columns.find(col => col.id === id))
-    .filter((col): col is typeof grid.columns[number] => !!col)
-    .map(col => ({ id: col.id, name: col.name, type: col.type }))
-  const usingText = selectedCols.length > 0
-    ? selectedCols.map(col => col.name).join(' × ')
-    : null
-
-  const groups = [
-    { id: 'explore',     label: 'Explore',     options: EXPLORE_CARD_OPTIONS },
-    { id: 'probability', label: 'Probability', options: PROBABILITY_CARD_OPTIONS },
-    { id: 'inference',   label: 'Inference',   options: INFERENCE_CARD_OPTIONS },
-  ]
-
   return (
-    <div className={`relative z-[60] ${className}`}>
+    <div className={className}>
       <button
-        onClick={() => setOpen(v => !v)}
+        onClick={onToggle}
         className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all min-w-[132px] ${
           open
             ? 'bg-[var(--color-text)] text-white'
@@ -224,47 +181,6 @@ function GroupedAddCardMenu({
           <span>Add Card</span>
         </span>
       </button>
-
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 z-[70] bg-[var(--color-surface)] rounded-2xl shadow-xl border border-[var(--color-border)] overflow-hidden min-w-[260px]">
-            {usingText && (
-              <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-accent-light)]">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-                  Using
-                </div>
-                <div className="mt-1 text-sm font-medium text-[var(--color-text)]">
-                  {usingText}
-                </div>
-              </div>
-            )}
-            {groups.map(group => (
-              <div key={group.id} className="border-b border-[var(--color-border)] last:border-b-0">
-                <div className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-                  {group.label}
-                </div>
-                <div className="pb-2">
-                  {group.options.map(option => (
-                    <button
-                      key={option.type}
-                      onClick={() => {
-                        const initialConfig = buildInitialConfig(option.type, selectedCols)
-                        onAdd(option.type, initialConfig)
-                        setOpen(false)
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--color-accent-light)] text-left transition-colors"
-                    >
-                      <span className="text-base leading-none">{option.icon}</span>
-                      <span className="text-sm font-medium text-[var(--color-text)]">{option.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
     </div>
   )
 }
@@ -738,9 +654,10 @@ function WorkspaceContent() {
   const [mode, setMode] = useState<WorkspaceMode>(initialMode)
   const [librarySection, setLibrarySection] = useState<LibrarySection>(initialLibrarySection)
   const [gameChrome, setGameChrome] = useState<{ title: string; onBack: () => void } | null>(null)
-  const { isDirty, clearGrid, activeDatasetId, activeDatasetName, addExploreCard, exploreCards, setGrid, setActiveDatasetId, setActiveDatasetName } = useStore()
+  const { isDirty, clearGrid, activeDatasetId, activeDatasetName, exploreCards, setGrid, setActiveDatasetId, setActiveDatasetName } = useStore()
   const hasOnlyDataGrid = exploreCards.every(card => card.config.type === 'data-grid')
   const { user, isGuest } = useAuth()
+  const [addCardCatalogOpen, setAddCardCatalogOpen] = useState(false)
 
   const nonDataGridCount = exploreCards.filter(c => c.config.type !== 'data-grid').length
   const prevNonDataGridCountRef = useRef(nonDataGridCount)
@@ -836,8 +753,20 @@ function WorkspaceContent() {
       setGameChrome(null)
     }
     setMode(resolvedMode)
+    setAddCardCatalogOpen(false)
     setSidebarOpen(false)
   }
+
+  useEffect(() => {
+    if (!addCardCatalogOpen) return
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setAddCardCatalogOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [addCardCatalogOpen])
 
   function handleLibrarySectionChange(nextSection: LibrarySection) {
     if (nextSection === 'logic-puzzles') {
@@ -978,7 +907,7 @@ function WorkspaceContent() {
         ]}
         activeModeId={mode}
         onModeChange={handleModeChange}
-        labActions={mode === 'lab' ? <GroupedAddCardMenu onAdd={(type, initialConfig) => addExploreCard(type, { initialConfig })} highlight={hasOnlyDataGrid} /> : libraryHeaderActions}
+        labActions={mode === 'lab' ? <GroupedAddCardMenu open={addCardCatalogOpen} onToggle={() => setAddCardCatalogOpen(open => !open)} highlight={hasOnlyDataGrid} /> : libraryHeaderActions}
         showSave={mode === 'lab'}
         showHomeLink={false}
       />
@@ -1002,7 +931,7 @@ function WorkspaceContent() {
 
         <div className={`flex-1 min-h-0 flex flex-col bg-[var(--color-bg)] ${mode === 'lab' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           {mode === 'lab' ? (
-            <ExploreCanvas />
+            <ExploreCanvas addCardCatalogOpen={addCardCatalogOpen} onCloseAddCardCatalog={() => setAddCardCatalogOpen(false)} />
           ) : (
             renderLibraryContent()
           )}

@@ -42,6 +42,11 @@ interface CardOption {
   label: string
 }
 
+interface ExploreCanvasProps {
+  addCardCatalogOpen?: boolean
+  onCloseAddCardCatalog?: () => void
+}
+
 const EXPLORE_CARD_OPTIONS: CardOption[] = [
   { type: 'graph', icon: '📈', label: 'Graph' },
   { type: 'summary', icon: '📊', label: 'Summary Statistics' },
@@ -71,6 +76,44 @@ const CARD_OPTION_GROUPS = [
   { id: 'probability', label: 'Probability', options: PROBABILITY_CARD_OPTIONS },
   { id: 'inference', label: 'Inference', options: INFERENCE_CARD_OPTIONS },
 ] as const
+
+function StripOptionCard({
+  icon,
+  label,
+  reason,
+  recommended = false,
+  onClick,
+}: {
+  icon: string
+  label: string
+  reason: string
+  recommended?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`min-w-[220px] max-w-[280px] rounded-2xl border px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${
+        recommended
+          ? 'border-[var(--color-gold)] bg-[var(--color-gold-light)]'
+          : 'border-[var(--color-border)] bg-[var(--color-bg)]'
+      }`}
+    >
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-lg leading-none">{icon}</span>
+          <span className="text-sm font-semibold text-[var(--color-text)]">{label}</span>
+        </div>
+        {recommended && (
+          <span className="rounded-full border border-[var(--color-gold)] bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#5A3A00]">
+            Recommended
+          </span>
+        )}
+      </div>
+      <p className="text-sm leading-5 text-[var(--color-muted)]">{reason}</p>
+    </button>
+  )
+}
 
 function GhostChip({ col }: { col: GridColumn }) {
   return (
@@ -167,10 +210,13 @@ function WorkspaceContextMenu({
 
 // ─── Main canvas ──────────────────────────────────────────────────────────────
 
-export function ExploreCanvas() {
+export function ExploreCanvas({
+  addCardCatalogOpen = false,
+  onCloseAddCardCatalog,
+}: ExploreCanvasProps) {
   const {
     grid, addExploreCard,
-    selectedColumnIds,
+    selectedColumnIds, setSelectedColumnIds,
     exploreCards, removeExploreCard, updateExploreCard, purgeExploreStaleIds, addLinkedGraphCard, addLinkedTableCard,
   } = useStore()
 
@@ -717,6 +763,10 @@ export function ExploreCanvas() {
       return
     }
 
+    if (selectedColumnIds.length > 0) {
+      setSelectedColumnIds([])
+    }
+
     const scroller = scrollRef.current
     if (!scroller) return
     const scrollerEl: HTMLDivElement = scroller
@@ -812,6 +862,13 @@ export function ExploreCanvas() {
     const sourceCols = type === 'summary' ? selectedCols : suggestionSelection
     const initialConfig = buildInitialConfig(type, sourceCols, { chartTypeHint })
     addExploreCard(type, { initialConfig })
+    onCloseAddCardCatalog?.()
+  }
+
+  function handleCatalogAdd(option: CardOption) {
+    const initialConfig = buildInitialConfig(option.type, selectedCols)
+    addExploreCard(option.type, { initialConfig })
+    onCloseAddCardCatalog?.()
   }
 
   const activeCol = activeColId ? (grid.columns.find(c => c.id === activeColId) ?? null) : null
@@ -821,7 +878,43 @@ export function ExploreCanvas() {
       <SwapAnimContext.Provider value={swapAnim}>
       <div className="flex h-full min-h-0">
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-          {selectedCols.length > 0 && suggestionReadingLine && suggestions.length > 0 && (
+          {addCardCatalogOpen ? (
+            <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+              <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">
+                <Plus size={14} className="text-[var(--color-accent)]" />
+                <span>Add Card</span>
+              </div>
+              {selectedCols.length > 0 && (
+                <div className="mb-4 text-sm font-medium text-[var(--color-text)]">
+                  Using: {selectedCols.map(col => col.name).join(' × ')}
+                </div>
+              )}
+              <div className="space-y-5 overflow-y-auto pb-1">
+                {CARD_OPTION_GROUPS.map(group => (
+                  <div key={group.id}>
+                    <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">
+                      {group.label}
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto pb-1">
+                      {group.options.map(option => (
+                        <StripOptionCard
+                          key={option.type}
+                          icon={option.icon}
+                          label={option.label}
+                          reason={
+                            selectedCols.length > 0
+                              ? `Build a ${option.label.toLowerCase()} card using the current variable selection.`
+                              : `Create an empty ${option.label.toLowerCase()} card.`
+                          }
+                          onClick={() => handleCatalogAdd(option)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : selectedCols.length > 0 && suggestionReadingLine && suggestions.length > 0 ? (
             <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
               <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">
                 <Sparkles size={14} className="text-[var(--color-accent)]" />
@@ -832,32 +925,18 @@ export function ExploreCanvas() {
               </div>
               <div className="flex gap-3 overflow-x-auto pb-1">
                 {suggestions.map((suggestion, index) => (
-                  <button
+                  <StripOptionCard
                     key={`${suggestion.type}-${suggestion.chartTypeHint ?? 'default'}-${index}`}
                     onClick={() => handleSuggestionAdd(suggestion.type, suggestion.chartTypeHint)}
-                    className={`min-w-[220px] max-w-[280px] rounded-2xl border px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${
-                      suggestion.recommended
-                        ? 'border-[var(--color-gold)] bg-[var(--color-gold-light)]'
-                        : 'border-[var(--color-border)] bg-[var(--color-bg)]'
-                    }`}
-                  >
-                    <div className="mb-2 flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg leading-none">{suggestion.icon}</span>
-                        <span className="text-sm font-semibold text-[var(--color-text)]">{suggestion.label}</span>
-                      </div>
-                      {suggestion.recommended && (
-                        <span className="rounded-full border border-[var(--color-gold)] bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#5A3A00]">
-                          Recommended
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm leading-5 text-[var(--color-muted)]">{suggestion.reason}</p>
-                  </button>
+                    icon={suggestion.icon}
+                    label={suggestion.label}
+                    reason={suggestion.reason}
+                    recommended={suggestion.recommended}
+                  />
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
           <div
             ref={scrollRef}
             onWheel={handleWheel}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useDroppable, useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
@@ -20,7 +21,28 @@ interface DropZoneProps {
 }
 
 function TypeBadge({ type }: { type: GridColumn['type'] }) {
-  return <span className="opacity-70 text-xs font-mono">{type === 'numeric' ? '#' : 'A'}</span>
+  return <span className="flex-shrink-0 opacity-70 text-xs font-mono">{type === 'numeric' ? '#' : 'A'}</span>
+}
+
+// Compute fixed position for the portal popover, flipping/clamping to stay on-screen.
+function computePopoverPos(anchor: DOMRect): { top: number; left: number } {
+  const MAX_H = 280
+  const MIN_W = 200
+  const GAP = 6
+  const PAD = 8
+
+  let top = anchor.bottom + GAP
+  if (top + MAX_H > window.innerHeight - PAD) {
+    top = Math.max(PAD, anchor.top - GAP - MAX_H)
+  }
+
+  let left = anchor.left
+  if (left + MIN_W > window.innerWidth - PAD) {
+    left = window.innerWidth - PAD - MIN_W
+  }
+  if (left < PAD) left = PAD
+
+  return { top, left }
 }
 
 export function DropZone({
@@ -41,6 +63,7 @@ export function DropZone({
     disabled: !assignedCol,
   })
   const [open, setOpen] = useState(false)
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const buttonRef = useRef<HTMLButtonElement | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
@@ -111,11 +134,20 @@ export function DropZone({
       }
     }
 
+    // Close when the canvas pans or the page scrolls so the anchor doesn't drift
+    function handleScrollOrResize() {
+      setOpen(false)
+    }
+
     document.addEventListener('pointerdown', handlePointerDown)
     window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('scroll', handleScrollOrResize, true)
+    window.addEventListener('resize', handleScrollOrResize)
     return () => {
       document.removeEventListener('pointerdown', handlePointerDown)
       window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('scroll', handleScrollOrResize, true)
+      window.removeEventListener('resize', handleScrollOrResize)
     }
   }, [open])
 
@@ -131,6 +163,9 @@ export function DropZone({
 
   function toggleMenu() {
     if (!onAssign && !assignedCol) return
+    if (!open && buttonRef.current) {
+      setPopoverPos(computePopoverPos(buttonRef.current.getBoundingClientRect()))
+    }
     setOpen(prev => !prev)
   }
 
@@ -166,6 +201,83 @@ export function DropZone({
 
   const zoneClass = assignedCol ? filledColors : emptyColors
   const zoneButtonClass = `w-full rounded-xl border-2 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${zoneClass}`
+
+  const pickerPanel = open && onAssign && popoverPos ? createPortal(
+    <div
+      ref={panelRef}
+      id={listboxId}
+      role="listbox"
+      tabIndex={-1}
+      onKeyDown={handleMenuKeyDown}
+      style={{
+        position: 'fixed',
+        top: popoverPos.top,
+        left: popoverPos.left,
+        zIndex: 9999,
+        minWidth: 200,
+        width: 'max-content',
+        maxWidth: 320,
+        maxHeight: 280,
+        overflowY: 'auto',
+      }}
+      className="rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-[var(--shadow-card)]"
+    >
+      {selectedColumns.length > 0 && (
+        <div className="px-2 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)]">
+          Selected
+        </div>
+      )}
+      {menuRows.map((row, index) => {
+        const isChecked = row.kind === 'column' && row.col?.id === assignedCol?.id
+        const showDivider =
+          selectedColumns.length > 0 &&
+          index === selectedColumns.filter(col => col.id !== assignedCol?.id).length + (assignedCol && selectedColumnIds.includes(assignedCol.id) ? 1 : 0) &&
+          row.kind === 'column' &&
+          !selectedColumnIds.includes(row.col!.id)
+
+        return (
+          <div key={row.kind === 'clear' ? 'clear' : row.col!.id}>
+            {showDivider && (
+              <div className="px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)]">
+                All variables
+              </div>
+            )}
+            {row.kind === 'clear' ? (
+              <button
+                ref={node => { rowRefs.current[index] = node }}
+                type="button"
+                role="option"
+                aria-selected={false}
+                className="flex min-h-[36px] w-full items-center whitespace-nowrap rounded-xl px-3 text-sm font-medium text-red-500 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                onClick={() => { onClear(); closeMenu() }}
+              >
+                Clear
+              </button>
+            ) : (
+              <button
+                ref={node => { rowRefs.current[index] = node }}
+                type="button"
+                role="option"
+                aria-selected={isChecked}
+                className={`flex min-h-[36px] w-full items-center gap-2 whitespace-nowrap rounded-xl px-3 text-sm hover:bg-[var(--color-accent-light)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
+                  isChecked ? 'bg-[var(--color-accent-light)] text-[var(--color-text)]' : 'text-[var(--color-text)]'
+                }`}
+                onClick={() => applyAssignment(row.col!.id)}
+              >
+                <TypeBadge type={row.col!.type} />
+                <span className="flex-1 text-left">{row.col!.name}</span>
+                {isChecked && <span className="flex-shrink-0 text-xs font-semibold text-[var(--color-accent)]">Current</span>}
+              </button>
+            )}
+          </div>
+        )
+      })}
+      {menuRows.length === 0 && (
+        <div className="px-3 py-2 text-sm text-[var(--color-muted)] whitespace-nowrap">No matching variables.</div>
+      )}
+    </div>,
+    document.body
+  ) : null
 
   return (
     <div className="relative w-full">
@@ -264,75 +376,7 @@ export function DropZone({
         </button>
       )}
 
-      {open && onAssign && (
-        <div
-          ref={panelRef}
-          id={listboxId}
-          role="listbox"
-          tabIndex={-1}
-          onKeyDown={handleMenuKeyDown}
-          className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 max-h-80 overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-[var(--shadow-card)]"
-        >
-          {selectedColumns.length > 0 && (
-            <div className="px-2 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)]">
-              Selected
-            </div>
-          )}
-          {menuRows.map((row, index) => {
-            const isChecked = row.kind === 'column' && row.col?.id === assignedCol?.id
-            const showDivider =
-              selectedColumns.length > 0 &&
-              index === selectedColumns.filter(col => col.id !== assignedCol?.id).length + (assignedCol && selectedColumnIds.includes(assignedCol.id) ? 1 : 0) &&
-              row.kind === 'column' &&
-              !selectedColumnIds.includes(row.col!.id)
-
-            return (
-              <div key={row.kind === 'clear' ? 'clear' : row.col!.id}>
-                {showDivider && (
-                  <div className="px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)]">
-                    All variables
-                  </div>
-                )}
-                {row.kind === 'clear' ? (
-                  <button
-                    ref={node => { rowRefs.current[index] = node }}
-                    type="button"
-                    role="option"
-                    aria-selected={false}
-                    className="flex min-h-[40px] w-full items-center rounded-xl px-3 text-sm font-medium text-red-500 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-                    onClick={() => {
-                      onClear()
-                      closeMenu()
-                    }}
-                  >
-                    Clear
-                  </button>
-                ) : (
-                  <button
-                    ref={node => { rowRefs.current[index] = node }}
-                    type="button"
-                    role="option"
-                    aria-selected={isChecked}
-                    className={`flex min-h-[40px] w-full items-center justify-between gap-3 rounded-xl px-3 text-sm hover:bg-[var(--color-accent-light)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
-                      isChecked ? 'bg-[var(--color-accent-light)] text-[var(--color-text)]' : 'text-[var(--color-text)]'
-                    }`}
-                    onClick={() => applyAssignment(row.col!.id)}
-                  >
-                    <span className="flex min-w-0 items-center gap-2">
-                      <TypeBadge type={row.col!.type} />
-                      <span className="truncate">{row.col!.name}</span>
-                    </span>
-                    {isChecked && <span className="text-xs font-semibold text-[var(--color-accent)]">Current</span>}
-                  </button>
-                )}
-              </div>
-            )
-          })}
-          {menuRows.length === 0 && (
-            <div className="px-3 py-2 text-sm text-[var(--color-muted)]">No matching variables.</div>
-          )}
-        </div>
-      )}
+      {pickerPanel}
     </div>
   )
 }

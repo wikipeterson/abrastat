@@ -9,7 +9,6 @@ import { useStore } from '@/lib/store'
 import { signOut } from '@/lib/auth'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { PalettePicker } from '@/components/layout/PalettePicker'
-import { BuildStamp } from '@/components/dev/BuildStamp'
 
 interface HeaderProps {
   onNew?: () => void
@@ -116,26 +115,23 @@ export function Header({
             <div className="flex items-center gap-2">
               {leadingNav && <div className="hidden md:flex">{leadingNav}</div>}
               {modeTabs && modeTabs.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
-                    {modeTabs.map(tab => {
-                      const active = tab.id === activeModeId
-                      return (
-                        <button
-                          key={tab.id}
-                          onClick={() => onModeChange?.(tab.id)}
-                          className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                            active
-                              ? 'bg-[var(--color-accent)] text-white'
-                              : 'text-[var(--color-muted)] hover:bg-slate-100'
-                          }`}
-                        >
-                          {tab.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <BuildStamp />
+                <div className="flex items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
+                  {modeTabs.map(tab => {
+                    const active = tab.id === activeModeId
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => onModeChange?.(tab.id)}
+                        className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          active
+                            ? 'bg-[var(--color-accent)] text-white'
+                            : 'text-[var(--color-muted)] hover:bg-slate-100'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>

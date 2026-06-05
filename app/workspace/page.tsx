@@ -21,6 +21,7 @@ import { DatasetMeta } from '@/types'
 import { exportGridAsCsv, exportGridAsXlsx } from '@/lib/datasetExport'
 import { canAccessPuzzleWeek } from '@/lib/featureFlags'
 import { DataDock, DockState, computeSnaps } from '@/components/grid/DataDock'
+import { BuildStamp } from '@/components/dev/BuildStamp'
 
 type WorkspaceMode = 'library' | 'lab'
 type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls' | 'logic-puzzles'
@@ -257,6 +258,10 @@ function VariableSidebar({
             </button>
           </div>
         )}
+
+        <div className="px-3 py-2 border-t border-[var(--color-border)]">
+          <BuildStamp />
+        </div>
       </aside>
     </>
   )

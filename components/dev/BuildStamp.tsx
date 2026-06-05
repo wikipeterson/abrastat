@@ -29,7 +29,6 @@ export function BuildStamp() {
 
   return (
     <div
-      className="hidden sm:block"
       title="Deployment build stamp"
     >
       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] text-[var(--color-muted)] shadow-sm whitespace-nowrap">

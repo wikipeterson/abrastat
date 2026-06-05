@@ -62,9 +62,10 @@ interface Props {
   cardId: string
   config: ProportionsCardConfig
   onClearZone: (zone: string) => void
+  onAssignZone: (zone: 'var1' | 'var2', colId: string) => boolean
 }
 
-export function ProportionsCard({ cardId, config, onClearZone }: Props) {
+export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: Props) {
   const { grid } = useStore()
 
   function handleNativeDrop(zone: 'var1' | 'var2') {
@@ -72,16 +73,7 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
       const colId = e.dataTransfer.getData('text/plain')
       if (!colId) return
       e.preventDefault()
-      const droppedCol = useStore.getState().grid.columns.find(c => c.id === colId)
-      if (!droppedCol || droppedCol.type !== 'categorical') return
-      const current = useStore.getState().exploreCards.find(c => c.id === cardId)
-      if (!current || current.config.type !== 'proportions') return
-      useStore.getState().updateExploreCard(cardId, {
-        config: {
-          ...current.config,
-          ...(zone === 'var1' ? { var1ColId: colId } : { var2ColId: colId }),
-        },
-      })
+      onAssignZone(zone, colId)
     }
   }
 
@@ -320,10 +312,10 @@ export function ProportionsCard({ cardId, config, onClearZone }: Props) {
       {!useManual && (
         <div className="flex gap-2 flex-shrink-0">
           <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var1')}>
-            <DropZone id={`${cardId}:var1`} label="Response Variable" hint="categorical only" assignedCol={responseCol} onClear={() => onClearZone('var1')} />
+            <DropZone id={`${cardId}:var1`} label="Response Variable" hint="categorical only" assignedCol={responseCol} onClear={() => onClearZone('var1')} onAssign={colId => onAssignZone('var1', colId)} allowedTypes={['categorical']} />
           </div>
           <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var2')}>
-            <DropZone id={`${cardId}:var2`} label="2nd Variable or Group By" hint="categorical only" assignedCol={groupCol} onClear={() => onClearZone('var2')} />
+            <DropZone id={`${cardId}:var2`} label="2nd Variable or Group By" hint="categorical only" assignedCol={groupCol} onClear={() => onClearZone('var2')} onAssign={colId => onAssignZone('var2', colId)} allowedTypes={['categorical']} />
           </div>
         </div>
       )}

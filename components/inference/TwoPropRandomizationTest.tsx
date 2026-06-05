@@ -373,9 +373,14 @@ function colStats(cases: TwoProportionData['cases'], group:0|1, assignment:numbe
 // ── Main component ────────────────────────────────────────────────────────────
 
 type SourceMode = 'data' | 'manual'
-interface Props { cardId:string; config:TwoPropRandomizationCardConfig; onClearZone:(z:string)=>void }
+interface Props {
+  cardId: string
+  config: TwoPropRandomizationCardConfig
+  onClearZone: (z: string) => void
+  onAssignZone: (zone: 'var1' | 'var2', colId: string) => boolean
+}
 
-export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props) {
+export function TwoPropRandomizationTest({ cardId, config, onClearZone, onAssignZone }: Props) {
   const { grid, updateExploreCard, addTwoPropSimCard, exploreCards } = useStore()
 
   // Config
@@ -399,11 +404,7 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
     return (e: React.DragEvent) => {
       const colId = e.dataTransfer.getData('text/plain')
       if (!colId) return; e.preventDefault()
-      const droppedCol = useStore.getState().grid.columns.find(c => c.id===colId)
-      if (!droppedCol||droppedCol.type!=='categorical') return
-      const current = useStore.getState().exploreCards.find(c => c.id===cardId)
-      if (!current||current.config.type!=='two-prop-randomization') return
-      updateExploreCard(cardId, { config:{...current.config,...(zone==='var1'?{var1ColId:colId}:{var2ColId:colId})} })
+      onAssignZone(zone, colId)
     }
   }
   function handleNativeDragOver(e: React.DragEvent) {
@@ -481,10 +482,10 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone }: Props)
           <>
             <div className="flex gap-2">
               <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var1')}>
-                <DropZone id={`${cardId}:var1`} label="Response Variable" hint="categorical only" assignedCol={responseCol} onClear={()=>onClearZone('var1')}/>
+                <DropZone id={`${cardId}:var1`} label="Response Variable" hint="categorical only" assignedCol={responseCol} onClear={()=>onClearZone('var1')} onAssign={colId => onAssignZone('var1', colId)} allowedTypes={['categorical']}/>
               </div>
               <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var2')}>
-                <DropZone id={`${cardId}:var2`} label="Group By" hint="categorical only" assignedCol={groupCol} onClear={()=>onClearZone('var2')}/>
+                <DropZone id={`${cardId}:var2`} label="Group By" hint="categorical only" assignedCol={groupCol} onClear={()=>onClearZone('var2')} onAssign={colId => onAssignZone('var2', colId)} allowedTypes={['categorical']}/>
               </div>
             </div>
             {responseLevels.length>1&&(

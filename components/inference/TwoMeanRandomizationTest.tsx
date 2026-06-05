@@ -384,9 +384,14 @@ function parseValues(text: string): { values: number[]; error: string | null } {
 // ── Config card ───────────────────────────────────────────────────────────────
 
 type SourceMode = 'data' | 'manual'
-interface Props { cardId:string; config:TwoMeanRandomizationCardConfig; onClearZone:(z:string)=>void }
+interface Props {
+  cardId: string
+  config: TwoMeanRandomizationCardConfig
+  onClearZone: (z: string) => void
+  onAssignZone: (zone: 'var1' | 'var2', colId: string) => boolean
+}
 
-export function TwoMeanRandomizationTest({ cardId, config, onClearZone }: Props) {
+export function TwoMeanRandomizationTest({ cardId, config, onClearZone, onAssignZone }: Props) {
   const { grid, updateExploreCard, addTwoMeanSimCard, exploreCards } = useStore()
   const dataShape = config.dataShape ?? 'grouping'
 
@@ -407,13 +412,7 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone }: Props)
     return (e: React.DragEvent) => {
       const colId = e.dataTransfer.getData('text/plain')
       if (!colId) return; e.preventDefault()
-      const droppedCol = useStore.getState().grid.columns.find(c => c.id === colId)
-      if (!droppedCol) return
-      const requiredType = zone === 'var1' ? 'numeric' : (dataShape === 'two-quant' ? 'numeric' : 'categorical')
-      if (droppedCol.type !== requiredType) return
-      const current = useStore.getState().exploreCards.find(c => c.id === cardId)
-      if (!current || current.config.type !== 'two-mean-randomization') return
-      updateExploreCard(cardId, { config: { ...current.config, ...(zone === 'var1' ? { var1ColId: colId } : { var2ColId: colId }) } })
+      onAssignZone(zone, colId)
     }
   }
 
@@ -541,10 +540,10 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone }: Props)
             </div>
             <div className="flex gap-2">
               <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var1')}>
-                <DropZone id={`${cardId}:var1`} label={dataShape === 'two-quant' ? 'Variable 1' : 'Quantitative Variable'} hint="numeric only" assignedCol={quantCol} onClear={() => onClearZone('var1')} />
+                <DropZone id={`${cardId}:var1`} label={dataShape === 'two-quant' ? 'Variable 1' : 'Quantitative Variable'} hint="numeric only" assignedCol={quantCol} onClear={() => onClearZone('var1')} onAssign={colId => onAssignZone('var1', colId)} allowedTypes={['numeric']} />
               </div>
               <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var2')}>
-                <DropZone id={`${cardId}:var2`} label={dataShape === 'two-quant' ? 'Variable 2' : 'Group By'} hint={dataShape === 'two-quant' ? 'numeric only' : 'categorical only'} assignedCol={secondCol} onClear={() => onClearZone('var2')} />
+                <DropZone id={`${cardId}:var2`} label={dataShape === 'two-quant' ? 'Variable 2' : 'Group By'} hint={dataShape === 'two-quant' ? 'numeric only' : 'categorical only'} assignedCol={secondCol} onClear={() => onClearZone('var2')} onAssign={colId => onAssignZone('var2', colId)} allowedTypes={dataShape === 'two-quant' ? ['numeric'] : ['categorical']} />
               </div>
             </div>
             {dataShape === 'grouping' && groupLevels.length > 2 && (

@@ -75,9 +75,10 @@ interface Props {
   cardId: string
   config: MeansCardConfig
   onClearZone: (zone: string) => void
+  onAssignZone: (zone: 'var1' | 'var2', colId: string) => boolean
 }
 
-export function MeansCard({ cardId, config, onClearZone }: Props) {
+export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) {
   const { grid } = useStore()
 
   function handleNativeDrop(zone: 'var1' | 'var2') {
@@ -85,17 +86,7 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
       const colId = e.dataTransfer.getData('text/plain')
       if (!colId) return
       e.preventDefault()
-      const droppedCol = useStore.getState().grid.columns.find(c => c.id === colId)
-      if (!droppedCol) return
-      if (zone === 'var1' && droppedCol.type !== 'numeric') return
-      const current = useStore.getState().exploreCards.find(c => c.id === cardId)
-      if (!current || current.config.type !== 'means') return
-      useStore.getState().updateExploreCard(cardId, {
-        config: {
-          ...current.config,
-          ...(zone === 'var1' ? { var1ColId: colId } : { var2ColId: colId }),
-        },
-      })
+      onAssignZone(zone, colId)
     }
   }
 
@@ -348,10 +339,10 @@ export function MeansCard({ cardId, config, onClearZone }: Props) {
     <div className="h-full flex flex-col gap-3 overflow-hidden text-sm">
       <div className="flex gap-2 flex-shrink-0">
         <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var1')}>
-          <DropZone id={`${cardId}:var1`} label="Variable" hint="numeric only" assignedCol={var1Col} onClear={() => onClearZone('var1')} />
+          <DropZone id={`${cardId}:var1`} label="Variable" hint="numeric only" assignedCol={var1Col} onClear={() => onClearZone('var1')} onAssign={colId => onAssignZone('var1', colId)} allowedTypes={['numeric']} />
         </div>
         <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var2')}>
-          <DropZone id={`${cardId}:var2`} label="2nd Variable or Group By" hint="numeric or categorical" assignedCol={var2Col} onClear={() => onClearZone('var2')} />
+          <DropZone id={`${cardId}:var2`} label="2nd Variable or Group By" hint="numeric or categorical" assignedCol={var2Col} onClear={() => onClearZone('var2')} onAssign={colId => onAssignZone('var2', colId)} />
         </div>
       </div>
 

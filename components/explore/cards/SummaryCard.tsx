@@ -1,8 +1,9 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { useStore } from '@/lib/store'
+import { GridColumn } from '@/types'
 import { getNumericValues, getNumericGroup, getValidStringValues } from '@/lib/gridHelpers'
 import { computeSummary, getFrequencyTable } from '@/lib/statistics'
 import { NumericStatsTable, NumericTableRow, CategoricalStatCard, TwoWayTableCard } from '@/components/stats/StatCard'
@@ -14,21 +15,64 @@ interface SummaryCardProps {
   cardId: string
   config: SummaryCardConfig
   onClearZone: (zone: string) => void
+  onAssignZone: (zone: 'variable' | 'group', colId: string) => boolean
   onRemove: () => void
   hideHeader?: boolean
 }
 
-function MultiVarDropZone({ id, varCols, onClearVar }: {
+function MultiVarDropZone({ id, varCols, onClearVar, onAssignVar }: {
   id: string
-  varCols: { id: string; name: string; type: string }[]
+  varCols: GridColumn[]
   onClearVar: (colId: string) => void
+  onAssignVar: (colId: string) => boolean
 }) {
+  const { grid, selectedColumnIds } = useStore()
   const { setNodeRef, isOver } = useDroppable({ id })
+  const buttonRef = useRef<HTMLDivElement | null>(null)
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  const [open, setOpen] = useState(false)
+  const validColumns = grid.columns
+  const selectedColumns = validColumns.filter(col => selectedColumnIds.includes(col.id))
+  const remainingColumns = validColumns.filter(col => !selectedColumnIds.includes(col.id))
+
+  useEffect(() => {
+    if (!open) return
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node
+      if (buttonRef.current?.contains(target) || panelRef.current?.contains(target)) return
+      setOpen(false)
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setOpen(false)
+        buttonRef.current?.focus()
+      }
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
   return (
-    <div className="flex-1 min-w-0">
+    <div className="relative flex-1 min-w-0">
       <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-1">Variable</div>
       <div
-        ref={setNodeRef}
+        ref={node => {
+          setNodeRef(node)
+          buttonRef.current = node
+        }}
+        onClick={() => setOpen(prev => !prev)}
+        onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            setOpen(prev => !prev)
+          }
+        }}
+        role="button"
+        tabIndex={0}
         className={`min-h-[2.25rem] flex flex-wrap gap-1 p-1.5 rounded-lg border transition-colors ${
           isOver
             ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
@@ -38,7 +82,7 @@ function MultiVarDropZone({ id, varCols, onClearVar }: {
         }`}
       >
         {varCols.length === 0 ? (
-          <span className="text-xs text-[var(--color-muted)] self-center px-1">drop variables here</span>
+          <span className="text-xs text-[var(--color-muted)] self-center px-1">Drop or click to add</span>
         ) : (
           varCols.map(col => (
             <span
@@ -48,6 +92,7 @@ function MultiVarDropZone({ id, varCols, onClearVar }: {
               <span className="font-mono opacity-60">{col.type === 'numeric' ? '#' : 'A'}</span>
               {col.name}
               <button
+                type="button"
                 onPointerDown={e => e.stopPropagation()}
                 onClick={() => onClearVar(col.id)}
                 className="ml-0.5 opacity-50 hover:opacity-100 leading-none"
@@ -56,11 +101,53 @@ function MultiVarDropZone({ id, varCols, onClearVar }: {
           ))
         )}
       </div>
+      {open && (
+        <div
+          ref={panelRef}
+          className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 max-h-80 overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-[var(--shadow-card)]"
+        >
+          {selectedColumns.length > 0 && (
+            <div className="px-2 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)]">
+              Selected
+            </div>
+          )}
+          {[...selectedColumns, ...remainingColumns.filter(col => !selectedColumnIds.includes(col.id))].map((col, index, all) => {
+            const showDivider = selectedColumns.length > 0 && index === selectedColumns.length
+            return (
+              <div key={col.id}>
+                {showDivider && (
+                  <div className="px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)]">
+                    All variables
+                  </div>
+                )}
+                <button
+                  type="button"
+                  className={`flex min-h-[40px] w-full items-center justify-between gap-3 rounded-xl px-3 text-sm hover:bg-[var(--color-accent-light)] ${
+                    varCols.some(existing => existing.id === col.id) ? 'bg-[var(--color-accent-light)]' : ''
+                  }`}
+                  onClick={() => {
+                    const applied = onAssignVar(col.id)
+                    if (applied) setOpen(false)
+                  }}
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="opacity-70 text-xs font-mono">{col.type === 'numeric' ? '#' : 'A'}</span>
+                    <span className="truncate">{col.name}</span>
+                  </span>
+                  {varCols.some(existing => existing.id === col.id) && (
+                    <span className="text-xs font-semibold text-[var(--color-accent)]">Added</span>
+                  )}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
 
-export function SummaryCard({ cardId, config, onClearZone, onRemove, hideHeader }: SummaryCardProps) {
+export function SummaryCard({ cardId, config, onClearZone, onAssignZone, onRemove, hideHeader }: SummaryCardProps) {
   const { grid } = useStore()
 
   function handleNativeDragOver(e: React.DragEvent) {
@@ -74,29 +161,14 @@ export function SummaryCard({ cardId, config, onClearZone, onRemove, hideHeader 
     const colId = e.dataTransfer.getData('text/plain')
     if (!colId) return
     e.preventDefault()
-    const current = useStore.getState().exploreCards.find(c => c.id === cardId)
-    if (!current || current.config.type !== 'summary') return
-    if (current.config.variableColIds.includes(colId)) return
-    useStore.getState().updateExploreCard(cardId, {
-      config: {
-        ...current.config,
-        variableColIds: [...current.config.variableColIds, colId],
-      },
-    })
+    onAssignZone('variable', colId)
   }
 
   function handleNativeGroupDrop(e: React.DragEvent) {
     const colId = e.dataTransfer.getData('text/plain')
     if (!colId) return
     e.preventDefault()
-    const current = useStore.getState().exploreCards.find(c => c.id === cardId)
-    if (!current || current.config.type !== 'summary') return
-    useStore.getState().updateExploreCard(cardId, {
-      config: {
-        ...current.config,
-        groupColId: colId,
-      },
-    })
+    onAssignZone('group', colId)
   }
 
   const varCols = config.variableColIds
@@ -183,18 +255,19 @@ export function SummaryCard({ cardId, config, onClearZone, onRemove, hideHeader 
               id={`${cardId}:variable`}
               varCols={varCols}
               onClearVar={colId => onClearZone(`variable:${colId}`)}
+              onAssignVar={colId => onAssignZone('variable', colId)}
             />
           </div>
           <div className="w-40 flex-shrink-0">
             <div onDragOver={handleNativeDragOver} onDrop={handleNativeGroupDrop}>
               <DropZone id={`${cardId}:group`} label="Group by" hint="categorical (optional)"
-                assignedCol={groupCol} onClear={() => onClearZone('group')} />
+                assignedCol={groupCol} onClear={() => onClearZone('group')} onAssign={colId => onAssignZone('group', colId)} allowedTypes={['categorical']} />
             </div>
           </div>
         </div>
 
         {varCols.length === 0 ? (
-          <EmptyState icon="📊" title="Drop a variable above" description="Drag any variable from the sidebar to see its statistics." />
+          <EmptyState icon="📊" title="Drop or click a variable above" description="Use the variable zone to add one or more columns and view their statistics." />
         ) : content}
       </div>
     </div>

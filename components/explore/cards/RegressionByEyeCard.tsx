@@ -424,11 +424,12 @@ interface RegressionByEyeCardProps {
   cardId: string
   config: RegressionByEyeCardConfig
   onClearZone: (zone: string) => void
+  onAssignZone: (zone: 'x' | 'y', colId: string) => boolean
   onRemove: () => void
   hideHeader?: boolean
 }
 
-export function RegressionByEyeCard({ cardId, config, onClearZone, onRemove, hideHeader }: RegressionByEyeCardProps) {
+export function RegressionByEyeCard({ cardId, config, onClearZone, onAssignZone, onRemove, hideHeader }: RegressionByEyeCardProps) {
   const { grid } = useStore()
 
   const xCol = config.xColId ? grid.columns.find(c => c.id === config.xColId) ?? null : null
@@ -449,13 +450,7 @@ export function RegressionByEyeCard({ cardId, config, onClearZone, onRemove, hid
       const colId = e.dataTransfer.getData('text/plain')
       if (!colId) return
       e.preventDefault()
-      const droppedCol = grid.columns.find(c => c.id === colId)
-      if (!droppedCol || droppedCol.type !== 'numeric') return
-      const current = useStore.getState().exploreCards.find(c => c.id === cardId)
-      if (!current || current.config.type !== 'regression-by-eye') return
-      useStore.getState().updateExploreCard(cardId, {
-        config: { ...current.config, [zone === 'x' ? 'xColId' : 'yColId']: colId },
-      })
+      onAssignZone(zone, colId)
     }
   }
 
@@ -527,6 +522,8 @@ export function RegressionByEyeCard({ cardId, config, onClearZone, onRemove, hid
             hint="numeric variable"
             assignedCol={yCol}
             onClear={() => onClearZone('y')}
+            onAssign={colId => onAssignZone('y', colId)}
+            allowedTypes={['numeric']}
             variant="vertical"
           />
         </div>
@@ -551,6 +548,8 @@ export function RegressionByEyeCard({ cardId, config, onClearZone, onRemove, hid
             hint="numeric variable"
             assignedCol={xCol}
             onClear={() => onClearZone('x')}
+            onAssign={colId => onAssignZone('x', colId)}
+            allowedTypes={['numeric']}
           />
         </div>
       </div>

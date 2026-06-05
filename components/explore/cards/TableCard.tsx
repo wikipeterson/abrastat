@@ -11,11 +11,12 @@ interface TableCardProps {
   cardId: string
   config: TableOutputCardConfig
   onClearZone: (zone: string) => void
+  onAssignZone: (zone: 'rows' | 'cols', colId: string) => boolean
   onRemove: () => void
   hideHeader?: boolean
 }
 
-export function TableCard({ cardId, config, onClearZone, onRemove, hideHeader }: TableCardProps) {
+export function TableCard({ cardId, config, onClearZone, onAssignZone, onRemove, hideHeader }: TableCardProps) {
   const { grid } = useStore()
   const manualTable = config.manualTable ?? null
 
@@ -35,9 +36,9 @@ export function TableCard({ cardId, config, onClearZone, onRemove, hideHeader }:
         {!manualTable && (
         <div className="grid grid-cols-2 gap-2">
           <DropZone id={`${cardId}:rows`} label="Rows" hint="categorical variable"
-            assignedCol={rowsCol} onClear={() => onClearZone('rows')} />
+            assignedCol={rowsCol} onClear={() => onClearZone('rows')} onAssign={colId => onAssignZone('rows', colId)} allowedTypes={['categorical']} />
           <DropZone id={`${cardId}:cols`} label="Columns" hint="categorical variable"
-            assignedCol={colsCol} onClear={() => onClearZone('cols')} />
+            assignedCol={colsCol} onClear={() => onClearZone('cols')} onAssign={colId => onAssignZone('cols', colId)} allowedTypes={['categorical']} />
         </div>
         )}
 

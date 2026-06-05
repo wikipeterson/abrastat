@@ -43,7 +43,7 @@ interface GraphCardProps {
   onSetShowOutlierFences: (show: boolean) => void
   onSetBestFitMode: (mode: 'none' | 'overall' | 'group') => void
   onSetBarValueMode: (mode: 'count' | 'percent') => void
-  onAssignZone: (zone: 'x' | 'y' | 'group', colId: string) => void
+  onAssignZone: (zone: 'x' | 'y' | 'group', colId: string) => boolean
   onRemove: () => void
   hideHeader?: boolean
 }
@@ -885,6 +885,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                   hint="optional"
                   assignedCol={groupCol}
                   onClear={() => onClearZone('group')}
+                  onAssign={colId => onAssignZone('group', colId)}
+                  allowedTypes={['categorical']}
                 />
               </div>
             </div>
@@ -927,9 +929,10 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
             <DropZone
               id={`${cardId}:y`}
               label="Response Variable"
-              hint="drop here"
+              hint="Drop or click to add"
               assignedCol={yCol}
               onClear={() => onClearZone('y')}
+              onAssign={colId => onAssignZone('y', colId)}
               variant="vertical"
             />
           </div>
@@ -974,9 +977,9 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
           ) : isBlank ? (
                 <div className="h-full flex flex-col items-center justify-center gap-2 text-center p-6">
                   <span className="text-4xl opacity-25 select-none">📈</span>
-                  <p className="text-sm font-medium text-[var(--color-muted)]">Drop a variable to get started</p>
+                  <p className="text-sm font-medium text-[var(--color-muted)]">Drop or click a variable to get started</p>
                   <p className="text-xs text-[var(--color-muted)] opacity-70">
-                    Drag and drop a variable from the sidebar to begin.
+                    Use the zones to assign variables without dragging if you prefer.
                   </p>
                 </div>
               ) : showDirectChart ? (
@@ -996,9 +999,10 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
             <DropZone
               id={`${cardId}:x`}
               label="Explanatory Variable"
-              hint="any variable"
+              hint="Drop or click to add"
               assignedCol={xCol}
               onClear={() => onClearZone('x')}
+              onAssign={colId => onAssignZone('x', colId)}
             />
           </div>
         </div>

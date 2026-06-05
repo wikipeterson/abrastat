@@ -25,7 +25,7 @@ export function computeSnaps() {
 const CYCLE_BTN: Record<DockState, { label: string; icon: string; next: DockState }> = {
   collapsed: { label: 'Show',    icon: '▴', next: 'half'      },
   half:      { label: 'Full',    icon: '▢', next: 'full'      },
-  full:      { label: 'Restore', icon: '▭', next: 'collapsed' },
+  full:      { label: 'Minimize', icon: '▭', next: 'collapsed' },
 }
 
 interface DataDockProps {

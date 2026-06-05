@@ -292,6 +292,13 @@ export function suggestAnalyses(selectedCols: SelectedAnalysisColumn[]): Suggest
       },
       {
         type: 'graph',
+        label: 'Histogram',
+        icon: '📊',
+        chartTypeHint: 'histogram',
+        reason: `See the shape, center and spread of ${formatName(first.name)}.`,
+      },
+      {
+        type: 'graph',
         label: 'Box Plot',
         icon: '📦',
         chartTypeHint: 'box',

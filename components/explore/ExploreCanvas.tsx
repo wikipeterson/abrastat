@@ -36,6 +36,31 @@ import { DiceRollerCard } from '@/components/probability/DiceRollerCard'
 import { SimResultsCard } from '@/components/probability/SimResultsCard'
 import { SimulationCard } from '@/components/probability/SimulationCard'
 
+type ZoneAssignableCardConfig =
+  | GraphCardConfig
+  | MeansCardConfig
+  | OnePropRandomizationCardConfig
+  | TwoPropRandomizationCardConfig
+  | TwoMeanRandomizationCardConfig
+  | Extract<CardConfig, { type: 'summary' | 'regression' | 'regression-by-eye' | 'proportions' | 'table' }>
+
+const ZONE_ASSIGNABLE_TYPES = new Set<CardConfig['type']>([
+  'graph',
+  'summary',
+  'regression',
+  'regression-by-eye',
+  'means',
+  'proportions',
+  'table',
+  'one-prop-randomization',
+  'two-prop-randomization',
+  'two-mean-randomization',
+])
+
+function isZoneAssignableConfig(config: CardConfig): config is ZoneAssignableCardConfig {
+  return ZONE_ASSIGNABLE_TYPES.has(config.type)
+}
+
 interface CardOption {
   type: CardConfig['type']
   icon: string
@@ -421,6 +446,182 @@ export function ExploreCanvas({
     }
   }, [])
 
+  const assignVariableToZone = useCallback((cardId: string, zone: string, colId: string, sourceZoneId?: string | null): boolean => {
+    const card = cards.find(c => c.id === cardId)
+    if (!card || !isZoneAssignableConfig(card.config)) return false
+
+    const cfg = card.config
+    const sourceZone = (sourceZoneId && sourceZoneId.startsWith(cardId + ':'))
+      ? sourceZoneId.slice(cardId.length + 1)
+      : null
+    const targetZone = zone === 'canvas' ? 'x' : zone
+    const droppedCol = grid.columns.find(c => c.id === colId) ?? null
+
+    let newConfig: CardConfig | null = null
+    if (cfg.type === 'graph') {
+      let c = { ...cfg }
+      const prevX = c.xColId
+      const prevY = c.yColId
+      const prevGroup = c.groupColId
+      if (targetZone === 'x') c = { ...c, xColId: colId }
+      if (targetZone === 'y') c = { ...c, yColId: colId }
+      if (targetZone === 'group') c = { ...c, groupColId: colId }
+      if (sourceZone && sourceZone !== targetZone) {
+        if (sourceZone === 'x') c = { ...c, xColId: targetZone === 'y' ? prevY : targetZone === 'group' ? prevGroup : null }
+        if (sourceZone === 'y') c = { ...c, yColId: targetZone === 'x' ? prevX : targetZone === 'group' ? prevGroup : null }
+        if (sourceZone === 'group') c = { ...c, groupColId: targetZone === 'x' ? prevX : targetZone === 'y' ? prevY : null }
+      }
+      newConfig = normalizeGraphConfig(c)
+    }
+    if (cfg.type === 'summary') {
+      if (targetZone === 'variable') {
+        const ids = cfg.variableColIds.includes(colId) ? cfg.variableColIds : [...cfg.variableColIds, colId]
+        newConfig = { ...cfg, variableColIds: ids }
+      }
+      if (targetZone === 'group' && droppedCol?.type === 'categorical') {
+        newConfig = { ...cfg, groupColId: colId }
+      }
+    }
+    if (cfg.type === 'regression') {
+      if (!droppedCol) return false
+      if ((targetZone === 'x' || targetZone === 'y') && droppedCol.type !== 'numeric') return false
+      if (targetZone === 'group' && droppedCol.type !== 'categorical') return false
+      let c = { ...cfg }
+      const prevX = c.xColId
+      const prevY = c.yColId
+      const prevGroup = c.groupColId
+      if (targetZone === 'x') c = { ...c, xColId: colId }
+      if (targetZone === 'y') c = { ...c, yColId: colId }
+      if (targetZone === 'group') c = { ...c, groupColId: colId }
+      if (sourceZone && sourceZone !== targetZone) {
+        if (sourceZone === 'x') c = { ...c, xColId: targetZone === 'y' ? prevY : targetZone === 'group' ? prevGroup : null }
+        if (sourceZone === 'y') c = { ...c, yColId: targetZone === 'x' ? prevX : targetZone === 'group' ? prevGroup : null }
+        if (sourceZone === 'group') c = { ...c, groupColId: targetZone === 'x' ? prevX : targetZone === 'y' ? prevY : null }
+      }
+      newConfig = c
+    }
+    if (cfg.type === 'table') {
+      if (!droppedCol) return false
+      let c = { ...cfg }
+      const prevRows = c.rowsColId
+      const prevCols = c.colsColId
+      if (targetZone === 'rows') c = { ...c, rowsColId: colId }
+      if (targetZone === 'cols') c = { ...c, colsColId: colId }
+      if (sourceZone && sourceZone !== targetZone) {
+        if (sourceZone === 'rows') c = { ...c, rowsColId: targetZone === 'cols' ? prevCols : null }
+        if (sourceZone === 'cols') c = { ...c, colsColId: targetZone === 'rows' ? prevRows : null }
+      }
+      newConfig = c
+    }
+    if (cfg.type === 'means') {
+      if (!droppedCol) return false
+      if (targetZone === 'var1' && droppedCol.type !== 'numeric') return false
+      let c: MeansCardConfig = { ...cfg }
+      const prevVar1 = c.var1ColId
+      const prevVar2 = c.var2ColId
+      if (targetZone === 'var1') c = { ...c, var1ColId: colId }
+      if (targetZone === 'var2') c = { ...c, var2ColId: colId }
+      if (sourceZone && sourceZone !== targetZone) {
+        if (sourceZone === 'var1') c = { ...c, var1ColId: targetZone === 'var2' ? prevVar2 : null }
+        if (sourceZone === 'var2') c = { ...c, var2ColId: targetZone === 'var1' ? prevVar1 : null }
+      }
+      newConfig = c
+    }
+    if (cfg.type === 'proportions') {
+      if (!droppedCol || droppedCol.type !== 'categorical') return false
+      let c = { ...cfg }
+      const prevVar1 = c.var1ColId
+      const prevVar2 = c.var2ColId
+      if (targetZone === 'var1') c = { ...c, var1ColId: colId }
+      if (targetZone === 'var2') c = { ...c, var2ColId: colId }
+      if (sourceZone && sourceZone !== targetZone) {
+        if (sourceZone === 'var1') c = { ...c, var1ColId: targetZone === 'var2' ? prevVar2 : null }
+        if (sourceZone === 'var2') c = { ...c, var2ColId: targetZone === 'var1' ? prevVar1 : null }
+      }
+      newConfig = c
+    }
+    if (cfg.type === 'one-prop-randomization') {
+      if (!droppedCol || droppedCol.type !== 'categorical') return false
+      let c: OnePropRandomizationCardConfig = { ...cfg }
+      if (targetZone === 'var1') c = { ...c, var1ColId: colId }
+      newConfig = c
+    }
+    if (cfg.type === 'two-prop-randomization') {
+      if (!droppedCol || droppedCol.type !== 'categorical') return false
+      let c: TwoPropRandomizationCardConfig = { ...cfg }
+      const prevVar1 = c.var1ColId
+      const prevVar2 = c.var2ColId
+      if (targetZone === 'var1') c = { ...c, var1ColId: colId }
+      if (targetZone === 'var2') c = { ...c, var2ColId: colId }
+      if (sourceZone && sourceZone !== targetZone) {
+        if (sourceZone === 'var1') c = { ...c, var1ColId: targetZone === 'var2' ? prevVar2 : null }
+        if (sourceZone === 'var2') c = { ...c, var2ColId: targetZone === 'var1' ? prevVar1 : null }
+      }
+      newConfig = c
+    }
+    if (cfg.type === 'two-mean-randomization') {
+      if (!droppedCol) return false
+      let c: TwoMeanRandomizationCardConfig = { ...cfg }
+      const dataShape = c.dataShape ?? 'grouping'
+      if (targetZone === 'var1' && droppedCol.type !== 'numeric') return false
+      if (targetZone === 'var2') {
+        const requiredType = dataShape === 'two-quant' ? 'numeric' : 'categorical'
+        if (droppedCol.type !== requiredType) return false
+      }
+      const prevVar1 = c.var1ColId
+      const prevVar2 = c.var2ColId
+      if (targetZone === 'var1') c = { ...c, var1ColId: colId }
+      if (targetZone === 'var2') c = { ...c, var2ColId: colId }
+      if (sourceZone && sourceZone !== targetZone) {
+        if (sourceZone === 'var1') c = { ...c, var1ColId: targetZone === 'var2' ? prevVar2 : null }
+        if (sourceZone === 'var2') c = { ...c, var2ColId: targetZone === 'var1' ? prevVar1 : null }
+      }
+      newConfig = c
+    }
+    if (cfg.type === 'regression-by-eye') {
+      if (!droppedCol || droppedCol.type !== 'numeric') return false
+      let c = { ...cfg }
+      const prevX = c.xColId
+      const prevY = c.yColId
+      if (targetZone === 'x') c = { ...c, xColId: colId }
+      if (targetZone === 'y') c = { ...c, yColId: colId }
+      if (sourceZone && sourceZone !== targetZone) {
+        if (sourceZone === 'x') c = { ...c, xColId: targetZone === 'y' ? prevY : null }
+        if (sourceZone === 'y') c = { ...c, yColId: targetZone === 'x' ? prevX : null }
+      }
+      newConfig = c
+    }
+
+    if (!newConfig) return false
+
+    if (sourceZone && sourceZone !== targetZone) {
+      const ZONE_ORDER: Record<string, string[]> = {
+        graph: ['x', 'y', 'group'],
+        regression: ['x', 'y', 'group'],
+        'regression-by-eye': ['x', 'y'],
+        means: ['var1', 'var2'],
+        proportions: ['var1', 'var2'],
+        'one-prop-randomization': ['var1'],
+        'two-prop-randomization': ['var1', 'var2'],
+        'two-mean-randomization': ['var1', 'var2'],
+        table: ['rows', 'cols'],
+      }
+      const order = ZONE_ORDER[cfg.type] ?? []
+      const tIdx = order.indexOf(targetZone)
+      const sIdx = order.indexOf(sourceZone)
+      const isVertZone = cfg.type === 'graph' && sourceZone === 'y'
+      const direction: SwapAnimState['direction'] =
+        (!isVertZone && tIdx !== -1 && sIdx !== -1)
+          ? (tIdx > sIdx ? 'from-right' : 'from-left')
+          : 'pop'
+      setSwapAnim({ zoneId: `${cardId}:${sourceZone}`, direction })
+      setTimeout(() => setSwapAnim(null), 300)
+    }
+
+    updateCard(cardId, { config: newConfig })
+    return true
+  }, [cards, grid.columns, normalizeGraphConfig, updateCard])
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     setActiveColId(null)
     if (!event.over) return
@@ -444,190 +645,8 @@ export function ExploreCanvas({
     if (colonIdx === -1) return
     const cardId = overId.slice(0, colonIdx)
     const zone = overId.slice(colonIdx + 1)
-
-    const card = cards.find(c => c.id === cardId)
-    if (!card) return
-    const cfg = card.config
-
-    // Only these card types have drop zones
-    if (cfg.type !== 'graph' && cfg.type !== 'summary' && cfg.type !== 'regression' && cfg.type !== 'regression-by-eye' && cfg.type !== 'means' && cfg.type !== 'proportions' && cfg.type !== 'table' && cfg.type !== 'one-prop-randomization' && cfg.type !== 'two-prop-randomization' && cfg.type !== 'two-mean-randomization') return
-
-    const sourceZone = (sourceZoneId && sourceZoneId.startsWith(cardId + ':'))
-      ? sourceZoneId.slice(cardId.length + 1)
-      : null
-
-    const targetZone = zone === 'canvas' ? 'x' : zone
-
-    let newConfig: CardConfig | null = null
-    if (cfg.type === 'graph') {
-      let c = { ...cfg }
-      const prevX = c.xColId
-      const prevY = c.yColId
-      const prevGroup = c.groupColId
-      if (targetZone === 'x')     c = { ...c, xColId: colId }
-      if (targetZone === 'y')     c = { ...c, yColId: colId }
-      if (targetZone === 'group') c = { ...c, groupColId: colId }
-      if (sourceZone && sourceZone !== targetZone) {
-        if (sourceZone === 'x')     c = { ...c, xColId: targetZone === 'y' ? prevY : targetZone === 'group' ? prevGroup : null }
-        if (sourceZone === 'y')     c = { ...c, yColId: targetZone === 'x' ? prevX : targetZone === 'group' ? prevGroup : null }
-        if (sourceZone === 'group') c = { ...c, groupColId: targetZone === 'x' ? prevX : targetZone === 'y' ? prevY : null }
-      }
-
-      newConfig = normalizeGraphConfig(c)
-    }
-    if (cfg.type === 'summary') {
-      if (zone === 'variable') {
-        const ids = cfg.variableColIds.includes(colId) ? cfg.variableColIds : [...cfg.variableColIds, colId]
-        newConfig = { ...cfg, variableColIds: ids }
-      }
-      if (zone === 'group') newConfig = { ...cfg, groupColId: colId }
-    }
-    if (cfg.type === 'regression') {
-      const droppedCol = grid.columns.find(c => c.id === colId)
-      if (!droppedCol) return
-      if ((targetZone === 'x' || targetZone === 'y') && droppedCol.type !== 'numeric') return
-      if (targetZone === 'group' && droppedCol.type !== 'categorical') return
-      let c = { ...cfg }
-      const prevX = c.xColId
-      const prevY = c.yColId
-      const prevGroup = c.groupColId
-      if (targetZone === 'x') c = { ...c, xColId: colId }
-      if (targetZone === 'y') c = { ...c, yColId: colId }
-      if (targetZone === 'group') c = { ...c, groupColId: colId }
-      if (sourceZone && sourceZone !== targetZone) {
-        if (sourceZone === 'x') c = { ...c, xColId: targetZone === 'y' ? prevY : targetZone === 'group' ? prevGroup : null }
-        if (sourceZone === 'y') c = { ...c, yColId: targetZone === 'x' ? prevX : targetZone === 'group' ? prevGroup : null }
-        if (sourceZone === 'group') c = { ...c, groupColId: targetZone === 'x' ? prevX : targetZone === 'y' ? prevY : null }
-      }
-      newConfig = c
-    }
-    if (cfg.type === 'table') {
-      let c = { ...cfg }
-      const prevRows = c.rowsColId
-      const prevCols = c.colsColId
-      if (targetZone === 'rows') c = { ...c, rowsColId: colId }
-      if (targetZone === 'cols') c = { ...c, colsColId: colId }
-      if (sourceZone && sourceZone !== targetZone) {
-        if (sourceZone === 'rows') c = { ...c, rowsColId: targetZone === 'cols' ? prevCols : null }
-        if (sourceZone === 'cols') c = { ...c, colsColId: targetZone === 'rows' ? prevRows : null }
-      }
-      newConfig = c
-    }
-    if (cfg.type === 'means') {
-      const droppedCol = grid.columns.find(c => c.id === colId)
-      if (!droppedCol) return
-      // var1 must be numeric; var2 can be numeric or categorical
-      if (targetZone === 'var1' && droppedCol.type !== 'numeric') return
-      let c: MeansCardConfig = { ...cfg }
-      const prevVar1 = c.var1ColId
-      const prevVar2 = c.var2ColId
-      if (targetZone === 'var1') c = { ...c, var1ColId: colId }
-      if (targetZone === 'var2') c = { ...c, var2ColId: colId }
-      if (sourceZone && sourceZone !== targetZone) {
-        if (sourceZone === 'var1') c = { ...c, var1ColId: targetZone === 'var2' ? prevVar2 : null }
-        if (sourceZone === 'var2') c = { ...c, var2ColId: targetZone === 'var1' ? prevVar1 : null }
-      }
-      newConfig = c
-    }
-    if (cfg.type === 'proportions') {
-      const droppedCol = grid.columns.find(c => c.id === colId)
-      if (!droppedCol || droppedCol.type !== 'categorical') return
-      let c = { ...cfg }
-      const prevVar1 = c.var1ColId
-      const prevVar2 = c.var2ColId
-      if (targetZone === 'var1') c = { ...c, var1ColId: colId }
-      if (targetZone === 'var2') c = { ...c, var2ColId: colId }
-      if (sourceZone && sourceZone !== targetZone) {
-        if (sourceZone === 'var1') c = { ...c, var1ColId: targetZone === 'var2' ? prevVar2 : null }
-        if (sourceZone === 'var2') c = { ...c, var2ColId: targetZone === 'var1' ? prevVar1 : null }
-      }
-      newConfig = c
-    }
-    if (cfg.type === 'one-prop-randomization') {
-      const droppedCol = grid.columns.find(c => c.id === colId)
-      if (!droppedCol || droppedCol.type !== 'categorical') return
-      let c: OnePropRandomizationCardConfig = { ...cfg }
-      if (targetZone === 'var1') c = { ...c, var1ColId: colId }
-      newConfig = c
-    }
-    if ((cfg as CardConfig).type === 'two-prop-randomization') {
-      const droppedCol = grid.columns.find(c => c.id === colId)
-      if (!droppedCol || droppedCol.type !== 'categorical') return
-      let c: TwoPropRandomizationCardConfig = { ...(cfg as unknown as TwoPropRandomizationCardConfig) }
-      const prevVar1 = c.var1ColId
-      const prevVar2 = c.var2ColId
-      if (targetZone === 'var1') c = { ...c, var1ColId: colId }
-      if (targetZone === 'var2') c = { ...c, var2ColId: colId }
-      if (sourceZone && sourceZone !== targetZone) {
-        if (sourceZone === 'var1') c = { ...c, var1ColId: targetZone === 'var2' ? prevVar2 : null }
-        if (sourceZone === 'var2') c = { ...c, var2ColId: targetZone === 'var1' ? prevVar1 : null }
-      }
-      newConfig = c
-    }
-    if ((cfg as CardConfig).type === 'two-mean-randomization') {
-      const droppedCol = grid.columns.find(c => c.id === colId)
-      if (!droppedCol) return
-      let c: TwoMeanRandomizationCardConfig = { ...(cfg as unknown as TwoMeanRandomizationCardConfig) }
-      const dataShape = c.dataShape ?? 'grouping'
-      if (targetZone === 'var1' && droppedCol.type !== 'numeric') return
-      if (targetZone === 'var2') {
-        const requiredType = dataShape === 'two-quant' ? 'numeric' : 'categorical'
-        if (droppedCol.type !== requiredType) return
-      }
-      const prevVar1 = c.var1ColId
-      const prevVar2 = c.var2ColId
-      if (targetZone === 'var1') c = { ...c, var1ColId: colId }
-      if (targetZone === 'var2') c = { ...c, var2ColId: colId }
-      if (sourceZone && sourceZone !== targetZone) {
-        if (sourceZone === 'var1') c = { ...c, var1ColId: targetZone === 'var2' ? prevVar2 : null }
-        if (sourceZone === 'var2') c = { ...c, var2ColId: targetZone === 'var1' ? prevVar1 : null }
-      }
-      newConfig = c
-    }
-    if (cfg.type === 'regression-by-eye') {
-      const droppedCol = grid.columns.find(c => c.id === colId)
-      if (!droppedCol || droppedCol.type !== 'numeric') return
-      let c = { ...cfg }
-      const prevX = c.xColId
-      const prevY = c.yColId
-      if (targetZone === 'x') c = { ...c, xColId: colId }
-      if (targetZone === 'y') c = { ...c, yColId: colId }
-      if (sourceZone && sourceZone !== targetZone) {
-        if (sourceZone === 'x') c = { ...c, xColId: targetZone === 'y' ? prevY : null }
-        if (sourceZone === 'y') c = { ...c, yColId: targetZone === 'x' ? prevX : null }
-      }
-      newConfig = c
-    }
-    if (newConfig) {
-      // When two occupied zones swap, animate the displaced chip into its new zone
-      if (sourceZone && sourceZone !== targetZone) {
-        // Zone left-to-right order per card type; used to infer the arrival direction
-        const ZONE_ORDER: Record<string, string[]> = {
-          graph:             ['x', 'y', 'group'],
-          regression:        ['x', 'y', 'group'],
-          'regression-by-eye': ['x', 'y'],
-          means:             ['var1', 'var2'],
-          proportions:['var1', 'var2'],
-          'one-prop-randomization': ['var1'],
-          'two-prop-randomization': ['var1', 'var2'],
-          'two-mean-randomization': ['var1', 'var2'],
-          table:      ['rows', 'cols'],
-        }
-        const order = ZONE_ORDER[cfg.type] ?? []
-        const tIdx = order.indexOf(targetZone)
-        const sIdx = order.indexOf(sourceZone)
-        // Graph's Y-axis uses a vertical chip layout — use a scale-pop instead of a slide
-        const isVertZone = cfg.type === 'graph' && sourceZone === 'y'
-        const direction: SwapAnimState['direction'] =
-          (!isVertZone && tIdx !== -1 && sIdx !== -1)
-            ? (tIdx > sIdx ? 'from-right' : 'from-left')
-            : 'pop'
-        setSwapAnim({ zoneId: `${cardId}:${sourceZone}`, direction })
-        setTimeout(() => setSwapAnim(null), 300)
-      }
-      updateCard(cardId, { config: newConfig })
-    }
-  }, [cards, grid.columns, normalizeGraphConfig, updateCard])
+    assignVariableToZone(cardId, zone, colId, sourceZoneId)
+  }, [assignVariableToZone])
 
   function clearZone(cardId: string, zone: string) {
     const card = cards.find(c => c.id === cardId)
@@ -681,16 +700,6 @@ export function ExploreCanvas({
       if (zone === 'var2') newConfig = { ...c, var2ColId: null }
     }
     if (newConfig) updateCard(cardId, { config: newConfig })
-  }
-
-  function assignGraphZone(cardId: string, zone: 'x' | 'y' | 'group', colId: string) {
-    const card = cards.find(c => c.id === cardId)
-    if (!card || card.config.type !== 'graph') return
-    let next: GraphCardConfig = { ...card.config }
-    if (zone === 'x') next = { ...next, xColId: colId }
-    if (zone === 'y') next = { ...next, yColId: colId }
-    if (zone === 'group') next = { ...next, groupColId: colId }
-    updateCard(cardId, { config: normalizeGraphConfig(next) })
   }
 
   // ─── Card movement ─────────────────────────────────────────────────────────
@@ -1143,13 +1152,13 @@ export function ExploreCanvas({
                               onSetShowOutlierFences={showOutlierFences => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), showOutlierFences } })}
                               onSetBestFitMode={bestFitMode => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), bestFitMode } })}
                               onSetBarValueMode={mode => updateCard(card.id, { config: { ...(card.config as GraphCardConfig), barValueMode: mode } })}
-                              onAssignZone={(zone, colId) => assignGraphZone(card.id, zone, colId)}
+                              onAssignZone={(zone, colId) => assignVariableToZone(card.id, zone, colId)}
                               onRemove={() => removeCard(card.id)}
                               hideHeader
                             />
                           )}
                           {card.config.type === 'summary' && (
-                            <SummaryCard cardId={card.id} config={card.config} onClearZone={z => clearZone(card.id, z)} onRemove={() => removeCard(card.id)} hideHeader />
+                            <SummaryCard cardId={card.id} config={card.config} onClearZone={z => clearZone(card.id, z)} onAssignZone={(zone, colId) => assignVariableToZone(card.id, zone, colId)} onRemove={() => removeCard(card.id)} hideHeader />
                           )}
                           {card.config.type === 'table' && (
                             <div className="h-full overflow-auto">
@@ -1158,6 +1167,7 @@ export function ExploreCanvas({
                                 rowsColId={card.config.rowsColId}
                                 colsColId={card.config.colsColId}
                                 onClearZone={z => clearZone(card.id, z)}
+                                onAssignZone={(zone, colId) => assignVariableToZone(card.id, zone, colId)}
                                 inputMode={tableInputModes[card.id] ?? 'raw'}
                                 onInputModeChange={mode =>
                                   setTableInputModes(prev => ({ ...prev, [card.id]: mode }))
@@ -1173,6 +1183,7 @@ export function ExploreCanvas({
                               cardId={card.id}
                               config={card.config}
                               onClearZone={z => clearZone(card.id, z)}
+                              onAssignZone={(zone, colId) => assignVariableToZone(card.id, zone, colId)}
                               onRemove={() => removeCard(card.id)}
                               hideHeader
                             />
@@ -1182,6 +1193,7 @@ export function ExploreCanvas({
                               cardId={card.id}
                               config={card.config}
                               onClearZone={z => clearZone(card.id, z)}
+                              onAssignZone={(zone, colId) => assignVariableToZone(card.id, zone, colId)}
                               onRemove={() => removeCard(card.id)}
                               hideHeader
                             />
@@ -1191,6 +1203,7 @@ export function ExploreCanvas({
                               cardId={card.id}
                               config={card.config}
                               onClearZone={z => clearZone(card.id, z)}
+                              onAssignZone={(zone, colId) => assignVariableToZone(card.id, zone, colId)}
                               onRemove={() => removeCard(card.id)}
                               hideHeader
                             />
@@ -1215,6 +1228,7 @@ export function ExploreCanvas({
                               cardId={card.id}
                               config={card.config}
                               onClearZone={z => clearZone(card.id, z)}
+                              onAssignZone={(zone, colId) => assignVariableToZone(card.id, zone, colId)}
                             />
                           )}
                           {card.config.type === 'proportions' && (
@@ -1222,6 +1236,7 @@ export function ExploreCanvas({
                               cardId={card.id}
                               config={card.config}
                               onClearZone={z => clearZone(card.id, z)}
+                              onAssignZone={(zone, colId) => assignVariableToZone(card.id, zone, colId)}
                             />
                           )}
                           {card.config.type === 'one-prop-randomization' && (
@@ -1229,6 +1244,7 @@ export function ExploreCanvas({
                               cardId={card.id}
                               config={card.config}
                               onClearZone={z => clearZone(card.id, z)}
+                              onAssignZone={(zone, colId) => assignVariableToZone(card.id, zone, colId)}
                             />
                           )}
                           {card.config.type === 'one-prop-sim' && (
@@ -1239,6 +1255,7 @@ export function ExploreCanvas({
                               cardId={card.id}
                               config={card.config}
                               onClearZone={z => clearZone(card.id, z)}
+                              onAssignZone={(zone, colId) => assignVariableToZone(card.id, zone, colId)}
                             />
                           )}
                           {card.config.type === 'two-prop-sim' && (
@@ -1249,6 +1266,7 @@ export function ExploreCanvas({
                               cardId={card.id}
                               config={card.config}
                               onClearZone={z => clearZone(card.id, z)}
+                              onAssignZone={(zone, colId) => assignVariableToZone(card.id, zone, colId)}
                             />
                           )}
                           {card.config.type === 'two-mean-sim' && (

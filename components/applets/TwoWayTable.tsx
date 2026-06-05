@@ -349,6 +349,7 @@ interface TwoWayTableProps {
   rowsColId?: string | null
   colsColId?: string | null
   onClearZone?: (zone: string) => void
+  onAssignZone?: (zone: 'rows' | 'cols', colId: string) => boolean
   inputMode?: InputMode
   onInputModeChange?: (mode: InputMode) => void
   onManualTableDataChange?: (snapshot: ManualTwoWayTableSnapshot | null) => void
@@ -359,6 +360,7 @@ export function TwoWayTable({
   rowsColId,
   colsColId,
   onClearZone,
+  onAssignZone,
   inputMode: controlledInputMode,
   onInputModeChange,
   onManualTableDataChange,
@@ -369,14 +371,7 @@ export function TwoWayTable({
       const colId = e.dataTransfer.getData('text/plain')
       if (!colId || !cardId) return
       e.preventDefault()
-      const current = useStore.getState().exploreCards.find(c => c.id === cardId)
-      if (!current || current.config.type !== 'table') return
-      useStore.getState().updateExploreCard(cardId, {
-        config: {
-          ...current.config,
-          ...(zone === 'rows' ? { rowsColId: colId } : { colsColId: colId }),
-        },
-      })
+      onAssignZone?.(zone, colId)
     }
   }
 
@@ -663,6 +658,8 @@ export function TwoWayTable({
                 label="Row Variable"
                 assignedCol={grid.columns.find(c => c.id === respColId) ?? null}
                 onClear={() => onClearZone?.('rows')}
+                onAssign={colId => onAssignZone?.('rows', colId) ?? false}
+                allowedTypes={['categorical']}
                 variant="vertical"
               />
             </div>
@@ -675,6 +672,8 @@ export function TwoWayTable({
                 label="Column Variable"
                 assignedCol={grid.columns.find(c => c.id === explColId) ?? null}
                 onClear={() => onClearZone?.('cols')}
+                onAssign={colId => onAssignZone?.('cols', colId) ?? false}
+                allowedTypes={['categorical']}
               />
             </div>
           </div>

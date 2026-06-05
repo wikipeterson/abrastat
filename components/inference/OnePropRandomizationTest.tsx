@@ -458,9 +458,14 @@ function OnePropNullDistPlot({
 // ── Config card ───────────────────────────────────────────────────────────────
 
 type SourceMode = 'data' | 'manual'
-interface ConfigProps { cardId: string; config: OnePropRandomizationCardConfig; onClearZone: (z: string) => void }
+interface ConfigProps {
+  cardId: string
+  config: OnePropRandomizationCardConfig
+  onClearZone: (z: string) => void
+  onAssignZone: (zone: 'var1', colId: string) => boolean
+}
 
-export function OnePropRandomizationTest({ cardId, config, onClearZone }: ConfigProps) {
+export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssignZone }: ConfigProps) {
   const { grid, updateExploreCard, addOnePropSimCard, exploreCards } = useStore()
 
   const [sourceMode, setSourceMode]     = useState<SourceMode>('manual')
@@ -477,11 +482,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
     const colId = e.dataTransfer.getData('text/plain')
     if (!colId) return
     e.preventDefault()
-    const droppedCol = useStore.getState().grid.columns.find(c => c.id === colId)
-    if (!droppedCol || droppedCol.type !== 'categorical') return
-    const current = useStore.getState().exploreCards.find(c => c.id === cardId)
-    if (!current || current.config.type !== 'one-prop-randomization') return
-    updateExploreCard(cardId, { config: { ...current.config, var1ColId: colId } })
+    onAssignZone('var1', colId)
   }
   function handleNativeDragOver(e: React.DragEvent) {
     if (e.dataTransfer.types.includes('text/plain')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' }
@@ -591,6 +592,8 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone }: Config
                 hint="categorical only"
                 assignedCol={catCol}
                 onClear={() => onClearZone('var1')}
+                onAssign={colId => onAssignZone('var1', colId)}
+                allowedTypes={['categorical']}
               />
             </div>
             {catLevels.length > 0 && (

@@ -12,6 +12,7 @@ interface RegressionCardProps {
   cardId: string
   config: { xColId: string | null; yColId: string | null; groupColId: string | null }
   onClearZone: (zone: string) => void
+  onAssignZone: (zone: 'x' | 'y' | 'group', colId: string) => boolean
   onRemove: () => void
   hideHeader?: boolean
 }
@@ -35,7 +36,7 @@ type RegressionSummary = {
   color: string
 }
 
-export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHeader }: RegressionCardProps) {
+export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRemove, hideHeader }: RegressionCardProps) {
   const { grid, exploreCards, addLinkedGraphCard } = useStore()
 
   function handleNativeDrop(zone: 'x' | 'y' | 'group') {
@@ -43,18 +44,7 @@ export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHead
       const colId = e.dataTransfer.getData('text/plain')
       if (!colId) return
       e.preventDefault()
-      const current = useStore.getState().exploreCards.find(c => c.id === cardId)
-      if (!current || current.config.type !== 'regression') return
-      const droppedCol = grid.columns.find(c => c.id === colId)
-      if (!droppedCol) return
-      if ((zone === 'x' || zone === 'y') && droppedCol.type !== 'numeric') return
-      if (zone === 'group' && droppedCol.type !== 'categorical') return
-      useStore.getState().updateExploreCard(cardId, {
-        config: {
-          ...current.config,
-          ...(zone === 'x' ? { xColId: colId } : zone === 'y' ? { yColId: colId } : { groupColId: colId }),
-        },
-      })
+      onAssignZone(zone, colId)
     }
   }
 
@@ -284,6 +274,8 @@ export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHead
             hint="numeric variable"
             assignedCol={xCol}
             onClear={() => onClearZone('x')}
+            onAssign={colId => onAssignZone('x', colId)}
+            allowedTypes={['numeric']}
           />
         </div>
         <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('y')}>
@@ -293,6 +285,8 @@ export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHead
             hint="numeric variable"
             assignedCol={yCol}
             onClear={() => onClearZone('y')}
+            onAssign={colId => onAssignZone('y', colId)}
+            allowedTypes={['numeric']}
           />
         </div>
       </div>
@@ -304,6 +298,8 @@ export function RegressionCard({ cardId, config, onClearZone, onRemove, hideHead
           hint="categorical variable"
           assignedCol={groupCol}
           onClear={() => onClearZone('group')}
+          onAssign={colId => onAssignZone('group', colId)}
+          allowedTypes={['categorical']}
         />
       </div>
 

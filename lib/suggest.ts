@@ -66,7 +66,7 @@ function graphConfigFromSelection(
       type: 'graph',
       xColId: nums[0].id,
       yColId: nums[1].id,
-      groupColId: null,
+      groupColId: cats[0]?.id ?? null,
       chartType: chartTypeHint,
     }
   }
@@ -259,6 +259,9 @@ export function getSuggestionReadingLine(selectedCols: SelectedAnalysisColumn[])
   if (cats.length >= 1 && nums.length === 0 && selectedCols.length === 1) {
     return 'One categorical variable — describe the category counts.'
   }
+  if (nums.length >= 2 && cats.length >= 1) {
+    return 'Two quantitative variables plus a category — compare the relationship across groups.'
+  }
   if (nums.length >= 2 && selectedCols.length >= 2) {
     return 'Two quantitative variables — look for a relationship.'
   }
@@ -328,6 +331,38 @@ export function suggestAnalyses(selectedCols: SelectedAnalysisColumn[]): Suggest
         label: 'Summary Statistics',
         icon: '📋',
         reason: `A frequency table for ${formatName(first.name)}.`,
+      },
+    ]
+  }
+
+  if (nums.length >= 2 && cats.length >= 1) {
+    return [
+      {
+        type: 'graph',
+        label: 'Scatterplot',
+        icon: '📈',
+        chartTypeHint: 'scatter',
+        recommended: true,
+        reason: `Look for the relationship between ${formatName(firstNum?.name)} and ${formatName(secondNum?.name)}, grouped by ${formatName(firstCat?.name)}.`,
+      },
+      {
+        type: 'regression',
+        label: 'Regression',
+        icon: '📉',
+        reason: `Fit lines for ${formatName(firstNum?.name)} and ${formatName(secondNum?.name)} across ${formatName(firstCat?.name)} groups.`,
+      },
+      {
+        type: 'graph',
+        label: 'Box Plot',
+        icon: '📦',
+        chartTypeHint: 'box',
+        reason: `Compare one quantitative variable across ${formatName(firstCat?.name)} if you want a simpler group summary.`,
+      },
+      {
+        type: 'summary',
+        label: 'Summary Statistics',
+        icon: '📋',
+        reason: 'See the numeric summaries before modeling.',
       },
     ]
   }

@@ -370,7 +370,7 @@ export function ExploreCanvas({
   )
 
   const suggestionSelection = useMemo(
-    () => selectedCols.slice(-2),
+    () => selectedCols,
     [selectedCols],
   )
 

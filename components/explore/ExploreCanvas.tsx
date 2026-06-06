@@ -286,6 +286,7 @@ export function ExploreCanvas({
   const [tableManualSnapshots, setTableManualSnapshots] = useState<Record<string, ManualTwoWayTableSnapshot | null>>({})
   const scrollRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
+  const topStripRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef(1)
   const prevCardIdsRef = useRef<string[]>([])
   const hasMountedRef = useRef(false)
@@ -796,10 +797,6 @@ export function ExploreCanvas({
       return
     }
 
-    if (selectedColumnIds.length > 0) {
-      setSelectedColumnIds([])
-    }
-
     const scroller = scrollRef.current
     if (!scroller) return
     const scrollerEl: HTMLDivElement = scroller
@@ -809,11 +806,22 @@ export function ExploreCanvas({
     const startY = e.clientY
     const startLeft = scrollerEl.scrollLeft
     const startTop = scrollerEl.scrollTop
+    let adjustedStartTop = startTop
+
+    if (selectedColumnIds.length > 0) {
+      const dismissedStripHeight = topStripRef.current?.offsetHeight ?? 0
+      adjustedStartTop = Math.max(0, startTop - dismissedStripHeight)
+      setSelectedColumnIds([])
+      requestAnimationFrame(() => {
+        scrollerEl.scrollTop = adjustedStartTop
+      })
+    }
+
     setInteractionCursor('grabbing')
 
     function onMove(ev: PointerEvent) {
       scrollerEl.scrollLeft = startLeft - (ev.clientX - startX)
-      scrollerEl.scrollTop = startTop - (ev.clientY - startY)
+      scrollerEl.scrollTop = adjustedStartTop - (ev.clientY - startY)
     }
 
     function onUp() {
@@ -912,7 +920,7 @@ export function ExploreCanvas({
       <div className="flex h-full min-h-0">
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
           {addCardCatalogOpen ? (
-            <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+            <div ref={topStripRef} className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
               <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">
                 <Plus size={14} className="text-[var(--color-accent)]" />
                 <span>Add Card</span>
@@ -945,7 +953,7 @@ export function ExploreCanvas({
               </div>
             </div>
           ) : selectedCols.length > 0 && suggestionReadingLine && suggestions.length > 0 ? (
-            <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 pb-3 pt-4">
+            <div ref={topStripRef} className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 pb-3 pt-4">
               <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">
                 <Sparkles size={14} className="text-[var(--color-accent)]" />
                 <span>Smart Suggest</span>

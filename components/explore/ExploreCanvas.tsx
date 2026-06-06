@@ -945,7 +945,7 @@ export function ExploreCanvas({
               </div>
             </div>
           ) : selectedCols.length > 0 && suggestionReadingLine && suggestions.length > 0 ? (
-            <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+            <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 pb-3 pt-4">
               <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">
                 <Sparkles size={14} className="text-[var(--color-accent)]" />
                 <span>Smart Suggest</span>
@@ -953,7 +953,7 @@ export function ExploreCanvas({
               <div className="mb-3 text-sm font-medium text-[var(--color-text)]">
                 {suggestionReadingLine}
               </div>
-              <div className="flex gap-3 overflow-x-auto pb-1">
+              <div className="flex gap-3 overflow-x-auto pb-1 pt-1">
                 {suggestions.map((suggestion, index) => (
                   <StripOptionCard
                     key={`${suggestion.type}-${suggestion.chartTypeHint ?? 'default'}-${index}`}

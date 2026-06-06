@@ -9,6 +9,14 @@ import { useStore } from '@/lib/store'
 
 type Status = 'loading' | 'error' | 'done'
 
+function normalizeDatasetId(value: string) {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
 export default function ShareLinkPage() {
   const { datasetId } = useParams<{ datasetId: string }>()
   const { loading: authLoading } = useAuth()
@@ -22,8 +30,10 @@ export default function ShareLinkPage() {
   useEffect(() => {
     if (authLoading) return
 
-    if (datasetId.startsWith('sample:')) {
-      const sample = getSampleDatasetById(datasetId)
+    const normalizedDatasetId = normalizeDatasetId(datasetId)
+
+    if (normalizedDatasetId.startsWith('sample:')) {
+      const sample = getSampleDatasetById(normalizedDatasetId)
       if (!sample) {
         setErrorMsg('Sample dataset not found.')
         setStatus('error')
@@ -38,7 +48,7 @@ export default function ShareLinkPage() {
       return
     }
 
-    loadDataset(datasetId)
+    loadDataset(normalizedDatasetId)
       .then(({ meta, grid }) => {
         // Load as a working copy — activeDatasetId stays null so
         // any subsequent Save creates a brand-new record.

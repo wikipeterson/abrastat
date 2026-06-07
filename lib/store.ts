@@ -176,6 +176,15 @@ interface AbraStatStore {
   toggleColumnSelection: (colId: string) => void
   setSelectedColumnIds: (ids: string[]) => void
 
+  // Linked brushing
+  brush: {
+    hovered: number[]
+    pinned: number[]
+  }
+  setBrushHover: (rows: number[]) => void
+  setBrushPinned: (rows: number[]) => void
+  clearBrush: () => void
+
   // Row filters (non-destructive)
   activeFilters: RowFilter[]
   setRowFilters: (filters: RowFilter[]) => void
@@ -249,7 +258,14 @@ export const useStore = create<AbraStatStore>((set) => ({
   isDirty: false,
   undoStack: [],
 
-  setGrid: (grid) => set({ grid, isDirty: true, undoStack: [], selectedColumnIds: [], activeFilters: [] }),
+  setGrid: (grid) => set({
+    grid,
+    isDirty: true,
+    undoStack: [],
+    selectedColumnIds: [],
+    activeFilters: [],
+    brush: { hovered: [], pinned: [] },
+  }),
 
   updateCell: (rowIndex, colId, value) => set(state => {
     const stack = [...state.undoStack, snapshot(state.grid)].slice(-MAX_UNDO)
@@ -358,6 +374,7 @@ export const useStore = create<AbraStatStore>((set) => ({
     undoStack: [],
     selectedColumnIds: [],
     activeFilters: [],
+    brush: { hovered: [], pinned: [] },
     exploreCards: [createDataGridCard()],
   }),
 
@@ -369,6 +386,30 @@ export const useStore = create<AbraStatStore>((set) => ({
     return { selectedColumnIds: ids }
   }),
   setSelectedColumnIds: (ids) => set({ selectedColumnIds: ids }),
+
+  brush: {
+    hovered: [],
+    pinned: [],
+  },
+  setBrushHover: (rows) => set(state => ({
+    brush: {
+      ...state.brush,
+      hovered: [...new Set(rows.filter(row => Number.isInteger(row) && row >= 0))].sort((a, b) => a - b),
+    },
+  })),
+  setBrushPinned: (rows) => set(state => ({
+    brush: {
+      ...state.brush,
+      pinned: [...new Set(rows.filter(row => Number.isInteger(row) && row >= 0))].sort((a, b) => a - b),
+    },
+  })),
+  clearBrush: () => set(state => ({
+    brush: {
+      ...state.brush,
+      hovered: [],
+      pinned: [],
+    },
+  })),
 
   // ─── Row filters ─────────────────────────────────────────────────────────────
   activeFilters: [],

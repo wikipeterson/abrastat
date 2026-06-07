@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { areBrushRowsEqual, createPlotlySelectionStyles, extractRowsFromPlotlyPoints, selectedPointIndicesForTrace, useEffectiveBrushSet } from '@/lib/linkedBrush'
 import { useStore } from '@/lib/store'
 import { getFrequencyTable } from '@/lib/statistics'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
@@ -17,6 +18,11 @@ interface PieChartProps {
 
 export function PieChart({ colId, groupColId }: PieChartProps) {
   const { grid } = useStore()
+  const pinnedBrush = useStore(state => state.brush.pinned)
+  const setBrushHover = useStore(state => state.setBrushHover)
+  const setBrushPinned = useStore(state => state.setBrushPinned)
+  const clearBrush = useStore(state => state.clearBrush)
+  const effectiveBrushSet = useEffectiveBrushSet()
   const { hideAxisTitles, colors } = useGraphCardContext()
   const col      = grid.columns.find(c => c.id === colId)
   const groupCol = groupColId ? (grid.columns.find(c => c.id === groupColId) ?? null) : null
@@ -58,12 +64,17 @@ export function PieChart({ colId, groupColId }: PieChartProps) {
 
   const traces = groups.slice(0, MAX_GROUPS).map((group, gi) => {
     const subset = hasGroups
-      ? allValues.filter(r => r.group === group).map(r => r.value)
-      : allValues.map(r => r.value)
+      ? allValues
+          .map((r, rowIndex) => ({ ...r, rowIndex }))
+          .filter(r => r.group === group)
+      : allValues.map((r, rowIndex) => ({ ...r, rowIndex }))
 
-    const freq = getFrequencyTable(subset).slice(0, 20)
+    const freq = getFrequencyTable(subset.map(r => r.value)).slice(0, 20)
     const labels = freq.map(r => r.value)
     const values = freq.map(r => r.count)
+    const rowGroups = labels.map(label =>
+      subset.filter(item => item.value === label).map(item => item.rowIndex),
+    )
     const sliceColors = labels.map(l => categoryColors[l] ?? colors[0])
 
     // Domain: lay groups out in a row (up to 3 per row, then wrap)
@@ -80,10 +91,14 @@ export function PieChart({ colId, groupColId }: PieChartProps) {
       ? { x: [xStart, xStart + cellW] as [number, number], y: [Math.max(0, yStart), yStart + cellH] as [number, number] }
       : { x: [0, 1] as [number, number], y: [0, 1] as [number, number] }
 
-    return {
+    return createPlotlySelectionStyles({
       type: 'pie' as const,
       labels,
       values,
+      customdata: rowGroups,
+      selectedpoints: effectiveBrushSet.size > 0
+        ? selectedPointIndicesForTrace(rowGroups, effectiveBrushSet) ?? undefined
+        : undefined,
       name: group || colLabel,
       title: hasGroups ? { text: group, font: { size: 12 } } : undefined,
       domain,
@@ -96,7 +111,7 @@ export function PieChart({ colId, groupColId }: PieChartProps) {
       hole: 0,
       // Show legend only on first trace to avoid duplication
       showlegend: gi === 0 && !hasGroups,
-    }
+    })
   })
 
   const tooManyGroups = hasGroups && allGroups.length > MAX_GROUPS
@@ -148,6 +163,22 @@ export function PieChart({ colId, groupColId }: PieChartProps) {
             // When showing multiple pies, annotations serve as group titles (already set via trace title)
           }}
           title={hideAxisTitles ? undefined : colLabel}
+          onHover={event => {
+            const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+            setBrushHover(rows)
+          }}
+          onUnhover={() => setBrushHover([])}
+          onClick={event => {
+            const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+            if (rows.length === 0) return
+            if (areBrushRowsEqual(rows, pinnedBrush)) clearBrush()
+            else setBrushPinned(rows)
+          }}
+          onSelected={event => {
+            const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+            setBrushPinned(rows)
+          }}
+          onDeselect={clearBrush}
         />
       </div>
     </div>

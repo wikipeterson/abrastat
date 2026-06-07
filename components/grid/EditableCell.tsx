@@ -8,6 +8,7 @@ interface EditableCellProps {
   colId: string
   isActive: boolean
   isSelected: boolean
+  isBrushed?: boolean
   onActivate: () => void
   onChange: (rowIndex: number, colId: string, value: string) => void
 }
@@ -18,6 +19,7 @@ export const EditableCell = memo(function EditableCell({
   colId,
   isActive,
   isSelected,
+  isBrushed = false,
   onActivate,
   onChange,
 }: EditableCellProps) {
@@ -84,7 +86,13 @@ export const EditableCell = memo(function EditableCell({
       onKeyDown={handleCellKeyDown}
       className={`relative h-8 px-2 flex items-center text-sm text-[var(--color-text)] border-r border-b border-[var(--color-border)] outline-none cursor-default select-none ${
         isActive ? 'ring-2 ring-inset ring-[var(--color-accent)] z-10' : ''
-      } ${isSelected && !isActive ? 'bg-[var(--color-grid-selected)]' : 'bg-[var(--color-surface)]'}`}
+      } ${
+        isSelected && !isActive
+          ? 'bg-[var(--color-grid-selected)]'
+          : isBrushed
+            ? 'bg-[var(--color-gold-light)]/70'
+            : 'bg-[var(--color-surface)]'
+      }`}
     >
       {editing ? (
         <input

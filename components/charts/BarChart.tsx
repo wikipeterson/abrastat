@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import type { Data } from 'plotly.js'
+import { areBrushRowsEqual, createPlotlySelectionStyles, extractRowsFromPlotlyPoints, selectedPointIndicesForTrace, useEffectiveBrushSet } from '@/lib/linkedBrush'
 import { useStore } from '@/lib/store'
 import { getStringValues } from '@/lib/gridHelpers'
 import { getFrequencyTable } from '@/lib/statistics'
@@ -19,13 +20,27 @@ interface BarChartProps {
 
 export function BarChart({ colId, valueMode = 'count', orientation = 'h' }: BarChartProps) {
   const { grid } = useStore()
+  const pinnedBrush = useStore(state => state.brush.pinned)
+  const setBrushHover = useStore(state => state.setBrushHover)
+  const setBrushPinned = useStore(state => state.setBrushPinned)
+  const clearBrush = useStore(state => state.clearBrush)
+  const effectiveBrushSet = useEffectiveBrushSet()
   const { hideAxisTitles, colors } = useGraphCardContext()
   const col = grid.columns.find(c => c.id === colId)
 
   const freqTable = useMemo(() => {
     if (!colId) return []
-    const values = getStringValues(grid, colId).filter(v => v.trim())
-    return getFrequencyTable(values).slice(0, 20)
+    const rowsByValue = new Map<string, number[]>()
+    grid.rows.forEach((row, rowIndex) => {
+      const value = String(row[colId] ?? '').trim()
+      if (!value) return
+      const entries = rowsByValue.get(value) ?? []
+      entries.push(rowIndex)
+      rowsByValue.set(value, entries)
+    })
+    return getFrequencyTable([...rowsByValue.keys()])
+      .slice(0, 20)
+      .map(row => ({ ...row, rowIndices: rowsByValue.get(row.value) ?? [] }))
   }, [grid, colId])
 
   if (!colId || !col) {
@@ -45,30 +60,38 @@ export function BarChart({ colId, valueMode = 'count', orientation = 'h' }: BarC
 
   // orientation='h': variable on x-axis → standard vertical bars (column chart)
   // orientation='v': variable on y-axis → horizontal bars
+  const selectedpoints = effectiveBrushSet.size > 0
+    ? selectedPointIndicesForTrace(freqTable.map(row => row.rowIndices), effectiveBrushSet) ?? undefined
+    : undefined
+
   const traces: Data[] = orientation === 'h'
-    ? [{
+    ? [createPlotlySelectionStyles({
         type: 'bar',
         x: freqTable.map(r => r.value || '(blank)'),
         y: displayValues,
+        customdata: freqTable.map(r => r.rowIndices),
+        selectedpoints,
         text: displayLabels,
         textposition: 'outside',
         marker: { color: barColors, opacity: 0.9 },
         hovertemplate: valueMode === 'percent'
           ? '%{x}: %{y:.1f}%<extra></extra>'
           : '%{x}: %{y}<extra></extra>',
-      }]
-    : [{
+      })]
+    : [createPlotlySelectionStyles({
         type: 'bar',
         orientation: 'h',
         x: displayValues,
         y: freqTable.map(r => r.value || '(blank)'),
+        customdata: freqTable.map(r => r.rowIndices),
+        selectedpoints,
         text: displayLabels,
         textposition: 'outside',
         marker: { color: barColors, opacity: 0.9 },
         hovertemplate: valueMode === 'percent'
           ? '%{y}: %{x:.1f}%<extra></extra>'
           : '%{y}: %{x}<extra></extra>',
-      }]
+      })]
 
   const layout = orientation === 'h'
     ? {
@@ -99,6 +122,22 @@ export function BarChart({ colId, valueMode = 'count', orientation = 'h' }: BarC
           data={traces as import("plotly.js").Data[]}
           layout={layout}
           title={hideAxisTitles ? undefined : `${colLabel} — ${valueMode === 'percent' ? 'Percent' : 'Frequency'}`}
+          onHover={event => {
+            const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+            setBrushHover(rows)
+          }}
+          onUnhover={() => setBrushHover([])}
+          onClick={event => {
+            const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+            if (rows.length === 0) return
+            if (areBrushRowsEqual(rows, pinnedBrush)) clearBrush()
+            else setBrushPinned(rows)
+          }}
+          onSelected={event => {
+            const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+            setBrushPinned(rows)
+          }}
+          onDeselect={clearBrush}
         />
       </div>
     </div>

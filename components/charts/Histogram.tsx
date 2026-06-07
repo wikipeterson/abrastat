@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import type { Data, Annotations, Layout } from 'plotly.js'
+import { areBrushRowsEqual, createPlotlySelectionStyles, extractRowsFromPlotlyPoints, selectedPointIndicesForTrace, useEffectiveBrushSet } from '@/lib/linkedBrush'
 import { useStore } from '@/lib/store'
 import { getNumericValues, getNumericGroup } from '@/lib/gridHelpers'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
@@ -144,6 +145,11 @@ function BinWidthControl({ stats, binWidth, binWidthInput, setBinWidthInput, app
 
 function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideAxisTitles }: HistogramInnerProps) {
   const { colors, showMeans, showMedian } = useGraphCardContext()
+  const pinnedBrush = useStore(state => state.brush.pinned)
+  const setBrushHover = useStore(state => state.setBrushHover)
+  const setBrushPinned = useStore(state => state.setBrushPinned)
+  const clearBrush = useStore(state => state.clearBrush)
+  const effectiveBrushSet = useEffectiveBrushSet()
   const colLabel = truncateChartLabel(col.name)
   const groupLabel = truncateChartLabel(groupCol?.name)
   const [showNormal, setShowNormal] = useState(false)
@@ -170,7 +176,12 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
 
   // ── Faceted layout: grouped + horizontal orientation ─────────────────
   if (groupCol && !vert) {
-    const allData = getNumericGroup(grid, col.id, groupCol.id)
+    const allData = grid.rows.flatMap((row, rowIndex) => {
+      const value = Number(row[col.id])
+      const group = String(row[groupCol.id] ?? '').trim()
+      if (!Number.isFinite(value) || !group) return []
+      return [{ rowIndex, value, group }]
+    })
     const uniqueGroups = sortCategoryValues([...new Set(allData.map(d => d.group))])
     const n = uniqueGroups.length
     const GAP = n > 1 ? 0.06 : 0
@@ -219,17 +230,23 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
         borderpad: 3,
       })
 
-      return {
+      const groupPoints = allData.filter(d => d.group === group)
+      const groupRows = groupPoints.map(d => d.rowIndex)
+      return createPlotlySelectionStyles({
         type: 'histogram',
         name: group,
-        x: allData.filter(d => d.group === group).map(d => d.value),
+        x: groupPoints.map(d => d.value),
+        customdata: groupRows,
+        selectedpoints: effectiveBrushSet.size > 0
+          ? selectedPointIndicesForTrace(groupRows, effectiveBrushSet) ?? undefined
+          : undefined,
         xbins: binSpec,
         xaxis: xRef,
         yaxis: yRef,
         marker: { color: colors[i % colors.length], opacity: 0.85, line: { color: 'white', width: 0.5 } },
         hovertemplate: `${group} — Range: %{x}<br>Count: %{y}<extra></extra>`,
         showlegend: false,
-      } as Data
+      }) as Data
     })
 
     const facetHeight = Math.max(280, n * 155 + 55)
@@ -260,6 +277,22 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
               margin,
             }}
             title={hideAxisTitles ? undefined : `Distribution of ${colLabel} by ${groupLabel}`}
+            onHover={event => {
+              const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+              setBrushHover(rows)
+            }}
+            onUnhover={() => setBrushHover([])}
+            onClick={event => {
+              const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+              if (rows.length === 0) return
+              if (areBrushRowsEqual(rows, pinnedBrush)) clearBrush()
+              else setBrushPinned(rows)
+            }}
+            onSelected={event => {
+              const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+              setBrushPinned(rows)
+            }}
+            onDeselect={clearBrush}
           />
         </div>
       </div>
@@ -271,27 +304,48 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
 
   if (groupCol) {
     // vert=true: keep overlay behavior
-    const allData = getNumericGroup(grid, col.id, groupCol.id)
+    const allData = grid.rows.flatMap((row, rowIndex) => {
+      const value = Number(row[col.id])
+      const group = String(row[groupCol.id] ?? '').trim()
+      if (!Number.isFinite(value) || !group) return []
+      return [{ rowIndex, value, group }]
+    })
     const uniqueGroups = sortCategoryValues([...new Set(allData.map(d => d.group))])
-    traces = uniqueGroups.map((group, i) => ({
+    traces = uniqueGroups.map((group, i) => {
+      const groupPoints = allData.filter(d => d.group === group)
+      const groupRows = groupPoints.map(d => d.rowIndex)
+      return createPlotlySelectionStyles({
       type: 'histogram',
       name: group,
-      [binKey]: allData.filter(d => d.group === group).map(d => d.value),
+      [binKey]: groupPoints.map(d => d.value),
+      customdata: groupRows,
+      selectedpoints: effectiveBrushSet.size > 0
+        ? selectedPointIndicesForTrace(groupRows, effectiveBrushSet) ?? undefined
+        : undefined,
       [binSpecKey]: binSpec,
       marker: { color: colors[i % colors.length], opacity: 0.85, line: { color: 'white', width: 0.5 } },
       hovertemplate: vert
         ? `${group} — Range: %{y}<br>Count: %{x}<extra></extra>`
         : `${group} — Range: %{x}<br>Count: %{y}<extra></extra>`,
-    }))
+    })
+    })
   } else {
-    traces = [{
+    const rowIndices = grid.rows.flatMap((row, rowIndex) => {
+      const value = Number(row[col.id])
+      return Number.isFinite(value) ? [rowIndex] : []
+    })
+    traces = [createPlotlySelectionStyles({
       type: 'histogram',
       name: colLabel,
       [binKey]: values,
+      customdata: rowIndices,
+      selectedpoints: effectiveBrushSet.size > 0
+        ? selectedPointIndicesForTrace(rowIndices, effectiveBrushSet) ?? undefined
+        : undefined,
       [binSpecKey]: binSpec,
       marker: { color: colors[0], opacity: 0.85, line: { color: 'white', width: 0.5 } },
       hovertemplate: vert ? 'Range: %{y}<br>Count: %{x}<extra></extra>' : 'Range: %{x}<br>Count: %{y}<extra></extra>',
-    }]
+    })]
 
     if (!vert && showNormal && values.length > 1) {
       const std = Math.sqrt(values.reduce((a, b) => a + (b - mean) ** 2, 0) / (values.length - 1))
@@ -385,6 +439,22 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
             ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
           }}
           title={hideAxisTitles ? undefined : `Distribution of ${colLabel}${groupCol ? ` by ${groupLabel}` : ''}`}
+          onHover={event => {
+            const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+            setBrushHover(rows)
+          }}
+          onUnhover={() => setBrushHover([])}
+          onClick={event => {
+            const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+            if (rows.length === 0) return
+            if (areBrushRowsEqual(rows, pinnedBrush)) clearBrush()
+            else setBrushPinned(rows)
+          }}
+          onSelected={event => {
+            const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+            setBrushPinned(rows)
+          }}
+          onDeselect={clearBrush}
         />
       </div>
     </div>

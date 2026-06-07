@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
+import { effectiveBrushRows, areBrushRowsEqual } from '@/lib/linkedBrush'
 import { useStore } from '@/lib/store'
 import { RowFilter, FilterOp } from '@/types'
 import { EditableCell } from './EditableCell'
@@ -100,6 +101,11 @@ function createColumnDragPreview(columnName: string, values: Array<string | numb
 
 export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
   const { grid, updateCell, addRow, addColumn, deleteRows, undo, reorderColumns, setColumnWidth, activeFilters } = useStore()
+  const hoveredBrush = useStore(state => state.brush.hovered)
+  const pinnedBrush = useStore(state => state.brush.pinned)
+  const setBrushHover = useStore(state => state.setBrushHover)
+  const setBrushPinned = useStore(state => state.setBrushPinned)
+  const clearBrush = useStore(state => state.clearBrush)
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null)
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; rowIndex: number } | null>(null)
@@ -130,6 +136,10 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
       return acc
     }, [] as Array<{ originalIdx: number; row: Record<string, string | number> }>)
   }, [rows, completeFilters, targetRows])
+  const effectiveBrushSet = useMemo(
+    () => new Set(effectiveBrushRows(hoveredBrush, pinnedBrush)),
+    [hoveredBrush, pinnedBrush],
+  )
 
   // Keyboard navigation
   useEffect(() => {
@@ -188,6 +198,11 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
   function handleRowClick(rowIndex: number) {
     setSelectedRows(new Set([rowIndex]))
     setActiveCell(null)
+    if (pinnedBrush.length === 1 && pinnedBrush[0] === rowIndex) {
+      clearBrush()
+    } else {
+      setBrushPinned([rowIndex])
+    }
   }
 
   const handleCellChange = useCallback((rowIndex: number, colId: string, value: string) => {
@@ -243,6 +258,9 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
   return (
     <div
       ref={containerRef}
+      onMouseLeave={() => {
+        if (hoveredBrush.length > 0) setBrushHover([])
+      }}
       className={fillHeight
         ? 'w-full h-full overflow-auto'
         : 'overflow-auto border border-[var(--color-border)] rounded-lg inline-block max-w-full'
@@ -365,11 +383,25 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
 
         {/* Data rows */}
         {displayRows.map(({ originalIdx, row }) => (
-          <div key={originalIdx} className="flex group">
+          <div
+            key={originalIdx}
+            className="flex group"
+            onMouseEnter={() => {
+              if (!areBrushRowsEqual(hoveredBrush, [originalIdx])) {
+                setBrushHover([originalIdx])
+              }
+            }}
+          >
             {/* Row number */}
             <div
               style={{ width: ROW_NUM_WIDTH, minWidth: ROW_NUM_WIDTH, boxShadow: '2px 0 4px -2px rgba(8,38,33,0.18)' }}
-              className={`flex-shrink-0 sticky left-0 z-10 flex items-center justify-center text-xs border-r border-b border-[var(--color-border)] cursor-pointer select-none ${selectedRows.has(originalIdx) ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-accent-light)] text-[var(--color-muted)]'}`}
+              className={`flex-shrink-0 sticky left-0 z-10 flex items-center justify-center text-xs border-r border-b border-[var(--color-border)] cursor-pointer select-none ${
+                effectiveBrushSet.has(originalIdx)
+                  ? 'bg-[var(--color-gold-light)] text-[#7A4B00]'
+                  : selectedRows.has(originalIdx)
+                    ? 'bg-[var(--color-accent)] text-white'
+                    : 'bg-[var(--color-accent-light)] text-[var(--color-muted)]'
+              }`}
               onClick={() => handleRowClick(originalIdx)}
               onContextMenu={e => handleRowContextMenu(e, originalIdx)}
             >
@@ -394,6 +426,7 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
                   colId={col.id}
                   isActive={activeCell?.row === originalIdx && activeCell?.col === colIndex}
                   isSelected={selectedRows.has(originalIdx)}
+                  isBrushed={effectiveBrushSet.has(originalIdx)}
                   onActivate={() => { setActiveCell({ row: originalIdx, col: colIndex }); setSelectedRows(new Set()) }}
                   onChange={handleCellChange}
                 />

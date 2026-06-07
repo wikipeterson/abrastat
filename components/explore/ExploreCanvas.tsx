@@ -266,6 +266,7 @@ export function ExploreCanvas({
     grid, addExploreCard,
     selectedColumnIds, setSelectedColumnIds,
     exploreCards, removeExploreCard, updateExploreCard, purgeExploreStaleIds, addLinkedGraphCard, addLinkedTableCard,
+    brush, clearBrush,
   } = useStore()
 
   const cards = exploreCards
@@ -430,11 +431,14 @@ export function ExploreCanvas({
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') setContextMenu(null)
+      if (e.key === 'Escape') {
+        setContextMenu(null)
+        clearBrush()
+      }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  }, [clearBrush])
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const id = String(event.active.id)
@@ -914,6 +918,7 @@ export function ExploreCanvas({
 
   const activeCol = activeColId ? (grid.columns.find(c => c.id === activeColId) ?? null) : null
   const visibleCards = cards.filter(c => c.config.type !== 'data-grid')
+  const pinnedBrushCount = brush.pinned.length
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <SwapAnimContext.Provider value={swapAnim}>
@@ -981,6 +986,24 @@ export function ExploreCanvas({
             onContextMenu={handleWorkspaceContextMenu}
             className="flex-1 overflow-auto bg-[var(--color-bg)] p-2 relative cursor-grab"
           >
+            {pinnedBrushCount > 0 && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-5 z-20 flex justify-center px-4">
+                <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-[var(--color-border)] bg-white/95 px-4 py-2 shadow-[var(--shadow-card)] backdrop-blur-sm">
+                  <span className="text-sm font-medium text-[var(--color-text)]">
+                    {pinnedBrushCount} case{pinnedBrushCount === 1 ? '' : 's'} highlighted
+                  </span>
+                  <button
+                    type="button"
+                    onClick={clearBrush}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] bg-white text-sm font-semibold text-[var(--color-muted)] transition-colors hover:border-slate-300 hover:text-[var(--color-text)]"
+                    aria-label="Clear highlighted cases"
+                    title="Clear highlighted cases"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            )}
             {visibleCards.length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                 <p className="text-[var(--color-muted)] text-sm font-medium select-none">

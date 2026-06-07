@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { areBrushRowsEqual, createPlotlySelectionStyles, extractRowsFromPlotlyPoints, selectedPointIndicesForTrace, useEffectiveBrushSet } from '@/lib/linkedBrush'
 import { useStore } from '@/lib/store'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -27,6 +28,11 @@ export function SegmentedBar({
   showControls = true,
 }: SegmentedBarProps) {
   const { grid } = useStore()
+  const pinnedBrush = useStore(state => state.brush.pinned)
+  const setBrushHover = useStore(state => state.setBrushHover)
+  const setBrushPinned = useStore(state => state.setBrushPinned)
+  const clearBrush = useStore(state => state.clearBrush)
+  const effectiveBrushSet = useEffectiveBrushSet()
   const { hideAxisTitles, colors } = useGraphCardContext()
   const [mode, setMode] = useState<'count' | 'percent'>('count')
   const effectiveMode = modeOverride ?? mode
@@ -60,11 +66,11 @@ export function SegmentedBar({
 
     if (!xCol || !fillCol) return []
 
-    const pairedValues = grid.rows.flatMap(row => {
+    const pairedValues = grid.rows.flatMap((row, rowIndex) => {
       const xValue = String(row[xCol.id] ?? '').trim()
       const fillValue = String(row[fillCol.id] ?? '').trim()
       if (!xValue || !fillValue) return []
-      return [{ xValue, fillValue }]
+      return [{ rowIndex, xValue, fillValue }]
     })
 
     const xGroups = sortCategoryValues([...new Set(pairedValues.map(pair => pair.xValue))])
@@ -81,18 +87,27 @@ export function SegmentedBar({
             return total ? (counts[xi] / total) * 100 : 0
           })
 
-      return {
+      const rowGroups = xGroups.map(xGroup =>
+        pairedValues
+          .filter(pair => pair.xValue === xGroup && pair.fillValue === fillGroup)
+          .map(pair => pair.rowIndex),
+      )
+      return createPlotlySelectionStyles({
         type: 'bar',
         name: fillGroup,
         x: xGroups,
         y: values,
+        customdata: rowGroups,
+        selectedpoints: effectiveBrushSet.size > 0
+          ? selectedPointIndicesForTrace(rowGroups, effectiveBrushSet) ?? undefined
+          : undefined,
         marker: { color: colors[gi % colors.length], opacity: 0.9 },
         hovertemplate: effectiveMode === 'count'
           ? `${fillGroup}: %{y}<extra></extra>`
           : `${fillGroup}: %{y:.1f}%<extra></extra>`,
-      }
+      })
     })
-  }, [grid, xCol, fillCol, manualTable, effectiveMode])
+  }, [grid, xCol, fillCol, manualTable, effectiveMode, effectiveBrushSet, colors])
 
   if (!manualTable && (!xCol || !fillCol)) {
     return <EmptyState icon="📊" title="Select two variables" description="Choose an X variable and a Fill variable above." />
@@ -134,6 +149,22 @@ export function SegmentedBar({
             ...(hideAxisTitles ? { margin: { t: 28, r: 16, b: 44, l: 52 } } : {}),
           }}
           title={hideAxisTitles ? undefined : chartTitle}
+          onHover={event => {
+            const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+            setBrushHover(rows)
+          }}
+          onUnhover={() => setBrushHover([])}
+          onClick={event => {
+            const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+            if (rows.length === 0) return
+            if (areBrushRowsEqual(rows, pinnedBrush)) clearBrush()
+            else setBrushPinned(rows)
+          }}
+          onSelected={event => {
+            const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+            setBrushPinned(rows)
+          }}
+          onDeselect={clearBrush}
         />
       </div>
     </div>

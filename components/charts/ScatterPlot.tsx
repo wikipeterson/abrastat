@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect, useRef } from 'react'
 import type { Data, Annotations } from 'plotly.js'
+import { areBrushRowsEqual, createPlotlySelectionStyles, extractRowsFromPlotlyPoints, selectedPointIndicesForTrace, useEffectiveBrushSet } from '@/lib/linkedBrush'
 import { useStore } from '@/lib/store'
 import { linearRegression } from '@/lib/statistics'
 import { PlotlyChart } from './PlotlyChart'
@@ -18,6 +19,7 @@ interface ScatterPlotProps {
 }
 
 interface ScatterPoint {
+  rowIndex: number
   x: number
   y: number
   group: string
@@ -62,6 +64,11 @@ function useAnimatedY(targetY: number[], animate: boolean): number[] {
 
 export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none' }: ScatterPlotProps) {
   const { grid } = useStore()
+  const pinnedBrush = useStore(state => state.brush.pinned)
+  const setBrushHover = useStore(state => state.setBrushHover)
+  const setBrushPinned = useStore(state => state.setBrushPinned)
+  const clearBrush = useStore(state => state.clearBrush)
+  const effectiveBrushSet = useEffectiveBrushSet()
   const { hideAxisTitles, colors, dotSize, showMeans, xAxisRange, yAxisRange } = useGraphCardContext()
   const prevYColIdRef = useRef<string | null>(null)
   const [shouldAnimate, setShouldAnimate] = useState(false)
@@ -77,7 +84,7 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
   // for color grouping. When it is numeric, use it for bubble size.
   const allPoints = useMemo(() => {
     if (!xColId || !yColId) return [] as ScatterPoint[]
-    return grid.rows.flatMap<ScatterPoint>(r => {
+    return grid.rows.flatMap<ScatterPoint>((r, rowIndex) => {
       const rx = r[xColId], ry = r[yColId]
       if (rx === '' || rx == null || ry === '' || ry == null) return [] as ScatterPoint[]
       const x = Number(rx), y = Number(ry)
@@ -85,16 +92,16 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
       if (useColorGroups && colorByColId) {
         const group = String(r[colorByColId] ?? '').trim()
         if (!group) return [] as ScatterPoint[]
-        return [{ x, y, group, size: null }]
+        return [{ rowIndex, x, y, group, size: null }]
       }
       if (useBubbleSize && colorByColId) {
         const rawSize = r[colorByColId]
         if (rawSize === '' || rawSize == null) return [] as ScatterPoint[]
         const size = Number(rawSize)
         if (!isFinite(size)) return [] as ScatterPoint[]
-        return [{ x, y, group: '', size }]
+        return [{ rowIndex, x, y, group: '', size }]
       }
-      return [{ x, y, group: '', size: null }]
+      return [{ rowIndex, x, y, group: '', size: null }]
     })
   }, [grid.rows, xColId, yColId, colorByColId, useBubbleSize, useColorGroups])
 
@@ -137,15 +144,23 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
 
   if (useColorGroups && colorByColId) {
     const uniqueGroups = sortCategoryValues([...new Set(allPoints.map(p => p.group))])
-    traces = uniqueGroups.map((group, i) => ({
+    traces = uniqueGroups.map((group, i) => {
+      const groupPoints = allPoints.filter(p => p.group === group)
+      const groupRows = groupPoints.map(p => p.rowIndex)
+      return createPlotlySelectionStyles({
       type: 'scatter',
       mode: 'markers',
       name: group,
-      x: allPoints.filter(p => p.group === group).map(p => p.x),
-      y: allPoints.filter(p => p.group === group).map(p => p.y),
+      x: groupPoints.map(p => p.x),
+      y: groupPoints.map(p => p.y),
+      customdata: groupRows,
+      selectedpoints: effectiveBrushSet.size > 0
+        ? selectedPointIndicesForTrace(groupRows, effectiveBrushSet) ?? undefined
+        : undefined,
       marker: { color: colors[i % colors.length], size: markerSize, opacity: 0.85, line: { width: 0 } },
       hovertemplate: `${xLabel}: %{x}<br>${yLabel}: %{y}<extra>${group}</extra>`,
-    }))
+    })
+    })
   } else if (useBubbleSize && groupCol) {
     const minSize = Math.min(...sizeValues)
     const maxSize = Math.max(...sizeValues)
@@ -154,12 +169,16 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
       if (maxSize === minSize) return 24
       return 12 + ((value - minSize) / (maxSize - minSize)) * 44
     })
-    traces = [{
+    traces = [createPlotlySelectionStyles({
       type: 'scatter',
       mode: 'markers',
       name: `${xLabel} vs ${yLabel}`,
       x: xValues,
       y: yValues,
+      customdata: allPoints.map(p => p.rowIndex),
+      selectedpoints: effectiveBrushSet.size > 0
+        ? selectedPointIndicesForTrace(allPoints.map(p => p.rowIndex), effectiveBrushSet) ?? undefined
+        : undefined,
       marker: {
         color: colors[0],
         size: scaledSizes.map(size => size * (markerSize / 7)),
@@ -167,19 +186,23 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
         opacity: 0.45,
         line: { width: 0 },
       },
-      hovertemplate: `${xLabel}: %{x}<br>${yLabel}: %{y}<br>${truncateChartLabel(groupCol.name)}: %{customdata}<extra></extra>`,
-      customdata: allPoints.map(p => p.size),
-    }]
+      hovertemplate: `${xLabel}: %{x}<br>${yLabel}: %{y}<br>${truncateChartLabel(groupCol.name)}: %{text}<extra></extra>`,
+      text: allPoints.map(p => String(p.size ?? '')),
+    })]
   } else {
-    traces = [{
+    traces = [createPlotlySelectionStyles({
       type: 'scatter',
       mode: 'markers',
       name: `${xLabel} vs ${yLabel}`,
       x: xValues,
       y: yValues,
+      customdata: allPoints.map(p => p.rowIndex),
+      selectedpoints: effectiveBrushSet.size > 0
+        ? selectedPointIndicesForTrace(allPoints.map(p => p.rowIndex), effectiveBrushSet) ?? undefined
+        : undefined,
       marker: { color: colors[0], size: markerSize, opacity: 0.85, line: { width: 0 } },
       hovertemplate: `${xLabel}: %{x}<br>${yLabel}: %{y}<extra></extra>`,
-    }]
+    })]
   }
 
   let annotations: Partial<Annotations>[] = []
@@ -268,6 +291,25 @@ export function ScatterPlot({ xColId, yColId, colorByColId, bestFitMode = 'none'
             ...(hideAxisTitles ? { margin: { t: 8, r: 16, b: 44, l: 52 } } : {}),
           }}
           title={hideAxisTitles ? '' : `${yLabel} vs ${xLabel}`}
+          onHover={event => {
+            const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+            setBrushHover(rows)
+          }}
+          onUnhover={() => setBrushHover([])}
+          onClick={event => {
+            const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+            if (rows.length === 0) return
+            if (areBrushRowsEqual(rows, pinnedBrush)) {
+              clearBrush()
+            } else {
+              setBrushPinned(rows)
+            }
+          }}
+          onSelected={event => {
+            const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
+            setBrushPinned(rows)
+          }}
+          onDeselect={clearBrush}
         />
       </div>
     </div>

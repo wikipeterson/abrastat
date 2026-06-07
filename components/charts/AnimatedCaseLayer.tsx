@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { renderSvgMarkupToPngBlob } from '@/lib/exportDomAsPng'
+import { areBrushRowsEqual, effectiveBrushRows } from '@/lib/linkedBrush'
 import { useStore } from '@/lib/store'
 import { linearRegression } from '@/lib/statistics'
 import { sortCategoryValues } from '@/lib/categoryOrder'
@@ -40,10 +41,16 @@ export interface AnimatedCaseLayerProps {
 
 interface LayoutPoint {
   id: string
+  rowIndex: number
   x: number
   y: number
   opacity: number
   color: string
+}
+
+interface IndexedRow {
+  rowIndex: number
+  row: Record<string, string | number>
 }
 
 interface GroupLabel {
@@ -162,7 +169,7 @@ function pointRadiusFor(dotSize: 'small' | 'medium' | 'large') {
 
 function buildLayout(
   spec: MorphSpec,
-  rows: Record<string, string | number>[],
+  rows: IndexedRow[],
   width: number,
   height: number,
   colors: string[] = COLORS,
@@ -184,10 +191,11 @@ function buildLayout(
   // ── Blank ──────────────────────────────────────────────────────────────────
   if (spec.kind === 'blank') {
     return {
-      points: rows.map((_, i) => ({
-        id: `row-${i}`,
-        x: pL + hashUnit(`x-${i}`) * pW,
-        y: pT + hashUnit(`y-${i}`) * pH,
+      points: rows.map(({ rowIndex }) => ({
+        id: `row-${rowIndex}`,
+        rowIndex,
+        x: pL + hashUnit(`x-${rowIndex}`) * pW,
+        y: pT + hashUnit(`y-${rowIndex}`) * pH,
         opacity: 0.72,
         color: '#7ccfc9',
       })),
@@ -200,7 +208,7 @@ function buildLayout(
     type RawPt = { id: string; x: number; y: number; group: string }
     const plotted: RawPt[] = []
     for (let i = 0; i < rows.length; i++) {
-      const row = rows[i]
+      const { rowIndex, row } = rows[i]
       const x = parseNumber(row[spec.xColId])
       const y = parseNumber(row[spec.yColId])
       if (x === null || y === null) continue
@@ -208,7 +216,7 @@ function buildLayout(
         ? String(row[spec.colorByColId] ?? '').trim()
         : '__all__'
       if (spec.colorByColId && group === '') continue
-      plotted.push({ id: `row-${i}`, x, y, group })
+      plotted.push({ id: `row-${rowIndex}`, x, y, group })
     }
     if (plotted.length === 0) return { points: [], labels: [] }
 
@@ -222,6 +230,7 @@ function buildLayout(
     return {
       points: plotted.map(p => ({
         id: p.id,
+        rowIndex: Number(p.id.slice(4)),
         x: toPixX(p.x),
         y: toPixY(p.y),
         opacity: 0.85,
@@ -245,7 +254,7 @@ function buildLayout(
   // ── Dot plot ───────────────────────────────────────────────────────────────
   const grouped = new Map<string, { id: string; value: number }[]>()
   for (let i = 0; i < rows.length; i++) {
-    const row = rows[i]
+    const { rowIndex, row } = rows[i]
     const value = parseNumber(row[spec.valueColId])
     if (value === null) continue
     const rawGroup = spec.groupColId
@@ -254,7 +263,7 @@ function buildLayout(
     if (spec.groupColId && rawGroup === '') continue
     const key = spec.groupColId ? rawGroup : '__all__'
     const arr = grouped.get(key) ?? []
-    arr.push({ id: `row-${i}`, value })
+    arr.push({ id: `row-${rowIndex}`, value })
     grouped.set(key, arr)
   }
 
@@ -333,12 +342,12 @@ function buildLayout(
             spec.groupColId ? bandTop : pT,
             yBase - stack * dotGap,
           )
-          points.push({ id: item.id, x, y, opacity: 0.92, color })
+          points.push({ id: item.id, rowIndex: Number(item.id.slice(4)), x, y, opacity: 0.92, color })
         } else {
           const y = pB - binRatio * pH
           const xBase = spec.groupColId ? pL + 13 + gi * 14 : pL + 11
           const x = Math.min(pR, xBase + stack * dotGap)
-          points.push({ id: item.id, x, y, opacity: 0.92, color })
+          points.push({ id: item.id, rowIndex: Number(item.id.slice(4)), x, y, opacity: 0.92, color })
         }
       })
   })
@@ -359,13 +368,13 @@ function buildLayout(
 
 function computeScatterBestFitLine(
   spec: MorphSpec,
-  rows: Record<string, string | number>[],
+  rows: IndexedRow[],
   width: number,
   height: number,
 ) {
   if (spec.kind !== 'scatter' || width <= 0 || height <= 0) return null
 
-  const plotted = rows.flatMap(row => {
+  const plotted = rows.flatMap(({ row }) => {
     const x = parseNumber(row[spec.xColId])
     const y = parseNumber(row[spec.yColId])
     if (x === null || y === null) return [] as { x: number; y: number }[]
@@ -415,7 +424,9 @@ export async function renderAnimatedGraphToPngBlob(options: {
   colors?: string[]
   dotSize?: 'small' | 'medium' | 'large'
 }) {
-  const rows = options.rows.filter(hasAnyData)
+  const rows = options.rows.flatMap((row, rowIndex) => (
+    hasAnyData(row) ? [{ rowIndex, row }] : [] as IndexedRow[]
+  ))
   const plotWidth = Math.max(1, Math.ceil(options.width))
   const plotHeight = Math.max(1, Math.ceil(options.height))
   const title = options.title?.trim() ?? ''
@@ -490,13 +501,42 @@ export function AnimatedCaseLayer({
   dotSize = 'medium',
 }: AnimatedCaseLayerProps) {
   const { grid } = useStore()
+  const hoveredBrush = useStore(state => state.brush.hovered)
+  const pinnedBrush = useStore(state => state.brush.pinned)
+  const setBrushHover = useStore(state => state.setBrushHover)
+  const setBrushPinned = useStore(state => state.setBrushPinned)
+  const clearBrush = useStore(state => state.clearBrush)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const hoverFrameRef = useRef<number | null>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [animating, setAnimating] = useState(false)
   const [phase, setPhase] = useState<'from' | 'to'>(fromSpec ? 'from' : 'to')
   const pointRadius = pointRadiusFor(dotSize)
 
-  const rows = useMemo(() => grid.rows.filter(hasAnyData), [grid.rows])
+  const rows = useMemo(
+    () =>
+      grid.rows.flatMap((row, rowIndex) => (
+        hasAnyData(row) ? [{ rowIndex, row }] : [] as IndexedRow[]
+      )),
+    [grid.rows],
+  )
+  const effectiveBrushSet = useMemo(
+    () => new Set(effectiveBrushRows(hoveredBrush, pinnedBrush)),
+    [hoveredBrush, pinnedBrush],
+  )
+
+  function scheduleHoverRows(nextRows: number[]) {
+    if (hoverFrameRef.current !== null) {
+      cancelAnimationFrame(hoverFrameRef.current)
+    }
+    hoverFrameRef.current = requestAnimationFrame(() => {
+      hoverFrameRef.current = null
+      const normalized = [...new Set(nextRows)].sort((a, b) => a - b)
+      if (!areBrushRowsEqual(normalized, hoveredBrush)) {
+        setBrushHover(normalized)
+      }
+    })
+  }
 
   useEffect(() => {
     const node = wrapRef.current
@@ -508,6 +548,14 @@ export function AnimatedCaseLayer({
     })
     ro.observe(node)
     return () => ro.disconnect()
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (hoverFrameRef.current !== null) {
+        cancelAnimationFrame(hoverFrameRef.current)
+      }
+    }
   }, [])
 
   const fromLayout = useMemo(
@@ -587,7 +635,11 @@ export function AnimatedCaseLayer({
   }
 
   return (
-    <div ref={wrapRef} className="relative h-full overflow-hidden rounded-xl">
+    <div
+      ref={wrapRef}
+      className="relative h-full overflow-hidden rounded-xl"
+      onMouseLeave={() => scheduleHoverRows([])}
+    >
       {showHint && spec.kind === 'blank' && (
         <div className="absolute inset-x-0 bottom-5 text-center pointer-events-none">
           <p className="text-sm font-medium text-[var(--color-muted)]">
@@ -744,6 +796,15 @@ export function AnimatedCaseLayer({
         <div
           key={point.id}
           className="absolute rounded-full shadow-[0_0_0_1px_rgba(255,255,255,0.15)]"
+          onMouseEnter={() => scheduleHoverRows([point.rowIndex])}
+          onMouseLeave={() => scheduleHoverRows([])}
+          onClick={() => {
+            if (pinnedBrush.length === 1 && pinnedBrush[0] === point.rowIndex) {
+              clearBrush()
+            } else {
+              setBrushPinned([point.rowIndex])
+            }
+          }}
           style={{
             width: pointRadius * 2,
             height: pointRadius * 2,
@@ -751,10 +812,20 @@ export function AnimatedCaseLayer({
             top: `${point.y}px`,
             transform: 'translate(-50%, -50%)',
             backgroundColor: point.color,
-            opacity: point.opacity,
+            opacity:
+              effectiveBrushSet.size === 0
+                ? point.opacity
+                : effectiveBrushSet.has(point.rowIndex)
+                  ? 1
+                  : Math.max(0.08, point.opacity * 0.12),
+            zIndex: effectiveBrushSet.has(point.rowIndex) ? 2 : 1,
+            boxShadow: effectiveBrushSet.has(point.rowIndex)
+              ? '0 0 0 2px rgba(255,255,255,0.92), 0 0 0 4px rgba(22,168,155,0.2)'
+              : undefined,
+            cursor: 'pointer',
             transition: animating
-              ? `left ${DURATION_MS}ms cubic-bezier(0.22,1,0.36,1), top ${DURATION_MS}ms cubic-bezier(0.22,1,0.36,1), opacity 220ms ease`
-              : 'none',
+              ? `left ${DURATION_MS}ms cubic-bezier(0.22,1,0.36,1), top ${DURATION_MS}ms cubic-bezier(0.22,1,0.36,1), opacity 220ms ease, box-shadow 160ms ease`
+              : 'opacity 120ms ease, box-shadow 120ms ease',
           }}
         />
       ))}

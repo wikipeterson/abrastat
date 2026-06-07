@@ -26,9 +26,25 @@ interface PlotlyChartProps {
    *          Use this for game cards, stat cards, or any context without a bounded parent.
    */
   mode?: 'fill' | 'fixed'
+  onHover?: (event: unknown) => void
+  onUnhover?: (event: unknown) => void
+  onClick?: (event: unknown) => void
+  onSelected?: (event: unknown) => void
+  onDeselect?: () => void
 }
 
-export function PlotlyChart({ data, layout, title, height = 360, mode = 'fill' }: PlotlyChartProps) {
+export function PlotlyChart({
+  data,
+  layout,
+  title,
+  height = 360,
+  mode = 'fill',
+  onHover,
+  onUnhover,
+  onClick,
+  onSelected,
+  onDeselect,
+}: PlotlyChartProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [plotSize, setPlotSize] = useState({ width: 0, height })
 
@@ -123,6 +139,11 @@ export function PlotlyChart({ data, layout, title, height = 360, mode = 'fill' }
         style={{ width: '100%', height: '100%' }}
         revision={revision}
         useResizeHandler
+        onHover={onHover}
+        onUnhover={onUnhover}
+        onClick={onClick}
+        onSelected={onSelected}
+        onDeselect={onDeselect}
       />
     </div>
   )

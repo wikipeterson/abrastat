@@ -83,6 +83,20 @@ export interface RegressionByEyeCardConfig {
 export interface OnePropRandomizationCardConfig {
   type: 'one-prop-randomization'
   var1ColId: string | null  // categorical variable
+  stage?: 'setup' | 'simulate' | 'conclude'
+  sourceMode?: 'data' | 'manual'
+  successLevel?: string
+  manualX?: string
+  manualN?: string
+  manualLabel?: string
+  nullP?: string
+  alternative?: import('./randomizationTest').Alternative
+  nullDist?: number[]
+  simCount?: number
+  extremeCount?: number
+  showNormalCurve?: boolean
+  graphView?: 'proportions' | 'counts'
+  customThreshold?: string
 }
 
 export interface OnePropSimCardConfig {

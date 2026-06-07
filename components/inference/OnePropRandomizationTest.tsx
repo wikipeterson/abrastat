@@ -333,6 +333,7 @@ function OnePropNullDistPlot({
   const seenC = new Map<number, number>()
   const dotStep = Math.min(6, yScale)
   const dotR = Math.max(0.55, Math.min(2.6, dotStep / 2 - 0.15))
+  const showHistogram = values.length >= 120
   const circles = normalizedValues.map(v => {
     const si = seenC.get(v) ?? 0
     seenC.set(v, si + 1)
@@ -366,6 +367,33 @@ function OnePropNullDistPlot({
     return makeFill(samp.filter(s => s.x <= nullCenter - threshDist)) + ' ' +
            makeFill(samp.filter(s => s.x >= nullCenter + threshDist))
   })()
+
+  const histogramBars = useMemo(() => {
+    if (!showHistogram) return []
+    const binCount = Math.min(28, Math.max(10, Math.round(Math.sqrt(values.length))))
+    const binWidth = xRange / binCount
+    const bins = Array.from({ length: binCount }, (_, index) => ({
+      x0: xLo + index * binWidth,
+      x1: xLo + (index + 1) * binWidth,
+      count: 0,
+      extreme: false,
+    }))
+    normalizedValues.forEach(value => {
+      const ratio = Math.max(0, Math.min(0.999999, (value - xLo) / xRange))
+      const index = Math.min(binCount - 1, Math.floor(ratio * binCount))
+      bins[index].count += 1
+    })
+    bins.forEach(bin => {
+      const mid = (bin.x0 + bin.x1) / 2
+      const dist = Math.abs(thresh - nullCenter)
+      bin.extreme = alternative === 'greater'
+        ? mid >= thresh
+        : alternative === 'less'
+          ? mid <= thresh
+          : Math.abs(mid - nullCenter) >= dist
+    })
+    return bins.filter(bin => bin.count > 0)
+  }, [alternative, normalizedValues, nullCenter, showHistogram, thresh, values.length, xLo, xRange])
 
   const obsX = xOf(obsVal)
   const threshX = xOf(thresh)
@@ -420,13 +448,31 @@ function OnePropNullDistPlot({
           {normalFillPath && (
             <path d={normalFillPath} fill="#0EA5A0" opacity={0.28} />
           )}
-          {circles.map((c, i) => (
-            <circle key={i} cx={c.cx} cy={c.cy} r={dotR}
-              fill={c.extreme ? '#0EA5A0' : '#111111'} opacity={0.85}
-              style={i === circles.length - 1 && values.length > 0
-                ? { animation: 'dot-drop-full 700ms ease-out' } : undefined}
-            />
-          ))}
+          {showHistogram
+            ? histogramBars.map((bar, i) => {
+                const x0 = xOf(bar.x0)
+                const x1 = xOf(bar.x1)
+                const barHeight = bar.count * yScale
+                return (
+                  <rect
+                    key={i}
+                    x={x0 + 0.8}
+                    y={Math.max(0, PH - barHeight)}
+                    width={Math.max(1.2, x1 - x0 - 1.6)}
+                    height={Math.max(1.2, barHeight)}
+                    rx={2}
+                    fill={bar.extreme ? '#0EA5A0' : '#111111'}
+                    opacity={0.82}
+                  />
+                )
+              })
+            : circles.map((c, i) => (
+                <circle key={i} cx={c.cx} cy={c.cy} r={dotR}
+                  fill={c.extreme ? '#0EA5A0' : '#111111'} opacity={0.85}
+                  style={i === circles.length - 1 && values.length > 0
+                    ? { animation: 'dot-drop-full 700ms ease-out' } : undefined}
+                />
+              ))}
           {normalPath && (
             <polyline points={normalPath} fill="none" stroke="#F59E0B" strokeWidth={2}
               strokeLinejoin="round" strokeLinecap="round" />
@@ -466,17 +512,60 @@ interface ConfigProps {
 }
 
 export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssignZone }: ConfigProps) {
-  const { grid, updateExploreCard, addOnePropSimCard, exploreCards } = useStore()
+  const { grid, updateExploreCard } = useStore()
 
-  const [sourceMode, setSourceMode]     = useState<SourceMode>('manual')
-  const [successLevel, setSuccessLevel] = useState('')
-  const [manualX, setManualX]           = useState('')
-  const [manualN, setManualN]           = useState('')
-  const [manualLabel, setManualLabel]   = useState('Success')
-  const [nullP, setNullP]               = useState('0.5')
-  const [alternative, setAlternative]   = useState<Alternative>('two')
+  const stage = config.stage ?? 'setup'
+  const sourceMode = config.sourceMode ?? 'manual'
+  const successLevel = config.successLevel ?? ''
+  const manualX = config.manualX ?? ''
+  const manualN = config.manualN ?? ''
+  const manualLabel = config.manualLabel ?? 'Success'
+  const nullP = config.nullP ?? '0.5'
+  const alternative = config.alternative ?? 'two'
+  const nullDist = config.nullDist ?? []
+  const simCount = config.simCount ?? 0
+  const extremeCount = config.extremeCount ?? 0
+  const graphView = config.graphView ?? 'proportions'
+  const showNormalCurve = config.showNormalCurve ?? false
+  const cardSizeTarget = stage === 'setup'
+    ? { width: 820, height: 520 }
+    : { width: 1180, height: 820 }
+
+  const [phase, setPhase] = useState<StepPhase>('observing')
+  const [pendingSim, setPendingSim] = useState<OnePropResult | null>(null)
+  const [displayedSim, setDisplayedSim] = useState<OnePropResult | null>(null)
+  const [isRunning, setIsRunning] = useState(false)
+  const [runProgress, setRunProgress] = useState<{ current: number; total: number } | null>(null)
+  const cancelRef = useRef(false)
 
   const catCol = config.var1ColId ? (grid.columns.find(c => c.id === config.var1ColId) ?? null) : null
+
+  function patchConfig(partial: Partial<OnePropRandomizationCardConfig>) {
+    updateExploreCard(cardId, {
+      config: {
+        ...config,
+        stage,
+        sourceMode,
+        successLevel,
+        manualX,
+        manualN,
+        manualLabel,
+        nullP,
+        alternative,
+        nullDist,
+        simCount,
+        extremeCount,
+        showNormalCurve,
+        graphView,
+        customThreshold: config.customThreshold ?? '',
+        ...partial,
+      },
+    })
+  }
+
+  useEffect(() => {
+    updateExploreCard(cardId, cardSizeTarget)
+  }, [cardId, cardSizeTarget.height, cardSizeTarget.width, updateExploreCard])
 
   function handleNativeDrop(e: React.DragEvent) {
     const colId = e.dataTransfer.getData('text/plain')
@@ -495,8 +584,10 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
     [grid.rows, config.var1ColId])
 
   useEffect(() => {
-    if (catLevels.length > 0)
-      setSuccessLevel(l => (l && catLevels.includes(l)) ? l : catLevels[0])
+    if (sourceMode !== 'data' || catLevels.length === 0) return
+    if (!successLevel || !catLevels.includes(successLevel)) {
+      patchConfig({ successLevel: catLevels[0] })
+    }
   }, [catLevels])
 
   const computed = useMemo(() => {
@@ -524,130 +615,641 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
   const { n, x, phat, error } = computed
   const p0Num   = parseFloat(nullP)
   const p0Valid = Number.isFinite(p0Num) && p0Num >= 0 && p0Num <= 1
-  const canLaunch = error === null && n > 0 && p0Valid
+  const canStartSimulating = error === null && n > 0 && p0Valid
+  const pValue = simCount > 0 ? extremeCount / simCount : null
+  const customThreshold = config.customThreshold && config.customThreshold !== ''
+    ? config.customThreshold
+    : (graphView === 'counts' ? String(x) : (x / Math.max(1, n)).toFixed(4))
+  const customThresholdNum = parseFloat(customThreshold)
+  const thresholdOnCountScale = Number.isFinite(customThresholdNum)
+    ? (graphView === 'counts' ? customThresholdNum : snapThresholdCount(customThresholdNum, n))
+    : Number.NaN
+  const nullCenterCount = n * p0Num
+  const customPValue = useMemo(() => {
+    if (nullDist.length === 0 || !Number.isFinite(thresholdOnCountScale)) return null
+    const dist = Math.abs(thresholdOnCountScale - nullCenterCount)
+    const extreme = nullDist.filter(xSim => {
+      if (alternative === 'greater') return xSim >= thresholdOnCountScale
+      if (alternative === 'less') return xSim <= thresholdOnCountScale
+      return Math.abs(xSim - nullCenterCount) >= dist
+    }).length
+    return extreme / nullDist.length
+  }, [alternative, nullCenterCount, nullDist, thresholdOnCountScale])
 
-  function handleLaunch() {
-    if (!canLaunch) return
-    const myCard = exploreCards.find(c => c.id === cardId)
-    if (!myCard) return
-    const successLabel = sourceMode === 'manual'
-      ? (manualLabel.trim() || 'Success')
-      : successLevel
-    addOnePropSimCard({
-      n, x,
-      successLabel,
-      failureLabel: `Not ${successLabel}`,
-      nullP,
-      alternative,
-    }, myCard)
+  useEffect(() => {
+    if (!config.customThreshold) {
+      patchConfig({ customThreshold })
+    }
+  }, [graphView, x])
+
+  const successLabel = sourceMode === 'manual'
+    ? (manualLabel.trim() || 'Success')
+    : successLevel
+
+  function goToStage(nextStage: 'setup' | 'simulate' | 'conclude') {
+    patchConfig({ stage: nextStage })
   }
 
+  function handleStartSimulating() {
+    if (!canStartSimulating) return
+    goToStage('simulate')
+  }
+
+  function updateAlternative(next: Alternative) {
+    const nextExtremeCount = nullDist.reduce((countExtreme, xSim) => (
+      countExtreme + (isExtremeOneProp(xSim, x, n, p0Num, next) ? 1 : 0)
+    ), 0)
+    patchConfig({
+      alternative: next,
+      extremeCount: nextExtremeCount,
+    })
+  }
+
+  function handleRandomize() {
+    const sim = runOnePropRandomization(n, p0Num)
+    setPendingSim(sim)
+    setPhase('spinning')
+  }
+
+  function handleCompute() {
+    if (!pendingSim) return
+    setDisplayedSim(pendingSim)
+    setPhase('computed')
+  }
+
+  function handlePlot() {
+    if (!pendingSim) return
+    const nextExtreme = isExtremeOneProp(pendingSim.xSim, x, n, p0Num, alternative) ? 1 : 0
+    patchConfig({
+      nullDist: [...nullDist, pendingSim.xSim],
+      simCount: simCount + 1,
+      extremeCount: extremeCount + nextExtreme,
+    })
+    setPendingSim(null)
+    setPhase('plotted')
+  }
+
+  function runBatch(count: number) {
+    if (!Number.isFinite(p0Num) || p0Num < 0 || p0Num > 1) return
+    let nextExtreme = 0
+    let last: OnePropResult | null = null
+    const newCounts: number[] = []
+    for (let i = 0; i < count; i++) {
+      const result = runOnePropRandomization(n, p0Num)
+      last = result
+      newCounts.push(result.xSim)
+      if (isExtremeOneProp(result.xSim, x, n, p0Num, alternative)) nextExtreme += 1
+    }
+    if (last) {
+      setDisplayedSim(last)
+      setPendingSim(null)
+      setPhase('plotted')
+    }
+    patchConfig({
+      nullDist: [...nullDist, ...newCounts],
+      simCount: simCount + count,
+      extremeCount: extremeCount + nextExtreme,
+    })
+  }
+
+  function handleReset() {
+    cancelRef.current = true
+    setIsRunning(false)
+    setRunProgress(null)
+    setPendingSim(null)
+    setDisplayedSim(null)
+    setPhase('observing')
+    patchConfig({
+      nullDist: [],
+      simCount: 0,
+      extremeCount: 0,
+      customThreshold: graphView === 'counts' ? String(x) : (x / Math.max(1, n)).toFixed(4),
+    })
+  }
+
+  function sleep(ms: number) { return new Promise<void>(resolve => setTimeout(resolve, ms)) }
+
+  async function runAnimated(count: number) {
+    if (isRunning || !Number.isFinite(p0Num) || p0Num < 0 || p0Num > 1) return
+    cancelRef.current = false
+    setIsRunning(true)
+
+    const spinMs = count === 1 ? 1200 : 360
+    const computeMs = count === 1 ? 450 : 130
+    const pauseMs = count === 1 ? 80 : 40
+
+    let localNullDist = [...nullDist]
+    let localSimCount = simCount
+    let localExtremeCount = extremeCount
+
+    for (let i = 0; i < count; i += 1) {
+      if (cancelRef.current) break
+      setRunProgress({ current: i + 1, total: count })
+      const sim = runOnePropRandomization(n, p0Num)
+      setPendingSim(sim)
+      setPhase('spinning')
+      await sleep(spinMs)
+      if (cancelRef.current) break
+      setDisplayedSim(sim)
+      setPhase('computed')
+      await sleep(computeMs)
+      if (cancelRef.current) break
+
+      const nextExtreme = isExtremeOneProp(sim.xSim, x, n, p0Num, alternative) ? 1 : 0
+      localNullDist = [...localNullDist, sim.xSim]
+      localSimCount += 1
+      localExtremeCount += nextExtreme
+      patchConfig({
+        nullDist: localNullDist,
+        simCount: localSimCount,
+        extremeCount: localExtremeCount,
+      })
+      setPendingSim(null)
+      setPhase('plotted')
+      if (i < count - 1) await sleep(pauseMs)
+    }
+
+    setIsRunning(false)
+    setRunProgress(null)
+    cancelRef.current = false
+  }
+
+  function stopRunning() {
+    cancelRef.current = true
+  }
+
+  const normMean = graphView === 'counts' ? n * p0Num : p0Num
+  const normSD   = graphView === 'counts'
+    ? Math.sqrt(Math.max(0, n * p0Num * (1 - p0Num)))
+    : Math.sqrt(Math.max(0, p0Num * (1 - p0Num) / Math.max(1, n)))
+
+  const { size: coinSize, gap: coinGap, perRow } = getCoinLayout(n)
+  const showSimFaces = (phase === 'computed' || phase === 'plotted') && displayedSim !== null
+  const displayFaces = useMemo<CoinFace[]>(() => {
+    if (showSimFaces && displayedSim) {
+      return displayedSim.outcomes.map(outcome => outcome ? 'heads' as CoinFace : 'tails' as CoinFace)
+    }
+    return [
+      ...Array(x).fill('heads' as CoinFace),
+      ...Array(Math.max(0, n - x)).fill('tails' as CoinFace),
+    ]
+  }, [displayedSim, n, showSimFaces, x])
+  const revealDelays = useMemo(() => {
+    const maxDelay = Math.min(500, n * 20)
+    return Array.from({ length: n }, (_, i) => Math.round((i / Math.max(1, n - 1)) * maxDelay))
+  }, [n])
+  const spinDelays = useMemo(
+    () => Array.from({ length: n }, (_, i) => Math.round((i / Math.max(1, n)) * 220)),
+    [n],
+  )
+  const coinRows = Math.ceil(n / perRow)
+  const panelH = Math.max(64, Math.min(coinRows * (coinSize + coinGap) + 16, 220))
+  const hasEnoughToConclude = simCount >= 100
+
+  const firstRunGuidance = (() => {
+    if (simCount > 0) return null
+    if (phase === 'observing') return `Flipping ${n} coins as if p = ${nullP} — the null world.`
+    if (phase === 'spinning') return `Now compute the simulated result from those ${n} flips.`
+    if (phase === 'computed') return `${displayedSim?.xSim ?? '?'} heads gives p̂* = ${displayedSim ? displayedSim.pSim.toFixed(3) : '?'}. Plot that one simulated sample.`
+    return null
+  })()
+
+  const verdict = (() => {
+    if (simCount < 100) {
+      return 'You need more simulated samples before the p-value is stable enough to interpret confidently.'
+    }
+    const shown = customPValue ?? pValue
+    if (shown == null) return 'Keep simulating to build the null distribution.'
+    if (shown <= 0.05) {
+      return `A result this extreme would be unusual if the null hypothesis were true, so the data give evidence for the alternative.`
+    }
+    return `Results like this are not especially rare under the null hypothesis, so the data do not give strong evidence for the alternative.`
+  })()
+
+  const statusLabel = (() => {
+    if (phase === 'observing') return `Observed sample — n = ${n}, X = ${x}`
+    if (phase === 'spinning') return 'Simulating under H₀ …'
+    if (phase === 'computed') return `Simulation result — X = ${displayedSim?.xSim ?? '?'}, p̂* = ${displayedSim ? displayedSim.pSim.toFixed(3) : '?'}`
+    return `Last result — X = ${displayedSim?.xSim ?? '?'}, p̂* = ${displayedSim ? displayedSim.pSim.toFixed(3) : '?'}`
+  })()
+
+  const stepper = (
+    <div className="flex flex-wrap items-center gap-2">
+      {([
+        ['setup', 'Set up'],
+        ['simulate', 'Simulate'],
+        ['conclude', 'Conclude'],
+      ] as const).map(([key, label], index) => {
+        const active = stage === key
+        const enabled = key === 'setup' || key === 'simulate' || hasEnoughToConclude
+        return (
+          <div key={key} className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={!enabled}
+              onClick={() => enabled && goToStage(key)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                active
+                  ? 'border-[var(--color-accent)] bg-[var(--color-accent)] text-white'
+                  : enabled
+                    ? 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-[var(--color-accent)]'
+                    : 'border-[var(--color-border)] bg-slate-50 text-slate-400'
+              }`}
+            >
+              {label}
+            </button>
+            {index < 2 && <span className="text-xs text-[var(--color-muted)]">·</span>}
+          </div>
+        )
+      })}
+    </div>
+  )
+
   return (
-    <div className="space-y-4">
-      <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4">
-        {/* Hypothesis */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₀: p =</span>
-            <input type="number" min={0} max={1} step={0.01} value={nullP} onChange={e => setNullP(e.target.value)}
-              className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]" />
+    <div className="flex h-full flex-col gap-4">
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4 shadow-[var(--shadow-card)]">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">Randomization Test</div>
+            <h3 className="text-[30px] font-semibold leading-none text-[var(--color-text)]">One proportion</h3>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Hₐ</span>
-            <span className="text-sm font-mono font-medium text-[var(--color-text)]">p</span>
-            <select value={alternative} onChange={e => setAlternative(e.target.value as Alternative)}
-              className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
-              <option value="less">&lt;</option>
-              <option value="greater">&gt;</option>
-              <option value="two">≠</option>
-            </select>
-            <span className="text-sm font-mono font-medium text-[var(--color-text)]">{nullP}</span>
-          </div>
-          <button onClick={handleLaunch} disabled={!canLaunch}
-            className="ml-auto rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity">
-            Launch Simulation →
-          </button>
+          {stepper}
         </div>
 
-        {/* Source mode toggle */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[var(--color-muted)]">Source</span>
-          <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
-            {(['data', 'manual'] as SourceMode[]).map((m, i) => (
-              <button key={m} onClick={() => setSourceMode(m)}
-                className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === m ? 'bg-[var(--color-text)] text-[var(--color-surface)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
-                {m === 'data' ? 'Use Data' : 'Enter Info'}
-              </button>
-            ))}
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₀: p =</span>
+              <input type="number" min={0} max={1} step={0.01} value={nullP} onChange={e => patchConfig({ nullP: e.target.value })}
+                className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Hₐ</span>
+              <span className="text-sm font-mono font-medium text-[var(--color-text)]">p</span>
+              <select value={alternative} onChange={e => updateAlternative(e.target.value as Alternative)}
+                className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
+                <option value="less">&lt;</option>
+                <option value="greater">&gt;</option>
+                <option value="two">≠</option>
+              </select>
+              <span className="text-sm font-mono font-medium text-[var(--color-text)]">{nullP}</span>
+            </div>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              {stage !== 'setup' && (
+                <button
+                  type="button"
+                  onClick={() => goToStage('setup')}
+                  className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]"
+                >
+                  ← Edit setup
+                </button>
+              )}
+              {stage === 'setup' && (
+                <button onClick={handleStartSimulating} disabled={!canStartSimulating}
+                  className="rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity">
+                  Start simulating →
+                </button>
+              )}
+              {stage === 'simulate' && (
+                <button
+                  type="button"
+                  onClick={() => goToStage('conclude')}
+                  disabled={!hasEnoughToConclude}
+                  className="rounded-lg bg-[var(--color-gold)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Conclude →
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--color-muted)]">Source</span>
+            <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+              {(['data', 'manual'] as SourceMode[]).map((m, i) => (
+                <button key={m} onClick={() => patchConfig({ sourceMode: m })}
+                  className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === m ? 'bg-[var(--color-text)] text-[var(--color-surface)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
+                  {m === 'data' ? 'Use Data' : 'Enter Info'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {sourceMode === 'data' ? (
+            <div className="space-y-3">
+              <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
+                <DropZone
+                  id={`${cardId}:var1`}
+                  label="Categorical Variable"
+                  hint="categorical only"
+                  assignedCol={catCol}
+                  onClear={() => onClearZone('var1')}
+                  onAssign={colId => onAssignZone('var1', colId)}
+                  allowedTypes={['categorical']}
+                />
+              </div>
+              {catLevels.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--color-muted)] whitespace-nowrap">Success</span>
+                  <select value={successLevel} onChange={e => patchConfig({ successLevel: e.target.value })}
+                    className="flex-1 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
+                    {catLevels.map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-[1fr_220px]">
+              <div className="flex items-center justify-around py-1">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="text-sm font-bold text-[var(--color-text)]">
+                    <PHat /> <span className="text-xs text-[var(--color-muted)] font-normal">= x / n</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex flex-col items-end gap-1 text-xs font-mono text-[var(--color-muted)]" style={{ paddingBottom: 2 }}>
+                      <span className="py-1.5">x</span>
+                      <span className="py-1.5">n</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <input type="number" min={0} step={1} value={manualX} onChange={e => patchConfig({ manualX: e.target.value })}
+                        placeholder=" "
+                        className="w-20 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)] [appearance:textfield]" />
+                      <div className="my-0.5 w-[5rem] border-t-2 border-[var(--color-text)]" />
+                      <input type="number" min={1} step={1} value={manualN} onChange={e => patchConfig({ manualN: e.target.value })}
+                        placeholder=" "
+                        className="w-20 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)] [appearance:textfield]" />
+                    </div>
+                  </div>
+                  <div className="text-sm text-[var(--color-muted)]">
+                    = <span className="font-bold text-[var(--color-text)]">{phat !== null ? phat.toFixed(3) : '—'}</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-[var(--color-muted)]">Success label (optional)</label>
+                <input value={manualLabel} onChange={e => patchConfig({ manualLabel: e.target.value })} placeholder="Success"
+                  className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)]" />
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-accent-light)] px-4 py-3 text-sm">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-[var(--color-muted)]">
+                <PHat /> = {x}/{n} =
+              </span>
+              <span className="font-bold text-[var(--color-accent)]">{phat !== null ? phat.toFixed(4) : '—'}</span>
+              {error && <span className="text-rose-500">{error}</span>}
+            </div>
           </div>
         </div>
-
-        {/* Data / manual inputs */}
-        {sourceMode === 'data' ? (
-          <div className="space-y-3">
-            <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
-              <DropZone
-                id={`${cardId}:var1`}
-                label="Categorical Variable"
-                hint="categorical only"
-                assignedCol={catCol}
-                onClear={() => onClearZone('var1')}
-                onAssign={colId => onAssignZone('var1', colId)}
-                allowedTypes={['categorical']}
-              />
-            </div>
-            {catLevels.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--color-muted)] whitespace-nowrap">Success</span>
-                <select value={successLevel} onChange={e => setSuccessLevel(e.target.value)}
-                  className="flex-1 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
-                  {catLevels.map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
-              </div>
-            )}
-            {phat !== null && (
-              <div className="rounded-xl bg-[var(--color-accent-light)] border border-[var(--color-border)] px-4 py-2 text-center text-sm">
-                <span className="text-[var(--color-muted)]"><PHat /> = {x}/{n} = </span>
-                <span className="font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-around py-1">
-              <div className="flex flex-col items-center gap-2">
-                <div className="text-sm font-bold text-[var(--color-text)]">
-                  <PHat /> <span className="text-xs text-[var(--color-muted)] font-normal">= x / n</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex flex-col items-end gap-1 text-xs font-mono text-[var(--color-muted)]" style={{ paddingBottom: 2 }}>
-                    <span className="py-1.5">x</span>
-                    <span className="py-1.5">n</span>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <input type="number" min={0} step={1} value={manualX} onChange={e => setManualX(e.target.value)}
-                      placeholder=" "
-                      className="w-20 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)] [appearance:textfield]" />
-                    <div className="my-0.5 w-[5rem] border-t-2 border-[var(--color-text)]" />
-                    <input type="number" min={1} step={1} value={manualN} onChange={e => setManualN(e.target.value)}
-                      placeholder=" "
-                      className="w-20 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)] [appearance:textfield]" />
-                  </div>
-                </div>
-                <div className="text-sm text-[var(--color-muted)]">
-                  = <span className="font-bold text-[var(--color-text)]">{phat !== null ? phat.toFixed(3) : '—'}</span>
-                </div>
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs text-[var(--color-muted)] mb-1">Success label (optional)</label>
-              <input value={manualLabel} onChange={e => setManualLabel(e.target.value)} placeholder="Success"
-                className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)]" />
-            </div>
-          </div>
-        )}
-
       </div>
+
+      {stage !== 'setup' && (
+        <>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                n <span className="font-semibold">{n}</span>
+              </div>
+              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                X <span className="font-semibold">{x}</span>
+              </div>
+              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                <PHat className="mr-1" /> <span className="font-semibold">{phat?.toFixed(4) ?? '—'}</span>
+              </div>
+              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                Repetitions <span className="font-semibold">{simCount}</span>
+              </div>
+            </div>
+
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_360px]">
+              <div className="space-y-4">
+                <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+                  <div className="flex items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-accent-light)] px-3 py-2">
+                    {phase === 'spinning' ? (
+                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+                    ) : phase === 'computed' ? (
+                      <span className="inline-block h-2 w-2 rounded-full bg-teal-500" />
+                    ) : (
+                      <span className="inline-block h-2 w-2 rounded-full bg-[var(--color-border)]" />
+                    )}
+                    <span className="text-xs font-medium text-[var(--color-text)]">{statusLabel}</span>
+                  </div>
+                  <div
+                    className="flex flex-wrap content-start overflow-hidden px-3 pb-2 pt-3"
+                    style={{ gap: coinGap, alignContent: 'flex-start', minHeight: panelH, maxHeight: panelH }}
+                  >
+                    {displayFaces.map((face, i) => (
+                      <AbraCoin
+                        key={i}
+                        face={face}
+                        size={coinSize}
+                        spinning={phase === 'spinning'}
+                        spinDelay={spinDelays[i] ?? 0}
+                        revealDelay={phase === 'computed' ? (revealDelays[i] ?? 0) : 0}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-4">
+                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">One repetition</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={handleRandomize}
+                      disabled={isRunning || phase === 'spinning' || phase === 'computed'}
+                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                        !isRunning && (phase === 'observing' || phase === 'plotted')
+                          ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
+                          : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
+                      }`}
+                    >
+                      1. Randomize
+                    </button>
+                    <span className="text-[var(--color-muted)]">→</span>
+                    <button
+                      onClick={handleCompute}
+                      disabled={isRunning || phase !== 'spinning'}
+                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                        !isRunning && phase === 'spinning'
+                          ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
+                          : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
+                      }`}
+                    >
+                      2. Compute
+                    </button>
+                    <span className="text-[var(--color-muted)]">→</span>
+                    <button
+                      onClick={handlePlot}
+                      disabled={isRunning || phase !== 'computed'}
+                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                        !isRunning && phase === 'computed'
+                          ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
+                          : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
+                      }`}
+                    >
+                      3. Plot
+                    </button>
+                  </div>
+                  {firstRunGuidance && (
+                    <p className="mt-3 text-sm text-[var(--color-muted)]">{firstRunGuidance}</p>
+                  )}
+                </div>
+
+                {(simCount > 0 || stage === 'conclude') && (
+                  <div className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-4">
+                    <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Speed up</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {[10, 100, 1000].map(cnt => (
+                        <button key={cnt} onClick={() => (cnt === 10 ? runAnimated(10) : runBatch(cnt))} disabled={isRunning}
+                          className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                            isRunning
+                              ? 'border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
+                              : 'border-[var(--color-border)] text-[var(--color-text)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)]'
+                          }`}>
+                          Run {cnt.toLocaleString()}
+                        </button>
+                      ))}
+                      {isRunning ? (
+                        <button onClick={stopRunning}
+                          className="ml-auto rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors">
+                          {runProgress ? `Stop (${runProgress.current}/${runProgress.total})` : 'Stop'}
+                        </button>
+                      ) : (
+                        <button onClick={handleReset}
+                          className="ml-auto rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-[var(--color-muted)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)] transition-colors">
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Null distribution</div>
+                      <p className="text-sm text-[var(--color-muted)]">
+                        {simCount === 0 ? 'Do the first repetition by hand, then the distribution will start to grow.' : `${extremeCount} of ${simCount} simulated samples are as or more extreme.`}
+                      </p>
+                    </div>
+                    <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+                      {(['proportions', 'counts'] as GraphView[]).map((value, index) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => patchConfig({
+                            graphView: value,
+                            customThreshold: value === 'counts' ? String(x) : (x / Math.max(1, n)).toFixed(4),
+                          })}
+                          className={`px-2.5 py-1 font-medium transition-colors ${index > 0 ? 'border-l border-[var(--color-border)]' : ''} ${graphView === value ? 'bg-[var(--color-text)] text-[var(--color-surface)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}
+                        >
+                          {value === 'proportions' ? 'Proportions' : 'Counts'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ height: 392 }}>
+                    {simCount === 0 ? (
+                      <div className="flex h-full items-center justify-center text-sm text-[var(--color-muted)]">
+                        Start with Randomize → Compute → Plot.
+                      </div>
+                    ) : (
+                      <OnePropNullDistPlot
+                        counts={nullDist}
+                        xObs={x}
+                        n={n}
+                        p0Num={p0Num}
+                        alternative={alternative}
+                        view={graphView}
+                        showNormalCurve={showNormalCurve}
+                        thresholdVal={Number.isFinite(customThresholdNum)
+                          ? (graphView === 'counts' ? customThresholdNum : thresholdOnCountScale / Math.max(1, n))
+                          : undefined}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Observed sample</div>
+                  <div className="mt-3 space-y-2 text-sm text-[var(--color-text)]">
+                    <div><span className="font-semibold">H₀:</span> p = {nullP}</div>
+                    <div><span className="font-semibold">Hₐ:</span> p {altOperator(alternative)} {nullP}</div>
+                    <div><span className="font-semibold">Success:</span> {successLabel}</div>
+                    <div><span className="font-semibold">n:</span> {n}</div>
+                    <div><span className="font-semibold">x:</span> {x}</div>
+                    <div><span className="font-semibold"><PHat /></span> {phat?.toFixed(4) ?? '—'}</div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Conclusion tools</div>
+                  <div className="mt-3 space-y-3 text-sm">
+                    <label className="flex items-center gap-2 select-none text-[var(--color-text)]">
+                      <input
+                        type="checkbox"
+                        checked={showNormalCurve}
+                        onChange={e => patchConfig({ showNormalCurve: e.target.checked })}
+                        className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                      />
+                      Overlay normal curve
+                    </label>
+                    {showNormalCurve && (
+                      <div className="pl-6 text-[var(--color-muted)]">
+                        <div>Mean = {normMean.toFixed(graphView === 'counts' ? 1 : 4)}</div>
+                        <div>SD = {normSD.toFixed(graphView === 'counts' ? 1 : 4)}</div>
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      <div className="font-medium text-[var(--color-text)]">Editable tail probability</div>
+                      <div className="flex flex-wrap items-center gap-1 text-[var(--color-muted)]">
+                        <span>{graphView === 'counts' ? 'P(X' : 'P(p̂'}</span>
+                        <span>{altOperator(alternative)}</span>
+                        <input
+                          type="number"
+                          value={customThreshold}
+                          onChange={e => patchConfig({ customThreshold: e.target.value })}
+                          step={graphView === 'counts' ? 1 : 0.01}
+                          min={0}
+                          max={graphView === 'counts' ? n : 1}
+                          className="w-20 rounded-md border border-[var(--color-border)] px-2 py-1 text-center text-[var(--color-text)]"
+                        />
+                        <span>) =</span>
+                        <span className="font-semibold text-[var(--color-accent)]">
+                          {customPValue !== null ? (customPValue < 0.001 ? '< 0.001' : customPValue.toFixed(4)) : '—'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-[var(--color-accent-light)] px-3 py-3 text-sm">
+                      {simCount < 100 ? (
+                        <div className="text-[var(--color-muted)]">Too few to trust yet. Build at least 100 repetitions before drawing a conclusion.</div>
+                      ) : (
+                        <>
+                          <div className="font-semibold text-[var(--color-text)]">{extremeCount} of {simCount} as or more extreme</div>
+                          <div className="mt-1 text-[var(--color-muted)]">{verdict}</div>
+                        </>
+                      )}
+                    </div>
+                    {stage === 'conclude' && (
+                      <button
+                        type="button"
+                        onClick={() => goToStage('simulate')}
+                        className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]"
+                      >
+                        ← Simulate more
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

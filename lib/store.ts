@@ -668,7 +668,24 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'table'        ? { type: 'table',       rowsColId: null, colsColId: null } :
       type === 'regression'   ? { type: 'regression',  xColId: null, yColId: null, groupColId: null } :
       type === 'regression-by-eye' ? { type: 'regression-by-eye', xColId: null, yColId: null } :
-      type === 'one-prop-randomization' ? { type: 'one-prop-randomization', var1ColId: null } :
+      type === 'one-prop-randomization' ? {
+        type: 'one-prop-randomization',
+        var1ColId: null,
+        stage: 'setup',
+        sourceMode: 'manual',
+        successLevel: '',
+        manualX: '',
+        manualN: '',
+        manualLabel: 'Success',
+        nullP: '0.5',
+        alternative: 'two' as const,
+        nullDist: [],
+        simCount: 0,
+        extremeCount: 0,
+        showNormalCurve: false,
+        graphView: 'proportions' as const,
+        customThreshold: '',
+      } :
       type === 'one-prop-sim' ? { type: 'one-prop-sim', n: 0, x: 0, successLabel: 'Success', failureLabel: 'Failure', nullP: '0.5', alternative: 'two' as const, nullDist: [], simCount: 0, extremeCount: 0, showNormalCurve: false } :
       type === 'distribution'    ? { type: 'distribution', preFill: scanChiSquareContext(state.exploreCards, state.grid) } :
       type === 'compare-normals' ? { type: 'compare-normals' } :

@@ -833,194 +833,250 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
     return `Last result — X = ${displayedSim?.xSim ?? '?'}, p̂* = ${displayedSim ? displayedSim.pSim.toFixed(3) : '?'}`
   })()
 
+  const stepLabels = [
+    { key: 'setup' as const, label: 'Set up', enabled: true },
+    { key: 'simulate' as const, label: 'Run', enabled: true },
+    { key: 'conclude' as const, label: 'Conclude', enabled: hasEnoughToConclude },
+  ]
+
   const stepper = (
-    <div className="flex flex-wrap items-center gap-2">
-      {([
-        ['setup', 'Set up'],
-        ['simulate', 'Simulate'],
-        ['conclude', 'Conclude'],
-      ] as const).map(([key, label], index) => {
-        const active = stage === key
-        const enabled = key === 'setup' || key === 'simulate' || hasEnoughToConclude
+    <div className="flex flex-wrap items-center gap-3 md:flex-nowrap md:gap-4">
+      {stepLabels.map((step, index) => {
+        const active = stage === step.key
         return (
-          <div key={key} className="flex items-center gap-2">
+          <div key={step.key} className="flex min-w-0 flex-1 items-center gap-3">
             <button
               type="button"
-              disabled={!enabled}
-              onClick={() => enabled && goToStage(key)}
-              className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
-                active
-                  ? 'border-[var(--color-accent)] bg-[var(--color-accent)] text-white'
-                  : enabled
-                    ? 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-[var(--color-accent)]'
-                    : 'border-[var(--color-border)] bg-slate-50 text-slate-400'
-              }`}
+              disabled={!step.enabled}
+              onClick={() => step.enabled && goToStage(step.key)}
+              className="flex items-center gap-3 disabled:cursor-not-allowed"
             >
-              {label}
+              <span
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                  active
+                    ? 'bg-[var(--color-accent)] text-white'
+                    : step.enabled
+                      ? 'bg-[var(--color-accent-light)] text-[var(--color-muted)]'
+                      : 'bg-slate-100 text-slate-400'
+                }`}
+              >
+                {index + 1}
+              </span>
+              <span
+                className={`text-sm font-semibold transition-colors ${
+                  active
+                    ? 'text-[var(--color-text)]'
+                    : step.enabled
+                      ? 'text-[var(--color-muted)]'
+                      : 'text-slate-400'
+                }`}
+              >
+                {step.label}
+              </span>
             </button>
-            {index < 2 && <span className="text-xs text-[var(--color-muted)]">·</span>}
+            {index < stepLabels.length - 1 && (
+              <div className="hidden h-px flex-1 bg-[var(--color-border)] md:block" />
+            )}
           </div>
         )
       })}
     </div>
   )
 
+  const setupCard = (
+    <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
+      <div className="flex items-center justify-between border-b border-[var(--color-border)] px-8 py-6">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="rounded-xl bg-[var(--color-text)] px-4 py-2 text-xs font-bold uppercase tracking-[0.28em] text-white">
+            Inference
+          </div>
+          <h3 className="truncate text-[clamp(1.75rem,3vw,2.5rem)] font-semibold italic leading-none text-[var(--color-text)]" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
+            One-Proportion Randomization Test
+          </h3>
+        </div>
+        <button
+          type="button"
+          className="text-2xl leading-none text-[var(--color-border)] transition-colors hover:text-[var(--color-muted)]"
+          aria-label="Close card"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="space-y-7 px-8 py-6">
+        {stepper}
+
+        <div className="text-[clamp(1.4rem,2.2vw,2rem)] font-semibold italic leading-snug text-[var(--color-text)]" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
+          If the true proportion were really p₀, how unusual is what we saw?
+        </div>
+
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">
+              Null hypothesis
+            </div>
+            <div className="rounded-[22px] bg-[var(--color-accent-light)] px-6 py-6">
+              <div className="flex flex-wrap items-center gap-4 text-[clamp(1.4rem,2vw,2rem)] font-semibold text-[var(--color-text)]">
+                <span>H₀</span>
+                <span>:</span>
+                <span>p =</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={nullP}
+                  onChange={e => patchConfig({ nullP: e.target.value })}
+                  className="w-28 rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-center text-[clamp(1.4rem,2vw,2rem)] font-semibold text-[var(--color-text)] shadow-sm"
+                />
+                <span className="ml-4">Hₐ</span>
+                <span>:</span>
+                <span>p</span>
+                <select
+                  value={alternative}
+                  onChange={e => updateAlternative(e.target.value as Alternative)}
+                  className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-[clamp(1.25rem,1.8vw,1.75rem)] font-semibold text-[var(--color-text)] shadow-sm"
+                >
+                  <option value="less">&lt;</option>
+                  <option value="two">≠</option>
+                  <option value="greater">&gt;</option>
+                </select>
+                <span>p₀</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">
+              Observed data
+            </div>
+
+            {sourceMode === 'data' ? (
+              <div className="space-y-4 rounded-[22px] bg-white px-0 py-0">
+                <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
+                  <DropZone
+                    id={`${cardId}:var1`}
+                    label="Categorical Variable"
+                    hint="categorical only"
+                    assignedCol={catCol}
+                    onClear={() => onClearZone('var1')}
+                    onAssign={colId => onAssignZone('var1', colId)}
+                    allowedTypes={['categorical']}
+                  />
+                </div>
+                {catLevels.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-sm font-medium text-[var(--color-muted)]">Success</span>
+                    <select
+                      value={successLevel}
+                      onChange={e => patchConfig({ successLevel: e.target.value })}
+                      className="min-w-[220px] rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-lg font-medium text-[var(--color-text)]"
+                    >
+                      {catLevels.map(l => <option key={l} value={l}>{l}</option>)}
+                    </select>
+                    <span className="ml-auto text-base text-[var(--color-muted)]">
+                      observed <PHat /> = <span className="font-semibold text-[var(--color-accent)]">{phat !== null ? phat.toFixed(2) : '—'}</span>
+                    </span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-4 text-[clamp(1.15rem,1.7vw,1.6rem)] text-[var(--color-muted)]">
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={manualX}
+                  onChange={e => patchConfig({ manualX: e.target.value })}
+                  className="w-28 rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-center text-[clamp(1.3rem,1.9vw,1.8rem)] font-semibold text-[var(--color-text)]"
+                />
+                <span>successes out of</span>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={manualN}
+                  onChange={e => patchConfig({ manualN: e.target.value })}
+                  className="w-28 rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-center text-[clamp(1.3rem,1.9vw,1.8rem)] font-semibold text-[var(--color-text)]"
+                />
+                <span>trials</span>
+                <span className="ml-auto text-base">
+                  observed <PHat /> = <span className="text-[clamp(1.4rem,1.8vw,1.9rem)] font-semibold text-[var(--color-accent)]">{phat !== null ? phat.toFixed(2) : '—'}</span>
+                </span>
+              </div>
+            )}
+
+            {error && <div className="text-sm text-rose-500">{error}</div>}
+          </div>
+        </div>
+
+        <button
+          onClick={handleStartSimulating}
+          disabled={!canStartSimulating}
+          className="w-full rounded-[20px] bg-[var(--color-accent)] px-6 py-5 text-xl font-semibold text-white transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Start simulating →
+        </button>
+      </div>
+    </div>
+  )
+
   return (
     <div className="flex h-full flex-col gap-4">
       <style>{COIN_CSS}</style>
-      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4 shadow-[var(--shadow-card)]">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">Randomization Test</div>
-            <h3 className="text-[30px] font-semibold leading-none text-[var(--color-text)]">One proportion</h3>
-          </div>
-          {stepper}
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₀: p =</span>
-              <input type="number" min={0} max={1} step={0.01} value={nullP} onChange={e => patchConfig({ nullP: e.target.value })}
-                className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]" />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Hₐ</span>
-              <span className="text-sm font-mono font-medium text-[var(--color-text)]">p</span>
-              <select value={alternative} onChange={e => updateAlternative(e.target.value as Alternative)}
-                className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
-                <option value="less">&lt;</option>
-                <option value="greater">&gt;</option>
-                <option value="two">≠</option>
-              </select>
-              <span className="text-sm font-mono font-medium text-[var(--color-text)]">{nullP}</span>
-            </div>
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              {stage !== 'setup' && (
-                <button
-                  type="button"
-                  onClick={() => goToStage('setup')}
-                  className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]"
-                >
-                  ← Edit setup
-                </button>
-              )}
-              {stage === 'setup' && (
-                <button onClick={handleStartSimulating} disabled={!canStartSimulating}
-                  className="rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity">
-                  Start simulating →
-                </button>
-              )}
-              {stage === 'simulate' && (
-                <button
-                  type="button"
-                  onClick={() => goToStage('conclude')}
-                  disabled={!hasEnoughToConclude}
-                  className="rounded-lg bg-[var(--color-gold)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Conclude →
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--color-muted)]">Source</span>
-            <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
-              {(['data', 'manual'] as SourceMode[]).map((m, i) => (
-                <button key={m} onClick={() => patchConfig({ sourceMode: m })}
-                  className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === m ? 'bg-[var(--color-text)] text-[var(--color-surface)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
-                  {m === 'data' ? 'Use Data' : 'Enter Info'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {sourceMode === 'data' ? (
-            <div className="space-y-3">
-              <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
-                <DropZone
-                  id={`${cardId}:var1`}
-                  label="Categorical Variable"
-                  hint="categorical only"
-                  assignedCol={catCol}
-                  onClear={() => onClearZone('var1')}
-                  onAssign={colId => onAssignZone('var1', colId)}
-                  allowedTypes={['categorical']}
-                />
-              </div>
-              {catLevels.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-[var(--color-muted)] whitespace-nowrap">Success</span>
-                  <select value={successLevel} onChange={e => patchConfig({ successLevel: e.target.value })}
-                    className="flex-1 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
-                    {catLevels.map(l => <option key={l} value={l}>{l}</option>)}
-                  </select>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-[1fr_220px]">
-              <div className="flex items-center justify-around py-1">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="text-sm font-bold text-[var(--color-text)]">
-                    <PHat /> <span className="text-xs text-[var(--color-muted)] font-normal">= x / n</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex flex-col items-end gap-1 text-xs font-mono text-[var(--color-muted)]" style={{ paddingBottom: 2 }}>
-                      <span className="py-1.5">x</span>
-                      <span className="py-1.5">n</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <input type="number" min={0} step={1} value={manualX} onChange={e => patchConfig({ manualX: e.target.value })}
-                        placeholder=" "
-                        className="w-20 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)] [appearance:textfield]" />
-                      <div className="my-0.5 w-[5rem] border-t-2 border-[var(--color-text)]" />
-                      <input type="number" min={1} step={1} value={manualN} onChange={e => patchConfig({ manualN: e.target.value })}
-                        placeholder=" "
-                        className="w-20 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)] [appearance:textfield]" />
-                    </div>
-                  </div>
-                  <div className="text-sm text-[var(--color-muted)]">
-                    = <span className="font-bold text-[var(--color-text)]">{phat !== null ? phat.toFixed(3) : '—'}</span>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-[var(--color-muted)]">Success label (optional)</label>
-                <input value={manualLabel} onChange={e => patchConfig({ manualLabel: e.target.value })} placeholder="Success"
-                  className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)]" />
-              </div>
-            </div>
-          )}
-
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-accent-light)] px-4 py-3 text-sm">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-[var(--color-muted)]">
-                <PHat /> = {x}/{n} =
-              </span>
-              <span className="font-bold text-[var(--color-accent)]">{phat !== null ? phat.toFixed(4) : '—'}</span>
-              {error && <span className="text-rose-500">{error}</span>}
-            </div>
-          </div>
-        </div>
-      </div>
+      {stage === 'setup' && setupCard}
 
       {stage !== 'setup' && (
         <>
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-            <div className="mb-4 flex flex-wrap items-center gap-3">
-              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                n <span className="font-semibold">{n}</span>
+            <div className="mb-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">Randomization Test</div>
+                  <h3 className="text-[30px] font-semibold leading-none text-[var(--color-text)]">One proportion</h3>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {stage === 'simulate' && (
+                    <button
+                      type="button"
+                      onClick={() => goToStage('conclude')}
+                      disabled={!hasEnoughToConclude}
+                      className="rounded-lg bg-[var(--color-gold)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Conclude →
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => goToStage('setup')}
+                    className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]"
+                  >
+                    ← Edit setup
+                  </button>
+                </div>
               </div>
-              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                X <span className="font-semibold">{x}</span>
-              </div>
-              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                <PHat className="mr-1" /> <span className="font-semibold">{phat?.toFixed(4) ?? '—'}</span>
-              </div>
-              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                Repetitions <span className="font-semibold">{simCount}</span>
+
+              {stepper}
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                  H₀: p = <span className="font-semibold">{nullP}</span>
+                </div>
+                <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                  Hₐ: p <span className="px-1 font-semibold">{altOperator(alternative)}</span> <span className="font-semibold">{nullP}</span>
+                </div>
+                <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                  n <span className="font-semibold">{n}</span>
+                </div>
+                <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                  X <span className="font-semibold">{x}</span>
+                </div>
+                <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                  <PHat className="mr-1" /> <span className="font-semibold">{phat?.toFixed(4) ?? '—'}</span>
+                </div>
+                <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                  Repetitions <span className="font-semibold">{simCount}</span>
+                </div>
               </div>
             </div>
 

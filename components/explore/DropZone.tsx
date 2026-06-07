@@ -25,16 +25,21 @@ function TypeBadge({ type }: { type: GridColumn['type'] }) {
 }
 
 // Compute fixed position for the portal popover, flipping/clamping to stay on-screen.
-function computePopoverPos(anchor: DOMRect): { top: number; left: number } {
-  const MAX_H = 280
+function computePopoverPos(anchor: DOMRect): { top: number; left: number; maxHeight: number } {
+  const IDEAL_MAX_H = 360
+  const MIN_H = 180
   const MIN_W = 200
   const GAP = 6
   const PAD = 8
 
-  let top = anchor.bottom + GAP
-  if (top + MAX_H > window.innerHeight - PAD) {
-    top = Math.max(PAD, anchor.top - GAP - MAX_H)
-  }
+  const spaceBelow = window.innerHeight - anchor.bottom - GAP - PAD
+  const spaceAbove = anchor.top - GAP - PAD
+  const preferBelow = spaceBelow >= MIN_H || spaceBelow >= spaceAbove
+  const usableHeight = Math.max(MIN_H, Math.min(IDEAL_MAX_H, preferBelow ? spaceBelow : spaceAbove))
+
+  let top = preferBelow
+    ? anchor.bottom + GAP
+    : Math.max(PAD, anchor.top - GAP - usableHeight)
 
   let left = anchor.left
   if (left + MIN_W > window.innerWidth - PAD) {
@@ -42,7 +47,7 @@ function computePopoverPos(anchor: DOMRect): { top: number; left: number } {
   }
   if (left < PAD) left = PAD
 
-  return { top, left }
+  return { top, left, maxHeight: usableHeight }
 }
 
 export function DropZone({
@@ -63,7 +68,7 @@ export function DropZone({
     disabled: !assignedCol,
   })
   const [open, setOpen] = useState(false)
-  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null)
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number; maxHeight: number } | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const buttonRef = useRef<HTMLButtonElement | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
@@ -197,7 +202,7 @@ export function DropZone({
     : 'border-transparent bg-[var(--color-accent-light)]/30'
   const emptyColors = isOver
     ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
-    : 'border-dashed border-[var(--color-border)] bg-slate-50'
+    : 'border-dashed border-[var(--color-border)] bg-[var(--color-bg)]'
 
   const zoneClass = assignedCol ? filledColors : emptyColors
   const zoneButtonClass = `w-full rounded-xl border-2 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${zoneClass}`
@@ -217,64 +222,68 @@ export function DropZone({
         minWidth: 200,
         width: 'max-content',
         maxWidth: 320,
-        maxHeight: 280,
-        overflowY: 'auto',
+        maxHeight: popoverPos.maxHeight,
       }}
-      className="rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-[var(--shadow-card)]"
+      className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-[var(--shadow-card)]"
     >
-      {selectedColumns.length > 0 && (
-        <div className="px-2 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)]">
-          Selected
-        </div>
-      )}
-      {menuRows.map((row, index) => {
-        const isChecked = row.kind === 'column' && row.col?.id === assignedCol?.id
-        const showDivider =
-          selectedColumns.length > 0 &&
-          index === selectedColumns.filter(col => col.id !== assignedCol?.id).length + (assignedCol && selectedColumnIds.includes(assignedCol.id) ? 1 : 0) &&
-          row.kind === 'column' &&
-          !selectedColumnIds.includes(row.col!.id)
-
-        return (
-          <div key={row.kind === 'clear' ? 'clear' : row.col!.id}>
-            {showDivider && (
-              <div className="px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)]">
-                All variables
-              </div>
-            )}
-            {row.kind === 'clear' ? (
-              <button
-                ref={node => { rowRefs.current[index] = node }}
-                type="button"
-                role="option"
-                aria-selected={false}
-                className="flex min-h-[36px] w-full items-center whitespace-nowrap rounded-xl px-3 text-sm font-medium text-red-500 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-                onClick={() => { onClear(); closeMenu() }}
-              >
-                Clear
-              </button>
-            ) : (
-              <button
-                ref={node => { rowRefs.current[index] = node }}
-                type="button"
-                role="option"
-                aria-selected={isChecked}
-                className={`flex min-h-[36px] w-full items-center gap-2 whitespace-nowrap rounded-xl px-3 text-sm hover:bg-[var(--color-accent-light)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
-                  isChecked ? 'bg-[var(--color-accent-light)] text-[var(--color-text)]' : 'text-[var(--color-text)]'
-                }`}
-                onClick={() => applyAssignment(row.col!.id)}
-              >
-                <TypeBadge type={row.col!.type} />
-                <span className="flex-1 text-left">{row.col!.name}</span>
-                {isChecked && <span className="flex-shrink-0 text-xs font-semibold text-[var(--color-accent)]">Current</span>}
-              </button>
-            )}
+      <div
+        style={{ maxHeight: popoverPos.maxHeight }}
+        className="overflow-y-auto overscroll-contain p-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[var(--color-border)]"
+      >
+        {selectedColumns.length > 0 && (
+          <div className="sticky top-0 z-10 bg-white px-2 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)]">
+            Selected
           </div>
-        )
-      })}
-      {menuRows.length === 0 && (
-        <div className="px-3 py-2 text-sm text-[var(--color-muted)] whitespace-nowrap">No matching variables.</div>
-      )}
+        )}
+        {menuRows.map((row, index) => {
+          const isChecked = row.kind === 'column' && row.col?.id === assignedCol?.id
+          const showDivider =
+            selectedColumns.length > 0 &&
+            index === selectedColumns.filter(col => col.id !== assignedCol?.id).length + (assignedCol && selectedColumnIds.includes(assignedCol.id) ? 1 : 0) &&
+            row.kind === 'column' &&
+            !selectedColumnIds.includes(row.col!.id)
+
+          return (
+            <div key={row.kind === 'clear' ? 'clear' : row.col!.id}>
+              {showDivider && (
+                <div className="sticky top-0 z-10 bg-white px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)]">
+                  All variables
+                </div>
+              )}
+              {row.kind === 'clear' ? (
+                <button
+                  ref={node => { rowRefs.current[index] = node }}
+                  type="button"
+                  role="option"
+                  aria-selected={false}
+                  className="flex min-h-[40px] w-full items-center whitespace-nowrap rounded-xl px-3 text-sm font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger-light)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                  onClick={() => { onClear(); closeMenu() }}
+                >
+                  Clear
+                </button>
+              ) : (
+                <button
+                  ref={node => { rowRefs.current[index] = node }}
+                  type="button"
+                  role="option"
+                  aria-selected={isChecked}
+                  className={`flex min-h-[40px] w-full items-center gap-2 whitespace-nowrap rounded-xl px-3 text-sm hover:bg-[var(--color-accent-light)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
+                    isChecked ? 'bg-[var(--color-accent-light)] text-[var(--color-text)]' : 'text-[var(--color-text)]'
+                  }`}
+                  onClick={() => applyAssignment(row.col!.id)}
+                >
+                  <TypeBadge type={row.col!.type} />
+                  <span className="flex-1 text-left">{row.col!.name}</span>
+                  {isChecked && <span className="flex-shrink-0 text-xs font-semibold text-[var(--color-accent)]">Current</span>}
+                </button>
+              )}
+            </div>
+          )
+        })}
+        {menuRows.length === 0 && (
+          <div className="px-3 py-2 text-sm text-[var(--color-muted)] whitespace-nowrap">No matching variables.</div>
+        )}
+      </div>
     </div>,
     document.body
   ) : null

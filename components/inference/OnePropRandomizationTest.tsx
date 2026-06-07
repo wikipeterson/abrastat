@@ -886,29 +886,29 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
   )
 
   const setupCard = (
-      <div className="space-y-6 px-3 py-2">
-        <div className="flex items-center gap-4">
-          <div className="rounded-xl bg-[var(--color-text)] px-4 py-2 text-xs font-bold uppercase tracking-[0.28em] text-white">
+      <div className="space-y-4 px-2 py-1">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-[var(--color-text)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.24em] text-white">
             Inference
           </div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">
             Randomization Test
           </div>
         </div>
 
         {stepper}
 
-        <div className="text-base font-semibold leading-snug text-[var(--color-text)]">
+        <div className="text-sm font-semibold leading-snug text-[var(--color-text)]">
           If the true proportion were really p₀, how unusual is what we saw?
         </div>
 
-        <div className="space-y-5">
-          <div className="space-y-3">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
               Null hypothesis
             </div>
-            <div className="rounded-[22px] bg-[var(--color-accent-light)] px-5 py-4">
-              <div className="flex flex-wrap items-center gap-3 text-base font-semibold text-[var(--color-text)]">
+            <div className="rounded-[20px] bg-[var(--color-accent-light)] px-4 py-3">
+              <div className="flex flex-wrap items-center gap-2.5 text-sm font-semibold text-[var(--color-text)]">
                 <span>H₀</span>
                 <span>:</span>
                 <span>p =</span>
@@ -919,15 +919,15 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                   step={0.01}
                   value={nullP}
                   onChange={e => patchConfig({ nullP: e.target.value })}
-                  className="w-24 rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-center text-base font-semibold text-[var(--color-text)] shadow-sm"
+                  className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center text-sm font-semibold text-[var(--color-text)] shadow-sm"
                 />
-                <span className="ml-2">Hₐ</span>
+                <span className="ml-1">Hₐ</span>
                 <span>:</span>
                 <span>p</span>
                 <select
                   value={alternative}
                   onChange={e => updateAlternative(e.target.value as Alternative)}
-                  className="rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-base font-semibold text-[var(--color-text)] shadow-sm"
+                  className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm"
                 >
                   <option value="less">&lt;</option>
                   <option value="two">≠</option>
@@ -938,8 +938,8 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">
+          <div className="space-y-2">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
               Observed data
             </div>
 
@@ -962,7 +962,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                     <select
                       value={successLevel}
                       onChange={e => patchConfig({ successLevel: e.target.value })}
-                      className="min-w-[220px] rounded-2xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-base font-medium text-[var(--color-text)]"
+                      className="min-w-[200px] rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text)]"
                     >
                       {catLevels.map(l => <option key={l} value={l}>{l}</option>)}
                     </select>
@@ -973,14 +973,14 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                 )}
               </div>
             ) : (
-              <div className="flex flex-wrap items-center gap-3 text-base text-[var(--color-muted)]">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--color-muted)]">
                 <input
                   type="number"
                   min={0}
                   step={1}
                   value={manualX}
                   onChange={e => patchConfig({ manualX: e.target.value })}
-                  className="w-24 rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-center text-base font-semibold text-[var(--color-text)]"
+                  className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center text-sm font-semibold text-[var(--color-text)]"
                 />
                 <span>successes out of</span>
                 <input
@@ -989,11 +989,11 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                   step={1}
                   value={manualN}
                   onChange={e => patchConfig({ manualN: e.target.value })}
-                  className="w-24 rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-center text-base font-semibold text-[var(--color-text)]"
+                  className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center text-sm font-semibold text-[var(--color-text)]"
                 />
                 <span>trials</span>
                 <span className="ml-auto text-sm">
-                  observed <PHat /> = <span className="text-base font-semibold text-[var(--color-accent)]">{phat !== null ? phat.toFixed(2) : '—'}</span>
+                  observed <PHat /> = <span className="font-semibold text-[var(--color-accent)]">{phat !== null ? phat.toFixed(2) : '—'}</span>
                 </span>
               </div>
             )}
@@ -1005,7 +1005,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
         <button
           onClick={handleStartSimulating}
           disabled={!canStartSimulating}
-          className="w-full rounded-[20px] bg-[var(--color-accent)] px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
+          className="w-full rounded-[18px] bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Start simulating →
         </button>

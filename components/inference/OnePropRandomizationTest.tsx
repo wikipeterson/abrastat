@@ -867,6 +867,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
 
   return (
     <div className="flex h-full flex-col gap-4">
+      <style>{COIN_CSS}</style>
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4 shadow-[var(--shadow-card)]">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>

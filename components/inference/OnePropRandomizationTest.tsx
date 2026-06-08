@@ -246,6 +246,20 @@ function altOperator(alternative: Alternative): string {
   return '≠'
 }
 
+function tailOperator(alternative: Alternative): string {
+  if (alternative === 'less') return '≤'
+  if (alternative === 'greater') return '≥'
+  return '≠'
+}
+
+function formatTailThreshold(value: number, graphView: GraphView, n: number): string {
+  if (!Number.isFinite(value)) return '—'
+  if (graphView === 'counts') {
+    return Number.isInteger(value) ? String(value) : value.toFixed(1)
+  }
+  return (value / Math.max(1, n)).toFixed(4)
+}
+
 function snapThresholdCount(threshold: number, n: number): number {
   const scaled = threshold * n
   const nearest = Math.round(scaled)
@@ -653,6 +667,30 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
     }).length
     return extreme / nullDist.length
   }, [alternative, nullCenterCount, nullDist, thresholdOnCountScale])
+
+  const tailProbabilityLabel = useMemo(() => {
+    if (!Number.isFinite(thresholdOnCountScale)) {
+      return {
+        leading: graphView === 'counts' ? 'P(X' : 'P(p̂',
+        trailing: ')',
+      }
+    }
+
+    if (alternative !== 'two') {
+      return {
+        leading: graphView === 'counts' ? 'P(X' : 'P(p̂',
+        trailing: `${tailOperator(alternative)}${formatTailThreshold(thresholdOnCountScale, graphView, n)})`,
+      }
+    }
+
+    const dist = Math.abs(thresholdOnCountScale - nullCenterCount)
+    const lower = nullCenterCount - dist
+    const upper = nullCenterCount + dist
+    return {
+      leading: graphView === 'counts' ? 'P(X' : 'P(p̂',
+      trailing: `≤${formatTailThreshold(lower, graphView, n)} or ${graphView === 'counts' ? 'X' : 'p̂'}≥${formatTailThreshold(upper, graphView, n)})`,
+    }
+  }, [alternative, graphView, n, nullCenterCount, thresholdOnCountScale])
 
   useEffect(() => {
     patchConfig({ customThreshold: graphView === 'counts' ? String(x) : (x / Math.max(1, n)).toFixed(4) })
@@ -1264,23 +1302,43 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
 
               <div className="space-y-1.5">
                 <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">Tail probability</div>
-                <div className="flex flex-wrap items-center gap-1 text-sm text-[var(--color-muted)]">
-                  <span>{graphView === 'counts' ? 'P(X' : 'P(p̂'}</span>
-                  <span>{altOperator(alternative)}</span>
-                  <input
-                    type="number"
-                    value={customThreshold}
-                    onChange={e => patchConfig({ customThreshold: e.target.value })}
-                    step={graphView === 'counts' ? 1 : 0.01}
-                    min={0}
-                    max={graphView === 'counts' ? n : 1}
-                    className="w-16 rounded-md border border-[var(--color-border)] px-2 py-1 text-center text-sm text-[var(--color-text)]"
-                  />
-                  <span>) =</span>
-                  <span className="font-mono tabular-nums font-semibold text-[var(--color-accent)]">
-                    {customPValue !== null ? (customPValue < 0.001 ? '< 0.001' : customPValue.toFixed(4)) : '—'}
-                  </span>
-                </div>
+                {alternative === 'two' ? (
+                  <div className="flex flex-wrap items-center gap-1 text-sm text-[var(--color-muted)]">
+                    <span>{tailProbabilityLabel.leading}</span>
+                    <input
+                      type="number"
+                      value={customThreshold}
+                      onChange={e => patchConfig({ customThreshold: e.target.value })}
+                      step={graphView === 'counts' ? 1 : 0.01}
+                      min={0}
+                      max={graphView === 'counts' ? n : 1}
+                      className="w-16 rounded-md border border-[var(--color-border)] px-2 py-1 text-center text-sm text-[var(--color-text)]"
+                    />
+                    <span>{tailProbabilityLabel.trailing}</span>
+                    <span className="basis-full sm:basis-auto">=</span>
+                    <span className="font-mono tabular-nums font-semibold text-[var(--color-accent)]">
+                      {customPValue !== null ? (customPValue < 0.001 ? '< 0.001' : customPValue.toFixed(4)) : '—'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-1 text-sm text-[var(--color-muted)]">
+                    <span>{tailProbabilityLabel.leading}</span>
+                    <span>{tailOperator(alternative)}</span>
+                    <input
+                      type="number"
+                      value={customThreshold}
+                      onChange={e => patchConfig({ customThreshold: e.target.value })}
+                      step={graphView === 'counts' ? 1 : 0.01}
+                      min={0}
+                      max={graphView === 'counts' ? n : 1}
+                      className="w-16 rounded-md border border-[var(--color-border)] px-2 py-1 text-center text-sm text-[var(--color-text)]"
+                    />
+                    <span>) =</span>
+                    <span className="font-mono tabular-nums font-semibold text-[var(--color-accent)]">
+                      {customPValue !== null ? (customPValue < 0.001 ? '< 0.001' : customPValue.toFixed(4)) : '—'}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="rounded-xl bg-[var(--color-accent-light)] px-3 py-3 text-sm">
@@ -1288,7 +1346,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                   <div className="text-[var(--color-muted)]">Too few to trust yet. Build at least 100 repetitions before drawing a conclusion.</div>
                 ) : (
                   <>
-                    <div className="font-semibold text-[var(--color-text)]">{extremeCount} of {simCount} as or more extreme</div>
+                    <div className="font-semibold text-[var(--color-text)]">{extremeCount} of the {simCount} simulated results were as or more extreme than the observed result</div>
                     <div className="mt-1 text-[var(--color-muted)]">{verdict}</div>
                   </>
                 )}

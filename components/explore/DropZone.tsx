@@ -315,7 +315,7 @@ export function DropZone({
               toggleMenu()
             }
           }}
-          className={`${zoneButtonClass} h-full min-h-[44px] flex items-center justify-center`}
+          className={`${zoneButtonClass} relative h-full min-h-[44px] overflow-visible`}
         >
           {assignedCol ? (
             <div
@@ -327,7 +327,7 @@ export function DropZone({
               style={{ transform: CSS.Translate.toString(transform) }}
               {...listeners}
               {...attributes}
-              className={`select-none transition-opacity ${isDragging ? 'opacity-30' : 'opacity-100'}`}
+              className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none transition-opacity ${isDragging ? 'opacity-30' : 'opacity-100'}`}
             >
               <div
                 style={{
@@ -344,7 +344,7 @@ export function DropZone({
           ) : (
             <div
               style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-              className="px-1 text-center"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-1 text-center"
             >
               <div className="text-[11px] font-mono font-semibold uppercase tracking-wide text-[var(--color-muted)] leading-tight">{label}</div>
               <div className="mt-2 text-[10px] text-[var(--color-muted)] leading-tight">{hint ?? 'Drop or click to add'}</div>

@@ -297,7 +297,7 @@ export function DropZone({
   ) : null
 
   return (
-    <div className="relative w-full">
+    <div className={`relative w-full ${variant === 'vertical' ? 'h-full' : ''}`}>
       {variant === 'vertical' ? (
         <button
           ref={node => {

@@ -352,11 +352,10 @@ export function suggestAnalyses(selectedCols: SelectedAnalysisColumn[]): Suggest
         reason: `Fit lines for ${formatName(firstNum?.name)} and ${formatName(secondNum?.name)} across ${formatName(firstCat?.name)} groups.`,
       },
       {
-        type: 'graph',
-        label: 'Box Plot',
-        icon: '📦',
-        chartTypeHint: 'box',
-        reason: `Compare one quantitative variable across ${formatName(firstCat?.name)} if you want a simpler group summary.`,
+        type: 'regression-by-eye',
+        label: 'Regression by Eye',
+        icon: '✏️',
+        reason: `Sketch and compare trend lines for ${formatName(firstNum?.name)} and ${formatName(secondNum?.name)} across ${formatName(firstCat?.name)} groups.`,
       },
       {
         type: 'summary',

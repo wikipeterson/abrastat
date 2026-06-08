@@ -812,12 +812,23 @@ function WorkspaceContent() {
   }
 
   async function handleOpenDataset(id: string) {
+    const snaps = computeSnaps()
+    const openDataGrid = () => {
+      setDockState('half')
+      setDockHeight(snaps.half)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('abrastat.dock.state', 'half')
+        localStorage.setItem('abrastat.dock.height', String(snaps.half))
+      }
+    }
+
     if (id.startsWith('sample:')) {
       const sample = getSampleDatasetById(id)
       if (!sample) return
       setGrid(sample.grid)
       setActiveDatasetId(null)
       setActiveDatasetName(sample.name)
+      openDataGrid()
       setMode('lab')
       setSidebarOpen(false)
       return
@@ -828,6 +839,7 @@ function WorkspaceContent() {
       setGrid(grid)
       setActiveDatasetId(id)
       setActiveDatasetName(meta.name)
+      openDataGrid()
       setMode('lab')
       setSidebarOpen(false)
     } catch {

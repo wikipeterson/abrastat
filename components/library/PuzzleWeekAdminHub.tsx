@@ -228,10 +228,10 @@ export function PuzzleWeekAdminHub() {
             </div>
           </div>
         ) : !canManage ? (
-          <div className="mx-auto max-w-lg rounded-3xl border border-red-200 bg-red-50 p-8 text-center shadow-sm">
-            <AlertTriangle className="mx-auto h-8 w-8 text-red-500" />
-            <h2 className="mt-4 text-xl font-semibold text-red-700">No admin access</h2>
-            <p className="mt-2 text-sm text-red-600">
+          <div className="mx-auto max-w-lg rounded-3xl border border-[var(--color-danger)] bg-[var(--color-danger-light)] p-8 text-center shadow-sm">
+            <AlertTriangle className="mx-auto h-8 w-8 text-[var(--color-danger)]" />
+            <h2 className="mt-4 text-xl font-semibold text-[var(--color-danger)]">No admin access</h2>
+            <p className="mt-2 text-sm text-[var(--color-danger)]">
               This account can use Puzzle Week, but it is not allowed to manage registrations.
             </p>
           </div>
@@ -255,7 +255,7 @@ export function PuzzleWeekAdminHub() {
             </div>
 
             {error && (
-              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="rounded-2xl border border-[var(--color-danger)] bg-[var(--color-danger-light)] px-4 py-3 text-sm text-[var(--color-danger)]">
                 {error}
               </div>
             )}
@@ -303,8 +303,8 @@ export function PuzzleWeekAdminHub() {
                               <h3 className="text-xl font-semibold text-[var(--color-text)]">{item.entry.name}</h3>
                               <span className={`rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${
                                 item.entry.type === 'team'
-                                  ? 'bg-teal-100 text-teal-700'
-                                  : 'bg-slate-100 text-slate-700'
+                                  ? 'bg-[var(--color-accent-light)] text-[var(--color-accent-strong)]'
+                                  : 'bg-[var(--color-bg)] text-[var(--color-text)]'
                               }`}>
                                 {item.entry.type}
                               </span>
@@ -332,7 +332,7 @@ export function PuzzleWeekAdminHub() {
                                       item.entry.name,
                                     )}
                                     disabled={savingEntryId === member.id}
-                                    className="rounded-full border border-red-200 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                                    className="rounded-full border border-[var(--color-danger)] bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-danger)] transition hover:bg-[var(--color-danger-light)] disabled:opacity-60"
                                   >
                                     {savingEntryId === member.id ? 'Removing…' : 'Remove'}
                                   </button>
@@ -355,7 +355,7 @@ export function PuzzleWeekAdminHub() {
                               {solvedTitles.length > 0 ? solvedTitles.map(title => (
                                 <span
                                   key={title}
-                                  className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700"
+                                  className="rounded-full bg-[var(--color-accent-light)] px-2.5 py-1 text-xs font-medium text-[var(--color-accent-strong)]"
                                 >
                                   {title}
                                 </span>
@@ -369,7 +369,7 @@ export function PuzzleWeekAdminHub() {
                             {item.entry.type === 'team' ? (
                               <>
                                 <div>
-                                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                                  <label className="mb-1 block text-xs font-mono font-semibold uppercase tracking-wide text-[var(--color-muted)]">
                                     Rename team
                                   </label>
                                   <input
@@ -401,7 +401,7 @@ export function PuzzleWeekAdminHub() {
                             <button
                               onClick={() => void handleReset(item.entry.id, item.entry.name)}
                               disabled={isSaving}
-                              className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+                              className="w-full rounded-xl border border-[var(--color-danger)] bg-[var(--color-danger-light)] px-4 py-2.5 text-sm font-semibold text-[var(--color-danger)] transition hover:bg-[var(--color-danger-light)] disabled:opacity-60"
                             >
                               {isSaving ? 'Resetting…' : 'Reset Registration'}
                             </button>

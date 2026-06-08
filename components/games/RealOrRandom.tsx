@@ -70,20 +70,20 @@ export function RealOrRandom({ onDone }: Props) {
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => choose(true)}
-            className="py-3 rounded-xl bg-teal-50 border-2 border-teal-200 text-teal-800 font-semibold hover:bg-teal-100 transition-colors"
+            className="py-3 rounded-xl bg-[var(--color-accent-light)] border-2 border-[var(--color-accent-light)] text-[var(--color-accent-strong)] font-semibold hover:opacity-80 transition-colors"
           >
             🌍 Real Data
           </button>
           <button
             onClick={() => choose(false)}
-            className="py-3 rounded-xl bg-slate-50 border-2 border-slate-200 text-slate-700 font-semibold hover:bg-slate-100 transition-colors"
+            className="py-3 rounded-xl bg-[var(--color-bg)] border-2 border-[var(--color-border)] text-[var(--color-text)] font-semibold hover:bg-[var(--color-border)] transition-colors"
           >
             🎲 Random
           </button>
         </div>
       ) : (
         <div className="space-y-3">
-          <div className={`text-center py-3 rounded-xl font-semibold ${isCorrect ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+          <div className={`text-center py-3 rounded-xl font-semibold ${isCorrect ? 'bg-[var(--color-accent-light)] text-[var(--color-accent-strong)]' : 'bg-[var(--color-danger-light)] text-[var(--color-danger)]'}`}>
             {isCorrect ? '✓ Correct! +100 pts' : '✗ Wrong'}
           </div>
           <div className="text-sm text-center text-[var(--color-muted)] px-2">

@@ -172,7 +172,7 @@ function RegressionByEyePlot({ pairs, xName, yName, lsSlope, lsIntercept, plotId
       <div className="bg-[var(--color-accent-light)] rounded-xl px-4 py-2 flex items-start justify-between gap-4 shrink-0">
         <div className="flex flex-wrap items-start gap-x-6 gap-y-2">
           <div>
-            <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)] mb-0.5">Your line</div>
+            <div className="text-[9px] font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)] mb-0.5">Your line</div>
             <div className="font-mono text-sm font-semibold text-[var(--color-text)]">{equation}</div>
             {showSSE && (
               <div className="text-[11px] text-[var(--color-muted)] mt-0.5">SSE: <span className="font-mono font-semibold text-[var(--color-text)]">{fmtNum(sse)}</span></div>
@@ -180,7 +180,7 @@ function RegressionByEyePlot({ pairs, xName, yName, lsSlope, lsIntercept, plotId
           </div>
           {showLS && (
             <div>
-              <div className="text-[9px] font-semibold uppercase tracking-wider text-[#10B981] mb-0.5">Least-squares</div>
+              <div className="text-[9px] font-mono font-semibold uppercase tracking-wider text-[#10B981] mb-0.5">Least-squares</div>
               <div className="font-mono text-sm font-semibold text-[#047857]">{lsEquation}</div>
               <div className="text-[11px] text-[#047857] mt-0.5">SSE: <span className="font-mono font-semibold">{fmtNum(lsSSE)}</span></div>
             </div>
@@ -531,7 +531,7 @@ export function RegressionByEyeCard({ cardId, config, onClearZone, onAssignZone,
 
       <div
         style={{ gridRow: '1', gridColumn: '2' }}
-        className="min-h-[260px] overflow-hidden rounded-xl border-2 border-dashed border-[var(--color-border)] bg-slate-50/40"
+        className="min-h-[260px] overflow-hidden rounded-xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-bg)]/40"
       >
         <div className="h-full min-h-[260px] bg-white flex flex-col">
           <div className="flex-1 min-h-0">
@@ -561,8 +561,8 @@ export function RegressionByEyeCard({ cardId, config, onClearZone, onAssignZone,
   return (
     <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
-        <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">Regression by Eye</span>
-        <button onClick={onRemove} className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none">×</button>
+        <span className="text-sm font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">Regression by Eye</span>
+        <button onClick={onRemove} className="text-[var(--color-muted)] hover:text-[var(--color-danger)] transition-colors text-xl leading-none">×</button>
       </div>
       <div className="p-4 min-h-[620px]">
         {inner}

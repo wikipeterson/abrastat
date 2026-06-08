@@ -206,7 +206,7 @@ export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRe
         </div>
 
         <div className="bg-[var(--color-accent-light)] rounded-xl px-4 py-3">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-1">
+          <div className="text-[10px] font-mono font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-1">
             {groupCol ? 'Separate Regression Equations' : 'Regression Equation'}
           </div>
           {groupCol ? (
@@ -245,7 +245,7 @@ export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRe
             { key: 'n', label: 'n', value: String(primary.n), sub: 'paired rows' },
             { key: 'rmse', label: 'RMSE', value: fmt(primary.rmse), sub: 'typical prediction error' },
           ] : []).map(item => (
-            <div key={item.label} className="bg-slate-50 rounded-xl p-3 text-center">
+            <div key={item.label} className="bg-[var(--color-bg)] rounded-xl p-3 text-center">
               {groupCol && 'color' in item ? (
                 <div className="flex items-center justify-center gap-2 text-xs text-[var(--color-muted)] mb-0.5">
                   <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
@@ -314,8 +314,8 @@ export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRe
   return (
     <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
-        <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">Regression</span>
-        <button onClick={onRemove} className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none">×</button>
+        <span className="text-sm font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">Regression</span>
+        <button onClick={onRemove} className="text-[var(--color-muted)] hover:text-[var(--color-danger)] transition-colors text-xl leading-none">×</button>
       </div>
       <div className="p-4 min-h-[420px]">
         {inner}

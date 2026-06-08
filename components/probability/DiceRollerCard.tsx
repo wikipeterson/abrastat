@@ -105,10 +105,10 @@ function ResultsDotPlot({
   if (ticks[ticks.length - 1] !== maxValue) ticks.push(maxValue)
 
   return (
-    <div className="h-full rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-      <div className="mb-2 text-sm font-semibold text-[var(--color-text)]">{label}</div>
+    <div className="h-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
+      <div className="mb-2 text-sm font-serif italic font-semibold text-[var(--color-text)]">{label}</div>
       {values.length === 0 ? (
-        <div className="flex h-[calc(100%-1.5rem)] min-h-[320px] items-center justify-center rounded-xl bg-slate-50 text-sm text-[var(--color-muted)]">
+        <div className="flex h-[calc(100%-1.5rem)] min-h-[320px] items-center justify-center rounded-xl bg-[var(--color-bg)] text-sm text-[var(--color-muted)]">
           Roll the dice to build the dot plot.
         </div>
       ) : (
@@ -487,7 +487,7 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
                     className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                       effectiveGraphMode === mode
                         ? 'bg-[var(--color-accent)] text-white'
-                        : 'text-[var(--color-muted)] hover:bg-slate-50'
+                        : 'text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                     } ${disabled ? 'cursor-not-allowed opacity-40 hover:bg-transparent' : ''}`}
                   >
                     {mode === 'sum' ? 'Sum' : 'Difference'}
@@ -536,7 +536,7 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
               onClick={clearAll}
               disabled={tray.length === 0}
               className="px-4 py-2.5 rounded-xl border border-[var(--color-border)] text-sm
-                         text-[var(--color-muted)] hover:text-red-500 hover:border-red-200 transition
+                         text-[var(--color-muted)] hover:text-[var(--color-danger)] hover:border-[var(--color-danger-light)] transition
                          disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Clear
@@ -585,12 +585,12 @@ export function DiceRollerCard({ cardId, onRemove, hideHeader }: DiceRollerCardP
   return (
     <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] overflow-hidden h-full flex flex-col">
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
-        <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">
+        <span className="text-sm font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">
           Dice Roller
         </span>
         <button
           onClick={onRemove}
-          className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none"
+          className="text-[var(--color-muted)] hover:text-[var(--color-danger)] transition-colors text-xl leading-none"
         >
           ×
         </button>

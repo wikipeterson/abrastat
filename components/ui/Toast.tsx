@@ -18,7 +18,7 @@ export function Toast({ message, type = 'success', onClose }: ToastProps) {
   }, [onClose])
 
   return (
-    <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all ${type === 'success' ? 'bg-[var(--color-accent)]' : 'bg-red-500'}`}>
+    <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all ${type === 'success' ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-danger)]'}`}>
       {type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
       {message}
       <button onClick={onClose} className="ml-1 opacity-70 hover:opacity-100">

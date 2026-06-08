@@ -60,7 +60,7 @@ export function ShareDatasetModal({ open, onClose, datasetId, initialIsPublic, o
                 type="button"
                 disabled={toggling}
                 onClick={() => handleTogglePublic(false)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${!isPublic ? 'bg-[var(--color-accent)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${!isPublic ? 'bg-[var(--color-accent)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}
               >
                 <Lock size={13} /> Private
               </button>
@@ -68,7 +68,7 @@ export function ShareDatasetModal({ open, onClose, datasetId, initialIsPublic, o
                 type="button"
                 disabled={toggling}
                 onClick={() => handleTogglePublic(true)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${isPublic ? 'bg-[var(--color-accent)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${isPublic ? 'bg-[var(--color-accent)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}
               >
                 <Globe size={13} /> Public
               </button>
@@ -82,7 +82,7 @@ export function ShareDatasetModal({ open, onClose, datasetId, initialIsPublic, o
               <input
                 readOnly
                 value={shareUrl}
-                className="flex-1 border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-muted)] bg-slate-50 focus:outline-none"
+                className="flex-1 border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-muted)] bg-[var(--color-bg)] focus:outline-none"
               />
               <button
                 onClick={handleCopy}
@@ -99,7 +99,7 @@ export function ShareDatasetModal({ open, onClose, datasetId, initialIsPublic, o
           <div className="flex justify-end pt-1">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-slate-100"
+              className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-[var(--color-bg)]"
             >
               Done
             </button>

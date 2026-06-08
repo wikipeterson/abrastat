@@ -56,11 +56,11 @@ function ScoreRow({
         'w-full rounded-lg px-2.5 py-2 text-xs transition-all',
         'flex items-center justify-between border',
         isScored
-          ? 'cursor-default border-slate-100 bg-slate-50'
+          ? 'cursor-default border-[var(--color-border)] bg-[var(--color-bg)]'
           : clickable
             ? mustScore || hasPoints
               ? 'cursor-pointer border-transparent hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-light)]'
-              : 'cursor-pointer border-transparent hover:border-red-200 hover:bg-red-50'
+              : 'cursor-pointer border-transparent hover:border-[var(--color-danger-light)] hover:bg-[var(--color-danger-light)]'
             : 'cursor-default opacity-50 border-transparent',
       ].join(' ')}
     >
@@ -73,7 +73,7 @@ function ScoreRow({
             : hasPoints
               ? 'text-[var(--color-accent)]'
               : zeroPick
-                ? 'text-red-400'
+                ? 'text-[var(--color-danger)]'
                 : 'text-[var(--color-muted)]',
         ].join(' ')}
       >
@@ -330,7 +330,7 @@ export function Yacht({ onDone }: Props) {
       <div className="flex h-full flex-col space-y-3 rounded-2xl border border-[var(--color-border)] bg-white p-3">
         <div className="flex items-end justify-between">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">Scorecard</div>
+            <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)]">Scorecard</div>
             <div className="text-xs text-[var(--color-muted)]">
               {mustScore ? 'Choose a category now.' : 'Potential scores update after each roll.'}
             </div>
@@ -347,7 +347,7 @@ export function Yacht({ onDone }: Props) {
         <div className="flex-1">
         <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
           <div>
-            <div className="mb-1 px-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
+            <div className="mb-1 px-2.5 text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)]">
               Upper Section
             </div>
             {upperCats.map(cat => (
@@ -380,7 +380,7 @@ export function Yacht({ onDone }: Props) {
           </div>
 
           <div>
-            <div className="mb-1 px-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
+            <div className="mb-1 px-2.5 text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)]">
               Lower Section
             </div>
             {lowerCats.map(cat => (
@@ -410,17 +410,17 @@ export function Yacht({ onDone }: Props) {
         >
           <div className="grid grid-cols-3 gap-3 text-center">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">Upper</div>
+              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)]">Upper</div>
               <div className="text-xl font-black tabular-nums text-[var(--color-text)]">
                 {upperSubtotal + (bonusAchieved ? 35 : 0)}
               </div>
             </div>
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">Lower</div>
+              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)]">Lower</div>
               <div className="text-xl font-black tabular-nums text-[var(--color-text)]">{lowerSubtotal}</div>
             </div>
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">Grand Total</div>
+              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)]">Grand Total</div>
               <div className="text-3xl font-black tabular-nums text-[var(--color-accent)]">{grandTotal}</div>
             </div>
           </div>

@@ -56,7 +56,7 @@ function StatRow({ label, value, highlight }: StatRowProps) {
       title={STAT_TOOLTIPS[label] ?? ''}
     >
       <span className="text-[var(--color-muted)] cursor-help">{label}</span>
-      <span className="font-mono font-medium text-[var(--color-text)]">
+      <span className="font-mono tabular-nums font-medium text-[var(--color-text)]">
         <CountUp target={value} />
       </span>
     </div>
@@ -65,7 +65,7 @@ function StatRow({ label, value, highlight }: StatRowProps) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-muted)] px-3 pt-3 pb-1">
+    <div className="text-[10px] font-mono font-semibold uppercase tracking-widest text-[var(--color-muted)] px-3 pt-3 pb-1">
       {children}
     </div>
   )
@@ -91,7 +91,7 @@ export function NumericStatCard({ result }: { result: SummaryResult }) {
   return (
     <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] p-4">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="font-semibold text-[var(--color-text)] truncate">{result.column}</h3>
+        <h3 className="font-serif italic font-semibold text-[var(--color-text)] truncate">{result.column}</h3>
         <button onClick={() => void copyAsTable()} className="text-xs text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors ml-2 flex-shrink-0">
           Copy as Table
         </button>
@@ -127,7 +127,7 @@ export function NumericStatCard({ result }: { result: SummaryResult }) {
       {result.outliers.length > 0 && (
         <div className="mt-3 pt-3 border-t border-[var(--color-border)]">
           <p className="text-xs text-[var(--color-muted)]">
-            <span className="font-medium text-red-500">{result.outliers.length} outlier{result.outliers.length > 1 ? 's' : ''}</span>
+            <span className="font-medium text-[var(--color-danger)]">{result.outliers.length} outlier{result.outliers.length > 1 ? 's' : ''}</span>
             {' '}— {result.outliers.slice(0, 5).map(fmt).join(', ')}{result.outliers.length > 5 ? '…' : ''}
           </p>
         </div>
@@ -159,7 +159,7 @@ export function LinearRegressionCard({ xName, yName, xs, ys }: { xName: string; 
   return (
     <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] p-4 md:col-span-2 xl:col-span-3">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-[var(--color-text)]">
+        <h3 className="font-serif italic font-semibold text-[var(--color-text)]">
           Linear Regression — <span className="text-[var(--color-accent)]">{yName}</span> vs <span className="text-[var(--color-accent)]">{xName}</span>
         </h3>
         <button onClick={() => void copyRegression()} className="text-xs text-[var(--color-muted)] hover:text-[var(--color-accent)] flex-shrink-0 ml-2">
@@ -176,9 +176,9 @@ export function LinearRegressionCard({ xName, yName, xs, ys }: { xName: string; 
           { label: 'Slope', value: fmt(slope), sub: `for each +1 ${xName}` },
           { label: 'Intercept', value: fmt(intercept), sub: `when ${xName} = 0` },
         ].map(item => (
-          <div key={item.label} className="bg-slate-50 rounded-xl p-3 text-center">
+          <div key={item.label} className="bg-[var(--color-bg)] rounded-xl p-3 text-center">
             <div className="text-xs text-[var(--color-muted)] mb-0.5">{item.label}</div>
-            <div className="font-mono font-semibold text-[var(--color-text)] text-base">{item.value}</div>
+            <div className="font-mono tabular-nums font-semibold text-[var(--color-text)] text-base">{item.value}</div>
             <div className="text-[10px] text-[var(--color-muted)] mt-0.5 leading-tight">{item.sub}</div>
           </div>
         ))}
@@ -330,7 +330,7 @@ export function TwoWayTableCard({
   return (
     <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] p-4 md:col-span-2 xl:col-span-3">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <h3 className="font-semibold text-[var(--color-text)]">
+        <h3 className="font-serif italic font-semibold text-[var(--color-text)]">
           Two-Way Table — <span className="text-[var(--color-accent)]">{displayAName}</span> × <span className="text-[var(--color-accent)]">{displayBName}</span>
         </h3>
         <div className="flex items-center gap-2 flex-wrap">
@@ -344,7 +344,7 @@ export function TwoWayTableCard({
             <button
               key={m}
               onClick={() => setMode(m)}
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${mode === m ? 'bg-[var(--color-accent)] text-white' : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'}`}
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${mode === m ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-border)]'}`}
             >
               {m === 'count' ? 'Counts' : m === 'row' ? 'Row %' : m === 'col' ? 'Col %' : m === 'expected' ? 'Expected' : 'Total %'}
             </button>
@@ -359,35 +359,35 @@ export function TwoWayTableCard({
                 {displayAName} ↓ / {displayBName} →
                 </th>
               {colLabels.map(label => (
-                <th key={label} className="px-3 py-2 text-center font-medium bg-[var(--color-grid-header)] text-white border-b border-slate-600">
+                <th key={label} className="px-3 py-2 text-center font-medium bg-[var(--color-grid-header)] text-white border-b border-[var(--color-grid-header)]">
                   {label}
                 </th>
               ))}
-              <th className="px-3 py-2 text-center font-medium bg-slate-600 text-white border-b border-slate-500">Total</th>
+              <th className="px-3 py-2 text-center font-medium bg-[var(--color-text)] text-white border-b border-[var(--color-grid-header)]">Total</th>
             </tr>
           </thead>
           <tbody>
             {rowLabels.map((rowLabel, ri) => (
-              <tr key={rowLabel} className="border-b border-[var(--color-border)] hover:bg-slate-50">
-                <td className="px-3 py-2 font-medium text-[var(--color-text)] bg-slate-50">{rowLabel}</td>
+              <tr key={rowLabel} className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg)]">
+                <td className="px-3 py-2 font-medium text-[var(--color-text)] bg-[var(--color-bg)]">{rowLabel}</td>
                 {colLabels.map((_, ci) => (
-                  <td key={ci} className="px-3 py-2 text-center font-mono text-[var(--color-text)]">
+                  <td key={ci} className="px-3 py-2 text-center font-mono tabular-nums text-[var(--color-text)]">
                     {cellDisplay(counts[ri][ci], ri, ci)}
                   </td>
                 ))}
-                <td className="px-3 py-2 text-center font-mono font-semibold text-[var(--color-text)] bg-slate-50">
+                <td className="px-3 py-2 text-center font-mono tabular-nums font-semibold text-[var(--color-text)] bg-[var(--color-bg)]">
                   {totalDisplay(rowTotals[ri], grandTotal)}
                 </td>
               </tr>
             ))}
-            <tr className="bg-slate-50 font-semibold">
+            <tr className="bg-[var(--color-bg)] font-semibold">
               <td className="px-3 py-2 text-[var(--color-text)]">Total</td>
               {colTotals.map((ct, ci) => (
-                <td key={ci} className="px-3 py-2 text-center font-mono text-[var(--color-text)]">
+                <td key={ci} className="px-3 py-2 text-center font-mono tabular-nums text-[var(--color-text)]">
                   {totalDisplay(ct, grandTotal)}
                 </td>
               ))}
-              <td className="px-3 py-2 text-center font-mono text-[var(--color-text)]">{grandTotal}</td>
+              <td className="px-3 py-2 text-center font-mono tabular-nums text-[var(--color-text)]">{grandTotal}</td>
             </tr>
           </tbody>
         </table>
@@ -442,7 +442,7 @@ export function NumericStatsTable({
     <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] overflow-hidden">
       <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
         <div>
-          <h3 className="font-semibold text-[var(--color-text)]">{colName}</h3>
+          <h3 className="font-serif italic font-semibold text-[var(--color-text)]">{colName}</h3>
           {groupColName && !rowLabelHeader && (
             <p className="text-xs text-[var(--color-muted)]">Group by: {groupColName}</p>
           )}
@@ -474,7 +474,7 @@ export function NumericStatsTable({
           </thead>
           <tbody>
             {rows.filter(r => r.summary).map((row, i) => (
-              <tr key={i} className={`border-t border-[var(--color-border)] hover:bg-slate-50 ${i % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
+              <tr key={i} className={`border-t border-[var(--color-border)] hover:bg-[var(--color-bg)] ${i % 2 === 1 ? 'bg-[var(--color-bg)]/50' : ''}`}>
                 {showLabel && (
                   <td className="px-3 py-2 font-medium text-[var(--color-text)] whitespace-nowrap">
                     {row.label ?? '—'}
@@ -483,7 +483,7 @@ export function NumericStatsTable({
                 {STAT_COLS.map(c => (
                   <td
                     key={c.key}
-                    className={`px-3 py-2 text-right font-mono text-[var(--color-text)] whitespace-nowrap ${c.highlight ? 'bg-[var(--color-gold-light)]' : ''}`}
+                    className={`px-3 py-2 text-right font-mono tabular-nums text-[var(--color-text)] whitespace-nowrap ${c.highlight ? 'bg-[var(--color-gold-light)]' : ''}`}
                   >
                     {fmt(c.get(row.summary!))}
                   </td>
@@ -500,13 +500,13 @@ export function NumericStatsTable({
 export function CategoricalStatCard({ column, rows }: { column: string; rows: FrequencyRow[] }) {
   return (
     <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] p-4">
-      <h3 className="font-semibold text-[var(--color-text)] mb-3">{column} <span className="text-xs font-normal text-[var(--color-muted)]">(categorical)</span></h3>
+      <h3 className="font-serif italic font-semibold text-[var(--color-text)] mb-3">{column} <span className="text-xs font-normal text-[var(--color-muted)]">(categorical)</span></h3>
       <div className="space-y-1">
         {rows.slice(0, 10).map(r => (
           <div key={r.value} className="flex items-center gap-2 text-sm">
             <div className="h-2 rounded-full bg-[var(--color-accent)]" style={{ width: `${r.percent}%`, maxWidth: '60%', minWidth: 4 }} />
             <span className="text-[var(--color-text)] truncate flex-1">{r.value || '(blank)'}</span>
-            <span className="text-[var(--color-muted)] font-mono text-xs flex-shrink-0">{r.count} ({r.percent.toFixed(1)}%)</span>
+            <span className="text-[var(--color-muted)] font-mono tabular-nums text-xs flex-shrink-0">{r.count} ({r.percent.toFixed(1)}%)</span>
           </div>
         ))}
         {rows.length > 10 && <p className="text-xs text-[var(--color-muted)] mt-1">+ {rows.length - 10} more categories</p>}

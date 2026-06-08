@@ -346,7 +346,7 @@ export function DropZone({
               style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
               className="px-1 text-center"
             >
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)] leading-tight">{label}</div>
+              <div className="text-[11px] font-mono font-semibold uppercase tracking-wide text-[var(--color-muted)] leading-tight">{label}</div>
               <div className="mt-2 text-[10px] text-[var(--color-muted)] leading-tight">{hint ?? 'Drop or click to add'}</div>
             </div>
           )}
@@ -392,7 +392,7 @@ export function DropZone({
             </div>
           ) : (
             <>
-              <span className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide leading-none">{label}</span>
+              <span className="text-[10px] font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide leading-none">{label}</span>
               <span className="mt-1 text-xs text-[var(--color-muted)] leading-none">{hint ?? 'Drop or click to add'}</span>
             </>
           )}

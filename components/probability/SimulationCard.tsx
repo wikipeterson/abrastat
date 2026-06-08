@@ -82,7 +82,7 @@ function DotPlotSVG({
 
   return (
     <div>
-      <div className="text-sm font-semibold text-[var(--color-text)] mb-1">{label}</div>
+      <div className="text-sm font-serif italic font-semibold text-[var(--color-text)] mb-1">{label}</div>
       <div>
         <svg
           width="100%"
@@ -218,7 +218,7 @@ function ConvergencePlotSVG({
 
   return (
     <div>
-      <div className="text-sm font-semibold text-[var(--color-text)] mb-1">
+      <div className="text-sm font-serif italic font-semibold text-[var(--color-text)] mb-1">
         Cumulative Proportion of Heads (by Flip #)
       </div>
       <div>
@@ -376,7 +376,7 @@ function GapPlotSVG({
 
   return (
     <div>
-      <div className="text-sm font-semibold text-[var(--color-text)] mb-1">
+      <div className="text-sm font-serif italic font-semibold text-[var(--color-text)] mb-1">
         Head–Tail Gap (Heads − Tails, by Flip #)
       </div>
       <div>
@@ -669,7 +669,7 @@ function flipGroup(probabilityHeads: number, flipsPerGroup: number) {
 
 function StatPill({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2 text-center">
+    <div className="rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] px-3 py-2 text-center">
       <div className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">{label}</div>
       <div className="mt-1 text-base font-semibold text-[var(--color-text)]">{value}</div>
     </div>
@@ -793,7 +793,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
               </label>
             </div>
 
-            <label className="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-sm text-[var(--color-text)] shadow-sm">
+            <label className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-text)] shadow-sm">
               <input
                 type="checkbox"
                 checked={simulateSetsMode}
@@ -816,7 +816,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
                 <button
                   type="button"
                   onClick={reset}
-                  className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-slate-50"
+                  className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-bg)]"
                 >
                   Reset
                 </button>
@@ -827,7 +827,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
               <button
                 type="button"
                 onClick={reset}
-                className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-slate-50"
+                className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-bg)]"
               >
                 Reset
               </button>
@@ -871,7 +871,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
                       className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                         activePlot === key
                           ? 'bg-[var(--color-accent)] text-white'
-                          : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                          : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                       }`}
                     >
                       {label}
@@ -884,7 +884,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
 
           {/* ── Right column: shared display area ── */}
           <div className="space-y-3">
-            <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
               {!simulateSetsMode ? (
                 <>
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -901,7 +901,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
                     </div>
                   </div>
 
-                  <div className="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-4">
+                  <div className="mt-3 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] p-4">
                     {history.length === 0 && !isSpinning ? (
                       <div className="flex min-h-[320px] items-center justify-center text-sm text-[var(--color-muted)]">
                         No groups simulated yet.
@@ -944,7 +944,7 @@ export function SimulationCard({ cardId, config }: SimulationCardProps) {
                     </div>
                   </div>
 
-                  <div className="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-4">
+                  <div className="mt-3 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] p-4">
                     {multiResults ? (
                       <div className="min-h-[420px]">
                         {activePlot === 'convergence' && (

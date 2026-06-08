@@ -171,7 +171,7 @@ export function MosaicPlot({
               className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
                 effectiveMode === nextMode
                   ? 'bg-[var(--color-accent)] text-white'
-                  : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
+                  : 'bg-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-border)]'
               }`}
             >
               {label}

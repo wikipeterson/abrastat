@@ -133,10 +133,10 @@ export function ChartBuilder() {
                   ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
                   : assignedCol
                     ? 'border-[var(--color-gold)] bg-[var(--color-gold-light)]'
-                    : 'border-dashed border-[var(--color-border)] bg-slate-50'
+                    : 'border-dashed border-[var(--color-border)] bg-[var(--color-bg)]'
               }`}
             >
-              <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide leading-none">
+              <div className="text-xs font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide leading-none">
                 {label}
               </div>
               {assignedCol ? (
@@ -178,7 +178,7 @@ export function ChartBuilder() {
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
                 currentChart === ct
                   ? 'border-[var(--color-gold)] bg-[var(--color-gold-light)] text-[#5A3A00]'
-                  : 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-slate-300'
+                  : 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-[var(--color-border)]'
               }`}
             >
               <span>{CHART_META[ct].icon}</span>

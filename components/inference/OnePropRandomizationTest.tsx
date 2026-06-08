@@ -432,21 +432,21 @@ function OnePropNullDistPlot({
       <style>{`@keyframes dot-drop-full{from{transform:translateY(-${PH}px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
       <defs><clipPath id={clipId}><rect x={0} y={0} width={PW} height={PH} /></clipPath></defs>
       <g transform={`translate(${MG.l},${MG.t})`}>
-        {/* Light shaded extreme region */}
-        <path d={shade} fill="#0EA5A0" opacity={0.10} />
-        <line x1={0} y1={PH} x2={PW} y2={PH} stroke="#111111" strokeWidth={1.5} />
+        {/* Light shaded extreme region — observed/focus = gold */}
+        <path d={shade} fill="var(--color-gold)" opacity={0.10} />
+        <line x1={0} y1={PH} x2={PW} y2={PH} stroke="var(--color-text)" strokeWidth={1.5} />
         {ticks.map((v, i) => (
           <g key={i} transform={`translate(${xOf(v)},${PH})`}>
-            <line y2={3} stroke="#111111" strokeWidth={1} />
-            <text y={18} textAnchor="middle" fontSize={tickFontSize} fill="#111111" fontFamily="DM Sans,sans-serif">
+            <line y2={3} stroke="var(--color-muted)" strokeWidth={1} />
+            <text y={18} textAnchor="middle" fontSize={tickFontSize} fill="var(--color-muted)" fontFamily="DM Sans,sans-serif">
               {view === 'counts' ? Math.round(v).toString() : formatTick(v, xRange)}
             </text>
           </g>
         ))}
         <g clipPath={`url(#${clipId})`}>
-          {/* Normal curve extreme-region fill (darker) */}
+          {/* Normal curve extreme-region fill — model overlay = accent */}
           {normalFillPath && (
-            <path d={normalFillPath} fill="#0EA5A0" opacity={0.28} />
+            <path d={normalFillPath} fill="var(--color-accent)" opacity={0.28} />
           )}
           {showHistogram
             ? histogramBars.map((bar, i) => {
@@ -461,39 +461,40 @@ function OnePropNullDistPlot({
                     width={Math.max(1.2, x1 - x0 - 1.6)}
                     height={Math.max(1.2, barHeight)}
                     rx={2}
-                    fill={bar.extreme ? '#0EA5A0' : '#111111'}
+                    fill={bar.extreme ? 'var(--color-gold)' : 'var(--color-accent)'}
                     opacity={0.82}
                   />
                 )
               })
             : circles.map((c, i) => (
                 <circle key={i} cx={c.cx} cy={c.cy} r={dotR}
-                  fill={c.extreme ? '#0EA5A0' : '#111111'} opacity={0.85}
+                  fill={c.extreme ? 'var(--color-gold)' : 'var(--color-accent)'} opacity={0.85}
                   style={i === circles.length - 1 && values.length > 0
                     ? { animation: 'dot-drop-full 700ms ease-out' } : undefined}
                 />
               ))}
+          {/* Normal curve — model overlay = accent */}
           {normalPath && (
-            <polyline points={normalPath} fill="none" stroke="#F59E0B" strokeWidth={2}
+            <polyline points={normalPath} fill="none" stroke="var(--color-accent)" strokeWidth={2}
               strokeLinejoin="round" strokeLinecap="round" />
           )}
         </g>
-        {/* Obs line — always red */}
-        <line x1={obsX} y1={0} x2={obsX} y2={PH} stroke="#EF4444" strokeWidth={1.8} strokeDasharray="4,3" />
+        {/* Obs line — observed = gold */}
+        <line x1={obsX} y1={0} x2={obsX} y2={PH} stroke="var(--color-gold)" strokeWidth={1.8} strokeDasharray="4,3" />
         <text x={obsX + (obsVal >= nullCenter ? 3 : -3)} y={7}
           textAnchor={obsVal >= nullCenter ? 'start' : 'end'}
-          fontSize={markerFontSize} fill="#EF4444" fontFamily="DM Sans,sans-serif" fontWeight="600">obs</text>
-        {/* Custom threshold line — teal, only when it differs from obs */}
+          fontSize={markerFontSize} fill="var(--color-gold-text)" fontFamily="DM Sans,sans-serif" fontWeight="600">obs</text>
+        {/* Custom threshold line — accent (model/theoretical), only when differs from obs */}
         {showThreshLine && (
           <>
             <line x1={threshX} y1={0} x2={threshX} y2={PH}
-              stroke="#0EA5A0" strokeWidth={1.6} strokeDasharray="5,3" />
+              stroke="var(--color-accent)" strokeWidth={1.6} strokeDasharray="5,3" />
             <text x={threshX + (thresh >= nullCenter ? 3 : -3)} y={16}
               textAnchor={thresh >= nullCenter ? 'start' : 'end'}
-              fontSize={markerFontSize} fill="#0EA5A0" fontFamily="DM Sans,sans-serif" fontWeight="600">t</text>
+              fontSize={markerFontSize} fill="var(--color-accent-strong)" fontFamily="DM Sans,sans-serif" fontWeight="600">t</text>
           </>
         )}
-        <text x={PW / 2} y={PH + 30} textAnchor="middle" fontSize={axisLabelFontSize} fill="#111111" fontFamily="DM Sans,sans-serif">
+        <text x={PW / 2} y={PH + 30} textAnchor="middle" fontSize={axisLabelFontSize} fill="var(--color-muted)" fontFamily="DM Sans,sans-serif">
           {view === 'counts' ? 'Simulated X (count of successes)' : 'Simulated p̂'}
         </text>
       </g>
@@ -528,10 +529,8 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
   const graphView = config.graphView ?? 'proportions'
   const showNormalCurve = config.showNormalCurve ?? false
   const cardSizeTarget = stage === 'setup'
-    ? { width: 1180, height: 860 }
-    : stage === 'conclude'
-      ? { width: 1260, height: 980 }
-      : { width: 1260, height: 900 }
+    ? { width: 820, height: 520 }
+    : { width: 1080, height: 720 }
 
   const [phase, setPhase] = useState<StepPhase>('observing')
   const [pendingSim, setPendingSim] = useState<OnePropResult | null>(null)
@@ -859,7 +858,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                     ? 'bg-[var(--color-accent)] text-white'
                     : step.enabled
                       ? 'bg-[var(--color-accent-light)] text-[var(--color-muted)]'
-                      : 'bg-slate-100 text-slate-400'
+                      : 'bg-[var(--color-border)] text-[var(--color-muted)] opacity-50'
                 }`}
               >
                 {index + 1}
@@ -870,7 +869,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                     ? 'text-[var(--color-text)]'
                     : step.enabled
                       ? 'text-[var(--color-muted)]'
-                      : 'text-slate-400'
+                      : 'text-[var(--color-muted)] opacity-40'
                 }`}
               >
                 {step.label}
@@ -888,26 +887,26 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
   const setupCard = (
       <div className="space-y-4 px-2 py-1">
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-[var(--color-text)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.24em] text-white">
+          <div className="rounded-xl bg-[var(--color-text)] px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-white">
             Inference
           </div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">
+          <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">
             Randomization Test
           </div>
         </div>
 
         {stepper}
 
-        <div className="text-sm font-semibold leading-snug text-[var(--color-text)]">
+        <div className="text-sm font-serif italic leading-snug text-[var(--color-text)]">
           If the true proportion were really p₀, how unusual is what we saw?
         </div>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
               Null hypothesis
             </div>
-            <div className="rounded-[20px] bg-[var(--color-accent-light)] px-4 py-3">
+            <div className="inline-flex rounded-[20px] bg-[var(--color-accent-light)] px-4 py-3">
               <div className="flex flex-wrap items-center gap-2.5 text-sm font-semibold text-[var(--color-text)]">
                 <span>H₀</span>
                 <span>:</span>
@@ -939,7 +938,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
           </div>
 
           <div className="space-y-2">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
               Observed data
             </div>
 
@@ -966,8 +965,8 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                     >
                       {catLevels.map(l => <option key={l} value={l}>{l}</option>)}
                     </select>
-                    <span className="ml-auto text-sm text-[var(--color-muted)]">
-                      observed <PHat /> = <span className="font-semibold text-[var(--color-accent)]">{phat !== null ? phat.toFixed(2) : '—'}</span>
+                    <span className="text-sm text-[var(--color-muted)]">
+                      observed <PHat /> = <span className="font-mono tabular-nums font-semibold text-[var(--color-accent)]">{phat !== null ? phat.toFixed(2) : '—'}</span>
                     </span>
                   </div>
                 )}
@@ -992,8 +991,8 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                   className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center text-sm font-semibold text-[var(--color-text)]"
                 />
                 <span>trials</span>
-                <span className="ml-auto text-sm">
-                  observed <PHat /> = <span className="font-semibold text-[var(--color-accent)]">{phat !== null ? phat.toFixed(2) : '—'}</span>
+                <span className="text-sm">
+                  observed <PHat /> = <span className="font-mono tabular-nums font-semibold text-[var(--color-accent)]">{phat !== null ? phat.toFixed(2) : '—'}</span>
                 </span>
               </div>
             )}
@@ -1005,7 +1004,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
         <button
           onClick={handleStartSimulating}
           disabled={!canStartSimulating}
-          className="w-full rounded-[18px] bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-[18px] bg-[var(--color-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Start simulating →
         </button>
@@ -1023,8 +1022,8 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
             <div className="mb-5 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">Randomization Test</div>
-                  <h3 className="text-[30px] font-semibold leading-none text-[var(--color-text)]">One proportion</h3>
+                  <div className="text-[11px] font-mono font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">Randomization Test</div>
+                  <h3 className="text-[30px] font-serif italic leading-none text-[var(--color-text)]">One proportion</h3>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {stage === 'simulate' && (
@@ -1051,22 +1050,22 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
 
               <div className="flex flex-wrap items-center gap-3">
                 <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                  H₀: p = <span className="font-semibold">{nullP}</span>
+                  H₀: p = <span className="font-mono tabular-nums font-semibold">{nullP}</span>
                 </div>
                 <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                  Hₐ: p <span className="px-1 font-semibold">{altOperator(alternative)}</span> <span className="font-semibold">{nullP}</span>
+                  Hₐ: p <span className="px-1 font-semibold">{altOperator(alternative)}</span> <span className="font-mono tabular-nums font-semibold">{nullP}</span>
                 </div>
                 <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                  n <span className="font-semibold">{n}</span>
+                  n <span className="font-mono tabular-nums font-semibold">{n}</span>
                 </div>
                 <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                  X <span className="font-semibold">{x}</span>
+                  X <span className="font-mono tabular-nums font-semibold">{x}</span>
                 </div>
                 <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                  <PHat className="mr-1" /> <span className="font-semibold">{phat?.toFixed(4) ?? '—'}</span>
+                  <PHat className="mr-1" /> <span className="font-mono tabular-nums font-semibold">{phat?.toFixed(4) ?? '—'}</span>
                 </div>
                 <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                  Repetitions <span className="font-semibold">{simCount}</span>
+                  Repetitions <span className="font-mono tabular-nums font-semibold">{simCount}</span>
                 </div>
               </div>
             </div>
@@ -1076,9 +1075,9 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                 <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
                   <div className="flex items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-accent-light)] px-3 py-2">
                     {phase === 'spinning' ? (
-                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--color-gold)]" />
                     ) : phase === 'computed' ? (
-                      <span className="inline-block h-2 w-2 rounded-full bg-teal-500" />
+                      <span className="inline-block h-2 w-2 rounded-full bg-[var(--color-accent)]" />
                     ) : (
                       <span className="inline-block h-2 w-2 rounded-full bg-[var(--color-border)]" />
                     )}
@@ -1102,7 +1101,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                 </div>
 
                 <div className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-4">
-                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">One repetition</div>
+                  <div className="mb-3 text-[11px] font-mono font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">One repetition</div>
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       onClick={handleRandomize}
@@ -1147,7 +1146,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
 
                 {(simCount > 0 || stage === 'conclude') && (
                   <div className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-4">
-                    <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Speed up</div>
+                    <div className="mb-3 text-[11px] font-mono font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Speed up</div>
                     <div className="flex flex-wrap items-center gap-2">
                       {[10, 100, 1000].map(cnt => (
                         <button key={cnt} onClick={() => (cnt === 10 ? runAnimated(10) : runBatch(cnt))} disabled={isRunning}
@@ -1161,7 +1160,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                       ))}
                       {isRunning ? (
                         <button onClick={stopRunning}
-                          className="ml-auto rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors">
+                          className="ml-auto rounded-lg border border-[var(--color-danger)] px-3 py-2 text-sm font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger-light)] transition-colors">
                           {runProgress ? `Stop (${runProgress.current}/${runProgress.total})` : 'Stop'}
                         </button>
                       ) : (
@@ -1177,7 +1176,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                 <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Null distribution</div>
+                      <div className="text-[11px] font-mono font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Null distribution</div>
                       <p className="text-sm text-[var(--color-muted)]">
                         {simCount === 0 ? 'Do the first repetition by hand, then the distribution will start to grow.' : `${extremeCount} of ${simCount} simulated samples are as or more extreme.`}
                       </p>
@@ -1223,19 +1222,19 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
 
               <div className="space-y-4">
                 <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Observed sample</div>
+                  <div className="text-[11px] font-mono font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Observed sample</div>
                   <div className="mt-3 space-y-2 text-sm text-[var(--color-text)]">
-                    <div><span className="font-semibold">H₀:</span> p = {nullP}</div>
-                    <div><span className="font-semibold">Hₐ:</span> p {altOperator(alternative)} {nullP}</div>
+                    <div><span className="font-semibold">H₀:</span> p = <span className="font-mono tabular-nums">{nullP}</span></div>
+                    <div><span className="font-semibold">Hₐ:</span> p {altOperator(alternative)} <span className="font-mono tabular-nums">{nullP}</span></div>
                     <div><span className="font-semibold">Success:</span> {successLabel}</div>
-                    <div><span className="font-semibold">n:</span> {n}</div>
-                    <div><span className="font-semibold">x:</span> {x}</div>
-                    <div><span className="font-semibold"><PHat /></span> {phat?.toFixed(4) ?? '—'}</div>
+                    <div><span className="font-semibold">n:</span> <span className="font-mono tabular-nums">{n}</span></div>
+                    <div><span className="font-semibold">x:</span> <span className="font-mono tabular-nums">{x}</span></div>
+                    <div><span className="font-semibold"><PHat /></span> <span className="font-mono tabular-nums">{phat?.toFixed(4) ?? '—'}</span></div>
                   </div>
                 </div>
 
                 <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Conclusion tools</div>
+                  <div className="text-[11px] font-mono font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Conclusion tools</div>
                   <div className="mt-3 space-y-3 text-sm">
                     <label className="flex items-center gap-2 select-none text-[var(--color-text)]">
                       <input
@@ -1594,10 +1593,10 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
               'bg-[var(--color-accent-light)]'
             }`}>
               {phase === 'spinning' && (
-                <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="inline-block w-2 h-2 rounded-full bg-[var(--color-gold)] animate-pulse" />
               )}
               {phase === 'computed' && (
-                <span className="inline-block w-2 h-2 rounded-full bg-teal-500" />
+                <span className="inline-block w-2 h-2 rounded-full bg-[var(--color-accent)]" />
               )}
               {(phase === 'observing' || phase === 'plotted') && (
                 <span className="inline-block w-2 h-2 rounded-full bg-[var(--color-border)]" />
@@ -1634,7 +1633,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 flex flex-col gap-1.5">
           <div className="flex gap-4 items-stretch">
             <div className="w-44 flex-shrink-0 flex flex-col gap-3">
-              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
               <div className="flex flex-col items-start gap-2">
                 <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-[10px]">
                   {(['proportions', 'counts'] as GraphView[]).map((v, i) => (
@@ -1677,12 +1676,12 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
                       <span className="font-medium text-[var(--color-text)]">{config.nullP}</span>
                     </div>
                     <div><span className="font-semibold text-[var(--color-text)]">n:</span> {n}</div>
-                    <div><span className="font-semibold text-[var(--color-text)]">p̂:</span> <span className="font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</span></div>
+                    <div><span className="font-semibold text-[var(--color-text)]">p̂:</span> <span className="font-mono tabular-nums font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</span></div>
                   </div>
                   <div className="pt-2 space-y-1 leading-[1.4] text-[14px]">
                     <div>
                       <span className="font-semibold text-[var(--color-text)]">As or more extreme:</span>{' '}
-                      <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
+                      <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
                     </div>
                     {/* Editable p-value threshold */}
                     <div className="flex items-baseline gap-0.5 flex-wrap text-[14px]">
@@ -1822,7 +1821,7 @@ export function OnePropSimCard({ cardId, config }: { cardId: string; config: One
 
         {isRunning ? (
           <button onClick={stopRunning}
-            className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors ml-auto">
+            className="rounded-lg border border-[var(--color-danger)] px-3 py-1.5 text-xs font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger-light)] transition-colors ml-auto">
             {runProgress ? `Stop (${runProgress.current}/${runProgress.total})` : 'Stop'}
           </button>
         ) : (

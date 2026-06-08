@@ -94,7 +94,7 @@ function ComputedSection({ onClose }: { onClose: () => void }) {
         <div className="flex flex-wrap gap-1.5">
           {numericCols.map(col => (
             <button key={col.id} onClick={() => insertAtCursor(col.name)}
-              className="px-2 py-0.5 rounded-md text-xs font-medium bg-[var(--color-accent-light)] text-[var(--color-accent)] hover:bg-teal-200 transition-colors">
+              className="px-2 py-0.5 rounded-md text-xs font-medium bg-[var(--color-accent-light)] text-[var(--color-accent)] hover:bg-[var(--color-accent-light)] transition-colors">
               {col.name}
             </button>
           ))}
@@ -106,7 +106,7 @@ function ComputedSection({ onClose }: { onClose: () => void }) {
         <div className="flex flex-wrap gap-1.5">
           {COMPUTED_OPS.map(op => (
             <button key={op.label} onClick={() => insertAtCursor(op.insert)}
-              className="px-2.5 py-1 rounded-md text-xs font-mono font-semibold bg-slate-100 text-[var(--color-text)] hover:bg-slate-200 transition-colors">
+              className="px-2.5 py-1 rounded-md text-xs font-mono font-semibold bg-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors">
               {op.label}
             </button>
           ))}
@@ -116,8 +116,8 @@ function ComputedSection({ onClose }: { onClose: () => void }) {
         <label className="text-xs font-medium text-[var(--color-muted)] mb-1 block">Formula</label>
         <input ref={formulaRef} value={formula} onChange={e => setFormula(e.target.value)} placeholder="e.g. gold / total"
           onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
-          className={`w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${allNull ? 'border-red-300 bg-red-50' : 'border-[var(--color-border)]'}`} />
-        {allNull && <p className="text-xs text-red-500 mt-1">Formula couldn&apos;t be evaluated. Check column names and syntax.</p>}
+          className={`w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${allNull ? 'border-[var(--color-danger-light)] bg-[var(--color-danger-light)]' : 'border-[var(--color-border)]'}`} />
+        {allNull && <p className="text-xs text-[var(--color-danger)] mt-1">Formula couldn&apos;t be evaluated. Check column names and syntax.</p>}
       </div>
       {preview.length > 0 && !allNull && (
         <div>
@@ -209,7 +209,7 @@ function SequentialSection({ onClose }: { onClose: () => void }) {
             {preview.map((val, i) => (
               <div key={i} className="flex-1 text-center py-1.5 rounded-lg bg-[var(--color-accent-light)] text-[var(--color-accent)] text-sm font-mono font-medium">{val}</div>
             ))}
-            {n > 5 && <div className="flex-1 text-center py-1.5 rounded-lg bg-slate-50 text-slate-400 text-sm">…</div>}
+            {n > 5 && <div className="flex-1 text-center py-1.5 rounded-lg bg-[var(--color-bg)] text-[var(--color-muted)] text-sm">…</div>}
           </div>
         </div>
       )}
@@ -280,7 +280,7 @@ function RandomSection({ onClose }: { onClose: () => void }) {
         <div className="flex gap-2 flex-wrap">
           {(['normal', 'uniform', 'binomial', 'geometric'] as RandDist[]).map(d => (
             <button key={d} onClick={() => setDist(d)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${dist === d ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]' : 'bg-white text-[var(--color-text)] border-[var(--color-border)] hover:bg-slate-50'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${dist === d ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]' : 'bg-white text-[var(--color-text)] border-[var(--color-border)] hover:bg-[var(--color-bg)]'}`}>
               {distLabels[d]}
             </button>
           ))}
@@ -387,7 +387,7 @@ function StackSection({ onClose }: { onClose: () => void }) {
         <label className="text-xs font-medium text-[var(--color-muted)] mb-1.5 block">Value columns to stack</label>
         <div className="flex flex-wrap gap-1.5 border border-[var(--color-border)] rounded-lg p-2 max-h-32 overflow-y-auto">
           {grid.columns.map(col => (
-            <label key={col.id} className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs cursor-pointer border transition-colors ${valueColIds.includes(col.id) ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]' : 'bg-white text-[var(--color-text)] border-[var(--color-border)] hover:bg-slate-50'}`}>
+            <label key={col.id} className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs cursor-pointer border transition-colors ${valueColIds.includes(col.id) ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]' : 'bg-white text-[var(--color-text)] border-[var(--color-border)] hover:bg-[var(--color-bg)]'}`}>
               <input type="checkbox" checked={valueColIds.includes(col.id)} onChange={() => toggleValue(col.id)} className="hidden" />
               {col.name}
             </label>
@@ -397,9 +397,9 @@ function StackSection({ onClose }: { onClose: () => void }) {
       <div>
         <label className="text-xs font-medium text-[var(--color-muted)] mb-1.5 block">Keep columns (repeat per row)</label>
         <div className="flex flex-wrap gap-1.5 border border-[var(--color-border)] rounded-lg p-2 max-h-24 overflow-y-auto">
-          {availableKeep.length === 0 && <span className="text-xs text-slate-400">Select value columns first</span>}
+          {availableKeep.length === 0 && <span className="text-xs text-[var(--color-muted)]">Select value columns first</span>}
           {availableKeep.map(col => (
-            <label key={col.id} className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs cursor-pointer border transition-colors ${keepColIds.includes(col.id) ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-[var(--color-text)] border-[var(--color-border)] hover:bg-slate-50'}`}>
+            <label key={col.id} className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs cursor-pointer border transition-colors ${keepColIds.includes(col.id) ? 'bg-[var(--color-text)] text-white border-[var(--color-text)]' : 'bg-white text-[var(--color-text)] border-[var(--color-border)] hover:bg-[var(--color-bg)]'}`}>
               <input type="checkbox" checked={keepColIds.includes(col.id)} onChange={() => toggleKeep(col.id)} className="hidden" />
               {col.name}
             </label>
@@ -418,7 +418,7 @@ function StackSection({ onClose }: { onClose: () => void }) {
             className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]" />
         </div>
       </div>
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-[var(--color-danger)]">{error}</p>}
       <div className="flex justify-end pt-1">
         <button onClick={handleStack} disabled={!canStack}
           className="px-4 py-2 rounded-lg text-sm bg-[var(--color-accent)] text-white font-medium disabled:opacity-40">
@@ -472,14 +472,14 @@ function UnstackSection({ onClose }: { onClose: () => void }) {
         </select>
       </div>
       <div>
-        <label className="text-xs font-medium text-[var(--color-muted)] mb-1 block">ID column <span className="text-slate-400 font-normal">(optional — groups rows with same ID)</span></label>
+        <label className="text-xs font-medium text-[var(--color-muted)] mb-1 block">ID column <span className="text-[var(--color-muted)] font-normal">(optional — groups rows with same ID)</span></label>
         <select value={idColId} onChange={e => setIdColId(e.target.value)}
           className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] bg-white">
           <option value="">None</option>
           {idOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-[var(--color-danger)]">{error}</p>}
       <div className="flex justify-end pt-1">
         <button onClick={handleUnstack} disabled={!canUnstack}
           className="px-4 py-2 rounded-lg text-sm bg-[var(--color-accent)] text-white font-medium disabled:opacity-40">
@@ -555,7 +555,7 @@ function FilterSection() {
           {activeFilters.map(filter => {
             const ops = filter.colType === 'numeric' ? NUMERIC_OPS : CAT_OPS
             return (
-              <div key={filter.id} className="flex items-center gap-2 p-2 border border-[var(--color-border)] rounded-lg bg-slate-50">
+              <div key={filter.id} className="flex items-center gap-2 p-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-bg)]">
                 {/* Column select */}
                 <select
                   value={filter.colId}
@@ -594,7 +594,7 @@ function FilterSection() {
                   </>
                 )}
 
-                <button onClick={() => removeFilter(filter.id)} className="flex-shrink-0 text-slate-400 hover:text-red-500">
+                <button onClick={() => removeFilter(filter.id)} className="flex-shrink-0 text-[var(--color-muted)] hover:text-[var(--color-danger)]">
                   <X size={14} />
                 </button>
               </div>
@@ -604,13 +604,13 @@ function FilterSection() {
       )}
 
       <button onClick={addFilter} disabled={grid.columns.length === 0}
-        className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-accent)] hover:text-teal-700 disabled:opacity-40">
+        className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-accent)] hover:opacity-80 disabled:opacity-40">
         <Plus size={13} /> Add Filter
       </button>
 
       {activeFilters.length > 0 && (
         <div className="pt-1">
-          <button onClick={() => setRowFilters([])} className="text-xs text-[var(--color-muted)] hover:text-red-500">
+          <button onClick={() => setRowFilters([])} className="text-xs text-[var(--color-muted)] hover:text-[var(--color-danger)]">
             Clear all filters
           </button>
         </div>
@@ -650,13 +650,13 @@ export function DataOperationsModal({ open, onClose, defaultSection }: Props) {
       >
 
         {/* Left sidebar */}
-        <div className="w-44 flex-shrink-0 bg-slate-50 border-r border-[var(--color-border)] py-4 overflow-y-auto">
+        <div className="w-44 flex-shrink-0 bg-[var(--color-bg)] border-r border-[var(--color-border)] py-4 overflow-y-auto">
           <div className="px-3 pb-2 flex items-center justify-between">
             <h2 className="font-semibold text-[var(--color-text)] text-sm">Data</h2>
           </div>
           {NAV.map(group => (
             <div key={group.group} className="mb-3">
-              <div className="px-3 py-1 text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">{group.group}</div>
+              <div className="px-3 py-1 text-[10px] font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wider">{group.group}</div>
               {group.items.map(item => (
                 <button
                   key={item.id}
@@ -664,7 +664,7 @@ export function DataOperationsModal({ open, onClose, defaultSection }: Props) {
                   className={`w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center justify-between ${
                     section === item.id
                       ? 'bg-[var(--color-accent-light)] text-[var(--color-accent)] font-medium'
-                      : 'text-[var(--color-text)] hover:bg-slate-100'
+                      : 'text-[var(--color-text)] hover:bg-[var(--color-border)]'
                   }`}
                 >
                   {item.label}

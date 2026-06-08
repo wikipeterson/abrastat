@@ -93,14 +93,14 @@ export function RecodeModal({ column, onClose }: Props) {
             <label className="text-xs font-medium text-[var(--color-muted)]">Rules (first match wins)</label>
             <button
               onClick={addRule}
-              className="flex items-center gap-1 text-xs text-[var(--color-accent)] hover:text-teal-700 font-medium"
+              className="flex items-center gap-1 text-xs text-[var(--color-accent)] hover:text-[var(--color-accent-strong)] font-medium"
             >
               <Plus size={12} /> Add Rule
             </button>
           </div>
 
           <div className="border border-[var(--color-border)] rounded-lg overflow-hidden">
-            <div className="grid text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide bg-slate-50 px-3 py-1.5"
+            <div className="grid text-[10px] font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide bg-[var(--color-bg)] px-3 py-1.5"
               style={{ gridTemplateColumns: '80px 80px 16px 80px 80px 1fr 28px' }}>
               <span>Min op</span>
               <span>Min value</span>
@@ -154,7 +154,7 @@ export function RecodeModal({ column, onClose }: Props) {
                 <button
                   onClick={() => removeRule(rule.id)}
                   disabled={rules.length === 1}
-                  className="flex items-center justify-center text-slate-400 hover:text-red-500 disabled:opacity-30"
+                  className="flex items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-danger)] disabled:opacity-30"
                 >
                   <Trash2 size={13} />
                 </button>
@@ -174,8 +174,8 @@ export function RecodeModal({ column, onClose }: Props) {
                 return (
                   <div key={i} className="flex items-center gap-2 text-xs">
                     <span className="font-mono text-[var(--color-muted)] w-16 text-right">{val}</span>
-                    <span className="text-slate-400">→</span>
-                    <span className={`font-medium ${label ? 'text-[var(--color-accent)]' : 'text-slate-400 italic'}`}>
+                    <span className="text-[var(--color-muted)]">→</span>
+                    <span className={`font-medium ${label ? 'text-[var(--color-accent)]' : 'text-[var(--color-muted)] italic'}`}>
                       {label || '(no match)'}
                     </span>
                   </div>
@@ -187,7 +187,7 @@ export function RecodeModal({ column, onClose }: Props) {
 
         {/* Actions */}
         <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-slate-100">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-[var(--color-bg)]">
             Cancel
           </button>
           <button

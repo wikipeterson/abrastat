@@ -117,10 +117,10 @@ export function GuessResidual({ onDone }: Props) {
               onClick={() => choose(opt.displayLabel)}
               disabled={phase === 'revealed'}
               className={`rounded-xl border-2 overflow-hidden transition-all ${
-                correct ? 'border-green-500' : wrong ? 'border-red-400' : chosen === opt.displayLabel ? 'border-[var(--color-accent)]' : 'border-slate-200 hover:border-[var(--color-accent)]'
+                correct ? 'border-[var(--color-accent)]' : wrong ? 'border-[var(--color-danger)]' : chosen === opt.displayLabel ? 'border-[var(--color-accent)]' : 'border-[var(--color-border)] hover:border-[var(--color-accent)]'
               }`}
             >
-              <div className="text-xs font-semibold text-center py-0.5 bg-slate-50 text-[var(--color-muted)]">
+              <div className="text-xs font-semibold text-center py-0.5 bg-[var(--color-bg)] text-[var(--color-muted)]">
                 {opt.displayLabel}
                 {correct && ' ✓'}
                 {wrong && ' ✗'}
@@ -149,7 +149,7 @@ export function GuessResidual({ onDone }: Props) {
 
       {phase === 'revealed' && (
         <div className="space-y-2">
-          <div className={`text-center py-2 rounded-xl font-semibold text-sm ${isCorrect ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+          <div className={`text-center py-2 rounded-xl font-semibold text-sm ${isCorrect ? 'bg-[var(--color-accent-light)] text-[var(--color-accent-strong)]' : 'bg-[var(--color-danger-light)] text-[var(--color-danger)]'}`}>
             {isCorrect ? '✓ Correct! +100 pts' : `✗ Wrong — the correct residual plot has random scatter around zero`}
           </div>
           <button

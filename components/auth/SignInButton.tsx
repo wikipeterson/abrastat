@@ -111,7 +111,7 @@ export function SignInButton({ googleOnly = false }: SignInButtonProps) {
                 setMessage(null)
               }}
               className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-                mode === 'signin' ? 'bg-[var(--color-accent)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                mode === 'signin' ? 'bg-[var(--color-accent)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
               }`}
             >
               Sign In
@@ -123,7 +123,7 @@ export function SignInButton({ googleOnly = false }: SignInButtonProps) {
                 setMessage(null)
               }}
               className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-                mode === 'signup' ? 'bg-[var(--color-accent)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                mode === 'signup' ? 'bg-[var(--color-accent)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
               }`}
             >
               Create Account
@@ -151,7 +151,7 @@ export function SignInButton({ googleOnly = false }: SignInButtonProps) {
             <button
               onClick={handleEmailAuth}
               disabled={!canSubmit || submitting || googleLoading}
-              className="w-full rounded-xl bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-xl bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? 'Working…' : mode === 'signin' ? 'Sign In with Email' : 'Create Account'}
             </button>
@@ -168,7 +168,7 @@ export function SignInButton({ googleOnly = false }: SignInButtonProps) {
         <button
           onClick={handleGoogleSignIn}
           disabled={submitting || googleLoading}
-          className="flex w-full items-center justify-center gap-3 rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {googleLoading ? (
             <span className="h-5 w-5 rounded-full border-2 border-[var(--color-accent)] border-t-transparent animate-spin" />
@@ -188,7 +188,7 @@ export function SignInButton({ googleOnly = false }: SignInButtonProps) {
           </button>
         )}
 
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
         {message && <p className="text-sm text-[var(--color-accent)]">{message}</p>}
       </div>
     </div>

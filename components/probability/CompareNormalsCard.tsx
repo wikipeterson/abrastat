@@ -280,7 +280,7 @@ export function CompareNormalsCard() {
           </div>
 
           {/* Derived: D = A − B */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-slate-50 p-3 space-y-1.5">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-3 space-y-1.5">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: COLOR_D }} />
               <span className="text-sm font-bold text-[var(--color-text)]">{lblA} − {lblB}</span>
@@ -296,7 +296,7 @@ export function CompareNormalsCard() {
 
           {/* Probability controls */}
           <div className="rounded-xl border border-[var(--color-border)] p-3 space-y-2.5">
-            <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-muted)]">Probability</div>
+            <div className="text-xs font-mono font-bold uppercase tracking-wide text-[var(--color-muted)]">Probability</div>
 
             <select
               value={mode} onChange={e => setMode(e.target.value as ProbMode)}
@@ -331,7 +331,7 @@ export function CompareNormalsCard() {
               <div className="text-[10px] text-[var(--color-accent)] font-medium mb-0.5">
                 {calc.threshLabel}
               </div>
-              <div className="text-2xl font-black text-[var(--color-text)]">
+              <div className="text-2xl font-mono tabular-nums font-black text-[var(--color-text)]">
                 {calc.prob.toFixed(4)}
               </div>
             </div>

@@ -58,7 +58,7 @@ function MultiVarDropZone({ id, varCols, onClearVar, onAssignVar }: {
 
   return (
     <div className="relative flex-1 min-w-0">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-1">Variable</div>
+      <div className="text-[10px] font-mono font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-1">Variable</div>
       <div
         ref={node => {
           setNodeRef(node)
@@ -77,8 +77,8 @@ function MultiVarDropZone({ id, varCols, onClearVar, onAssignVar }: {
           isOver
             ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
             : varCols.length === 0
-              ? 'border-dashed border-[var(--color-border)] bg-slate-50'
-              : 'border-[var(--color-border)] bg-slate-50'
+              ? 'border-dashed border-[var(--color-border)] bg-[var(--color-bg)]'
+              : 'border-[var(--color-border)] bg-[var(--color-bg)]'
         }`}
       >
         {varCols.length === 0 ? (
@@ -107,7 +107,7 @@ function MultiVarDropZone({ id, varCols, onClearVar, onAssignVar }: {
           className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 max-h-80 overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-[var(--shadow-card)]"
         >
           {selectedColumns.length > 0 && (
-            <div className="px-2 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)]">
+            <div className="px-2 pt-1 pb-2 text-[10px] font-mono font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)]">
               Selected
             </div>
           )}
@@ -116,7 +116,7 @@ function MultiVarDropZone({ id, varCols, onClearVar, onAssignVar }: {
             return (
               <div key={col.id}>
                 {showDivider && (
-                  <div className="px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)]">
+                  <div className="px-2 pt-2 pb-1 text-[10px] font-mono font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)]">
                     All variables
                   </div>
                 )}
@@ -243,8 +243,8 @@ export function SummaryCard({ cardId, config, onClearZone, onAssignZone, onRemov
     <div className={hideHeader ? '' : 'bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] overflow-hidden'}>
       {!hideHeader && (
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
-          <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">Summary Stats</span>
-          <button onClick={onRemove} className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none">×</button>
+          <span className="text-sm font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">Summary Stats</span>
+          <button onClick={onRemove} className="text-[var(--color-muted)] hover:text-[var(--color-danger)] transition-colors text-xl leading-none">×</button>
         </div>
       )}
 

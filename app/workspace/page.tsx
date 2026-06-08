@@ -208,7 +208,7 @@ function VariableSidebar({
         ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <div className="px-3 py-2 border-b border-[var(--color-border)] flex items-center justify-between">
-          <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Variables</div>
+          <div className="text-xs font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">Variables</div>
           <button onClick={onClose} className="md:hidden text-[var(--color-muted)] text-lg leading-none">×</button>
         </div>
 
@@ -235,8 +235,8 @@ function VariableSidebar({
                   isSelected
                     ? 'bg-[var(--color-gold-light)] text-[#5A3A00] ring-2 ring-inset ring-[var(--color-gold)]'
                     : isNumeric
-                      ? 'bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100'
-                      : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200'
+                      ? 'bg-[var(--color-accent-light)] text-[var(--color-accent-strong)] border border-[var(--color-accent-light)] hover:bg-[var(--color-accent-light)]'
+                      : 'bg-[var(--color-bg)] text-[var(--color-muted)] border border-[var(--color-border)] hover:bg-[var(--color-border)]'
                 }`}
               >
                 <span className={`text-[10px] font-mono font-bold flex-shrink-0 ${isSelected ? 'opacity-70' : 'opacity-50'}`}>
@@ -293,7 +293,7 @@ function LibrarySidebar({
         ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <div className="px-3 py-2 border-b border-[var(--color-border)] flex items-center justify-between">
-          <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Library</div>
+          <div className="text-xs font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">Library</div>
           <button onClick={onClose} className="md:hidden text-[var(--color-muted)] text-lg leading-none">×</button>
         </div>
 
@@ -311,7 +311,7 @@ function LibrarySidebar({
                   ? 'bg-[var(--color-accent)] text-white'
                   : item.soon
                     ? 'text-[var(--color-border)] cursor-default'
-                    : 'text-[var(--color-text)] hover:bg-slate-100'
+                    : 'text-[var(--color-text)] hover:bg-[var(--color-bg)]'
               }`}
             >
               <span>{item.label}</span>
@@ -448,8 +448,8 @@ function DatasetsBrowser({
               <h3 className="font-semibold text-[var(--color-text)] mb-2">Delete dataset?</h3>
               <p className="text-sm text-[var(--color-muted)] mb-4">This cannot be undone.</p>
               <div className="flex justify-end gap-2">
-                <button onClick={() => setConfirmDelete(null)} className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-slate-100">Cancel</button>
-                <button onClick={() => handleDelete(confirmDelete)} className="px-4 py-2 rounded-lg text-sm bg-red-500 text-white font-medium">Delete</button>
+                <button onClick={() => setConfirmDelete(null)} className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-[var(--color-bg)]">Cancel</button>
+                <button onClick={() => handleDelete(confirmDelete)} className="px-4 py-2 rounded-lg text-sm bg-[var(--color-danger)] text-white font-medium">Delete</button>
               </div>
             </div>
           </div>
@@ -463,7 +463,7 @@ function PollsPlaceholder() {
   return (
     <div className="flex-1 flex items-center justify-center px-6">
       <div className="max-w-xl text-center space-y-2">
-        <h2 className="text-xl font-semibold text-[var(--color-text)]">Polls</h2>
+        <h2 className="text-xl font-serif italic font-semibold text-[var(--color-text)]">Polls</h2>
         <p className="text-[var(--color-muted)]">
           Polls will live here in the library shell. For now, this section is still being built.
         </p>
@@ -477,7 +477,7 @@ function AppletsBrowser() {
     <div className="flex-1 min-h-0 overflow-y-auto">
       <div className="max-w-5xl mx-auto w-full px-6 py-6 space-y-4">
         <div className="space-y-1">
-          <h2 className="text-xl font-semibold text-[var(--color-text)]">Applets</h2>
+          <h2 className="text-xl font-serif italic font-semibold text-[var(--color-text)]">Applets</h2>
           <p className="text-[var(--color-muted)]">
             Standalone interactive tools you can open directly.
           </p>
@@ -491,7 +491,7 @@ function AppletsBrowser() {
             <div className="flex items-start gap-4">
               <div className="text-3xl leading-none">🎲</div>
               <div className="space-y-1">
-                <div className="text-lg font-semibold text-[var(--color-text)]">Dice Roller</div>
+                <div className="text-lg font-serif italic font-semibold text-[var(--color-text)]">Dice Roller</div>
                 <p className="text-sm text-[var(--color-muted)] max-w-md">
                   Roll d6, d10, and d100 with fast batches and linked results.
                 </p>
@@ -509,7 +509,7 @@ function AppletsBrowser() {
             <div className="flex items-start gap-4">
               <div className="text-3xl leading-none">🔀</div>
               <div className="space-y-1">
-                <div className="text-lg font-semibold text-[var(--color-text)]">Coin Flipper</div>
+                <div className="text-lg font-serif italic font-semibold text-[var(--color-text)]">Coin Flipper</div>
                 <p className="text-sm text-[var(--color-muted)] max-w-md">
                   Simulate groups of coin flips and graph the distribution of heads or percent heads.
                 </p>
@@ -527,7 +527,7 @@ function AppletsBrowser() {
             <div className="flex items-start gap-4">
               <div className="text-3xl leading-none">🎛️</div>
               <div className="space-y-1">
-                <div className="text-lg font-semibold text-[var(--color-text)]">Random Number Generator</div>
+                <div className="text-lg font-serif italic font-semibold text-[var(--color-text)]">Random Number Generator</div>
                 <p className="text-sm text-[var(--color-muted)] max-w-md">
                   Generate random integers in a chosen range, one at a time or in batches.
                 </p>
@@ -545,7 +545,7 @@ function AppletsBrowser() {
             <div className="flex items-start gap-4">
               <div className="text-3xl leading-none">🎡</div>
               <div className="space-y-1">
-                <div className="text-lg font-semibold text-[var(--color-text)]">Spinner</div>
+                <div className="text-lg font-serif italic font-semibold text-[var(--color-text)]">Spinner</div>
                 <p className="text-sm text-[var(--color-muted)] max-w-md">
                   Prize-wheel randomizer for probability demonstrations and classroom activities.
                 </p>
@@ -563,7 +563,7 @@ function AppletsBrowser() {
             <div className="flex items-start gap-4">
               <div className="text-3xl leading-none">🟢</div>
               <div className="space-y-1">
-                <div className="text-lg font-semibold text-[var(--color-text)]">Galton Board</div>
+                <div className="text-lg font-serif italic font-semibold text-[var(--color-text)]">Galton Board</div>
                 <p className="text-sm text-[var(--color-muted)] max-w-md">
                   Drop balls through pegs and watch the distribution build bin by bin.
                 </p>
@@ -587,8 +587,8 @@ function UnsavedGuard({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
         <h3 className="font-semibold text-[var(--color-text)] mb-2">Unsaved changes</h3>
         <p className="text-sm text-[var(--color-muted)] mb-4">You have unsaved changes. Starting a new dataset will discard them.</p>
         <div className="flex justify-end gap-2">
-          <button onClick={onCancel} className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-slate-100">Keep editing</button>
-          <button onClick={onConfirm} className="px-4 py-2 rounded-lg text-sm bg-red-500 text-white font-medium">Discard & continue</button>
+          <button onClick={onCancel} className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-[var(--color-bg)]">Keep editing</button>
+          <button onClick={onConfirm} className="px-4 py-2 rounded-lg text-sm bg-[var(--color-danger)] text-white font-medium">Discard & continue</button>
         </div>
       </div>
     </div>
@@ -899,7 +899,7 @@ function WorkspaceContent() {
             ? (
               <button
                 onClick={gameChrome.onBack}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-slate-100 transition-colors"
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors"
               >
                 Back
               </button>

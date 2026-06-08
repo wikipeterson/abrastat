@@ -514,7 +514,7 @@ export function GaltonBoard() {
             height={CH}
             style={{ display: 'block' }}
           />
-          <div className="border-t border-[var(--color-border)] bg-slate-50 px-4 py-2 text-center">
+          <div className="border-t border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2 text-center">
             <p className="text-xs text-[var(--color-muted)]">
               {totalDropped === 0
                 ? 'Drop balls to see the binomial distribution emerge'
@@ -531,7 +531,7 @@ export function GaltonBoard() {
 
         {/* Board setup */}
         <div className="rounded-2xl border border-[var(--color-border)] bg-white shadow-sm p-4 space-y-4">
-          <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-muted)]">Board Setup</div>
+          <div className="text-xs font-mono font-bold uppercase tracking-wide text-[var(--color-muted)]">Board Setup</div>
 
           <label className="block space-y-1">
             <div className="flex justify-between">
@@ -558,7 +558,7 @@ export function GaltonBoard() {
                   className={`flex-1 py-1.5 font-medium capitalize transition-colors ${
                     speed === s
                       ? 'bg-[var(--color-accent)] text-white'
-                      : 'text-[var(--color-muted)] hover:bg-slate-50'
+                      : 'text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                   }`}
                 >
                   {s}
@@ -580,13 +580,13 @@ export function GaltonBoard() {
 
         {/* Drop controls */}
         <div className="rounded-2xl border border-[var(--color-border)] bg-white shadow-sm p-4 space-y-3">
-          <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-muted)]">Drop Balls</div>
+          <div className="text-xs font-mono font-bold uppercase tracking-wide text-[var(--color-muted)]">Drop Balls</div>
           <div className="grid grid-cols-2 gap-2">
             {([1, 10, 100, 500] as const).map(n => (
               <button key={n}
                 onClick={() => handleDrop(n)}
                 className="rounded-xl border border-[var(--color-border)] py-2.5 text-sm font-bold
-                           text-[var(--color-text)] hover:bg-slate-50 hover:border-[var(--color-accent)]
+                           text-[var(--color-text)] hover:bg-[var(--color-bg)] hover:border-[var(--color-accent)]
                            transition-colors"
               >
                 {n === 1 ? 'Drop One' : `Drop ${n.toLocaleString()}`}
@@ -595,7 +595,7 @@ export function GaltonBoard() {
           </div>
           <button onClick={handleReset} disabled={isRunning}
             className="w-full rounded-xl border border-[var(--color-border)] py-2.5 text-sm font-medium
-                       text-[var(--color-muted)] hover:bg-slate-50 disabled:opacity-40
+                       text-[var(--color-muted)] hover:bg-[var(--color-bg)] disabled:opacity-40
                        disabled:cursor-not-allowed transition-colors"
           >
             Reset

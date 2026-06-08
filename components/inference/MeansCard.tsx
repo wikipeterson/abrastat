@@ -78,8 +78,17 @@ interface Props {
   onAssignZone: (zone: 'var1' | 'var2', colId: string) => boolean
 }
 
+function getCssVar(name: string, fallback: string): string {
+  if (typeof document === 'undefined') return fallback
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+}
+
 export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) {
   const { grid } = useStore()
+  const accentColor = getCssVar('--color-accent', '#16A89B')
+  const goldColor = getCssVar('--color-gold', '#E8920C')
+  const goldTextColor = getCssVar('--color-gold-text', '#8A5800')
+  const mutedColor = getCssVar('--color-muted', '#5A726E')
 
   function handleNativeDrop(zone: 'var1' | 'var2') {
     return (e: React.DragEvent) => {
@@ -307,8 +316,8 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
     return {
       traces: [
         ...shades,
-        { type: 'scatter' as const, mode: 'lines' as const, x: xs, y: ys, line: { color: '#475569', width: 2 }, hoverinfo: 'skip' as const, showlegend: false },
-        { type: 'scatter' as const, mode: 'lines' as const, x: [stat, stat], y: [0, Math.min(pdf(stat) * 1.05, yMax)], line: { color: '#EF4444', width: 2, dash: 'dash' as const }, hoverinfo: 'skip' as const, showlegend: false },
+        { type: 'scatter' as const, mode: 'lines' as const, x: xs, y: ys, line: { color: accentColor, width: 2 }, hoverinfo: 'skip' as const, showlegend: false },
+        { type: 'scatter' as const, mode: 'lines' as const, x: [stat, stat], y: [0, Math.min(pdf(stat) * 1.05, yMax)], line: { color: goldColor, width: 2, dash: 'dash' as const }, hoverinfo: 'skip' as const, showlegend: false },
       ],
       absMax,
       yMax,
@@ -367,7 +376,7 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
             key={p}
             onClick={() => setProcedure(p)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
-              effectiveProcedure === p ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]' : 'bg-white text-[var(--color-muted)] border-[var(--color-border)] hover:bg-slate-50'
+              effectiveProcedure === p ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] border-[var(--color-border)] hover:bg-[var(--color-bg)]'
             }`}
           >
             {procLabels[p]}
@@ -385,7 +394,7 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
       ) : (
         <div className="flex flex-col md:grid md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-3 flex-1 min-h-0">
           <div className="min-h-0 flex flex-col gap-3">
-            <div className="bg-slate-50 rounded-xl p-3 flex-shrink-0 space-y-2">
+            <div className="bg-[var(--color-bg)] rounded-xl p-3 flex-shrink-0 space-y-2">
               {isZProcedure(effectiveProcedure) && (
                 <div className="flex items-center gap-2">
                   <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">σ (known)</label>
@@ -402,7 +411,7 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
                     <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Hₐ:</span>
                     <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
                       {(['less', 'two-sided', 'greater'] as Alternative[]).map((a, i) => (
-                        <button key={a} onClick={() => setAlternative(a)} className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alternative === a ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}>
+                        <button key={a} onClick={() => setAlternative(a)} className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alternative === a ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}>
                           {a === 'less' ? '< (left)' : a === 'two-sided' ? '≠ (two)' : '> (right)'}
                         </button>
                       ))}
@@ -426,7 +435,7 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
 
             {(stats1 || statsA) && (
               <div className="flex-shrink-0">
-                <p className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">Summary Statistics</p>
+                <p className="text-[10px] font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">Summary Statistics</p>
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="text-[var(--color-muted)] text-[10px]">
@@ -477,7 +486,7 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
                     margin: { t: 8, r: 8, b: 32, l: 8 },
                     height: 140,
                     showlegend: false,
-                    annotations: [{ x: testResult.stat, y: chartTraces.yMax * 1.08, text: `${testResult.statLabel} = ${fmt(testResult.stat, 3)}`, showarrow: false, font: { size: 11, color: '#EF4444' }, xanchor: testResult.stat >= 0 ? 'right' : 'left' }],
+                    annotations: [{ x: testResult.stat, y: chartTraces.yMax * 1.08, text: `${testResult.statLabel} = ${fmt(testResult.stat, 3)}`, showarrow: false, font: { size: 11, color: goldTextColor }, xanchor: testResult.stat >= 0 ? 'right' : 'left' }],
                   }}
                 />
               </div>
@@ -511,8 +520,8 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
                 </div>
 
                 {isTestProcedure(effectiveProcedure) && (
-                  <div className={`rounded-xl p-3 border ${rejected ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
-                    <p className={`text-xs font-semibold mb-1 ${rejected ? 'text-red-700' : 'text-green-700'}`}>{rejected ? 'Reject H₀' : 'Fail to Reject H₀'}</p>
+                  <div className={`rounded-xl p-3 border ${rejected ? 'bg-[var(--color-danger-light)] border-[var(--color-danger)]' : 'bg-[var(--color-accent-light)] border-[var(--color-border)]'}`}>
+                    <p className={`text-xs font-semibold mb-1 ${rejected ? 'text-[var(--color-danger)]' : 'text-[var(--color-accent-strong)]'}`}>{rejected ? 'Reject H₀' : 'Fail to Reject H₀'}</p>
                     <p className="text-xs text-[var(--color-muted)] leading-relaxed">
                       {rejected
                         ? `At α = ${alpha}, there is sufficient evidence to conclude ${altMu} ${altSymbol} ${h0}.`
@@ -543,9 +552,9 @@ function SummaryRow({ label, s }: { label: string; s: SummaryStats }) {
 
 function StatBox({ label, value, highlight }: { label: string; value: string; highlight?: 'reject' | 'keep' }) {
   return (
-    <div className={`rounded-xl p-3 text-center ${highlight === 'reject' ? 'bg-red-50' : highlight === 'keep' ? 'bg-green-50' : 'bg-slate-50'}`}>
-      <p className="text-[10px] text-[var(--color-muted)] mb-0.5">{label}</p>
-      <p className={`text-base font-semibold font-mono ${highlight === 'reject' ? 'text-red-600' : highlight === 'keep' ? 'text-green-700' : 'text-[var(--color-text)]'}`}>{value}</p>
+    <div className={`rounded-xl p-3 text-center ${highlight === 'reject' ? 'bg-[var(--color-danger-light)]' : highlight === 'keep' ? 'bg-[var(--color-accent-light)]' : 'bg-[var(--color-bg)]'}`}>
+      <p className="text-[10px] font-mono text-[var(--color-muted)] mb-0.5">{label}</p>
+      <p className={`text-base font-semibold font-mono tabular-nums ${highlight === 'reject' ? 'text-[var(--color-danger)]' : highlight === 'keep' ? 'text-[var(--color-accent-strong)]' : 'text-[var(--color-text)]'}`}>{value}</p>
     </div>
   )
 }

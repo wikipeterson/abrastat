@@ -292,33 +292,33 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
       <style>{`@keyframes dot-drop-full{from{transform:translateY(-${PH}px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
       <defs><clipPath id={clipId}><rect x={0} y={0} width={PW} height={PH}/></clipPath></defs>
       <g transform={`translate(${MG.l},${MG.t})`}>
-        <path d={shade} fill="#0EA5A0" opacity={0.10}/>
-        <line x1={0} y1={PH} x2={PW} y2={PH} stroke="#E2E8F0" strokeWidth={1.5}/>
+        <path d={shade} fill="var(--color-gold)" opacity={0.10}/>
+        <line x1={0} y1={PH} x2={PW} y2={PH} stroke="var(--color-text)" strokeWidth={1.5}/>
         {tickValues.map(v => (
           <g key={v} transform={`translate(${xOf(v)},${PH})`}>
-            <line y2={3} stroke="#CBD5E1" strokeWidth={1}/>
-            <text y={12} textAnchor="middle" fontSize={8} fill="#94A3B8" fontFamily="DM Sans,sans-serif">{tickLabel(v)}</text>
+            <line y2={3} stroke="var(--color-muted)" strokeWidth={1}/>
+            <text y={12} textAnchor="middle" fontSize={8} fill="var(--color-muted)" fontFamily="DM Sans,sans-serif">{tickLabel(v)}</text>
           </g>
         ))}
         <g clipPath={`url(#${clipId})`}>
           {circles.map((c,i) => (
-            <circle key={i} cx={c.cx} cy={c.cy} r={dotR} fill={c.extreme?'#0EA5A0':'#94A3B8'} opacity={0.85}
+            <circle key={i} cx={c.cx} cy={c.cy} r={dotR} fill={c.extreme?'var(--color-gold)':'var(--color-accent)'} opacity={0.85}
               style={i===circles.length-1&&values.length>0?{animation:'dot-drop-full 700ms ease-out'}:undefined}/>
           ))}
           {normalPath && (
             <polyline
               points={normalPath}
               fill="none"
-              stroke="#F59E0B"
+              stroke="var(--color-accent)"
               strokeWidth={2}
               strokeLinejoin="round"
               strokeLinecap="round"
             />
           )}
         </g>
-        <line x1={obsX} y1={0} x2={obsX} y2={PH} stroke="#EF4444" strokeWidth={1.8} strokeDasharray="4,3"/>
-        <text x={obsX+(diffObs>=0?3:-3)} y={5} textAnchor={diffObs>=0?'start':'end'} fontSize={8} fill="#EF4444" fontFamily="DM Sans,sans-serif" fontWeight="600">obs</text>
-        <text x={PW/2} y={PH+24} textAnchor="middle" fontSize={9} fill="#94A3B8" fontFamily="DM Sans,sans-serif">Simulated p̂₁ − p̂₂</text>
+        <line x1={obsX} y1={0} x2={obsX} y2={PH} stroke="var(--color-gold)" strokeWidth={1.8} strokeDasharray="4,3"/>
+        <text x={obsX+(diffObs>=0?3:-3)} y={5} textAnchor={diffObs>=0?'start':'end'} fontSize={8} fill="var(--color-gold-text)" fontFamily="DM Sans,sans-serif" fontWeight="600">obs</text>
+        <text x={PW/2} y={PH+24} textAnchor="middle" fontSize={9} fill="var(--color-muted)" fontFamily="DM Sans,sans-serif">Simulated p̂₁ − p̂₂</text>
       </g>
     </svg>
   )
@@ -522,7 +522,7 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone, onAssign
                   <span className="font-semibold text-[var(--color-text)]">{data.group2Label}</span>: p̂₂ = {data.s2}/{data.n2} = <span className="font-semibold text-[var(--color-text)]">{data.p2.toFixed(3)}</span>
                 </div>
                 <div className="text-[var(--color-muted)]">
-                  p̂₁ − p̂₂ = {data.p1.toFixed(3)} − {data.p2.toFixed(3)} = <span className="font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</span>
+                  p̂₁ − p̂₂ = {data.p1.toFixed(3)} − {data.p2.toFixed(3)} = <span className="font-mono tabular-nums font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</span>
                 </div>
               </div>
             )}
@@ -549,7 +549,7 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone, onAssign
             {data&&(
               <div className="rounded-xl bg-[var(--color-accent-light)] border border-[var(--color-border)] px-4 py-2 text-center text-sm">
                 <span className="text-[var(--color-muted)]">p̂₁ − p̂₂ = {data.p1.toFixed(3)} − {data.p2.toFixed(3)} = </span>
-                <span className="font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</span>
+                <span className="font-mono tabular-nums font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</span>
               </div>
             )}
           </div>
@@ -557,18 +557,18 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone, onAssign
 
         <div className="flex flex-wrap items-center gap-3 pt-1">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₀: p₁−p₂=</span>
+            <span className="text-xs font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₀: p₁−p₂=</span>
             <input type="number" min={-1} max={1} step={0.01} value={nullDiff} onChange={e=>setNullDiff(e.target.value)}
               className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]"/>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₁</span>
-            <span className="text-sm font-mono font-medium text-[var(--color-text)]">p₁ − p₂</span>
+            <span className="text-xs font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">H₁</span>
+            <span className="text-sm font-mono tabular-nums font-medium text-[var(--color-text)]">p₁ − p₂</span>
             <select value={alternative} onChange={e=>setAlternative(e.target.value as Alternative)}
               className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
               <option value="less">&lt;</option><option value="greater">&gt;</option><option value="two">≠</option>
             </select>
-            <span className="text-sm font-mono font-medium text-[var(--color-text)]">{nullDiff}</span>
+            <span className="text-sm font-mono tabular-nums font-medium text-[var(--color-text)]">{nullDiff}</span>
           </div>
           <button onClick={handleLaunch} disabled={!data}
             className="ml-auto rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity">
@@ -610,7 +610,7 @@ function FractionInput({ label, numLabel, denLabel, numValue, denValue, onChange
             className="w-16 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)] [appearance:textfield]"/>
         </div>
       </div>
-      <div className="text-sm text-[var(--color-muted)]">= <span className="font-bold text-[var(--color-text)]">{phat}</span></div>
+      <div className="text-sm text-[var(--color-muted)]">= <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{phat}</span></div>
     </div>
   )
 }
@@ -830,14 +830,14 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-4 space-y-4">
-        <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-xs text-[var(--color-muted)]">
+        <div className="rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] px-3 py-2.5 text-xs text-[var(--color-muted)]">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
             <span><span className="font-semibold text-[var(--color-text)]">H₀:</span> p₁ − p₂ = {nullDiff}</span>
             <span><span className="font-semibold text-[var(--color-text)]">Hₐ:</span> {altStatement}</span>
             <span><span className="font-semibold text-[var(--color-text)]">n₁:</span> {data.n1}</span>
             <span><span className="font-semibold text-[var(--color-text)]">n₂:</span> {data.n2}</span>
             <span><span className="font-semibold text-[var(--color-text)]">N:</span> {cases.length}</span>
-            <span><span className="font-semibold text-[var(--color-text)]">p̂₁ − p̂₂:</span> <span className="font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</span></span>
+            <span><span className="font-semibold text-[var(--color-text)]">p̂₁ − p̂₂:</span> <span className="font-mono tabular-nums font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</span></span>
           </div>
         </div>
 
@@ -845,7 +845,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
           <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
             <div className="overflow-x-auto flex justify-center">
               <div className="w-fit">
-                <div className="relative bg-slate-50 border-b border-[var(--color-border)] flex-shrink-0" style={{width:CANVAS_W,height:HEADER_H}}>
+                <div className="relative bg-[var(--color-bg)] border-b border-[var(--color-border)] flex-shrink-0" style={{width:CANVAS_W,height:HEADER_H}}>
                   <span style={{position:'absolute',left:COL_CX.left,top:showColStats?15:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label1}</span>
                   {showCenter&&<span style={{position:'absolute',left:COL_CX.center,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,color:'var(--color-muted)'}}>Pooled</span>}
                   <span style={{position:'absolute',left:COL_CX.right,top:showColStats?15:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label2}</span>
@@ -860,20 +860,20 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
                 <div className="relative bg-white flex-shrink-0 overflow-hidden" style={{width:CANVAS_W,height:canvasH,transition:'height 400ms ease'}}>
                   <div className="absolute inset-y-0 transition-all duration-500" style={{
                     left:COL_CX.left-COL_W/2-4,width:COL_W+8,
-                    background:showSplit?'rgba(14,165,160,0.04)':'transparent',
-                    borderRight:showSplit?'1px dashed rgba(14,165,160,0.2)':'none',
+                    background:showSplit?'rgba(var(--color-accent-rgb,22,168,155),0.04)':'transparent',
+                    borderRight:showSplit?'1px dashed var(--color-border)':'none',
                   }}/>
                   <div className="absolute inset-y-0 transition-all duration-500" style={{
                     left:COL_CX.right-COL_W/2-4,width:COL_W+8,
-                    background:showSplit?'rgba(14,165,160,0.04)':'transparent',
-                    borderLeft:showSplit?'1px dashed rgba(14,165,160,0.2)':'none',
+                    background:showSplit?'rgba(var(--color-accent-rgb,22,168,155),0.04)':'transparent',
+                    borderLeft:showSplit?'1px dashed var(--color-border)':'none',
                   }}/>
                   {cases.map(c => {
                     const p  = positions.get(c.id) ?? {x:-50,y:-50,rotation:0,delay:0,faceDown:false}
                     const fd = p.faceDown
                     const isSuccess = c.response===1
-                    const bg  = fd?'#1A8C80':isSuccess?'#2EC4B6':'#E2E8F0'
-                    const bdr = fd?'#0D6B63':isSuccess?'#1A8C80':'#CBD5E1'
+                    const bg  = fd?'var(--color-accent-strong)':isSuccess?'var(--color-accent)':'var(--color-border)'
+                    const bdr = fd?'var(--color-accent-strong)':isSuccess?'var(--color-accent-strong)':'var(--color-border)'
                     return (
                       <div key={c.id} style={{
                         position:'absolute',left:p.x,top:p.y,width:layout.w,height:layout.h,
@@ -887,14 +887,14 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
                   })}
                 </div>
 
-                <div className="flex-shrink-0 border-t border-[var(--color-border)] bg-slate-50 px-3 py-1.5" style={{width:CANVAS_W}}>
+                <div className="flex-shrink-0 border-t border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5" style={{width:CANVAS_W}}>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
-                      <span className="inline-block rounded-sm bg-[#2EC4B6] flex-shrink-0" style={{width:8,height:13,boxShadow:'0 1px 2px rgba(0,0,0,0.15)'}}/>
+                      <span className="inline-block rounded-sm bg-[var(--color-accent)] flex-shrink-0" style={{width:8,height:13,boxShadow:'0 1px 2px rgba(0,0,0,0.15)'}}/>
                       {config.successLabel}
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
-                      <span className="inline-block rounded-sm bg-[#E2E8F0] border border-[#CBD5E1] flex-shrink-0" style={{width:8,height:13}}/>
+                      <span className="inline-block rounded-sm bg-[var(--color-border)] flex-shrink-0" style={{width:8,height:13}}/>
                       {config.failureLabel}
                     </div>
                     <span className="ml-auto text-[10px] italic text-[var(--color-muted)]">{CAPTIONS[stage]}</span>
@@ -917,7 +917,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
         <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 flex flex-col gap-1.5">
           <div className="flex gap-4 items-stretch">
             <div className="w-40 flex-shrink-0 flex flex-col gap-3">
-              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
               <div className="flex flex-col items-start gap-2 text-xs text-[var(--color-muted)]">
                 <label className="flex items-center gap-2 select-none">
                   <input
@@ -934,7 +934,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
                 </div>
                 <div className="pt-2 leading-tight">
                   <div>
-                    Extreme: <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
+                    Extreme: <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
                   </div>
                   <div className="pt-1 font-semibold text-[var(--color-accent)]">
                     {pValue!==null?`p ≈ ${pValue<0.001?'< 0.001':pValue.toFixed(4)}`:'p = —'}
@@ -955,7 +955,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
       </div>
 
       {/* ── Controls ── */}
-      <div className="flex-shrink-0 flex flex-wrap items-center gap-2 px-4 py-3 border-t border-[var(--color-border)] bg-slate-50">
+      <div className="flex-shrink-0 flex flex-wrap items-center gap-2 px-4 py-3 border-t border-[var(--color-border)] bg-[var(--color-bg)]">
         <div className="flex items-center gap-1">
           {STEPS.map(({label,stages})=>{
             const active = (stages as Stage[]).includes(stage)&&!isAnimating

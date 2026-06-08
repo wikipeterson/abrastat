@@ -125,7 +125,7 @@ export function Header({
                         className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                           active
                             ? 'bg-[var(--color-accent)] text-white'
-                            : 'text-[var(--color-muted)] hover:bg-slate-100'
+                            : 'text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                         }`}
                       >
                         {tab.label}
@@ -166,7 +166,7 @@ export function Header({
               className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 isDirty
                   ? 'text-[var(--color-accent)] hover:bg-[var(--color-accent-light)]'
-                  : 'text-[var(--color-muted)] hover:bg-slate-100'
+                  : 'text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
               }`}
               aria-label="Save dataset"
             >
@@ -178,7 +178,7 @@ export function Header({
           {onShare && (
             <button
               onClick={onShare}
-              className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-slate-100 transition-colors"
+              className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors"
               aria-label="Share dataset"
             >
               <Share2 size={14} />
@@ -189,7 +189,7 @@ export function Header({
           {onNew && (
             <button
               onClick={onNew}
-              className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-slate-100 transition-colors"
+              className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors"
               aria-label="New dataset"
             >
               <FilePlus size={14} />
@@ -198,7 +198,7 @@ export function Header({
           )}
 
           {!isGuest && showHomeLink && (
-            <Link href="/home" className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-slate-100 transition-colors">
+            <Link href="/home" className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors">
               <Library size={14} />
               <span className="hidden sm:inline">Home</span>
             </Link>
@@ -208,13 +208,13 @@ export function Header({
             <div ref={userMenuRef} className="relative">
               <button
                 onClick={() => setShowUserMenu(v => !v)}
-                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-[var(--color-bg)] transition-colors"
                 aria-label="User menu"
               >
                 {user.photoURL && !isGuest ? (
                   <Image src={user.photoURL} alt="" width={24} height={24} className="rounded-full" referrerPolicy="no-referrer" />
                 ) : (
-                  <div className={`w-6 h-6 rounded-full text-white text-xs flex items-center justify-center font-bold ${isGuest ? 'bg-slate-400' : 'bg-[var(--color-accent)]'}`}>
+                  <div className={`w-6 h-6 rounded-full text-white text-xs flex items-center justify-center font-bold ${isGuest ? 'bg-[var(--color-muted)]' : 'bg-[var(--color-accent)]'}`}>
                     {isGuest ? '?' : (user.displayName?.[0] ?? '?')}
                   </div>
                 )}
@@ -231,7 +231,7 @@ export function Header({
                   {isGuest ? (
                     <Link
                       href="/"
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-accent)] font-medium hover:bg-slate-50"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-accent)] font-medium hover:bg-[var(--color-bg)]"
                       onClick={() => setShowUserMenu(false)}
                     >
                       Sign in to save your work
@@ -239,7 +239,7 @@ export function Header({
                   ) : (
                     <button
                       onClick={handleSignOut}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-text)] hover:bg-slate-50"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-text)] hover:bg-[var(--color-bg)]"
                     >
                       <LogOut size={14} />
                       Sign Out

@@ -28,7 +28,7 @@ export function Modal({ open, onClose, title, children, width = 'max-w-lg' }: Mo
         {title && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)]">
             <h2 className="font-semibold text-[var(--color-text)]">{title}</h2>
-            <button onClick={onClose} className="p-1 rounded hover:bg-slate-100 transition-colors">
+            <button onClick={onClose} className="p-1 rounded hover:bg-[var(--color-bg)] transition-colors">
               <X size={18} />
             </button>
           </div>

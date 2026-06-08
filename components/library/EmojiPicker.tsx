@@ -36,7 +36,7 @@ export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className="w-14 h-14 text-3xl flex items-center justify-center bg-[var(--color-accent-light)] rounded-xl hover:bg-teal-100 transition-colors"
+        className="w-14 h-14 text-3xl flex items-center justify-center bg-[var(--color-accent-light)] rounded-xl hover:bg-[var(--color-accent-light)] transition-colors"
         title="Choose emoji"
       >
         {value}
@@ -52,7 +52,7 @@ export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
                     key={e}
                     type="button"
                     onClick={() => { onChange(e); setOpen(false) }}
-                    className={`text-xl w-8 h-8 flex items-center justify-center rounded hover:bg-slate-100 transition-colors ${value === e ? 'bg-[var(--color-accent-light)]' : ''}`}
+                    className={`text-xl w-8 h-8 flex items-center justify-center rounded hover:bg-[var(--color-bg)] transition-colors ${value === e ? 'bg-[var(--color-accent-light)]' : ''}`}
                   >
                     {e}
                   </button>

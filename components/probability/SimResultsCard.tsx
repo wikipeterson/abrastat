@@ -51,7 +51,7 @@ function ModeSelector({
         className={`px-2.5 py-1 transition-colors ${
           mode === 'sum'
             ? 'bg-[var(--color-accent)] text-white'
-            : 'text-[var(--color-muted)] hover:bg-slate-50'
+            : 'text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
         }`}
       >
         {labels?.primary ?? 'Sum'}
@@ -62,7 +62,7 @@ function ModeSelector({
           className={`px-2.5 py-1 border-l border-[var(--color-border)] transition-colors ${
             mode === 'difference'
               ? 'bg-[var(--color-accent)] text-white'
-              : 'text-[var(--color-muted)] hover:bg-slate-50'
+              : 'text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
           }`}
         >
           {labels?.secondary ?? '|Δ|'}
@@ -378,9 +378,9 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
     <div className="flex flex-col h-full">
       {/* ── Meta strip ── */}
       <div className="flex-shrink-0 flex items-center justify-between px-3 py-2
-                      border-b border-[var(--color-border)] bg-slate-50">
+                      border-b border-[var(--color-border)] bg-[var(--color-bg)]">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+          <span className="text-[10px] font-mono font-semibold uppercase tracking-wide text-[var(--color-muted)]">
             {displaySourceLabel}
           </span>
           {isCoinFlipper ? (
@@ -390,7 +390,7 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
                 className={`px-2.5 py-1 transition-colors ${
                   valueMode === 'count'
                     ? 'bg-[var(--color-accent)] text-white'
-                    : 'text-[var(--color-muted)] hover:bg-slate-50'
+                    : 'text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                 }`}
               >
                 Heads
@@ -400,7 +400,7 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
                 className={`px-2.5 py-1 border-l border-[var(--color-border)] transition-colors ${
                   valueMode === 'proportion'
                     ? 'bg-[var(--color-accent)] text-white'
-                    : 'text-[var(--color-muted)] hover:bg-slate-50'
+                    : 'text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                 }`}
               >
                 % Heads
@@ -416,7 +416,7 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
         <button
           onClick={() => clearSimResults(cardId)}
           disabled={rollCount === 0}
-          className="text-[10px] text-[var(--color-muted)] hover:text-red-500
+          className="text-[10px] text-[var(--color-muted)] hover:text-[var(--color-danger)]
                      disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           Clear
@@ -426,7 +426,7 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
       {isCoinFlipper && (
         <div className="flex-shrink-0 border-b border-[var(--color-border)] bg-white px-3 py-2">
           <div className="flex flex-wrap items-center gap-2 text-[10px] text-[var(--color-muted)]">
-            <span className="font-semibold uppercase tracking-wide">Simulated Proportion</span>
+            <span className="font-mono font-semibold uppercase tracking-wide">Simulated Proportion</span>
             <select
               value={thresholdOp}
               onChange={e => handleThresholdOpChange(e.target.value as '<' | '<=' | '>' | '>=')}
@@ -447,7 +447,7 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
               className="w-24 rounded-md border border-[var(--color-border)] px-2 py-1 text-[12px] text-[var(--color-text)]"
             />
             <span className="text-[12px] text-[var(--color-text)]">
-              = <span className="font-semibold">{matchingProportion.toFixed(4)}</span>
+              = <span className="font-mono tabular-nums font-semibold">{matchingProportion.toFixed(4)}</span>
             </span>
             <span className="text-[11px] text-[var(--color-muted)]">
               ({matchingCount} of {rollCount || 0})
@@ -500,15 +500,15 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
         const max   = sorted[sorted.length - 1]
         return (
           <div className="flex-shrink-0 flex items-center gap-4 px-4 py-2
-                          border-t border-[var(--color-border)] bg-slate-50">
+                          border-t border-[var(--color-border)] bg-[var(--color-bg)]">
             {[
               { label: 'Mean', val: mean.toFixed(2) },
               { label: 'Min',  val: String(min) },
               { label: 'Max',  val: String(max) },
             ].map(({ label, val }) => (
               <div key={label} className="text-center">
-                <div className="text-[10px] text-[var(--color-muted)] uppercase tracking-wide">{label}</div>
-                <div className="text-sm font-bold text-[var(--color-text)]">{val}</div>
+                <div className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wide">{label}</div>
+                <div className="text-sm font-mono tabular-nums font-bold text-[var(--color-text)]">{val}</div>
               </div>
             ))}
           </div>

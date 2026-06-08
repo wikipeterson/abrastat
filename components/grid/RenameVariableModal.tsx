@@ -65,7 +65,7 @@ export function RenameVariableModal({ column, onClose }: Props) {
         </div>
 
         <div className="mt-5 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-[var(--color-muted)] hover:bg-slate-100">
+          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-[var(--color-muted)] hover:bg-[var(--color-bg)]">
             Cancel
           </button>
           <button

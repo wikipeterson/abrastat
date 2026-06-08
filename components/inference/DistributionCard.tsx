@@ -136,7 +136,14 @@ interface DistributionCardProps {
   preFill?: DistributionPreFill
 }
 
+function getCssVar(name: string, fallback: string): string {
+  if (typeof document === 'undefined') return fallback
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+}
+
 export function DistributionCard({ preFill }: DistributionCardProps) {
+  const accentColor = getCssVar('--color-accent', '#16A89B')
+  const goldColor = getCssVar('--color-gold', '#E8920C')
   const [dist, setDist] = useState<DistType>(preFill?.dist ?? 'normal')
   const distSymbol = getDistSymbol(dist)
 
@@ -264,7 +271,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
           x: shadeXs.length > 1 ? [shadeXs[0], ...shadeXs, shadeXs.at(-1)] : [],
           y: shadeXs.length > 1 ? [0, ...shadeYs, 0] : [],
           fill: 'toself' as const,
-          fillcolor: ABRA_COLORS[0] + '30',
+          fillcolor: goldColor + '30',
           line: { color: 'transparent' as const },
           hoverinfo: 'skip' as const,
           showlegend: false,
@@ -274,7 +281,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
           mode: 'lines' as const,
           x: xs,
           y: ys,
-          line: { color: ABRA_COLORS[0], width: 2.5 },
+          line: { color: accentColor, width: 2.5 },
           hoverinfo: 'skip' as const,
           showlegend: false,
         },
@@ -298,7 +305,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
       x: ks,
       y: ps,
       marker: {
-        color: ks.map(k => (inShade(k) ? ABRA_COLORS[0] : '#CBD5E1')),
+        color: ks.map(k => (inShade(k) ? goldColor : accentColor + '60')),
         line: { color: 'white', width: 1 },
       },
       hovertemplate: 'k = %{x}<br>P(X = %{x}) = %{y:.4f}<extra></extra>',
@@ -340,7 +347,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
             className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
               dist === item.id
                 ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
-                : 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-slate-300'
+                : 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-[var(--color-accent)]'
             }`}
           >
             {item.label}
@@ -393,7 +400,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
         </label>
       </div>
 
-      <div className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-slate-50 px-3 py-3 overflow-x-auto">
+      <div className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-3 overflow-x-auto">
         <div className="flex min-w-max items-center gap-1.5 text-sm sm:text-base font-serif text-[var(--color-text)] whitespace-nowrap">
           <span>P(</span>
           {direction === 'between' ? (
@@ -454,7 +461,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
             readOnly={!canInverse}
             step="any"
             className={`w-20 rounded border border-[var(--color-border)] px-1.5 py-1 text-sm font-sans ${
-              !canInverse ? 'bg-slate-100 text-[var(--color-muted)]' : 'bg-white'
+              !canInverse ? 'bg-[var(--color-border)] text-[var(--color-muted)]' : 'bg-[var(--color-surface)]'
             }`}
           />
         </div>
@@ -473,7 +480,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
         />
       </div>
 
-      <div className="flex-shrink-0 text-center py-2 px-4 bg-slate-50 rounded-xl border border-[var(--color-border)]">
+      <div className="flex-shrink-0 text-center py-2 px-4 bg-[var(--color-bg)] rounded-xl border border-[var(--color-border)]">
         <span className="text-sm font-mono font-semibold text-[var(--color-text)]">
           {direction === 'between'
             ? `P(${lower} ≤ ${distSymbol} ≤ ${upper}) = ${probabilityDisplay || '—'}`

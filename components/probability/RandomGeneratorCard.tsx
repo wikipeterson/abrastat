@@ -97,13 +97,13 @@ export function RandomGeneratorCard() {
           <button
             type="button"
             onClick={reset}
-            className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-slate-50"
+            className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-bg)]"
           >
             Reset
           </button>
         </div>
 
-        <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <div className="text-sm font-semibold text-[var(--color-text)]">Output</div>
@@ -116,7 +116,7 @@ export function RandomGeneratorCard() {
             </div>
           </div>
 
-          <div className="mt-4 rounded-xl bg-slate-50 border border-slate-100 p-3 min-h-[140px]">
+          <div className="mt-4 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] p-3 min-h-[140px]">
             {results.length === 0 ? (
               <div className="text-sm text-[var(--color-muted)]">
                 No random numbers yet. Set a range and generate values.
@@ -126,7 +126,7 @@ export function RandomGeneratorCard() {
                 {results.map((value, index) => (
                   <span
                     key={`${value}-${index}`}
-                    className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-800 border border-teal-100"
+                    className="rounded-full bg-[var(--color-accent-light)] px-3 py-1 text-xs font-medium text-[var(--color-accent-strong)] border border-[var(--color-accent-light)]"
                   >
                     {value}
                   </span>

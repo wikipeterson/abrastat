@@ -77,7 +77,7 @@ export function SummaryStats() {
         <div className="flex gap-3 items-start">
           {/* Variables zone */}
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-2">
+            <div className="text-xs font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-2">
               Variables
             </div>
             <div
@@ -87,7 +87,7 @@ export function SummaryStats() {
               className={`flex flex-wrap gap-2 min-h-[44px] p-2 rounded-xl border-2 transition-colors ${
                 dragOver
                   ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
-                  : 'border-dashed border-[var(--color-border)] bg-slate-50'
+                  : 'border-dashed border-[var(--color-border)] bg-[var(--color-bg)]'
               }`}
             >
               {selectedColumns.map(col => (
@@ -126,7 +126,7 @@ export function SummaryStats() {
 
           {/* Group by zone */}
           <div className="w-52 flex-shrink-0">
-            <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-2">
+            <div className="text-xs font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-2">
               Group by
             </div>
             <div
@@ -138,7 +138,7 @@ export function SummaryStats() {
                   ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
                   : groupCol
                     ? 'border-[var(--color-gold)] bg-[var(--color-gold-light)]'
-                    : 'border-dashed border-[var(--color-border)] bg-slate-50'
+                    : 'border-dashed border-[var(--color-border)] bg-[var(--color-bg)]'
               }`}
             >
               {groupCol ? (

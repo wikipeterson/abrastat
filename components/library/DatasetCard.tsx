@@ -84,14 +84,14 @@ function ExportButton({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-20 min-w-[124px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+        <div className="absolute right-0 top-full mt-1 z-20 min-w-[124px] overflow-hidden rounded-xl border border-[var(--color-border)] bg-white shadow-lg">
           <button
             onClick={e => {
               e.stopPropagation()
               setOpen(false)
               void onExport(dataset, 'csv')
             }}
-            className="block w-full px-3 py-2 text-left text-sm text-[var(--color-text)] hover:bg-slate-50"
+            className="block w-full px-3 py-2 text-left text-sm text-[var(--color-text)] hover:bg-[var(--color-bg)]"
           >
             Export CSV
           </button>
@@ -101,7 +101,7 @@ function ExportButton({
               setOpen(false)
               void onExport(dataset, 'xlsx')
             }}
-            className="block w-full px-3 py-2 text-left text-sm text-[var(--color-text)] hover:bg-slate-50"
+            className="block w-full px-3 py-2 text-left text-sm text-[var(--color-text)] hover:bg-[var(--color-bg)]"
           >
             Export XLSX
           </button>
@@ -127,7 +127,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, onExport
             {canDelete && (
               <button
                 onClick={e => { e.stopPropagation(); onDelete!(dataset.id) }}
-                className="p-1 rounded hover:bg-red-50 text-red-400 transition-all"
+                className="p-1 rounded hover:bg-[var(--color-danger-light)] text-[var(--color-danger)] transition-all"
               >
                 <Trash2 size={14} />
               </button>
@@ -135,7 +135,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, onExport
           </div>
         </div>
         <div>
-          <p className="font-semibold text-[var(--color-text)] truncate">{dataset.name}</p>
+          <p className="font-serif italic font-semibold text-[var(--color-text)] truncate">{dataset.name}</p>
           {dataset.description && <p className="text-xs text-[var(--color-muted)] mt-0.5 line-clamp-2">{dataset.description}</p>}
           {dataset.source && (
             <p className="text-[11px] text-[var(--color-muted)] mt-1 truncate" title={dataset.citation || dataset.source}>
@@ -152,7 +152,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, onExport
   }
 
   return (
-    <div className="flex items-center gap-3 py-3 px-4 hover:bg-slate-50 rounded-xl group cursor-pointer" onClick={() => onOpen(dataset.id)}>
+    <div className="flex items-center gap-3 py-3 px-4 hover:bg-[var(--color-bg)] rounded-xl group cursor-pointer" onClick={() => onOpen(dataset.id)}>
       <DatasetCoverThumb cover={dataset.emoji} size="sm" />
       <div className="flex-1 min-w-0">
         <p className="font-medium text-[var(--color-text)] truncate">{dataset.name}</p>
@@ -174,7 +174,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, onExport
         {canDelete && (
           <button
             onClick={e => { e.stopPropagation(); onDelete!(dataset.id) }}
-            className="p-1 rounded hover:bg-red-50 text-red-400 transition-all"
+            className="p-1 rounded hover:bg-[var(--color-danger-light)] text-[var(--color-danger)] transition-all"
           >
             <Trash2 size={14} />
           </button>

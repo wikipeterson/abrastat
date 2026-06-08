@@ -92,7 +92,7 @@ export function GuessCorrelation({ onDone }: Props) {
       ) : (
         <div className="space-y-3">
           <div className="grid grid-cols-3 text-center gap-2">
-            <div className="bg-slate-50 rounded-xl p-3">
+            <div className="bg-[var(--color-bg)] rounded-xl p-3">
               <div className="text-xs text-[var(--color-muted)] mb-1">Your guess</div>
               <div className="text-xl font-bold tabular-nums">{guess.toFixed(2)}</div>
             </div>
@@ -100,7 +100,7 @@ export function GuessCorrelation({ onDone }: Props) {
               <div className="text-xs text-[var(--color-muted)] mb-1">Actual r</div>
               <div className="text-xl font-bold tabular-nums text-[var(--color-accent)]">{target.toFixed(2)}</div>
             </div>
-            <div className={`rounded-xl p-3 ${(roundScore ?? 0) >= 80 ? 'bg-green-50' : (roundScore ?? 0) >= 50 ? 'bg-yellow-50' : 'bg-red-50'}`}>
+            <div className={`rounded-xl p-3 ${(roundScore ?? 0) >= 80 ? 'bg-[var(--color-accent-light)]' : (roundScore ?? 0) >= 50 ? 'bg-[var(--color-gold-light)]' : 'bg-[var(--color-danger-light)]'}`}>
               <div className="text-xs text-[var(--color-muted)] mb-1">Points</div>
               <div className="text-xl font-bold tabular-nums">{roundScore}</div>
             </div>

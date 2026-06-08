@@ -100,7 +100,7 @@ export function MeanVsMedian({ onDone }: Props) {
       {phase === 'revealed' && (
         <div className="flex justify-center gap-4 text-xs">
           <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-[var(--color-accent)] inline-block" /> Mean = {roundData.mean.toFixed(2)}</span>
-          <span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed border-amber-400 inline-block" /> Median = {roundData.median.toFixed(2)}</span>
+          <span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed border-[var(--color-gold)] inline-block" /> Median = {roundData.median.toFixed(2)}</span>
         </div>
       )}
 
@@ -110,7 +110,7 @@ export function MeanVsMedian({ onDone }: Props) {
             <button
               key={opt.value}
               onClick={() => choose(opt.value)}
-              className="py-2.5 rounded-xl border-2 border-slate-200 text-sm font-medium hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-light)] transition-all"
+              className="py-2.5 rounded-xl border-2 border-[var(--color-border)] text-sm font-medium hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-light)] transition-all"
             >
               {opt.label}
             </button>
@@ -118,7 +118,7 @@ export function MeanVsMedian({ onDone }: Props) {
         </div>
       ) : (
         <div className="space-y-2">
-          <div className={`text-center py-2 rounded-xl font-semibold text-sm ${isCorrect ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+          <div className={`text-center py-2 rounded-xl font-semibold text-sm ${isCorrect ? 'bg-[var(--color-accent-light)] text-[var(--color-accent-strong)]' : 'bg-[var(--color-danger-light)] text-[var(--color-danger)]'}`}>
             {isCorrect ? '✓ Correct! +100 pts' : `✗ Wrong — answer was "${correctLabel}"`}
           </div>
           <button

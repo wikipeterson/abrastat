@@ -150,7 +150,7 @@ export function ImportPanel({ open, onClose }: ImportPanelProps) {
             rows={8}
             className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
           />
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
           {preview && <PreviewTable grid={preview} />}
         </div>
       )}
@@ -176,7 +176,7 @@ export function ImportPanel({ open, onClose }: ImportPanelProps) {
             <span className="text-xs text-[var(--color-muted)] mt-1">.csv  .tsv  .txt  .xlsx  .xls</span>
             <input type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" className="hidden" onChange={handleFile} />
           </label>
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
           {preview && <PreviewTable grid={preview} />}
         </div>
       )}
@@ -211,7 +211,7 @@ export function ImportPanel({ open, onClose }: ImportPanelProps) {
               <li>Copy the link and paste it above</li>
             </ol>
           </details>
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
           {preview && <PreviewTable grid={preview} />}
         </div>
       )}
@@ -230,7 +230,7 @@ export function ImportPanel({ open, onClose }: ImportPanelProps) {
 
       {preview && (
         <div className="mt-4 flex justify-end gap-2">
-          <button onClick={handleClose} className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-slate-100">Cancel</button>
+          <button onClick={handleClose} className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-[var(--color-border)]">Cancel</button>
           <button onClick={handleConfirm} className="px-4 py-2 rounded-lg text-sm bg-[var(--color-accent)] text-white font-medium">
             Load into AbraStat
           </button>
@@ -244,14 +244,14 @@ function PreviewTable({ grid }: { grid: GridState }) {
   const previewRows = grid.rows.slice(0, 5)
   return (
     <div className="overflow-auto rounded-lg border border-[var(--color-border)]">
-      <p className="text-xs text-[var(--color-muted)] px-3 py-1 bg-slate-50 border-b border-[var(--color-border)]">
+      <p className="text-xs text-[var(--color-muted)] px-3 py-1 bg-[var(--color-bg)] border-b border-[var(--color-border)]">
         Preview — {grid.rows.length} rows × {grid.columns.length} columns
       </p>
       <table className="text-xs w-full">
         <thead>
           <tr className="bg-[var(--color-grid-header)] text-white">
             {grid.columns.map(col => (
-              <th key={col.id} className="px-3 py-1.5 text-left font-medium border-r border-slate-600 last:border-0">{col.name}</th>
+              <th key={col.id} className="px-3 py-1.5 text-left font-medium border-r border-[var(--color-grid-header)] last:border-0">{col.name}</th>
             ))}
           </tr>
         </thead>

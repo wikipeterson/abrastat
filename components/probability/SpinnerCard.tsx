@@ -591,7 +591,7 @@ export function SpinnerCard() {
             onClick={() => { if (!isSpinning) handleSpin() }}
             aria-label="Prize wheel — click to spin"
           />
-          <div className="border-t border-[var(--color-border)] bg-slate-50 px-4 py-2 text-center">
+          <div className="border-t border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2 text-center">
             <p className="text-xs text-[var(--color-muted)]">
               {isSpinning ? 'Spinning…' : selectedSector ? `Result: ${selectedSector.fullLabel}` : 'Click wheel or Spin button'}
             </p>
@@ -604,7 +604,7 @@ export function SpinnerCard() {
 
         {/* Config */}
         <div className="rounded-2xl border border-[var(--color-border)] bg-white shadow-sm p-4 space-y-4">
-          <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-muted)]">Wheel Setup</div>
+          <div className="text-xs font-mono font-bold uppercase tracking-wide text-[var(--color-muted)]">Wheel Setup</div>
 
           {/* Mode toggle */}
           <div className="flex rounded-lg overflow-hidden border border-[var(--color-border)] text-sm">
@@ -615,7 +615,7 @@ export function SpinnerCard() {
                 className={`flex-1 py-1.5 font-medium transition-colors ${
                   mode === m
                     ? 'bg-[var(--color-accent)] text-white'
-                    : 'text-[var(--color-muted)] hover:bg-slate-50'
+                    : 'text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                 }`}
               >
                 {m === 'sectors' ? '# Sectors' : 'Variable'}
@@ -658,7 +658,7 @@ export function SpinnerCard() {
                 </select>
               )}
               {tooManyCats && (
-                <p className="text-xs text-amber-600">
+                <p className="text-xs text-[var(--color-gold-text)]">
                   {categoryLabels.length} categories — showing all, but labels may be crowded.
                 </p>
               )}
@@ -725,7 +725,7 @@ export function SpinnerCard() {
             onClick={handleReset}
             disabled={isSpinning}
             className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-medium
-                       text-[var(--color-muted)] hover:bg-slate-50
+                       text-[var(--color-muted)] hover:bg-[var(--color-bg)]
                        disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             Reset
@@ -735,7 +735,7 @@ export function SpinnerCard() {
         {/* Result panel */}
         {selectedSector && !isSpinning && (
           <div className="rounded-2xl border-2 border-[var(--color-accent)] bg-[var(--color-accent-light)] p-5 text-center space-y-1">
-            <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-accent)]">Result</div>
+            <div className="text-xs font-mono font-bold uppercase tracking-wide text-[var(--color-accent)]">Result</div>
             <div className="text-3xl font-black text-[var(--color-text)] break-words leading-tight">
               {selectedSector.fullLabel}
             </div>
@@ -751,7 +751,7 @@ export function SpinnerCard() {
         {recordHistory && totalSpins >= 2 && (
           <div className="rounded-2xl border border-[var(--color-border)] bg-white shadow-sm p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-muted)]">
+              <div className="text-xs font-mono font-bold uppercase tracking-wide text-[var(--color-muted)]">
                 Results — {totalSpins} spin{totalSpins !== 1 ? 's' : ''}
               </div>
             </div>
@@ -772,13 +772,13 @@ export function SpinnerCard() {
                       {(pct * 100).toFixed(1)}%
                     </span>
                     {/* Bar showing empirical vs theoretical */}
-                    <div className="w-20 bg-slate-100 rounded-full h-1.5 flex-shrink-0">
+                    <div className="w-20 bg-[var(--color-border)] rounded-full h-1.5 flex-shrink-0">
                       <div
                         className="h-1.5 rounded-full bg-[var(--color-accent)] transition-all"
                         style={{ width: `${pct * 100}%` }}
                       />
                       <div
-                        className="h-0 border-t border-dashed border-slate-400 relative"
+                        className="h-0 border-t border-dashed border-[var(--color-muted)] relative"
                         style={{ marginTop: -6, marginLeft: `${theoPct * 100}%`, width: 0 }}
                       />
                     </div>

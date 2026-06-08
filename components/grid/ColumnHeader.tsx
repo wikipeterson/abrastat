@@ -61,10 +61,10 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
   return (
     <>
       <div
-        className="relative flex items-center h-8 px-2 gap-1 bg-[var(--color-grid-header)] text-white text-xs font-medium border-r border-slate-600 select-none"
+        className="relative flex items-center h-8 px-2 gap-1 bg-[var(--color-grid-header)] text-white text-xs font-medium border-r border-[var(--color-border)] select-none"
         onContextMenu={handleRightClick}
       >
-        <span className="flex-shrink-0 text-slate-500 opacity-0 group-hover/col:opacity-60 transition-opacity cursor-grab text-[11px] leading-none" aria-hidden>⠿</span>
+        <span className="flex-shrink-0 text-[var(--color-muted)] opacity-0 group-hover/col:opacity-60 transition-opacity cursor-grab text-[11px] leading-none" aria-hidden>⠿</span>
 
         <span
           className="flex-1 truncate cursor-pointer"
@@ -74,11 +74,11 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
         </span>
 
         {column.computedFormula ? (
-          <span className="text-[10px] px-1 rounded font-bold bg-amber-500 text-white" title={`Computed: ${column.computedFormula}`}>ƒ</span>
+          <span className="text-[10px] px-1 rounded font-bold bg-[var(--color-gold)] text-white" title={`Computed: ${column.computedFormula}`}>ƒ</span>
         ) : (
           <span
             onClick={() => setColumnType(column.id, isNumeric ? 'categorical' : 'numeric')}
-            className={`text-[10px] px-1 rounded cursor-pointer font-bold ${isNumeric ? 'bg-[var(--color-accent)] text-white' : 'bg-slate-500 text-slate-200'}`}
+            className={`text-[10px] px-1 rounded cursor-pointer font-bold ${isNumeric ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-border)] text-[var(--color-muted)]'}`}
             title={isNumeric ? 'Numeric — click to toggle' : 'Categorical — click to toggle'}
           >
             {isNumeric ? '#' : 'C'}
@@ -122,36 +122,36 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
             {/* Main menu */}
             {menuMode === 'main' && (
               <>
-                <button onClick={() => { setShowRename(true); setMenuMode('closed') }} className="w-full text-left px-3 py-1.5 hover:bg-slate-50">
+                <button onClick={() => { setShowRename(true); setMenuMode('closed') }} className="w-full text-left px-3 py-1.5 hover:bg-[var(--color-bg)]">
                   Rename
                 </button>
                 <div className="h-px bg-[var(--color-border)] my-1" />
-                <button onClick={() => setMenuMode('sort-asc')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 flex items-center justify-between">
-                  Sort Ascending <ChevronRight size={12} className="text-slate-400" />
+                <button onClick={() => setMenuMode('sort-asc')} className="w-full text-left px-3 py-1.5 hover:bg-[var(--color-bg)] flex items-center justify-between">
+                  Sort Ascending <ChevronRight size={12} className="text-[var(--color-muted)]" />
                 </button>
-                <button onClick={() => setMenuMode('sort-desc')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 flex items-center justify-between">
-                  Sort Descending <ChevronRight size={12} className="text-slate-400" />
+                <button onClick={() => setMenuMode('sort-desc')} className="w-full text-left px-3 py-1.5 hover:bg-[var(--color-bg)] flex items-center justify-between">
+                  Sort Descending <ChevronRight size={12} className="text-[var(--color-muted)]" />
                 </button>
                 {isNumeric && (
                   <>
                     <div className="h-px bg-[var(--color-border)] my-1" />
-                    <button onClick={handleZScore} className="w-full text-left px-3 py-1.5 hover:bg-slate-50">
+                    <button onClick={handleZScore} className="w-full text-left px-3 py-1.5 hover:bg-[var(--color-bg)]">
                       Create Z-Score Variable
                     </button>
-                    <button onClick={() => { setMenuMode('closed'); setShowRecode(true) }} className="w-full text-left px-3 py-1.5 hover:bg-slate-50">
+                    <button onClick={() => { setMenuMode('closed'); setShowRecode(true) }} className="w-full text-left px-3 py-1.5 hover:bg-[var(--color-bg)]">
                       Recode into Categories
                     </button>
                   </>
                 )}
                 <div className="h-px bg-[var(--color-border)] my-1" />
-                <button onClick={() => addColumn(colIndex - 1)} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-[var(--color-muted)]">
+                <button onClick={() => addColumn(colIndex - 1)} className="w-full text-left px-3 py-1.5 hover:bg-[var(--color-bg)] text-[var(--color-muted)]">
                   Insert column left
                 </button>
-                <button onClick={() => addColumn(colIndex)} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-[var(--color-muted)]">
+                <button onClick={() => addColumn(colIndex)} className="w-full text-left px-3 py-1.5 hover:bg-[var(--color-bg)] text-[var(--color-muted)]">
                   Insert column right
                 </button>
                 <div className="h-px bg-[var(--color-border)] my-1" />
-                <button onClick={() => setMenuMode('delete-confirm')} className="w-full text-left px-3 py-1.5 hover:bg-red-50 text-red-500">
+                <button onClick={() => setMenuMode('delete-confirm')} className="w-full text-left px-3 py-1.5 hover:bg-[var(--color-danger-light)] text-[var(--color-danger)]">
                   Delete column…
                 </button>
               </>
@@ -160,10 +160,10 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
             {/* Sort scope sub-panel */}
             {(menuMode === 'sort-asc' || menuMode === 'sort-desc') && (
               <>
-                <div className="px-3 py-1.5 font-semibold text-[var(--color-muted)] text-[10px] uppercase tracking-wide">
+                <div className="px-3 py-1.5 font-mono font-semibold text-[var(--color-muted)] text-[10px] uppercase tracking-wide">
                   {menuMode === 'sort-asc' ? 'Sort Ascending' : 'Sort Descending'}
                 </div>
-                <button onClick={() => applySort(menuMode === 'sort-asc' ? 'asc' : 'desc', 'table')} className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-start gap-2">
+                <button onClick={() => applySort(menuMode === 'sort-asc' ? 'asc' : 'desc', 'table')} className="w-full text-left px-3 py-2 hover:bg-[var(--color-bg)] flex items-start gap-2">
                   <span className="mt-0.5 flex-shrink-0 w-3.5 h-3.5 rounded-full border-2 border-[var(--color-accent)] bg-[var(--color-accent)]" />
                   <span>
                     <span className="font-medium block">Entire Table</span>
@@ -171,23 +171,23 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
                   </span>
                 </button>
                 {selectedColumnIds.length > 0 && (
-                  <button onClick={() => applySort(menuMode === 'sort-asc' ? 'asc' : 'desc', 'selected')} className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-start gap-2">
-                    <span className="mt-0.5 flex-shrink-0 w-3.5 h-3.5 rounded-full border-2 border-slate-400" />
+                  <button onClick={() => applySort(menuMode === 'sort-asc' ? 'asc' : 'desc', 'selected')} className="w-full text-left px-3 py-2 hover:bg-[var(--color-bg)] flex items-start gap-2">
+                    <span className="mt-0.5 flex-shrink-0 w-3.5 h-3.5 rounded-full border-2 border-[var(--color-border)]" />
                     <span>
                       <span className="font-medium block">Selected Columns</span>
                       <span className="text-[var(--color-muted)] text-[10px]">Sorts this + {selectedColumnIds.length} selected column{selectedColumnIds.length !== 1 ? 's' : ''} together</span>
                     </span>
                   </button>
                 )}
-                <button onClick={() => applySort(menuMode === 'sort-asc' ? 'asc' : 'desc', 'column')} className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-start gap-2">
-                  <span className="mt-0.5 flex-shrink-0 w-3.5 h-3.5 rounded-full border-2 border-slate-400" />
+                <button onClick={() => applySort(menuMode === 'sort-asc' ? 'asc' : 'desc', 'column')} className="w-full text-left px-3 py-2 hover:bg-[var(--color-bg)] flex items-start gap-2">
+                  <span className="mt-0.5 flex-shrink-0 w-3.5 h-3.5 rounded-full border-2 border-[var(--color-border)]" />
                   <span>
                     <span className="font-medium block">This Column Only</span>
                     <span className="text-[var(--color-muted)] text-[10px]">⚠️ Detaches values from other columns</span>
                   </span>
                 </button>
                 <div className="h-px bg-[var(--color-border)] my-1" />
-                <button onClick={() => setMenuMode('main')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-[var(--color-muted)]">
+                <button onClick={() => setMenuMode('main')} className="w-full text-left px-3 py-1.5 hover:bg-[var(--color-bg)] text-[var(--color-muted)]">
                   ← Back
                 </button>
               </>
@@ -203,13 +203,13 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
                 <div className="flex gap-2">
                   <button
                     onClick={() => setMenuMode('main')}
-                    className="flex-1 px-2 py-1.5 rounded-md border border-[var(--color-border)] text-[var(--color-muted)] hover:bg-slate-50 text-xs"
+                    className="flex-1 px-2 py-1.5 rounded-md border border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-bg)] text-xs"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={() => { deleteColumn(column.id); setMenuMode('closed') }}
-                    className="flex-1 px-2 py-1.5 rounded-md bg-red-500 text-white hover:bg-red-600 text-xs font-medium"
+                    className="flex-1 px-2 py-1.5 rounded-md bg-[var(--color-danger)] text-white hover:opacity-90 text-xs font-medium"
                   >
                     Delete
                   </button>
@@ -222,7 +222,7 @@ export function ColumnHeader({ column, colIndex, onResizeStart }: ColumnHeaderPr
 
         {/* Z-score error toast */}
         {zError && (
-          <div className="absolute top-full left-0 z-50 mt-1 w-56 bg-red-600 text-white text-[10px] rounded-lg px-3 py-2 shadow-lg">
+          <div className="absolute top-full left-0 z-50 mt-1 w-56 bg-[var(--color-danger)] text-white text-[10px] rounded-lg px-3 py-2 shadow-lg">
             {zError}
           </div>
         )}

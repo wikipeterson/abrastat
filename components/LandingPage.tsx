@@ -27,7 +27,7 @@ export function LandingPage() {
       <section className="flex-1 flex flex-col items-center justify-center text-center px-4 py-20">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(200px, 60vw, 360px)', height: 'auto' }} className="mb-4" />
-        <p className="text-2xl sm:text-3xl font-semibold text-[var(--color-text)] mb-3">
+        <p className="text-2xl sm:text-3xl font-serif italic font-semibold text-[var(--color-text)] mb-3">
           Statistics made for students.
         </p>
         <p className="text-[var(--color-muted)] max-w-md mb-10">
@@ -54,7 +54,7 @@ export function LandingPage() {
           ].map(f => (
             <div key={f.title}>
               <div className="text-4xl mb-3">{f.icon}</div>
-              <h3 className="font-semibold text-[var(--color-text)] mb-1">{f.title}</h3>
+              <h3 className="font-serif italic font-semibold text-[var(--color-text)] mb-1">{f.title}</h3>
               <p className="text-sm text-[var(--color-muted)]">{f.desc}</p>
             </div>
           ))}
@@ -63,7 +63,7 @@ export function LandingPage() {
 
       {/* How it works */}
       <section className="py-12 px-4">
-        <h2 className="font-display italic text-2xl font-bold text-center text-[var(--color-text)] mb-8">How it works</h2>
+        <h2 className="font-serif italic text-2xl font-bold text-center text-[var(--color-text)] mb-8">How it works</h2>
         <div className="max-w-2xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           {[
             { step: '1', label: 'Import', desc: 'Paste, upload, or link a Google Sheet' },

@@ -8,7 +8,7 @@ import { basePlotlyLayout, plotlyConfig, getChartColorway } from '@/lib/plotlyTh
 const Plot = dynamic(() => import('react-plotly.js'), {
   ssr: false,
   loading: () => (
-    <div className="h-full min-h-[200px] flex items-center justify-center text-slate-400 text-sm">
+    <div className="h-full min-h-[200px] flex items-center justify-center text-[var(--color-muted)] text-sm">
       Loading chart…
     </div>
   ),

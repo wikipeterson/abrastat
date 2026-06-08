@@ -42,8 +42,8 @@ type PuzzleBadge = 'easiest' | 'hardest' | 'favorite'
 
 const BADGE_CONFIG: Record<PuzzleBadge, { label: string; className: string }> = {
   easiest:  { label: '😌 Easiest',  className: 'bg-sky-100 text-sky-700' },
-  hardest:  { label: '🤯 Hardest',  className: 'bg-red-100 text-red-700' },
-  favorite: { label: '⭐ Favorite', className: 'bg-amber-100 text-amber-700' },
+  hardest:  { label: '🤯 Hardest',  className: 'bg-[var(--color-danger-light)] text-[var(--color-danger)]' },
+  favorite: { label: '⭐ Favorite', className: 'bg-[var(--color-gold-light)] text-[var(--color-gold-text)]' },
 }
 
 function topVotedIds(tally: Record<string, number>): Set<string> {
@@ -507,14 +507,14 @@ export function PuzzleWeekHub() {
                 {canManage && (
                   <Link
                     href="/puzzleweek/admin"
-                    className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+                    className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]"
                   >
                     Admin
                   </Link>
                 )}
                 <button
                   onClick={handleSignOut}
-                  className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+                  className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]"
                 >
                   Sign out
                 </button>
@@ -525,10 +525,7 @@ export function PuzzleWeekHub() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
               HHS Math Department Presents
             </p>
-            <h1
-              className="text-3xl font-semibold leading-tight text-[var(--color-text)]"
-              style={{ fontFamily: 'var(--font-fraunces)' }}
-            >
+            <h1 className="text-3xl font-serif italic font-semibold leading-tight text-[var(--color-text)]">
               Puzzle Week 2026
             </h1>
             <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] shadow-sm">
@@ -564,14 +561,14 @@ export function PuzzleWeekHub() {
               {canManage && (
                 <Link
                   href="/puzzleweek/admin"
-                  className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+                  className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]"
                 >
                   Admin
                 </Link>
               )}
               <button
                 onClick={handleSignOut}
-                className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+                className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]"
               >
                 Sign out
               </button>
@@ -595,7 +592,7 @@ export function PuzzleWeekHub() {
                   <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-bold tabular-nums text-[var(--color-text)] shadow-sm">
                     {String(value).padStart(2, '0')}
                   </div>
-                  <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
+                  <div className="mt-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)]">
                     {label}
                   </div>
                 </div>
@@ -634,8 +631,8 @@ export function PuzzleWeekHub() {
                       className={`h-8 flex-1 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${
                         solved
                           ? isMeta
-                            ? 'bg-amber-500 text-white'
-                            : 'bg-emerald-500 text-white'
+                            ? 'bg-[var(--color-gold)] text-white'
+                            : 'bg-[var(--color-accent)] text-white'
                           : 'bg-[var(--color-accent-light)] text-[var(--color-muted)]'
                       }`}
                     >
@@ -657,14 +654,14 @@ export function PuzzleWeekHub() {
                   {bonusMedalCount} of {TOTAL_BONUS_MEDALS} earned across the bonus puzzles.
                 </p>
                 {bonusMedalCount >= TOTAL_BONUS_MEDALS && (
-                  <div className="mt-2 inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                  <div className="mt-2 inline-flex items-center rounded-full border border-[var(--color-gold-light)] bg-[var(--color-gold-light)] px-3 py-1 text-xs font-semibold text-[var(--color-gold-text)]">
                     {LOGIC_PUZZLE_MASTER_AWARD}
                   </div>
                 )}
               </div>
               <Link
                 href="/puzzleweek/bonus"
-                className="inline-flex flex-shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+                className="inline-flex flex-shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]"
               >
                 Logic Puzzles
               </Link>
@@ -757,7 +754,7 @@ export function PuzzleWeekHub() {
                       <div
                         key={lb.entryId}
                         className={`flex items-start gap-2 border-b px-3 py-2 last:border-b-0 border-[var(--color-border)] ${
-                          isMe ? 'bg-[var(--color-accent-light)]/40' : 'hover:bg-slate-50/60'
+                          isMe ? 'bg-[var(--color-accent-light)]/40' : 'hover:bg-[var(--color-bg)]/60'
                         }`}
                       >
                         <div className="w-6 flex-shrink-0 text-center">
@@ -795,7 +792,7 @@ export function PuzzleWeekHub() {
                               <div
                                 key={puzzle.id}
                                 title={puzzle.title}
-                                className={`h-2 w-2 rounded-full ${solved ? (isMeta ? 'bg-amber-400' : 'bg-emerald-400') : 'bg-[var(--color-border)]'}`}
+                                className={`h-2 w-2 rounded-full ${solved ? (isMeta ? 'bg-[var(--color-gold)]' : 'bg-[var(--color-accent)]') : 'bg-[var(--color-border)]'}`}
                               />
                             )
                           })}
@@ -842,7 +839,7 @@ export function PuzzleWeekHub() {
                       <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-bold tabular-nums text-[var(--color-text)] shadow-sm">
                         {String(value).padStart(2, '0')}
                       </div>
-                      <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
+                      <div className="mt-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)]">
                         {label}
                       </div>
                     </div>
@@ -855,7 +852,7 @@ export function PuzzleWeekHub() {
         ) : loadingRegistration && !entry ? (
           null
         ) : !canRegister ? (
-          <div className="mx-auto max-w-2xl rounded-3xl border border-amber-200 bg-amber-50 p-8 shadow-sm text-center space-y-3">
+          <div className="mx-auto max-w-2xl rounded-3xl border border-[var(--color-gold-light)] bg-[var(--color-gold-light)] p-8 shadow-sm text-center space-y-3">
             <h2 className="text-xl font-semibold text-[var(--color-text)]">Registration limited</h2>
             <p className="text-sm text-[var(--color-muted)]">{eligibilityMessage}</p>
             <p className="text-sm text-[var(--color-muted)]">
@@ -1007,7 +1004,7 @@ export function PuzzleWeekHub() {
             </div>
 
             {error && (
-              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="rounded-2xl border border-[var(--color-danger-light)] bg-[var(--color-danger-light)] px-4 py-3 text-sm text-[var(--color-danger)]">
                 {error}
               </div>
             )}
@@ -1166,7 +1163,7 @@ export function PuzzleWeekHub() {
               )}
 
               {error && (
-                <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                <div className="mt-4 rounded-2xl border border-[var(--color-danger-light)] bg-[var(--color-danger-light)] px-4 py-3 text-sm text-[var(--color-danger)]">
                   {error}
                 </div>
               )}
@@ -1224,7 +1221,7 @@ export function PuzzleWeekHub() {
                   {savingVote ? 'Saving…' : 'Save Votes'}
                 </button>
                 {voteSaved && (
-                  <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-600">
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-[var(--color-accent-strong)]">
                     <CheckCircle2 className="h-4 w-4" /> Saved
                   </span>
                 )}
@@ -1284,7 +1281,7 @@ export function PuzzleWeekHub() {
                   <div
                     key={lb.entryId}
                     className={`flex items-center gap-2 sm:gap-4 border-b px-3 sm:px-5 py-3 sm:py-3.5 last:border-b-0 border-[var(--color-border)] transition-colors ${
-                      isMe ? 'bg-[var(--color-accent-light)]/40' : 'hover:bg-slate-50/70'
+                      isMe ? 'bg-[var(--color-accent-light)]/40' : 'hover:bg-[var(--color-bg)]/70'
                     }`}
                   >
                     <div className="w-7 flex-shrink-0 text-center">
@@ -1314,7 +1311,7 @@ export function PuzzleWeekHub() {
                     <span className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
                       lb.type === 'team'
                         ? 'bg-[var(--color-accent-light)] text-[var(--color-accent)]'
-                        : 'bg-slate-100 text-slate-500'
+                        : 'bg-[var(--color-border)] text-[var(--color-muted)]'
                     }`}>
                       {lb.type === 'team' ? 'Team' : 'Solo'}
                     </span>
@@ -1328,7 +1325,7 @@ export function PuzzleWeekHub() {
                             title={puzzle.title}
                             className={`h-2.5 w-2.5 rounded-full transition-colors ${
                               solved
-                                ? isMeta ? 'bg-amber-400' : 'bg-emerald-400'
+                                ? isMeta ? 'bg-[var(--color-gold)]' : 'bg-[var(--color-accent)]'
                                 : 'bg-[var(--color-border)]'
                             }`}
                           />
@@ -1384,7 +1381,7 @@ function VoteBarChart({
               <div className="w-10 flex-shrink-0 text-right text-[11px] font-semibold text-[var(--color-muted)]">
                 {shortLabel}
               </div>
-              <div className="relative flex-1 h-6 rounded-lg overflow-hidden bg-slate-100">
+              <div className="relative flex-1 h-6 rounded-lg overflow-hidden bg-[var(--color-border)]">
                 <div
                   className="absolute inset-y-0 left-0 rounded-lg transition-all duration-700"
                   style={{
@@ -1477,20 +1474,20 @@ function PuzzleCard({
   return (
     <div className={`rounded-2xl border p-5 space-y-4 transition-colors ${
       solved
-        ? 'border-emerald-200 bg-emerald-50'
+        ? 'border-[var(--color-accent-light)] bg-[var(--color-accent-light)]'
         : 'border-[var(--color-border)] bg-white'
     }`}>
       <div className="flex items-start gap-3">
         <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors ${
           solved
-            ? 'bg-emerald-500 text-white'
+            ? 'bg-[var(--color-accent)] text-white'
             : 'bg-[var(--color-accent-light)] text-[var(--color-accent)]'
         }`}>
           {solved ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
         </div>
         <div className="flex-1 min-w-0">
           {dayLabel && (
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)]">
               {dayLabel}
             </div>
           )}
@@ -1508,7 +1505,7 @@ function PuzzleCard({
       </div>
 
       {solved ? (
-        <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+        <div className="flex items-center gap-2 text-sm font-medium text-[var(--color-accent-strong)]">
           <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
           Solved
         </div>
@@ -1533,8 +1530,8 @@ function PuzzleCard({
           {answerMessage && (
             <div className={`rounded-lg px-3 py-2 text-xs ${
               answerMessage.correct
-                ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
-                : 'border border-amber-200 bg-amber-50 text-amber-800'
+                ? 'border border-[var(--color-accent-light)] bg-[var(--color-accent-light)] text-[var(--color-accent-strong)]'
+                : 'border border-[var(--color-gold-light)] bg-[var(--color-gold-light)] text-[var(--color-gold-text)]'
             }`}>
               {answerMessage.message}
             </div>
@@ -1572,17 +1569,17 @@ function MetaPuzzleCard({
   return (
     <div className={`rounded-2xl border p-6 transition-colors ${
       solved
-        ? 'border-amber-300 bg-white'
-        : 'border-amber-200/70 bg-white'
+        ? 'border-[var(--color-gold)] bg-white'
+        : 'border-[var(--color-gold-light)] bg-white'
     }`}>
       <div className="flex items-start gap-4">
         <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-base font-bold transition-colors ${
-          solved ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-600'
+          solved ? 'bg-[var(--color-gold)] text-white' : 'bg-[var(--color-gold-light)] text-[var(--color-gold-text)]'
         }`}>
           {solved ? <CheckCircle2 className="h-5 w-5" /> : '★'}
         </div>
         <div className="flex-1">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-600">Metapuzzle</div>
+          <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--color-gold-text)]">Metapuzzle</div>
           <div className="mt-0.5 text-base font-semibold leading-snug text-[var(--color-text)]">{puzzleName}</div>
           {badges.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1">
@@ -1594,7 +1591,7 @@ function MetaPuzzleCard({
             </div>
           )}
           {!solved && mainPuzzlesSolvedCount < MAIN_PUZZLES.length && (
-            <p className="mt-1.5 text-xs text-amber-700">
+            <p className="mt-1.5 text-xs text-[var(--color-gold-text)]">
               Uses the answers from puzzles 1–6. ({mainPuzzlesSolvedCount}/{MAIN_PUZZLES.length} solved so far)
             </p>
           )}
@@ -1602,7 +1599,7 @@ function MetaPuzzleCard({
       </div>
 
       {solved ? (
-        <div className="mt-4 flex items-center gap-2 text-sm font-medium text-amber-700">
+        <div className="mt-4 flex items-center gap-2 text-sm font-medium text-[var(--color-gold-text)]">
           <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
           Solved — congratulations!
         </div>
@@ -1614,12 +1611,12 @@ function MetaPuzzleCard({
               onChange={e => onAnswerChange(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') onCheck() }}
               placeholder="Your metapuzzle answer"
-              className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)]"
             />
             <button
               onClick={onCheck}
               disabled={checking || !answer.trim()}
-              className="flex-shrink-0 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
+              className="flex-shrink-0 rounded-xl bg-[var(--color-gold)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
             >
               {checking ? '…' : 'Check'}
             </button>
@@ -1627,8 +1624,8 @@ function MetaPuzzleCard({
           {answerMessage && (
             <div className={`rounded-lg px-3 py-2 text-xs ${
               answerMessage.correct
-                ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
-                : 'border border-amber-200 bg-amber-50 text-amber-800'
+                ? 'border border-[var(--color-accent-light)] bg-[var(--color-accent-light)] text-[var(--color-accent-strong)]'
+                : 'border border-[var(--color-gold-light)] bg-[var(--color-gold-light)] text-[var(--color-gold-text)]'
             }`}>
               {answerMessage.message}
             </div>

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { DM_Sans, Fraunces } from 'next/font/google'
+import { DM_Sans, Fraunces, JetBrains_Mono } from 'next/font/google'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 import './globals.css'
 
@@ -12,6 +12,11 @@ const fraunces = Fraunces({
   subsets: ['latin'],
   variable: '--font-fraunces',
   style: ['italic', 'normal'],
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
 })
 
 export const metadata: Metadata = {
@@ -56,7 +61,7 @@ export default function RootLayout({
       lang="en"
       data-palette="abra"
       suppressHydrationWarning
-      className={`${dmSans.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${dmSans.variable} ${fraunces.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: paletteInitScript }} />

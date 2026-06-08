@@ -66,10 +66,10 @@ export function MoreVariability({ onDone }: Props) {
   }
 
   const leftBorder = phase === 'revealed'
-    ? (roundData.correct === 'left' ? 'ring-2 ring-green-500' : chosen === 'left' ? 'ring-2 ring-red-400' : '')
+    ? (roundData.correct === 'left' ? 'ring-2 ring-[var(--color-accent)]' : chosen === 'left' ? 'ring-2 ring-[var(--color-danger)]' : '')
     : ''
   const rightBorder = phase === 'revealed'
-    ? (roundData.correct === 'right' ? 'ring-2 ring-green-500' : chosen === 'right' ? 'ring-2 ring-red-400' : '')
+    ? (roundData.correct === 'right' ? 'ring-2 ring-[var(--color-accent)]' : chosen === 'right' ? 'ring-2 ring-[var(--color-danger)]' : '')
     : ''
 
   return (
@@ -88,9 +88,9 @@ export function MoreVariability({ onDone }: Props) {
             disabled={phase === 'revealed'}
             className={`rounded-xl border-2 overflow-hidden transition-all ${
               chosen === side ? '' : 'hover:border-[var(--color-accent)]'
-            } ${side === 'left' ? leftBorder : rightBorder} border-slate-200`}
+            } ${side === 'left' ? leftBorder : rightBorder} border-[var(--color-border)]`}
           >
-            <div className="text-xs font-semibold text-center py-1 bg-slate-50 uppercase tracking-wide text-[var(--color-muted)]">
+            <div className="text-xs font-mono font-semibold text-center py-1 bg-[var(--color-bg)] uppercase tracking-wide text-[var(--color-muted)]">
               {side === 'left' ? 'A' : 'B'}
               {phase === 'revealed' && (
                 <span className="ml-1 font-normal normal-case">
@@ -118,7 +118,7 @@ export function MoreVariability({ onDone }: Props) {
 
       {phase === 'revealed' && (
         <div className="space-y-3">
-          <div className={`text-center py-2 rounded-xl font-semibold ${isCorrect ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+          <div className={`text-center py-2 rounded-xl font-semibold ${isCorrect ? 'bg-[var(--color-accent-light)] text-[var(--color-accent-strong)]' : 'bg-[var(--color-danger-light)] text-[var(--color-danger)]'}`}>
             {isCorrect ? '✓ Correct! +100 pts' : `✗ Wrong — ${roundData.correct === 'left' ? 'A' : 'B'} had more spread`}
           </div>
           <button

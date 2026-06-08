@@ -41,7 +41,7 @@ export function CoverPicker({ open, value, onChange, onClose }: CoverPickerProps
     >
       {GROUPS.map(group => (
         <div key={group.label}>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-muted)] mb-1.5">
+          <p className="text-[10px] font-mono font-semibold uppercase tracking-widest text-[var(--color-muted)] mb-1.5">
             {group.label}
           </p>
           <div className="grid grid-cols-6 gap-1.5">

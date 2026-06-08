@@ -230,7 +230,7 @@ export function DataDock({ state, setState, height, setHeight, upperRef }: DataD
       >
         {activeFilters.length > 0 && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 flex-wrap border-b border-[var(--color-border)]">
-            <span className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide mr-0.5">Filters:</span>
+            <span className="text-[10px] font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide mr-0.5">Filters:</span>
             {activeFilters.map(f => {
               const label = f.op === 'between'
                 ? `${f.colName} between ${f.value} and ${f.value2 ?? '?'}`
@@ -238,13 +238,13 @@ export function DataDock({ state, setState, height, setHeight, upperRef }: DataD
               return (
                 <span key={f.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--color-accent-light)] text-[var(--color-accent)] border border-[var(--color-accent)]/30">
                   {label}
-                  <button onClick={() => setRowFilters(activeFilters.filter(x => x.id !== f.id))} className="hover:text-teal-800 ml-0.5" aria-label="Remove filter">
+                  <button onClick={() => setRowFilters(activeFilters.filter(x => x.id !== f.id))} className="hover:text-[var(--color-accent-strong)] ml-0.5" aria-label="Remove filter">
                     <X size={10} />
                   </button>
                 </span>
               )
             })}
-            <button onClick={() => setRowFilters([])} className="text-[11px] text-[var(--color-muted)] hover:text-red-500 ml-1">Clear all</button>
+            <button onClick={() => setRowFilters([])} className="text-[11px] text-[var(--color-muted)] hover:text-[var(--color-danger)] ml-1">Clear all</button>
             <button onClick={() => setShowData(true)} className="text-[11px] text-[var(--color-accent)] hover:underline ml-1">Edit filters</button>
           </div>
         )}

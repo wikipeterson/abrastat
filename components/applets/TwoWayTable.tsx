@@ -68,16 +68,16 @@ function ManualInput({
   onAddRow, onRemoveRow, onAddCol, onRemoveCol,
 }: ManualInputProps) {
   const textInput =
-    'rounded border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:border-[var(--color-accent)]'
+    'rounded border border-[var(--color-border)] px-2 py-1 text-sm focus:outline-none focus:border-[var(--color-accent)]'
   const numInput =
-    'w-20 text-center rounded border border-slate-200 px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:border-[var(--color-accent)]'
+    'w-20 text-center rounded border border-[var(--color-border)] px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:border-[var(--color-accent)]'
 
   return (
     <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] p-4 space-y-5">
       {/* Variable name inputs */}
       <div className="flex flex-wrap gap-4">
         <div>
-          <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
+          <div className="text-xs font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
             Column Variable Name
           </div>
           <input
@@ -88,7 +88,7 @@ function ManualInput({
           />
         </div>
         <div>
-          <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
+          <div className="text-xs font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
             Row Variable Name
           </div>
           <input
@@ -124,7 +124,7 @@ function ManualInput({
                     <button
                       onClick={() => onRemoveCol(ci)}
                       disabled={colLabels.length <= 1}
-                      className="text-slate-300 hover:text-red-400 text-[11px] leading-none disabled:opacity-20 transition-colors"
+                      className="text-[var(--color-border)] hover:text-[var(--color-danger)] text-[11px] leading-none disabled:opacity-20 transition-colors"
                       title="Remove column"
                     >
                       ×
@@ -156,7 +156,7 @@ function ManualInput({
                     <button
                       onClick={() => onRemoveRow(ri)}
                       disabled={rowLabels.length <= 1}
-                      className="text-slate-300 hover:text-red-400 text-sm leading-none disabled:opacity-20 transition-colors"
+                      className="text-[var(--color-border)] hover:text-[var(--color-danger)] text-sm leading-none disabled:opacity-20 transition-colors"
                       title="Remove row"
                     >
                       ×
@@ -224,39 +224,39 @@ function OutputTable({ data, view }: { data: TwoWayData; view: TableView }) {
     return String(cTotals[ci])
   }
 
-  const th = 'px-3 py-2 text-xs font-semibold text-[var(--color-muted)] border border-slate-200'
-  const td = 'px-3 py-2 text-sm text-center tabular-nums border border-slate-200'
+  const th = 'px-3 py-2 text-xs font-semibold text-[var(--color-muted)] border border-[var(--color-border)]'
+  const td = 'px-3 py-2 text-sm text-center tabular-nums border border-[var(--color-border)]'
 
   return (
     <table className="border-collapse min-w-full">
       <thead>
         <tr>
-          <th className={`${th} text-left bg-slate-50 whitespace-nowrap`}>
+          <th className={`${th} text-left bg-[var(--color-bg)] whitespace-nowrap`}>
             {data.explName}
-            <span className="block font-normal text-slate-400 text-[10px]">\ {data.respName}</span>
+            <span className="block font-normal text-[var(--color-muted)] text-[10px]">\ {data.respName}</span>
           </th>
           {data.colLabels.map(cl => (
-            <th key={cl} className={`${th} text-center bg-slate-50`}>{cl}</th>
+            <th key={cl} className={`${th} text-center bg-[var(--color-bg)]`}>{cl}</th>
           ))}
-          <th className={`${th} text-center bg-slate-100`}>Total</th>
+          <th className={`${th} text-center bg-[var(--color-border)]`}>Total</th>
         </tr>
       </thead>
       <tbody>
         {data.rowLabels.map((rl, ri) => (
           <tr key={rl}>
-            <td className={`${td} text-left font-semibold bg-slate-50`}>{rl}</td>
+            <td className={`${td} text-left font-semibold bg-[var(--color-bg)]`}>{rl}</td>
             {data.colLabels.map((_, ci) => (
-              <td key={ci} className={`${td} bg-white`}>{cellDisplay(ri, ci)}</td>
+              <td key={ci} className={`${td} bg-[var(--color-surface)]`}>{cellDisplay(ri, ci)}</td>
             ))}
-            <td className={`${td} font-semibold bg-slate-50`}>{rowTotalDisplay(ri)}</td>
+            <td className={`${td} font-semibold bg-[var(--color-bg)]`}>{rowTotalDisplay(ri)}</td>
           </tr>
         ))}
         <tr>
-          <td className={`${td} text-left font-semibold bg-slate-100`}>Total</td>
+          <td className={`${td} text-left font-semibold bg-[var(--color-border)]`}>Total</td>
           {data.colLabels.map((_, ci) => (
-            <td key={ci} className={`${td} font-semibold bg-slate-100`}>{colTotalDisplay(ci)}</td>
+            <td key={ci} className={`${td} font-semibold bg-[var(--color-border)]`}>{colTotalDisplay(ci)}</td>
           ))}
-          <td className={`${td} font-bold bg-slate-200`}>{getGrandTotal(data.cells)}</td>
+          <td className={`${td} font-bold bg-[var(--color-border)]`}>{getGrandTotal(data.cells)}</td>
         </tr>
       </tbody>
     </table>
@@ -509,8 +509,8 @@ export function TwoWayTable({
       active
         ? accent
           ? 'bg-[var(--color-accent)] text-white'
-          : 'bg-slate-600 text-white'
-        : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
+          : 'bg-[var(--color-text)] text-white'
+        : 'bg-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-border)]'
     }`
   }
 
@@ -581,7 +581,7 @@ export function TwoWayTable({
                 className={`px-3 py-1.5 text-sm font-medium transition-colors ${
                   inputMode === m
                     ? 'bg-[var(--color-accent)] text-white'
-                    : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                    : 'bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                 }`}
               >
                 {m === 'raw' ? 'Raw Data' : 'Enter Table'}
@@ -594,7 +594,7 @@ export function TwoWayTable({
         {inputMode === 'raw' && !isCardMode && (
           <>
             <div>
-              <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
+              <div className="text-xs font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
                 Column Variable
               </div>
               <select
@@ -609,7 +609,7 @@ export function TwoWayTable({
               </select>
             </div>
             <div>
-              <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
+              <div className="text-xs font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">
                 Row Variable
               </div>
               <select
@@ -624,7 +624,7 @@ export function TwoWayTable({
               </select>
             </div>
             {categoricalCols.length < 2 && (
-              <p className="text-sm text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg self-center">
+              <p className="text-sm text-[var(--color-gold-text)] bg-[var(--color-gold-light)] px-3 py-1.5 rounded-lg self-center">
                 Add two categorical variables to use raw-data mode, or switch to Enter Table.
               </p>
             )}
@@ -680,7 +680,7 @@ export function TwoWayTable({
 
           <div
             style={{ gridRow: '2', gridColumn: '2' }}
-            className="min-h-[420px] h-full rounded-2xl border border-dashed border-[var(--color-border)] bg-slate-50/70 p-4"
+            className="min-h-[420px] h-full rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg)]/70 p-4"
           >
             {outputContent}
           </div>

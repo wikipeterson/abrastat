@@ -571,7 +571,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                     className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                       manualTableGraphType === type
                         ? 'bg-[var(--color-accent)] text-white'
-                        : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
+                        : 'bg-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-border)]'
                     }`}
                   >
                     {label}
@@ -589,8 +589,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                     onClick={() => setManualTableValueMode(mode)}
                     className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                       manualTableValueMode === mode
-                        ? 'bg-slate-600 text-white'
-                        : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
+                        ? 'bg-[var(--color-text)] text-white'
+                        : 'bg-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-border)]'
                     }`}
                   >
                     {label}
@@ -609,7 +609,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
                     currentChart === ct
                       ? 'border-[var(--color-gold)] bg-[var(--color-gold-light)] text-[#5A3A00]'
-                      : 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-slate-300'
+                      : 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-[var(--color-border)]'
                   }`}
                 >
                   <span>{CHART_META[ct].icon}</span>
@@ -642,7 +642,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                     (config.barValueMode ?? 'count') === mode
                       ? 'bg-[var(--color-accent)] text-white'
-                      : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
+                      : 'bg-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-border)]'
                   }`}
                 >
                   {label}
@@ -657,7 +657,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
             <button
               ref={customizeButtonRef}
               onClick={() => setShowCustomize(v => !v)}
-              className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] transition-colors hover:border-slate-300"
+              className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] transition-colors hover:border-[var(--color-border)]"
             >
               Customize
             </button>
@@ -666,7 +666,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                 <div className="space-y-3">
                   <div
                     onPointerDown={handleCustomizeDragStart}
-                    className="flex cursor-move items-center justify-between rounded-lg border border-dashed border-[var(--color-border)] bg-slate-50 px-2.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--color-muted)]"
+                    className="flex cursor-move items-center justify-between rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--color-muted)]"
                   >
                     <span>Customize Graph</span>
                     <span>Drag</span>
@@ -693,7 +693,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                             onClick={() => setCustomizeDraft(draft => ({ ...draft, colorPalette: name }))}
                             title={name.charAt(0).toUpperCase() + name.slice(1)}
                             className={`flex items-center gap-0.5 p-1 rounded-lg border-2 transition-colors ${
-                              (customizeDraft.colorPalette ?? 'default') === name ? 'border-[var(--color-accent)]' : 'border-transparent hover:border-slate-200'
+                              (customizeDraft.colorPalette ?? 'default') === name ? 'border-[var(--color-accent)]' : 'border-transparent hover:border-[var(--color-border)]'
                             }`}
                           >
                             {pal.slice(0, 5).map((c, i) => (
@@ -720,7 +720,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                             className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
                               customizeDraft.dotSize === size
                                 ? 'bg-[var(--color-accent)] text-white'
-                                : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'
+                                : 'bg-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-border)]'
                             }`}
                           >
                             {label}
@@ -852,7 +852,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
                     <button
                       type="button"
                       onClick={() => setShowCustomize(false)}
-                      className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] transition-colors hover:border-slate-300"
+                      className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] transition-colors hover:border-[var(--color-border)]"
                     >
                       Cancel
                     </button>
@@ -872,7 +872,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
           <button
             onClick={handleCopyGraph}
             disabled={isBlank || isCopying}
-            className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] transition-colors hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] transition-colors hover:border-[var(--color-border)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isCopying ? 'Copying…' : 'Copy Graph'}
           </button>
@@ -948,7 +948,7 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
             isBlank
               ? isOverCanvas
                 ? 'border-2 border-[var(--color-accent)] bg-[var(--color-accent-light)]'
-                : 'border-2 border-dashed border-[var(--color-border)] bg-slate-50/80'
+                : 'border-2 border-dashed border-[var(--color-border)] bg-[var(--color-bg)]/80'
               : ''
           }`}
         >
@@ -1018,8 +1018,8 @@ export function GraphCard({ cardId, config, onClearZone, onSetChartType, onSetTi
   return (
     <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
-        <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">Graph</span>
-        <button onClick={onRemove} className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none">×</button>
+        <span className="text-sm font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">Graph</span>
+        <button onClick={onRemove} className="text-[var(--color-muted)] hover:text-[var(--color-danger)] transition-colors text-xl leading-none">×</button>
       </div>
       <div className="p-4" style={{ minHeight: 480 }}>
         {inner}

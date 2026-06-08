@@ -286,35 +286,35 @@ function MeanNullDistPlot({ values, diffObs, alternative, showNormalCurve = fals
       <style>{`@keyframes dot-drop-full{from{transform:translateY(-${PH}px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
       <defs><clipPath id={clipId}><rect x={0} y={0} width={PW} height={PH}/></clipPath></defs>
       <g transform={`translate(${MG.l},${MG.t})`}>
-        <path d={shade} fill="#0EA5A0" opacity={0.10}/>
-        <line x1={0} y1={PH} x2={PW} y2={PH} stroke="#E2E8F0" strokeWidth={1.5}/>
+        <path d={shade} fill="var(--color-gold)" opacity={0.10}/>
+        <line x1={0} y1={PH} x2={PW} y2={PH} stroke="var(--color-text)" strokeWidth={1.5}/>
         {ticks.map((v, i) => (
           <g key={i} transform={`translate(${xOf(v)},${PH})`}>
-            <line y2={3} stroke="#CBD5E1" strokeWidth={1}/>
-            <text y={12} textAnchor="middle" fontSize={8} fill="#94A3B8" fontFamily="DM Sans,sans-serif">
+            <line y2={3} stroke="var(--color-muted)" strokeWidth={1}/>
+            <text y={12} textAnchor="middle" fontSize={8} fill="var(--color-muted)" fontFamily="DM Sans,sans-serif">
               {formatTick(v, xRange)}
             </text>
           </g>
         ))}
         <g clipPath={`url(#${clipId})`}>
           {circles.map((c,i) => (
-            <circle key={i} cx={c.cx} cy={c.cy} r={dotR} fill={c.extreme?'#0EA5A0':'#94A3B8'} opacity={0.85}
+            <circle key={i} cx={c.cx} cy={c.cy} r={dotR} fill={c.extreme?'var(--color-gold)':'var(--color-accent)'} opacity={0.85}
               style={i===circles.length-1&&values.length>0?{animation:'dot-drop-full 700ms ease-out'}:undefined}/>
           ))}
           {normalPath && (
             <polyline
               points={normalPath}
               fill="none"
-              stroke="#F59E0B"
+              stroke="var(--color-accent)"
               strokeWidth={2}
               strokeLinejoin="round"
               strokeLinecap="round"
             />
           )}
         </g>
-        <line x1={obsX} y1={0} x2={obsX} y2={PH} stroke="#EF4444" strokeWidth={1.8} strokeDasharray="4,3"/>
-        <text x={obsX+(diffObs>=0?3:-3)} y={5} textAnchor={diffObs>=0?'start':'end'} fontSize={8} fill="#EF4444" fontFamily="DM Sans,sans-serif" fontWeight="600">obs</text>
-        <text x={PW/2} y={PH+24} textAnchor="middle" fontSize={9} fill="#94A3B8" fontFamily="DM Sans,sans-serif">Simulated x̄₁ − x̄₂</text>
+        <line x1={obsX} y1={0} x2={obsX} y2={PH} stroke="var(--color-gold)" strokeWidth={1.8} strokeDasharray="4,3"/>
+        <text x={obsX+(diffObs>=0?3:-3)} y={5} textAnchor={diffObs>=0?'start':'end'} fontSize={8} fill="var(--color-gold-text)" fontFamily="DM Sans,sans-serif" fontWeight="600">obs</text>
+        <text x={PW/2} y={PH+24} textAnchor="middle" fontSize={9} fill="var(--color-muted)" fontFamily="DM Sans,sans-serif">Simulated x̄₁ − x̄₂</text>
       </g>
     </svg>
   )
@@ -496,7 +496,7 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone, onAssign
           <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
             {(['data', 'manual'] as SourceMode[]).map((m, i) => (
               <button key={m} onClick={() => setSourceMode(m)}
-                className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === m ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}>
+                className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === m ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}>
                 {m === 'data' ? 'Use Data' : 'Enter Info'}
               </button>
             ))}
@@ -531,7 +531,7 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone, onAssign
                       setGroupA('')
                       setGroupB('')
                     }}
-                    className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${dataShape === option.key ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}
+                    className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${dataShape === option.key ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}
                   >
                     {option.label}
                   </button>
@@ -563,9 +563,9 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone, onAssign
               </div>
             )}
             {data && (
-              <div className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-2 text-center text-sm">
+              <div className="rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] px-4 py-2 text-center text-sm">
                 <span className="text-[var(--color-muted)]">x̄₁ − x̄₂ = {data.mean1.toFixed(3)} − {data.mean2.toFixed(3)} = </span>
-                <span className="font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</span>
+                <span className="font-mono tabular-nums font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</span>
               </div>
             )}
           </>
@@ -585,7 +585,7 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone, onAssign
                   className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-xs font-mono bg-white text-[var(--color-text)] resize-none" />
                 <div className="text-[10px] text-[var(--color-muted)]">
                   {side.parsed.error
-                    ? <span className="text-red-500">{side.parsed.error}</span>
+                    ? <span className="text-[var(--color-danger)]">{side.parsed.error}</span>
                     : side.parsed.values.length > 0
                       ? `n = ${side.parsed.values.length},  x̄ = ${(side.parsed.values.reduce((a,b)=>a+b,0)/side.parsed.values.length).toFixed(3)}`
                       : 'Enter values separated by commas or spaces'}
@@ -593,9 +593,9 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone, onAssign
               </div>
             ))}
             {data && (
-              <div className="col-span-2 rounded-xl bg-slate-50 border border-slate-100 px-4 py-2 text-center text-sm">
+              <div className="col-span-2 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] px-4 py-2 text-center text-sm">
                 <span className="text-[var(--color-muted)]">x̄₁ − x̄₂ = {data.mean1.toFixed(3)} − {data.mean2.toFixed(3)} = </span>
-                <span className="font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</span>
+                <span className="font-mono tabular-nums font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</span>
               </div>
             )}
           </div>
@@ -609,14 +609,14 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone, onAssign
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-[var(--color-muted)] tracking-wide">Hₐ:</span>
-            <span className="text-sm font-mono font-medium text-[var(--color-text)]">μ₁ − μ₂</span>
+            <span className="text-sm font-mono tabular-nums font-medium text-[var(--color-text)]">μ₁ − μ₂</span>
             <select value={alternative} onChange={e => setAlternative(e.target.value as Alternative)}
               className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white">
               <option value="less">&lt;</option>
               <option value="greater">&gt;</option>
               <option value="two">≠</option>
             </select>
-            <span className="text-sm font-mono font-medium text-[var(--color-text)]">{nullDiff}</span>
+            <span className="text-sm font-mono tabular-nums font-medium text-[var(--color-text)]">{nullDiff}</span>
           </div>
           <button onClick={handleLaunch} disabled={!data}
             className="ml-auto rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity">
@@ -635,7 +635,7 @@ function MeanColStatLabel({ cx, n, mean, highlight }: {
 }) {
   return (
     <div style={{position:'absolute',left:cx,top:5,transform:'translateX(-50%)',textAlign:'center',pointerEvents:'none'}}>
-      <div className={`rounded-lg px-2 py-0.5 text-[10px] font-semibold transition-colors ${highlight?'bg-[var(--color-accent)] text-white':'bg-slate-100 text-[var(--color-muted)]'}`}>
+      <div className={`rounded-lg px-2 py-0.5 text-[10px] font-semibold transition-colors ${highlight?'bg-[var(--color-accent)] text-white':'bg-[var(--color-bg)] text-[var(--color-muted)]'}`}>
         n={n}, x̄={mean.toFixed(3)}
       </div>
     </div>
@@ -778,7 +778,7 @@ export function TwoMeanSimCard({ cardId, config }: { cardId: string; config: Two
           <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
             <div className="overflow-x-auto flex justify-center">
               <div className="w-fit">
-                <div className="relative bg-slate-50 border-b border-[var(--color-border)] flex-shrink-0" style={{width:CANVAS_W,height:HEADER_H}}>
+                <div className="relative bg-[var(--color-bg)] border-b border-[var(--color-border)] flex-shrink-0" style={{width:CANVAS_W,height:HEADER_H}}>
                   <span style={{position:'absolute',left:COL_CX.left,top:showColStats?15:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label1}</span>
                   {showCenter&&<span style={{position:'absolute',left:COL_CX.center,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,color:'var(--color-muted)'}}>Pooled</span>}
                   <span style={{position:'absolute',left:COL_CX.right,top:showColStats?15:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label2}</span>
@@ -806,8 +806,8 @@ export function TwoMeanSimCard({ cardId, config }: { cardId: string; config: Two
                     const fd = p.faceDown
                     // face-up: teal for group 1, amber for group 2
                     const inG1 = assignment.length > 0 ? aSet.has(c.id) : c.group === 0
-                    const bg  = fd ? '#1A8C80' : inG1 ? '#2EC4B6' : '#F59E0B'
-                    const bdr = fd ? '#0D6B63' : inG1 ? '#1A8C80' : '#D97706'
+                    const bg  = fd ? 'var(--color-accent-strong)' : inG1 ? 'var(--color-accent)' : 'var(--color-gold)'
+                    const bdr = fd ? 'var(--color-accent-strong)' : inG1 ? 'var(--color-accent-strong)' : 'var(--color-gold-ring)'
                     return (
                       <div key={c.id} style={{
                         position:'absolute',left:p.x,top:p.y,width:layout.w,height:layout.h,
@@ -821,7 +821,7 @@ export function TwoMeanSimCard({ cardId, config }: { cardId: string; config: Two
                         {!fd && layout.w >= 18 && (
                           <span style={{
                             fontSize: Math.max(5, Math.min(9, layout.w * 0.28)),
-                            color: inG1 ? 'rgba(10,70,60,0.85)' : 'rgba(120,60,0,0.85)',
+                            color: inG1 ? 'var(--color-accent-strong)' : 'var(--color-gold-text)',
                             fontFamily:'DM Sans,monospace',
                             fontWeight:600,
                             lineHeight:1,
@@ -841,14 +841,14 @@ export function TwoMeanSimCard({ cardId, config }: { cardId: string; config: Two
                   })}
                 </div>
 
-                <div className="flex-shrink-0 border-t border-[var(--color-border)] bg-slate-50 px-3 py-1.5" style={{width:CANVAS_W}}>
+                <div className="flex-shrink-0 border-t border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5" style={{width:CANVAS_W}}>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
-                      <span className="inline-block rounded-sm bg-[#2EC4B6] flex-shrink-0" style={{width:8,height:13,boxShadow:'0 1px 2px rgba(0,0,0,0.15)'}}/>
+                      <span className="inline-block rounded-sm bg-[var(--color-accent)] flex-shrink-0" style={{width:8,height:13,boxShadow:'0 1px 2px rgba(0,0,0,0.15)'}}/>
                       {config.label1}
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
-                      <span className="inline-block rounded-sm bg-[#F59E0B] flex-shrink-0" style={{width:8,height:13,boxShadow:'0 1px 2px rgba(0,0,0,0.15)'}}/>
+                      <span className="inline-block rounded-sm bg-[var(--color-gold)] flex-shrink-0" style={{width:8,height:13,boxShadow:'0 1px 2px rgba(0,0,0,0.15)'}}/>
                       {config.label2}
                     </div>
                     <span className="ml-auto text-[10px] italic text-[var(--color-muted)]">{CAPTIONS[stage]}</span>
@@ -862,14 +862,14 @@ export function TwoMeanSimCard({ cardId, config }: { cardId: string; config: Two
           <div className="space-y-4">
             <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
               <div className="grid text-xs" style={{gridTemplateColumns:'auto 1fr 1fr 1fr'}}>
-                <div className="px-2 py-1.5 bg-slate-50 border-b border-[var(--color-border)]"/>
+                <div className="px-2 py-1.5 bg-[var(--color-bg)] border-b border-[var(--color-border)]"/>
                 {[config.label1, config.label2, 'x̄₁ − x̄₂'].map(h => (
-                  <div key={h} className="px-2 py-1.5 bg-slate-50 border-b border-[var(--color-border)] text-center font-semibold text-[var(--color-muted)] truncate">{h}</div>
+                  <div key={h} className="px-2 py-1.5 bg-[var(--color-bg)] border-b border-[var(--color-border)] text-center font-semibold text-[var(--color-muted)] truncate">{h}</div>
                 ))}
-                <div className="px-2 py-1.5 font-semibold text-[var(--color-muted)] bg-slate-50 text-[10px] flex items-center">Obs.</div>
+                <div className="px-2 py-1.5 font-semibold text-[var(--color-muted)] bg-[var(--color-bg)] text-[10px] flex items-center">Obs.</div>
                 <div className="px-2 py-1.5 text-center text-[var(--color-text)]">n={data.n1}<br/><span className="font-bold">{data.mean1.toFixed(3)}</span></div>
                 <div className="px-2 py-1.5 text-center text-[var(--color-text)]">n={data.n2}<br/><span className="font-bold">{data.mean2.toFixed(3)}</span></div>
-                <div className="px-2 py-1.5 text-center font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</div>
+                <div className="px-2 py-1.5 text-center font-mono tabular-nums font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</div>
                 {currentResult ? (
                   <>
                     <div className={`px-2 py-1.5 text-[10px] font-semibold flex items-center text-[var(--color-muted)] ${highlightSim?'bg-[var(--color-accent-light)]':''}`}>Sim.</div>
@@ -899,7 +899,7 @@ export function TwoMeanSimCard({ cardId, config }: { cardId: string; config: Two
                 <span className="text-[10px] text-[var(--color-muted)]">{simCount} total</span>
               </div>
             </div>
-            <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-3 text-xs text-[var(--color-muted)] space-y-1">
+            <div className="rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] px-3 py-3 text-xs text-[var(--color-muted)] space-y-1">
               <div><span className="font-semibold">H₀:</span> μ₁ − μ₂ = {nullDiff}</div>
               <div><span className="font-semibold">H₁:</span> {altStatement}</div>
             </div>
@@ -914,7 +914,7 @@ export function TwoMeanSimCard({ cardId, config }: { cardId: string; config: Two
         {/* Null distribution */}
         <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 flex flex-col gap-1.5">
           <div className="flex items-start justify-between gap-3 flex-shrink-0">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
             <div className="flex flex-col items-end gap-1">
               <label className="flex items-center gap-2 text-xs text-[var(--color-muted)] select-none">
                 <input
@@ -938,8 +938,8 @@ export function TwoMeanSimCard({ cardId, config }: { cardId: string; config: Two
             }
           </div>
           <div className="flex items-center gap-3 pt-1.5 border-t border-[var(--color-border)] flex-shrink-0">
-            <span className="text-xs text-[var(--color-muted)]">Extreme: <span className="font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}</span>
-            <span className="ml-auto text-sm font-bold text-[var(--color-accent)]">
+            <span className="text-xs text-[var(--color-muted)]">Extreme: <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}</span>
+            <span className="ml-auto text-sm font-mono tabular-nums font-bold text-[var(--color-accent)]">
               {pValue !== null ? `p ≈ ${pValue < 0.001 ? '< 0.001' : pValue.toFixed(4)}` : 'p = —'}
             </span>
           </div>
@@ -947,7 +947,7 @@ export function TwoMeanSimCard({ cardId, config }: { cardId: string; config: Two
       </div>
 
       {/* Controls */}
-      <div className="flex-shrink-0 flex flex-wrap items-center gap-2 px-4 py-3 border-t border-[var(--color-border)] bg-slate-50">
+      <div className="flex-shrink-0 flex flex-wrap items-center gap-2 px-4 py-3 border-t border-[var(--color-border)] bg-[var(--color-bg)]">
         <div className="flex items-center gap-1">
           {STEPS.map(({label,stages})=>{
             const active = (stages as Stage[]).includes(stage) && !isAnimating

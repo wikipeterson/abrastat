@@ -88,7 +88,7 @@ export function ScoreEntry({ score, maxScore, onSubmit, submitting }: Props) {
 
       {/* Initials */}
       <div className="text-center space-y-2">
-        <div className="text-xs font-bold uppercase tracking-widest text-[var(--color-muted)]">
+        <div className="text-xs font-mono font-bold uppercase tracking-widest text-[var(--color-muted)]">
           Enter Your Initials
         </div>
         <div className="flex items-center justify-center gap-3">
@@ -104,7 +104,7 @@ export function ScoreEntry({ score, maxScore, onSubmit, submitting }: Props) {
                 onChange={e => handleChange(i, e.target.value)}
                 onKeyDown={e => handleKeyDown(i, e)}
                 onFocus={e => e.target.select()}
-                className="w-14 h-16 text-center font-mono font-bold text-3xl rounded-xl border-2 border-slate-300 focus:border-[var(--color-accent)] focus:bg-[var(--color-accent-light)] focus:text-[var(--color-accent)] bg-slate-50 outline-none uppercase caret-transparent"
+                className="w-14 h-16 text-center font-mono font-bold text-3xl rounded-xl border-2 border-[var(--color-border)] focus:border-[var(--color-accent)] focus:bg-[var(--color-accent-light)] focus:text-[var(--color-accent)] bg-[var(--color-bg)] outline-none uppercase caret-transparent"
               />
             ))}
           </div>
@@ -114,7 +114,7 @@ export function ScoreEntry({ score, maxScore, onSubmit, submitting }: Props) {
 
       {/* Emoji picker */}
       <div className="space-y-2">
-        <div className="text-xs font-bold uppercase tracking-widest text-[var(--color-muted)] text-center">
+        <div className="text-xs font-mono font-bold uppercase tracking-widest text-[var(--color-muted)] text-center">
           Pick Your Emoji
         </div>
         <div className="grid grid-cols-8 gap-1.5">
@@ -125,7 +125,7 @@ export function ScoreEntry({ score, maxScore, onSubmit, submitting }: Props) {
               className={`text-xl py-1 rounded-lg transition-colors ${
                 emoji === e
                   ? 'bg-[var(--color-accent-light)] ring-2 ring-[var(--color-accent)]'
-                  : 'hover:bg-slate-100'
+                  : 'hover:bg-[var(--color-bg)]'
               }`}
             >
               {e}

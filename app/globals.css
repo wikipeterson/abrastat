@@ -1,10 +1,21 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans:  var(--font-dm-sans), system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-mono:  var(--font-jetbrains-mono), ui-monospace, monospace;
+}
+
 html {
   font-size: 125%;
 }
 
 :root {
+  /* Semantic font tokens — components reference these, never raw family names */
+  --font-sans:  var(--font-dm-sans), system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-mono:  var(--font-jetbrains-mono), ui-monospace, monospace;
+
   --color-bg:            #F7F2E8;
   --color-surface:       #FFFFFF;
   --color-text:          #0E3D38;
@@ -17,6 +28,10 @@ html {
   --color-accent-strong: #0D6E64;
   --color-gold:          #E8920C;
   --color-gold-light:    #FBEAC9;
+  --color-gold-text:     #8A5800;
+  --color-gold-ring:     #F0A82E;
+  --color-danger:        #C0392B;
+  --color-danger-light:  #FBE9E7;
 
   /* tinted with the deep-teal ink so it harmonizes with the cream field */
   --shadow-card: 0 1px 2px rgba(8,38,33,0.05), 0 12px 28px -18px rgba(8,38,33,0.32);
@@ -36,6 +51,10 @@ html[data-palette='classic'] {
   --color-accent-strong: #235D54;
   --color-gold:          #E8920C;
   --color-gold-light:    #FBEFD6;
+  --color-gold-text:     #8A5800;
+  --color-gold-ring:     #F0A82E;
+  --color-danger:        #C0392B;
+  --color-danger-light:  #FBE9E7;
 }
 
 html[data-palette='ocean'] {
@@ -51,6 +70,10 @@ html[data-palette='ocean'] {
   --color-accent-strong: #1C5BC0;
   --color-gold:          #E8920C;
   --color-gold-light:    #FBEFD6;
+  --color-gold-text:     #8A5800;
+  --color-gold-ring:     #F0A82E;
+  --color-danger:        #C0392B;
+  --color-danger-light:  #FBE9E7;
 }
 
 html[data-palette='citrus'] {
@@ -66,6 +89,10 @@ html[data-palette='citrus'] {
   --color-accent-strong: #92600A;
   --color-gold:          #0E8C7F;
   --color-gold-light:    #DBF1ED;
+  --color-gold-text:     #0A6A60;
+  --color-gold-ring:     #14A896;
+  --color-danger:        #C0392B;
+  --color-danger-light:  #FBE9E7;
 }
 
 html[data-palette='midnight'] {
@@ -81,6 +108,10 @@ html[data-palette='midnight'] {
   --color-accent-strong: #0369A1;
   --color-gold:          #F0A93A;
   --color-gold-light:    #3A2A08;
+  --color-gold-text:     #F0A93A;
+  --color-gold-ring:     #F4BD5E;
+  --color-danger:        #FC8181;
+  --color-danger-light:  #3D1515;
 }
 
 html[data-palette='grape'] {
@@ -96,6 +127,10 @@ html[data-palette='grape'] {
   --color-accent-strong: #7E22CE;
   --color-gold:          #E8920C;
   --color-gold-light:    #FBEFD6;
+  --color-gold-text:     #8A5800;
+  --color-gold-ring:     #F0A82E;
+  --color-danger:        #C0392B;
+  --color-danger-light:  #FBE9E7;
 }
 
 html[data-palette='rose'] {
@@ -111,6 +146,10 @@ html[data-palette='rose'] {
   --color-accent-strong: #BE123C;
   --color-gold:          #E8920C;
   --color-gold-light:    #FBEFD6;
+  --color-gold-text:     #8A5800;
+  --color-gold-ring:     #F0A82E;
+  --color-danger:        #C0392B;
+  --color-danger-light:  #FBE9E7;
 }
 
 html[data-palette='ember'] {
@@ -126,6 +165,10 @@ html[data-palette='ember'] {
   --color-accent-strong: #C2410C;
   --color-gold:          #C9820A;
   --color-gold-light:    #FBEFD6;
+  --color-gold-text:     #7A4E00;
+  --color-gold-ring:     #D4900C;
+  --color-danger:        #C0392B;
+  --color-danger-light:  #FBE9E7;
 }
 
 html[data-palette='sage'] {
@@ -141,6 +184,10 @@ html[data-palette='sage'] {
   --color-accent-strong: #166534;
   --color-gold:          #E8920C;
   --color-gold-light:    #FBEFD6;
+  --color-gold-text:     #8A5800;
+  --color-gold-ring:     #F0A82E;
+  --color-danger:        #C0392B;
+  --color-danger-light:  #FBE9E7;
 }
 
 html[data-palette='indigo'] {
@@ -156,6 +203,10 @@ html[data-palette='indigo'] {
   --color-accent-strong: #4338CA;
   --color-gold:          #E8920C;
   --color-gold-light:    #FBEFD6;
+  --color-gold-text:     #8A5800;
+  --color-gold-ring:     #F0A82E;
+  --color-danger:        #C0392B;
+  --color-danger-light:  #FBE9E7;
 }
 
 html[data-palette='classroom'] {
@@ -171,12 +222,16 @@ html[data-palette='classroom'] {
   --color-accent-strong: #0A6A60;
   --color-gold:          #D97706;
   --color-gold-light:    #FFE08A;
+  --color-gold-text:     #8A4D00;
+  --color-gold-ring:     #E8920C;
+  --color-danger:        #C0392B;
+  --color-danger-light:  #FBE9E7;
 }
 
 body {
   background: var(--color-bg);
   color: var(--color-text);
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
 }
 
 /* Variable chip rotation animations for zone transitions */

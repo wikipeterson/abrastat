@@ -65,8 +65,16 @@ interface Props {
   onAssignZone: (zone: 'var1' | 'var2', colId: string) => boolean
 }
 
+function getCssVar(name: string, fallback: string): string {
+  if (typeof document === 'undefined') return fallback
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+}
+
 export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: Props) {
   const { grid } = useStore()
+  const accentColor = getCssVar('--color-accent', '#16A89B')
+  const goldColor = getCssVar('--color-gold', '#E8920C')
+  const goldTextColor = getCssVar('--color-gold-text', '#8A5800')
 
   function handleNativeDrop(zone: 'var1' | 'var2') {
     return (e: React.DragEvent) => {
@@ -253,8 +261,8 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
     return {
       traces: [
         ...shades,
-        { type: 'scatter' as const, mode: 'lines' as const, x: xs, y: ys, line: { color: '#475569', width: 2 }, hoverinfo: 'skip' as const, showlegend: false },
-        { type: 'scatter' as const, mode: 'lines' as const, x: [result.stat, result.stat], y: [0, Math.min(jS.normal.pdf(result.stat, 0, 1) * 1.05, yMax)], line: { color: '#EF4444', width: 2, dash: 'dash' as const }, hoverinfo: 'skip' as const, showlegend: false },
+        { type: 'scatter' as const, mode: 'lines' as const, x: xs, y: ys, line: { color: accentColor, width: 2 }, hoverinfo: 'skip' as const, showlegend: false },
+        { type: 'scatter' as const, mode: 'lines' as const, x: [result.stat, result.stat], y: [0, Math.min(jS.normal.pdf(result.stat, 0, 1) * 1.05, yMax)], line: { color: goldColor, width: 2, dash: 'dash' as const }, hoverinfo: 'skip' as const, showlegend: false },
       ],
       absMax,
       yMax,
@@ -282,7 +290,7 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
             <button
               key={nextMode}
               onClick={() => setSourceMode(nextMode)}
-              className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === nextMode ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}
+              className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === nextMode ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}
             >
               {label}
             </button>
@@ -299,7 +307,7 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
                 <button
                   key={nextKind}
                   onClick={() => setManualKind(nextKind)}
-                  className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${manualKind === nextKind ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}
+                  className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${manualKind === nextKind ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}
                 >
                   {label}
                 </button>
@@ -355,7 +363,7 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
             )}
 
             {useManual && (
-              <div className="bg-slate-50 rounded-xl p-3 flex-shrink-0 space-y-2">
+              <div className="bg-[var(--color-bg)] rounded-xl p-3 flex-shrink-0 space-y-2">
                 <div className="grid gap-2 grid-cols-2">
                   <label className="text-xs text-[var(--color-muted)]">
                     n₁
@@ -381,7 +389,7 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
               </div>
             )}
 
-            <div className="bg-slate-50 rounded-xl p-3 flex-shrink-0 space-y-2">
+            <div className="bg-[var(--color-bg)] rounded-xl p-3 flex-shrink-0 space-y-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Procedure</span>
                 <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
@@ -392,7 +400,7 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
                     <button
                       key={nextMode}
                       onClick={() => setMode(nextMode)}
-                      className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${mode === nextMode ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}
+                      className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${mode === nextMode ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}
                     >
                       {label}
                     </button>
@@ -450,7 +458,7 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
 
             {((useManual && manualSummary1) || (!useManual && (oneSampleSummary || groupedSummaries.a))) && (
               <div className="flex-shrink-0">
-                <p className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">Summary Statistics</p>
+                <p className="text-[10px] font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">Summary Statistics</p>
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="text-[var(--color-muted)] text-[10px]">
@@ -509,7 +517,7 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
                     margin: { t: 8, r: 8, b: 32, l: 8 },
                     height: 140,
                     showlegend: false,
-                    annotations: [{ x: result.stat, y: chartTraces.yMax * 1.08, text: `z = ${fmt(result.stat, 3)}`, showarrow: false, font: { size: 11, color: '#EF4444' }, xanchor: result.stat >= 0 ? 'right' : 'left' }],
+                    annotations: [{ x: result.stat, y: chartTraces.yMax * 1.08, text: `z = ${fmt(result.stat, 3)}`, showarrow: false, font: { size: 11, color: goldTextColor }, xanchor: result.stat >= 0 ? 'right' : 'left' }],
                   }}
                 />
               </div>
@@ -524,8 +532,8 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
                       <StatBox label="p-value" value={fmtP(result.p)} highlight={rejected ? 'reject' : 'keep'} />
                     </div>
 
-                    <div className={`rounded-xl p-3 border ${rejected ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
-                      <p className={`text-xs font-semibold mb-1 ${rejected ? 'text-red-700' : 'text-green-700'}`}>{rejected ? 'Reject H₀' : 'Fail to Reject H₀'}</p>
+                    <div className={`rounded-xl p-3 border ${rejected ? 'bg-[var(--color-danger-light)] border-[var(--color-danger)]' : 'bg-[var(--color-accent-light)] border-[var(--color-border)]'}`}>
+                      <p className={`text-xs font-semibold mb-1 ${rejected ? 'text-[var(--color-danger)]' : 'text-[var(--color-accent-strong)]'}`}>{rejected ? 'Reject H₀' : 'Fail to Reject H₀'}</p>
                       <p className="text-xs text-[var(--color-muted)] leading-relaxed">
                         {rejected
                           ? `At α = ${alpha}, there is sufficient evidence to conclude ${altStatement}.`
@@ -569,9 +577,9 @@ function PropSummaryRow({ label, s }: { label: string; s: PropSummary }) {
 
 function StatBox({ label, value, highlight }: { label: string; value: string; highlight?: 'reject' | 'keep' }) {
   return (
-    <div className={`rounded-xl border p-3 ${highlight === 'reject' ? 'border-red-200 bg-red-50' : highlight === 'keep' ? 'border-green-200 bg-green-50' : 'border-[var(--color-border)] bg-white'}`}>
-      <p className="text-[10px] text-[var(--color-muted)] uppercase tracking-wide mb-1">{label}</p>
-      <p className="text-base font-semibold text-[var(--color-text)]">{value}</p>
+    <div className={`rounded-xl border p-3 ${highlight === 'reject' ? 'border-[var(--color-danger)] bg-[var(--color-danger-light)]' : highlight === 'keep' ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]' : 'border-[var(--color-border)] bg-[var(--color-surface)]'}`}>
+      <p className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wide mb-1">{label}</p>
+      <p className="text-base font-mono tabular-nums font-semibold text-[var(--color-text)]">{value}</p>
     </div>
   )
 }

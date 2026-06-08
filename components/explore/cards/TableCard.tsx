@@ -27,8 +27,8 @@ export function TableCard({ cardId, config, onClearZone, onAssignZone, onRemove,
     <div className={hideHeader ? '' : 'bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] overflow-hidden'}>
       {!hideHeader && (
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
-          <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">Two-Way Table</span>
-          <button onClick={onRemove} className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none">×</button>
+          <span className="text-sm font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">Two-Way Table</span>
+          <button onClick={onRemove} className="text-[var(--color-muted)] hover:text-[var(--color-danger)] transition-colors text-xl leading-none">×</button>
         </div>
       )}
 

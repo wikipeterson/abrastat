@@ -38,7 +38,7 @@ export function Leaderboard({ gameId, highlightInitials, compact }: LeaderboardP
     <div className={compact ? '' : 'bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] overflow-hidden'}>
       {!compact && (
         <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
-          <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">
+          <span className="text-sm font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">
             Top Scores · Last 2 Weeks
           </span>
           {loading && <span className="text-xs text-[var(--color-muted)]">Loading…</span>}
@@ -78,7 +78,7 @@ export function Leaderboard({ gameId, highlightInitials, compact }: LeaderboardP
       </div>
 
       {!loading && canExpand && (
-        <div className="px-4 py-3 border-t border-[var(--color-border)] bg-slate-50/60">
+        <div className="px-4 py-3 border-t border-[var(--color-border)] bg-[var(--color-bg)]/60">
           <button
             onClick={() => setExpanded(v => !v)}
             className="text-sm font-medium text-[var(--color-accent)] hover:opacity-80 transition-opacity"

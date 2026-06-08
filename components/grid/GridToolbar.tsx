@@ -18,14 +18,14 @@ export function GridToolbar() {
           <div className="flex min-w-max items-center gap-1 px-2 py-1.5 whitespace-nowrap">
             <button
               onClick={() => setShowData(true)}
-              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-bg)] transition-colors"
             >
               <Database size={14} /> Transform
             </button>
             <div className="w-px h-4 bg-[var(--color-border)] mx-1" />
             <button
               onClick={() => setShowImport(true)}
-              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-slate-100 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-bg)] transition-colors"
             >
               <ArrowDownToLine size={14} /> Import
             </button>
@@ -35,7 +35,7 @@ export function GridToolbar() {
         {/* Filter chips */}
         {activeFilters.length > 0 && (
           <div className="flex items-center gap-1.5 px-2 pb-1.5 flex-wrap">
-            <span className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wide mr-0.5">Filters:</span>
+            <span className="text-[10px] font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide mr-0.5">Filters:</span>
             {activeFilters.map(f => {
               const label = f.op === 'between'
                 ? `${f.colName} between ${f.value} and ${f.value2 ?? '?'}`
@@ -48,7 +48,7 @@ export function GridToolbar() {
                   {label}
                   <button
                     onClick={() => setRowFilters(activeFilters.filter(x => x.id !== f.id))}
-                    className="hover:text-teal-800 ml-0.5"
+                    className="hover:text-[var(--color-accent-strong)] ml-0.5"
                     aria-label="Remove filter"
                   >
                     <X size={10} />
@@ -58,7 +58,7 @@ export function GridToolbar() {
             })}
             <button
               onClick={() => setRowFilters([])}
-              className="text-[11px] text-[var(--color-muted)] hover:text-red-500 ml-1"
+              className="text-[11px] text-[var(--color-muted)] hover:text-[var(--color-danger)] ml-1"
             >
               Clear all
             </button>

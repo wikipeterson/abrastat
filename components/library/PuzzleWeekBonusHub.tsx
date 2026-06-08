@@ -756,7 +756,7 @@ function SolvedOverlay({
         <button
           type="button"
           onClick={onAdmire}
-          className="w-full rounded-2xl border border-[var(--color-border)] bg-white py-3 text-sm font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+          className="w-full rounded-2xl border border-[var(--color-border)] bg-white py-3 text-sm font-semibold text-[var(--color-text)] transition hover:bg-[var(--color-bg)]"
         >
           Admire your puzzle?
         </button>
@@ -834,7 +834,7 @@ function BonusHowToPlay({ children }: { children: ReactNode }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-slate-50 lg:hidden"
+        className="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-[var(--color-bg)] lg:hidden"
       >
         How to play
         <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">?</span>
@@ -853,7 +853,7 @@ function BonusHowToPlay({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-slate-50"
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-[var(--color-bg)]"
               >
                 ✕
               </button>
@@ -969,7 +969,7 @@ function SliderPuzzleBoard({
               {Array.from({ length: total }).map((_, idx) => (
                 <div
                   key={`slot-${idx}`}
-                  className="rounded-[0.95rem] border border-dashed border-slate-200 bg-white/80"
+                  className="rounded-[0.95rem] border border-dashed border-[var(--color-border)] bg-white/80"
                 />
               ))}
             </div>
@@ -1028,7 +1028,7 @@ function SliderPuzzleBoard({
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition lg:text-sm ${
                   level === l
                     ? 'bg-[var(--color-accent)] text-white shadow-sm'
-                    : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                    : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                 }`}
               >
                 {SLIDER_LABELS[l]}
@@ -1040,20 +1040,20 @@ function SliderPuzzleBoard({
           </div>
           <div className="flex flex-shrink-0 gap-2 lg:hidden">
             <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5">
-              <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">Moves</div>
+              <div className="text-[9px] font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)]">Moves</div>
               <div className="text-lg font-bold leading-none text-[var(--color-text)]">{moves}</div>
             </div>
             <button
               type="button"
               onClick={newBoard}
-              className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 transition hover:bg-slate-50"
+              className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 transition hover:bg-[var(--color-bg)]"
             >
               <div className="text-sm font-bold text-[var(--color-text)]">New Board</div>
             </button>
             <button
               type="button"
               onClick={() => setHowToPlayOpen(true)}
-              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-slate-50"
+              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-[var(--color-bg)]"
             >
               How to play
               <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">?</span>
@@ -1064,7 +1064,7 @@ function SliderPuzzleBoard({
             <button
               type="button"
               onClick={newBoard}
-              className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-slate-50"
+              className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-[var(--color-bg)]"
             >
               <div className="text-[clamp(1.15rem,1.55vw,1.55rem)] font-bold leading-none text-[var(--color-text)]">
                 New Board
@@ -1072,7 +1072,7 @@ function SliderPuzzleBoard({
             </button>
           </div>
           {solved && (
-            <div className="flex-shrink-0 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+            <div className="flex-shrink-0 rounded-2xl border border-[var(--color-accent-light)] bg-[var(--color-accent-light)] px-4 py-3 text-sm font-medium text-[var(--color-accent-strong)]">
               🎉 {SLIDER_MEDALS[level]} {SLIDER_LABELS[level]} solved!
             </div>
           )}
@@ -1098,7 +1098,7 @@ function SliderPuzzleBoard({
                   <button
                     type="button"
                     onClick={() => setHowToPlayOpen(false)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)] hover:bg-[var(--color-border)]"
                   >
                     ✕
                   </button>
@@ -1204,7 +1204,7 @@ function LightsOutBoard({
                 className={`aspect-square rounded-full border transition duration-150 ${
                   isOn
                     ? 'border-[#d6eef3] bg-white shadow-[0_0_0_4px_rgba(255,255,255,0.92),0_0_20px_rgba(115,221,221,0.22)]'
-                    : 'border-teal-300 bg-[var(--color-accent)] shadow-[inset_0_2px_0_rgba(255,255,255,0.18),0_0_0_3px_rgba(14,165,160,0.16)]'
+                    : 'border-[var(--color-accent)] bg-[var(--color-accent)] shadow-[inset_0_2px_0_rgba(255,255,255,0.18),0_0_0_3px_rgba(14,165,160,0.16)]'
                 } ${solved ? 'cursor-default' : 'hover:scale-105 active:scale-95'}`}
               />
             )
@@ -1230,7 +1230,7 @@ function LightsOutBoard({
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition lg:text-sm ${
                   level === l
                     ? 'bg-[var(--color-accent)] text-white shadow-sm'
-                    : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                    : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                 }`}
               >
                 {LIGHTS_OUT_LABELS[l]}
@@ -1243,20 +1243,20 @@ function LightsOutBoard({
 
           <div className="flex flex-shrink-0 gap-2 lg:hidden">
             <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] py-2.5">
-              <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">Moves</div>
+              <div className="text-[9px] font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)]">Moves</div>
               <div className="text-lg font-bold leading-none text-[var(--color-text)]">{moves}</div>
             </div>
             <button
               type="button"
               onClick={newBoard}
-              className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white py-2.5 transition active:bg-slate-50"
+              className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white py-2.5 transition active:bg-[var(--color-bg)]"
             >
               <div className="text-sm font-bold leading-none text-[var(--color-text)]">New Board</div>
             </button>
             <button
               type="button"
               onClick={() => setHowToPlayOpen(true)}
-              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white py-2.5 text-xs font-semibold text-[var(--color-muted)] transition active:bg-slate-50"
+              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white py-2.5 text-xs font-semibold text-[var(--color-muted)] transition active:bg-[var(--color-bg)]"
             >
               How to play
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">?</span>
@@ -1267,7 +1267,7 @@ function LightsOutBoard({
             <button
               type="button"
               onClick={newBoard}
-              className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-slate-50"
+              className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-[var(--color-bg)]"
             >
               <div className="text-[clamp(1.15rem,1.55vw,1.55rem)] font-bold leading-none text-[var(--color-text)]">
                 New Board
@@ -1276,7 +1276,7 @@ function LightsOutBoard({
           </div>
 
           {solved && (
-            <div className="flex-shrink-0 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+            <div className="flex-shrink-0 rounded-2xl border border-[var(--color-accent-light)] bg-[var(--color-accent-light)] px-4 py-3 text-sm font-medium text-[var(--color-accent-strong)]">
               🎉 {LIGHTS_OUT_MEDALS[level]} {LIGHTS_OUT_LABELS[level]} solved!
             </div>
           )}
@@ -1303,7 +1303,7 @@ function LightsOutBoard({
                   <button
                     type="button"
                     onClick={() => setHowToPlayOpen(false)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-slate-50"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-[var(--color-bg)]"
                   >
                     ✕
                   </button>
@@ -1455,7 +1455,7 @@ function NetwalkBoard({
                 onClick={() => handleTilePress(index)}
                 className={`relative aspect-square transition-colors ${
                   status.solved ? 'cursor-default' : 'cursor-pointer hover:brightness-95'
-                } ${isConnected ? 'bg-teal-50' : 'bg-white'}`}
+                } ${isConnected ? 'bg-[var(--color-accent-light)]' : 'bg-white'}`}
                 aria-label={`Rotate network tile ${index + 1}`}
               >
                 <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" style={{ overflow: 'visible' }}>
@@ -1499,7 +1499,7 @@ function NetwalkBoard({
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition lg:text-sm ${
                   level === l
                     ? 'bg-[var(--color-accent)] text-white shadow-sm'
-                    : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                    : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                 }`}
               >
                 {NETWALK_LABELS[l]}
@@ -1511,11 +1511,11 @@ function NetwalkBoard({
           </div>
           <div className="flex flex-shrink-0 gap-2 lg:hidden">
             <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] py-2.5">
-              <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">Moves</div>
+              <div className="text-[9px] font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)]">Moves</div>
               <div className="text-lg font-bold leading-none text-[var(--color-text)]">{moves}</div>
             </div>
             <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-2.5">
-              <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">Connected</div>
+              <div className="text-[9px] font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)]">Connected</div>
               <div className="text-lg font-bold leading-none text-[var(--color-text)]">{status.connectedCount}/{board.length}</div>
               <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[var(--color-border)]">
                 <div className="h-full rounded-full bg-[var(--color-accent)] transition-all duration-300" style={{ width: `${pct}%` }} />
@@ -1524,14 +1524,14 @@ function NetwalkBoard({
             <button
               type="button"
               onClick={newBoard}
-              className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white py-2.5 transition active:bg-slate-50"
+              className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white py-2.5 transition active:bg-[var(--color-bg)]"
             >
               <div className="text-sm font-bold leading-none text-[var(--color-text)]">New Board</div>
             </button>
             <button
               type="button"
               onClick={() => setHowToPlayOpen(true)}
-              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white py-2.5 text-xs font-semibold text-[var(--color-muted)] transition active:bg-slate-50"
+              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white py-2.5 text-xs font-semibold text-[var(--color-muted)] transition active:bg-[var(--color-bg)]"
             >
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">?</span>
             </button>
@@ -1555,7 +1555,7 @@ function NetwalkBoard({
             <button
               type="button"
               onClick={newBoard}
-              className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-slate-50"
+              className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-[var(--color-bg)]"
             >
               <div className="text-[clamp(1.15rem,1.55vw,1.55rem)] font-bold leading-none text-[var(--color-text)]">
                 New Board
@@ -1563,7 +1563,7 @@ function NetwalkBoard({
             </button>
           </div>
           {status.solved && (
-            <div className="flex-shrink-0 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+            <div className="flex-shrink-0 rounded-2xl border border-[var(--color-accent-light)] bg-[var(--color-accent-light)] px-4 py-3 text-sm font-medium text-[var(--color-accent-strong)]">
               🎉 {NETWALK_MEDALS[level]} {NETWALK_LABELS[level]} restored!
             </div>
           )}
@@ -1589,7 +1589,7 @@ function NetwalkBoard({
                   <button
                     type="button"
                     onClick={() => setHowToPlayOpen(false)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-slate-50"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-[var(--color-bg)]"
                   >
                     ✕
                   </button>
@@ -1797,24 +1797,24 @@ function Puzzle2048Board({
           </div>
           <div className="flex flex-shrink-0 gap-2 lg:hidden">
             <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5">
-              <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">Score</div>
+              <div className="text-[9px] font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)]">Score</div>
               <div className="text-lg font-bold leading-none text-[var(--color-text)]">{score}</div>
             </div>
             <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5">
-              <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">Best</div>
+              <div className="text-[9px] font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)]">Best</div>
               <div className="text-lg font-bold leading-none text-[var(--color-text)]">{bestTile}</div>
             </div>
             <button
               type="button"
               onClick={handleReset}
-              className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 transition hover:bg-slate-50"
+              className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 transition hover:bg-[var(--color-bg)]"
             >
               <div className="text-sm font-bold text-[var(--color-text)]">New Board</div>
             </button>
             <button
               type="button"
               onClick={() => setHowToPlayOpen(true)}
-              className="flex flex-1 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-[var(--color-accent)] transition hover:bg-slate-50"
+              className="flex flex-1 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-[var(--color-accent)] transition hover:bg-[var(--color-bg)]"
             >
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-xs font-bold">?</span>
             </button>
@@ -1832,7 +1832,7 @@ function Puzzle2048Board({
                 className={`rounded-xl border px-3 py-2 text-xs font-semibold uppercase transition lg:text-sm ${
                   startMode === option.value
                     ? 'border-[var(--color-accent)] bg-[var(--color-accent)] text-white'
-                    : 'border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-slate-50'
+                    : 'border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-[var(--color-bg)]'
                 }`}
               >
                 {option.label}
@@ -1845,7 +1845,7 @@ function Puzzle2048Board({
                 key={direction}
                 type="button"
                 onClick={() => handleMove(direction)}
-                className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold uppercase text-[var(--color-text)] transition hover:bg-slate-50 lg:text-sm"
+                className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold uppercase text-[var(--color-text)] transition hover:bg-[var(--color-bg)] lg:text-sm"
               >
                 {direction === 'left' ? '←' : direction === 'right' ? '→' : direction === 'up' ? '↑' : '↓'}
               </button>
@@ -1854,8 +1854,8 @@ function Puzzle2048Board({
           {(stuck || bestTile >= GAME_2048_MEDALS.bronze.threshold) && (
             <div className={`flex-shrink-0 rounded-2xl px-4 py-3 text-sm font-medium ${
               stuck
-                ? 'border border-amber-200 bg-amber-50 text-amber-700'
-                : 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                ? 'border border-[var(--color-gold-light)] bg-[var(--color-gold-light)] text-[var(--color-gold-text)]'
+                : 'border border-[var(--color-accent-light)] bg-[var(--color-accent-light)] text-[var(--color-accent-strong)]'
             }`}>
               {stuck
                 ? 'No more moves. Start a new board and try another run.'
@@ -1870,7 +1870,7 @@ function Puzzle2048Board({
             <button
               type="button"
               onClick={handleReset}
-              className="w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-slate-50"
+              className="w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:bg-[var(--color-bg)]"
             >
               <div className="text-[clamp(1.15rem,1.55vw,1.55rem)] font-bold leading-none text-[var(--color-text)]">
                 New Board
@@ -1902,7 +1902,7 @@ function Puzzle2048Board({
                   <button
                     type="button"
                     onClick={() => setHowToPlayOpen(false)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)] hover:bg-[var(--color-border)]"
                   >
                     ✕
                   </button>
@@ -2137,7 +2137,7 @@ function QueensBoard({
                   )}
                   {state === 1 && (
                     <span
-                      className="select-none font-bold leading-none text-slate-400"
+                      className="select-none font-bold leading-none text-[var(--color-muted)]"
                       style={{ fontSize: 'clamp(0.8rem,2.2vw,1.4rem)' }}
                     >
                       ✕
@@ -2168,7 +2168,7 @@ function QueensBoard({
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition lg:text-sm ${
                   level === l
                     ? 'bg-[var(--color-accent)] text-white shadow-sm'
-                    : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                    : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                 }`}
               >
                 {QUEENS_LABELS[l]}
@@ -2182,13 +2182,13 @@ function QueensBoard({
           {/* Mobile-only: queens counter + puzzle picker button + how to play */}
           <div className="flex flex-shrink-0 gap-2 lg:hidden">
             <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5">
-              <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">Queens</div>
+              <div className="text-[9px] font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)]">Queens</div>
               <div className="text-lg font-bold leading-none text-[var(--color-text)]">{numQueens}/{n}</div>
             </div>
             <button
               type="button"
               onClick={() => setPickerOpen(true)}
-              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-slate-50"
+              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-[var(--color-bg)]"
             >
               #{puzzleIdx + 1}
               <span className="text-[10px] text-[var(--color-accent)]">▾</span>
@@ -2196,7 +2196,7 @@ function QueensBoard({
             <button
               type="button"
               onClick={() => setHowToPlayOpen(true)}
-              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-slate-50"
+              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-[var(--color-bg)]"
             >
               How to play
               <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">?</span>
@@ -2207,7 +2207,7 @@ function QueensBoard({
           <div className="hidden min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto lg:flex">
             <BonusStatTile label="Queens" value={`${numQueens}/${n}`} />
             <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-muted)]">Puzzle</div>
+              <div className="mb-2 text-xs font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)]">Puzzle</div>
               <div className="grid grid-cols-5 gap-1.5">
                 {QN_PUZZLES[level].map((_, i) => (
                   <button
@@ -2218,8 +2218,8 @@ function QueensBoard({
                       puzzleIdx === i
                         ? 'bg-[var(--color-accent)] text-white shadow-sm'
                         : solvedBoards[level].has(i)
-                          ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
-                          : 'border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-slate-50'
+                          ? 'border border-[var(--color-accent-light)] bg-[var(--color-accent-light)] text-[var(--color-accent-strong)]'
+                          : 'border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-[var(--color-bg)]'
                     }`}
                   >
                     {solvedBoards[level].has(i) ? '✓' : i + 1}
@@ -2228,7 +2228,7 @@ function QueensBoard({
               </div>
             </div>
             {numQueens === n && !solved && conflicts.size > 0 && (
-              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              <div className="rounded-2xl border border-[var(--color-danger)] bg-[var(--color-danger-light)] px-4 py-3 text-sm font-medium text-[var(--color-danger)]">
                 A conflict detected — queens can&apos;t share a row, column, region, or be diagonally adjacent.
               </div>
             )}
@@ -2242,7 +2242,7 @@ function QueensBoard({
 
           {/* Mobile-only: error message */}
           {numQueens === n && !solved && conflicts.size > 0 && (
-            <div className="flex-shrink-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 lg:hidden">
+            <div className="flex-shrink-0 rounded-2xl border border-[var(--color-danger)] bg-[var(--color-danger-light)] px-4 py-3 text-sm font-medium text-[var(--color-danger)] lg:hidden">
               A conflict detected — queens can&apos;t share a row, column, region, or be diagonally adjacent.
             </div>
           )}
@@ -2262,7 +2262,7 @@ function QueensBoard({
                   <button
                     type="button"
                     onClick={() => setPickerOpen(false)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-slate-50"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-[var(--color-bg)]"
                   >
                     ✕
                   </button>
@@ -2276,7 +2276,7 @@ function QueensBoard({
                       className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition ${
                         level === l
                           ? 'bg-[var(--color-accent)] text-white shadow-sm'
-                          : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                          : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                       }`}
                     >
                       {QUEENS_LABELS[l]}
@@ -2293,8 +2293,8 @@ function QueensBoard({
                         puzzleIdx === i
                           ? 'bg-[var(--color-accent)] text-white shadow-sm'
                           : solvedBoards[level].has(i)
-                            ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
-                            : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                            ? 'border border-[var(--color-accent-light)] bg-[var(--color-accent-light)] text-[var(--color-accent-strong)]'
+                            : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                       }`}
                     >
                       {solvedBoards[level].has(i) ? '✓' : i + 1}
@@ -2320,7 +2320,7 @@ function QueensBoard({
                   <button
                     type="button"
                     onClick={() => setHowToPlayOpen(false)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)] hover:bg-[var(--color-border)]"
                   >
                     ✕
                   </button>
@@ -2508,7 +2508,7 @@ function StarBattleBoard({
                     <span className="select-none text-[clamp(1rem,3vw,2rem)] leading-none drop-shadow-sm">⭐</span>
                   )}
                   {(state === 2 || showAutoX) && (
-                    <span className={`select-none text-[clamp(0.8rem,2.2vw,1.4rem)] font-bold leading-none ${state === 2 ? 'text-slate-500' : 'text-slate-400'}`}>✕</span>
+                    <span className={`select-none text-[clamp(0.8rem,2.2vw,1.4rem)] font-bold leading-none ${state === 2 ? 'text-[var(--color-muted)]' : 'text-[var(--color-muted)]'}`}>✕</span>
                   )}
                 </button>
               )
@@ -2536,7 +2536,7 @@ function StarBattleBoard({
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition lg:text-sm ${
                   level === l
                     ? 'bg-[var(--color-accent)] text-white shadow-sm'
-                    : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                    : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                 }`}
               >
                 {STAR_BATTLE_LABELS[l]}
@@ -2550,13 +2550,13 @@ function StarBattleBoard({
           {/* Mobile-only: stars counter + puzzle picker button + how to play */}
           <div className="flex flex-shrink-0 gap-2 lg:hidden">
             <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5">
-              <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">Stars</div>
+              <div className="text-[9px] font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)]">Stars</div>
               <div className="text-lg font-bold leading-none text-[var(--color-text)]">{numStars}/{size * 2}</div>
             </div>
             <button
               type="button"
               onClick={() => setSbPickerOpen(true)}
-              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-slate-50"
+              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-[var(--color-bg)]"
             >
               #{puzzleIdx + 1}
               <span className="text-[10px] text-[var(--color-accent)]">▾</span>
@@ -2564,7 +2564,7 @@ function StarBattleBoard({
             <button
               type="button"
               onClick={() => setHowToPlayOpen(true)}
-              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-slate-50"
+              className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-white px-2 py-2.5 text-xs font-semibold text-[var(--color-muted)] transition hover:bg-[var(--color-bg)]"
             >
               How to play
               <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[10px] font-bold text-[var(--color-accent)]">?</span>
@@ -2575,7 +2575,7 @@ function StarBattleBoard({
           <div className="hidden min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto lg:flex">
             <BonusStatTile label="Stars" value={`${numStars}/${size * 2}`} />
             <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-muted)]">Puzzle</div>
+              <div className="mb-2 text-xs font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)]">Puzzle</div>
               <div className="grid grid-cols-5 gap-1.5">
                 {SB_PUZZLES[level].map((_, i) => (
                   <button
@@ -2586,8 +2586,8 @@ function StarBattleBoard({
                       puzzleIdx === i
                         ? 'bg-[var(--color-accent)] text-white shadow-sm'
                         : solvedBoards[level].has(i)
-                          ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
-                          : 'border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-slate-50'
+                          ? 'border border-[var(--color-accent-light)] bg-[var(--color-accent-light)] text-[var(--color-accent-strong)]'
+                          : 'border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-[var(--color-bg)]'
                     }`}
                   >
                     {solvedBoards[level].has(i) ? '✓' : i + 1}
@@ -2596,7 +2596,7 @@ function StarBattleBoard({
               </div>
             </div>
             {numStars === size * 2 && !solved && !valid && (
-              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              <div className="rounded-2xl border border-[var(--color-danger)] bg-[var(--color-danger-light)] px-4 py-3 text-sm font-medium text-[var(--color-danger)]">
                 A rule is violated — stars can&apos;t touch, and each row, column, and region needs exactly 2.
               </div>
             )}
@@ -2610,7 +2610,7 @@ function StarBattleBoard({
 
           {/* Mobile-only: error message */}
           {numStars === size * 2 && !solved && !valid && (
-            <div className="flex-shrink-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 lg:hidden">
+            <div className="flex-shrink-0 rounded-2xl border border-[var(--color-danger)] bg-[var(--color-danger-light)] px-4 py-3 text-sm font-medium text-[var(--color-danger)] lg:hidden">
               A rule is violated — stars can&apos;t touch, and each row, column, and region needs exactly 2.
             </div>
           )}
@@ -2630,7 +2630,7 @@ function StarBattleBoard({
                   <button
                     type="button"
                     onClick={() => setSbPickerOpen(false)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-slate-50"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-[var(--color-bg)]"
                   >
                     ✕
                   </button>
@@ -2644,7 +2644,7 @@ function StarBattleBoard({
                       className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition ${
                         level === l
                           ? 'bg-[var(--color-accent)] text-white shadow-sm'
-                          : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                          : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                       }`}
                     >
                       {STAR_BATTLE_LABELS[l]}
@@ -2661,8 +2661,8 @@ function StarBattleBoard({
                         puzzleIdx === i
                           ? 'bg-[var(--color-accent)] text-white shadow-sm'
                           : solvedBoards[level].has(i)
-                            ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
-                            : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                            ? 'border border-[var(--color-accent-light)] bg-[var(--color-accent-light)] text-[var(--color-accent-strong)]'
+                            : 'border border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                       }`}
                     >
                       {solvedBoards[level].has(i) ? '✓' : i + 1}
@@ -2688,7 +2688,7 @@ function StarBattleBoard({
                   <button
                     type="button"
                     onClick={() => setHowToPlayOpen(false)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)] hover:bg-[var(--color-border)]"
                   >
                     ✕
                   </button>
@@ -3482,9 +3482,9 @@ export function PuzzleWeekBonusHub() {
           onClick={() => p.live && selectPuzzle(p.id)}
           className={`flex items-start gap-3 rounded-2xl px-3 py-3 text-left transition ${
             selectedId === p.id
-              ? 'bg-teal-50'
+              ? 'bg-[var(--color-accent-light)]'
               : p.live
-                ? 'hover:bg-slate-50 cursor-pointer'
+                ? 'hover:bg-[var(--color-bg)] cursor-pointer'
                 : 'opacity-50 cursor-default'
           }`}
         >
@@ -3575,7 +3575,7 @@ export function PuzzleWeekBonusHub() {
               </div>
             )}
             {!p.live && (
-              <span className="mt-1.5 inline-block rounded-full bg-[var(--color-accent-light)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-accent)]">
+              <span className="mt-1.5 inline-block rounded-full bg-[var(--color-accent-light)] px-2 py-0.5 text-[9px] font-mono font-semibold uppercase tracking-wide text-[var(--color-accent)]">
                 Soon
               </span>
             )}
@@ -3590,7 +3590,7 @@ export function PuzzleWeekBonusHub() {
       <Link
         href="https://puzzleweek.abrastat.com"
         onClick={() => setMenuOpen(false)}
-        className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+        className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]"
       >
         <ArrowLeft className="h-4 w-4 flex-shrink-0 text-[var(--color-muted)]" />
         Puzzle Week
@@ -3599,7 +3599,7 @@ export function PuzzleWeekBonusHub() {
         <Link
           href="/puzzleweek/admin"
           onClick={() => setMenuOpen(false)}
-          className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+          className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]"
         >
           Admin
         </Link>
@@ -3612,7 +3612,7 @@ export function PuzzleWeekBonusHub() {
           <button
             type="button"
             onClick={() => { void signOut(); setMenuOpen(false) }}
-            className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-muted)] transition hover:bg-slate-50 hover:text-[var(--color-text)]"
+            className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-muted)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-text)]"
           >
             Sign out
           </button>
@@ -3645,7 +3645,7 @@ export function PuzzleWeekBonusHub() {
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
-            className="flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text)] transition active:bg-slate-50"
+            className="flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text)] transition active:bg-[var(--color-bg)]"
             aria-label="Menu"
           >
             <Menu className="h-4 w-4" />
@@ -3672,7 +3672,7 @@ export function PuzzleWeekBonusHub() {
                 <button
                   type="button"
                   onClick={() => setMenuOpen(false)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-slate-50"
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-muted)] transition hover:bg-[var(--color-bg)]"
                 >
                   ✕
                 </button>
@@ -3712,7 +3712,7 @@ export function PuzzleWeekBonusHub() {
               <button
                 type="button"
                 onClick={() => setMenuOpen(v => !v)}
-                className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-slate-50"
+                className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]"
                 aria-label="Menu"
               >
                 <Menu className="h-4 w-4" />

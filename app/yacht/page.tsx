@@ -60,7 +60,7 @@ function YachtPageContent() {
                 />
               ) : (
                 <div className="text-center space-y-1 py-2">
-                  <div className="text-green-600 font-semibold">✓ Score submitted!</div>
+                  <div className="text-[var(--color-accent-strong)] font-semibold">✓ Score submitted!</div>
                   <div className="text-4xl font-bold text-[var(--color-accent)] tabular-nums">
                     {state.score} <span className="text-lg font-normal text-[var(--color-muted)]">/ {YACHT_MAX_SCORE}</span>
                   </div>

@@ -59,7 +59,7 @@ export function AppletShell({
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}>
           <div className="px-3 py-2 border-b border-[var(--color-border)] flex items-center justify-between">
-            <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Library</div>
+            <div className="text-xs font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">Library</div>
             <button onClick={() => setSidebarOpen(false)} className="md:hidden text-[var(--color-muted)] text-lg leading-none">×</button>
           </div>
 
@@ -90,8 +90,8 @@ export function AppletShell({
                           href={applet.href}
                           className={`block w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                             active
-                              ? 'bg-teal-50 text-teal-800 border border-teal-200'
-                              : 'text-[var(--color-text)] hover:bg-slate-100'
+                              ? 'bg-[var(--color-accent-light)] text-[var(--color-accent-strong)] border border-[var(--color-accent-light)]'
+                              : 'text-[var(--color-text)] hover:bg-[var(--color-bg)]'
                           }`}
                         >
                           {applet.label}
@@ -104,7 +104,7 @@ export function AppletShell({
                 <Link
                   key={item.label}
                   href={item.href}
-                  className="block w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-slate-100"
+                  className="block w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg)]"
                 >
                   {item.label}
                 </Link>

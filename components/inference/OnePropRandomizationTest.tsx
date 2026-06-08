@@ -918,7 +918,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
         {stepper}
 
         <div className="text-sm font-serif italic leading-snug text-[var(--color-text)]">
-          If the true proportion were really p₀, how unusual is what we saw?
+          If the null hypothesis were true, would our sample result be unusual enough to make us doubt it?
         </div>
 
         <div className="space-y-4">

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useStore } from '@/lib/store'
 import { DropZone } from '@/components/explore/DropZone'
 import { OnePropRandomizationCardConfig } from '@/lib/exploreTypes'
@@ -266,6 +267,38 @@ function snapThresholdCount(threshold: number, n: number): number {
   return Math.abs(scaled - nearest) <= 0.01 ? nearest : scaled
 }
 
+function FloatingTooltip({ children, content }: { children: React.ReactNode; content: string }) {
+  const [visible, setVisible] = useState(false)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const triggerRef = useRef<HTMLSpanElement>(null)
+
+  function show() {
+    if (!triggerRef.current || !content) return
+    const rect = triggerRef.current.getBoundingClientRect()
+    setPos({ top: rect.top - 8, left: rect.left + rect.width / 2 })
+    setVisible(true)
+  }
+  function hide() { setVisible(false) }
+
+  return (
+    <>
+      <span ref={triggerRef} onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide}>
+        {children}
+      </span>
+      {visible && pos && content && typeof document !== 'undefined' && createPortal(
+        <div
+          style={{ position: 'fixed', top: pos.top, left: pos.left, transform: 'translate(-50%, -100%)', zIndex: 9999, pointerEvents: 'none' }}
+          className="max-w-[300px] rounded-xl bg-[var(--color-text)] px-3 py-2 text-xs leading-relaxed text-white shadow-lg"
+        >
+          {content}
+          <div style={{ position: 'absolute', left: '50%', top: '100%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid var(--color-text)' }} />
+        </div>,
+        document.body
+      )}
+    </>
+  )
+}
+
 function OnePropNullDistPlot({
   counts, xObs, n, p0Num, alternative, view, showNormalCurve = false, thresholdVal, forceHistogram = false,
 }: {
@@ -325,6 +358,41 @@ function OnePropNullDistPlot({
   normalizedValues.forEach(v => stackCounts.set(v, (stackCounts.get(v) ?? 0) + 1))
   const maxStack = Math.max(1, ...Array.from(stackCounts.values()))
 
+  // Use custom threshold for shading/coloring if provided and valid
+  const thresh = (thresholdVal !== undefined && Number.isFinite(thresholdVal)) ? thresholdVal : obsVal
+  const showHistogram = forceHistogram || values.length >= 250
+
+  // Compute histogram bars before yScale so we can derive the correct y-axis max (4o fix)
+  const histogramBars = useMemo(() => {
+    if (!showHistogram) return []
+    const binCount = Math.min(28, Math.max(10, Math.round(Math.sqrt(values.length))))
+    const binWidth = xRange / binCount
+    const bins = Array.from({ length: binCount }, (_, index) => ({
+      x0: xLo + index * binWidth,
+      x1: xLo + (index + 1) * binWidth,
+      count: 0,
+      extreme: false,
+    }))
+    normalizedValues.forEach(value => {
+      const ratio = Math.max(0, Math.min(0.999999, (value - xLo) / xRange))
+      const index = Math.min(binCount - 1, Math.floor(ratio * binCount))
+      bins[index].count += 1
+    })
+    bins.forEach(bin => {
+      const mid = (bin.x0 + bin.x1) / 2
+      const dist = Math.abs(thresh - nullCenter)
+      bin.extreme = alternative === 'greater'
+        ? mid >= thresh
+        : alternative === 'less'
+          ? mid <= thresh
+          : Math.abs(mid - nullCenter) >= dist
+    })
+    return bins.filter(bin => bin.count > 0)
+  }, [alternative, normalizedValues, nullCenter, showHistogram, thresh, values.length, xLo, xRange])
+
+  const maxHistCount = histogramBars.length > 0 ? Math.max(...histogramBars.map(b => b.count)) : 0
+  const maxDisplayMax = showHistogram ? maxHistCount : maxStack
+
   const normalStats = (() => {
     if (!showNormalCurve || values.length < 2 || normSD <= 0) return null
     const samples = Array.from({ length: 241 }, (_, i) => {
@@ -337,18 +405,14 @@ function OnePropNullDistPlot({
   })()
 
   const maxCurveCountRaw = normalStats ? Math.max(...normalStats.samples.map(s => s.expectedCount)) : 0
-  const maxCurveCount = Math.min(maxCurveCountRaw, Math.max(maxStack * 1.35, 1))
+  const maxCurveCount = Math.min(maxCurveCountRaw, Math.max(maxDisplayMax * 1.35, 1))
   const topPad = 10
-  const yMaxCount = Math.max(maxStack, maxCurveCount) * 1.12
+  const yMaxCount = Math.max(maxDisplayMax, maxCurveCount) * 1.12
   const yScale = (PH - topPad) / Math.max(1, yMaxCount)
 
-  // Use custom threshold for shading/coloring if provided and valid
-  const thresh = (thresholdVal !== undefined && Number.isFinite(thresholdVal)) ? thresholdVal : obsVal
-
   const seenC = new Map<number, number>()
-  const dotStep = Math.min(13, PH / Math.max(1, maxStack))
-  const dotR = Math.max(3, dotStep / 2 - 1)
-  const showHistogram = forceHistogram || values.length >= 250
+  const dotStep = Math.min(20, PH / Math.max(1, maxStack))
+  const dotR = Math.max(4.5, dotStep / 2 - 0.8)
   const circles = normalizedValues.map(v => {
     const si = seenC.get(v) ?? 0
     seenC.set(v, si + 1)
@@ -382,33 +446,6 @@ function OnePropNullDistPlot({
     return makeFill(samp.filter(s => s.x <= nullCenter - threshDist)) + ' ' +
            makeFill(samp.filter(s => s.x >= nullCenter + threshDist))
   })()
-
-  const histogramBars = useMemo(() => {
-    if (!showHistogram) return []
-    const binCount = Math.min(28, Math.max(10, Math.round(Math.sqrt(values.length))))
-    const binWidth = xRange / binCount
-    const bins = Array.from({ length: binCount }, (_, index) => ({
-      x0: xLo + index * binWidth,
-      x1: xLo + (index + 1) * binWidth,
-      count: 0,
-      extreme: false,
-    }))
-    normalizedValues.forEach(value => {
-      const ratio = Math.max(0, Math.min(0.999999, (value - xLo) / xRange))
-      const index = Math.min(binCount - 1, Math.floor(ratio * binCount))
-      bins[index].count += 1
-    })
-    bins.forEach(bin => {
-      const mid = (bin.x0 + bin.x1) / 2
-      const dist = Math.abs(thresh - nullCenter)
-      bin.extreme = alternative === 'greater'
-        ? mid >= thresh
-        : alternative === 'less'
-          ? mid <= thresh
-          : Math.abs(mid - nullCenter) >= dist
-    })
-    return bins.filter(bin => bin.count > 0)
-  }, [alternative, normalizedValues, nullCenter, showHistogram, thresh, values.length, xLo, xRange])
 
   const obsX = xOf(obsVal)
   const threshX = xOf(thresh)
@@ -484,7 +521,7 @@ function OnePropNullDistPlot({
             : circles.map((c, i) => (
                 <circle key={i} cx={c.cx} cy={c.cy} r={dotR}
                   fill={c.extreme ? 'var(--color-gold)' : 'var(--color-accent)'} opacity={0.85}
-                  stroke="white" strokeWidth={0.6}
+                  stroke="white" strokeWidth={0.8}
                   style={i === circles.length - 1 && values.length > 0
                     ? { animation: 'dot-drop-full 700ms ease-out' } : undefined}
                 />
@@ -650,53 +687,6 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
   const p0Valid = Number.isFinite(p0Num) && p0Num >= 0 && p0Num <= 1
   const canStartSimulating = error === null && n > 0 && p0Valid
   const pValue = simCount > 0 ? extremeCount / simCount : null
-  const customThreshold = config.customThreshold && config.customThreshold !== ''
-    ? config.customThreshold
-    : (graphView === 'counts' ? String(x) : (x / Math.max(1, n)).toFixed(4))
-  const customThresholdNum = parseFloat(customThreshold)
-  const thresholdOnCountScale = Number.isFinite(customThresholdNum)
-    ? (graphView === 'counts' ? customThresholdNum : snapThresholdCount(customThresholdNum, n))
-    : Number.NaN
-  const nullCenterCount = n * p0Num
-  const customPValue = useMemo(() => {
-    if (nullDist.length === 0 || !Number.isFinite(thresholdOnCountScale)) return null
-    const dist = Math.abs(thresholdOnCountScale - nullCenterCount)
-    const extreme = nullDist.filter(xSim => {
-      if (alternative === 'greater') return xSim >= thresholdOnCountScale
-      if (alternative === 'less') return xSim <= thresholdOnCountScale
-      return Math.abs(xSim - nullCenterCount) >= dist
-    }).length
-    return extreme / nullDist.length
-  }, [alternative, nullCenterCount, nullDist, thresholdOnCountScale])
-
-  const tailProbabilityLabel = useMemo(() => {
-    if (!Number.isFinite(thresholdOnCountScale)) {
-      return {
-        leading: graphView === 'counts' ? 'P(X' : 'P(p̂',
-        trailing: ')',
-      }
-    }
-
-    if (alternative !== 'two') {
-      return {
-        leading: graphView === 'counts' ? 'P(X' : 'P(p̂',
-        trailing: `${tailOperator(alternative)}${formatTailThreshold(thresholdOnCountScale, graphView, n)})`,
-      }
-    }
-
-    const dist = Math.abs(thresholdOnCountScale - nullCenterCount)
-    const lower = nullCenterCount - dist
-    const upper = nullCenterCount + dist
-    return {
-      leading: graphView === 'counts' ? 'P(X' : 'P(p̂',
-      trailing: `≤${formatTailThreshold(lower, graphView, n)} or ${graphView === 'counts' ? 'X' : 'p̂'}≥${formatTailThreshold(upper, graphView, n)})`,
-    }
-  }, [alternative, graphView, n, nullCenterCount, thresholdOnCountScale])
-
-  useEffect(() => {
-    patchConfig({ customThreshold: graphView === 'counts' ? String(x) : (x / Math.max(1, n)).toFixed(4) })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graphView, x, n])
 
   const successLabel = sourceMode === 'manual'
     ? (manualLabel.trim() || 'Success')
@@ -768,19 +758,14 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
     })
   }
 
-  function handleReset() {
+  function handleClear() {
     cancelRef.current = true
     setIsRunning(false)
     setRunProgress(null)
     setPendingSim(null)
     setDisplayedSim(null)
     setPhase('observing')
-    patchConfig({
-      nullDist: [],
-      simCount: 0,
-      extremeCount: 0,
-      customThreshold: graphView === 'counts' ? String(x) : (x / Math.max(1, n)).toFixed(4),
-    })
+    patchConfig({ nullDist: [], simCount: 0, extremeCount: 0 })
   }
 
   function sleep(ms: number) { return new Promise<void>(resolve => setTimeout(resolve, ms)) }
@@ -874,17 +859,31 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
     ? `Running ${runProgress.current} of ${runProgress.total}…`
     : firstRunGuidance
 
-  const verdict = (() => {
-    if (simCount < 100) {
-      return 'You need more simulated samples before the p-value is stable enough to interpret confidently.'
+  const factualTooltipContent = useMemo((): string => {
+    if (pValue === null || simCount < 100 || phat === null || !p0Valid) return ''
+    const dist = Math.abs(phat - p0Num)
+    let probStr: string
+    if (graphView === 'counts') {
+      const xDist = Math.round(Math.abs(x - n * p0Num))
+      const lo = Math.round(n * p0Num - xDist)
+      const hi = Math.round(n * p0Num + xDist)
+      if (alternative === 'greater') probStr = `P(X* ≥ ${x}) under H₀`
+      else if (alternative === 'less') probStr = `P(X* ≤ ${x}) under H₀`
+      else probStr = `P(X* ≤ ${lo} or X* ≥ ${hi}) under H₀`
+    } else {
+      if (alternative === 'greater') probStr = `P(p̂* ≥ ${phat.toFixed(3)}) under H₀`
+      else if (alternative === 'less') probStr = `P(p̂* ≤ ${phat.toFixed(3)}) under H₀`
+      else {
+        const lower = (p0Num - dist).toFixed(3)
+        const upper = (p0Num + dist).toFixed(3)
+        probStr = `P(p̂* ≤ ${lower} or p̂* ≥ ${upper}) under H₀`
+      }
     }
-    const shown = customPValue ?? pValue
-    if (shown == null) return 'Keep simulating to build the null distribution.'
-    if (shown <= 0.05) {
-      return `A result this extreme would be unusual if the null hypothesis were true.`
-    }
-    return `Results like this are not especially rare under the null hypothesis.`
-  })()
+    const interp = pValue <= 0.05
+      ? 'Results like this are especially rare under the null hypothesis.'
+      : 'Results like this are not especially rare under the null hypothesis.'
+    return `${probStr} · ${interp}`
+  }, [alternative, graphView, n, p0Num, p0Valid, pValue, phat, simCount, x])
 
   const statusLabel = (() => {
     if (phase === 'observing') return `Observed sample — n = ${n}, X = ${x}`
@@ -1170,10 +1169,11 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                 <button
                   key={cnt}
                   onClick={() => cnt === 10 ? runAnimated(cnt) : runBatch(cnt)}
-                  disabled={isRunning}
+                  disabled={isRunning || simCount === 0}
+                  title={simCount === 0 ? 'Complete one repetition by hand first' : undefined}
                   className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                    isRunning
-                      ? 'border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
+                    isRunning || simCount === 0
+                      ? 'border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed opacity-50'
                       : 'border-[var(--color-border)] text-[var(--color-text)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)]'
                   }`}
                 >
@@ -1189,10 +1189,10 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                 </button>
               ) : (
                 <button
-                  onClick={handleReset}
+                  onClick={handleClear}
                   className="rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-muted)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)] transition-colors"
                 >
-                  Reset
+                  Clear
                 </button>
               )}
             </div>
@@ -1217,9 +1217,6 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                   view={graphView}
                   showNormalCurve={showNormalCurve}
                   forceHistogram={stage === 'conclude'}
-                  thresholdVal={Number.isFinite(customThresholdNum)
-                    ? (graphView === 'counts' ? customThresholdNum : thresholdOnCountScale / Math.max(1, n))
-                    : undefined}
                 />
               )}
 
@@ -1267,17 +1264,16 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
               </div>
             </div>
 
-            {/* Conclusion tools — fixed 250px */}
-            <div className="w-[250px] flex-shrink-0 flex flex-col gap-3 overflow-y-auto">
+            {/* Conclusion panel — calm 3-element readout */}
+            <div className="w-[250px] flex-shrink-0 flex flex-col gap-4">
+
+              {/* Proportions / Counts toggle */}
               <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
                 {(['proportions', 'counts'] as GraphView[]).map((value, index) => (
                   <button
                     key={value}
                     type="button"
-                    onClick={() => patchConfig({
-                      graphView: value,
-                      customThreshold: value === 'counts' ? String(x) : (x / Math.max(1, n)).toFixed(4),
-                    })}
+                    onClick={() => patchConfig({ graphView: value })}
                     className={`flex-1 px-2.5 py-1.5 font-medium transition-colors ${index > 0 ? 'border-l border-[var(--color-border)]' : ''} ${graphView === value ? 'bg-[var(--color-text)] text-[var(--color-surface)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}
                   >
                     {value === 'proportions' ? 'Proportions' : 'Counts'}
@@ -1285,6 +1281,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                 ))}
               </div>
 
+              {/* 1. Normal curve checkbox — mean/SD in hover tooltip */}
               <label className="flex items-center gap-2 select-none text-sm text-[var(--color-text)]">
                 <input
                   type="checkbox"
@@ -1292,72 +1289,41 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                   onChange={e => patchConfig({ showNormalCurve: e.target.checked })}
                   className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                 />
-                Overlay normal curve
+                <FloatingTooltip content={`Normal approximation of the null distribution · mean = ${normMean.toFixed(graphView === 'counts' ? 2 : 3)} · SD = ${normSD.toFixed(3)}`}>
+                  <span className="underline decoration-dotted underline-offset-2 cursor-help">Overlay normal curve</span>
+                </FloatingTooltip>
               </label>
-              {showNormalCurve && (
-                <div className="pl-6 space-y-0.5 text-sm text-[var(--color-muted)]">
-                  <div>Mean = <span className="font-mono tabular-nums">{normMean.toFixed(graphView === 'counts' ? 1 : 4)}</span></div>
-                  <div>SD = <span className="font-mono tabular-nums">{normSD.toFixed(graphView === 'counts' ? 1 : 4)}</span></div>
+
+              {/* 2. p-value headline in gold */}
+              <div>
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)] mb-1.5">p-value</div>
+                <div className="font-mono tabular-nums font-bold text-[var(--color-gold)]" style={{ fontSize: '1.75rem', lineHeight: 1.1 }}>
+                  {simCount < 100 || pValue === null
+                    ? '—'
+                    : pValue < 0.001 ? '< 0.001' : pValue.toFixed(3)
+                  }
                 </div>
-              )}
-
-              <div className="space-y-1.5">
-                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">Tail probability</div>
-                {alternative === 'two' ? (
-                  <div className="flex flex-wrap items-center gap-1 text-sm text-[var(--color-muted)]">
-                    <span>{tailProbabilityLabel.leading}</span>
-                    <input
-                      type="number"
-                      value={customThreshold}
-                      onChange={e => patchConfig({ customThreshold: e.target.value })}
-                      step={graphView === 'counts' ? 1 : 0.01}
-                      min={0}
-                      max={graphView === 'counts' ? n : 1}
-                      className="w-20 min-w-[5ch] rounded-md border border-[var(--color-border)] px-2 py-1 text-center text-sm text-[var(--color-text)]"
-                    />
-                    <span>{tailProbabilityLabel.trailing}</span>
-                    <span className="basis-full sm:basis-auto">=</span>
-                    <span className="font-mono tabular-nums font-semibold text-[var(--color-accent)]">
-                      {customPValue !== null ? (customPValue < 0.001 ? '< 0.001' : customPValue.toFixed(4)) : '—'}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap items-center gap-1 text-sm text-[var(--color-muted)]">
-                    <span>{tailProbabilityLabel.leading}</span>
-                    <span>{tailOperator(alternative)}</span>
-                    <input
-                      type="number"
-                      value={customThreshold}
-                      onChange={e => patchConfig({ customThreshold: e.target.value })}
-                      step={graphView === 'counts' ? 1 : 0.01}
-                      min={0}
-                      max={graphView === 'counts' ? n : 1}
-                      className="w-20 min-w-[5ch] rounded-md border border-[var(--color-border)] px-2 py-1 text-center text-sm text-[var(--color-text)]"
-                    />
-                    <span>) =</span>
-                    <span className="font-mono tabular-nums font-semibold text-[var(--color-accent)]">
-                      {customPValue !== null ? (customPValue < 0.001 ? '< 0.001' : customPValue.toFixed(4)) : '—'}
-                    </span>
-                  </div>
-                )}
               </div>
 
-              <div className="rounded-xl bg-[var(--color-accent-light)] px-3 py-3 text-sm">
-                {simCount < 100 ? (
-                  <div className="text-[var(--color-muted)]">Too few to trust yet. Build at least 100 repetitions before drawing a conclusion.</div>
-                ) : (
-                  <>
-                    <div className="font-semibold text-[var(--color-text)]">{extremeCount} of the {simCount} simulated results were as or more extreme than the observed result</div>
-                    <div className="mt-1 text-[var(--color-muted)]">{verdict}</div>
-                  </>
-                )}
-              </div>
+              {/* 3. Factual readout — DM Sans, numbers mono+bold; tooltip with probability rep */}
+              {simCount < 100
+                ? <p className="text-sm text-[var(--color-text)] leading-relaxed">
+                    Build at least <strong className="font-mono font-bold">100</strong> repetitions to read a p-value.
+                  </p>
+                : <FloatingTooltip content={factualTooltipContent}>
+                    <p className="text-sm text-[var(--color-text)] leading-relaxed cursor-help">
+                      <strong className="font-mono font-bold">{extremeCount.toLocaleString()}</strong>{' '}of the{' '}
+                      <strong className="font-mono font-bold">{simCount.toLocaleString()}</strong>{' '}
+                      simulated results were as or more extreme than the observed result.
+                    </p>
+                  </FloatingTooltip>
+              }
 
               {stage === 'conclude' && (
                 <button
                   type="button"
                   onClick={() => goToStage('simulate')}
-                  className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]"
+                  className="mt-auto rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]"
                 >
                   ← Simulate more
                 </button>

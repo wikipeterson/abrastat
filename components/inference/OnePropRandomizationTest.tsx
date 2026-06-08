@@ -859,31 +859,29 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
     ? `Running ${runProgress.current} of ${runProgress.total}…`
     : firstRunGuidance
 
-  const factualTooltipContent = useMemo((): string => {
+  const pValueTooltip = useMemo((): string => {
     if (pValue === null || simCount < 100 || phat === null || !p0Valid) return ''
     const dist = Math.abs(phat - p0Num)
-    let probStr: string
     if (graphView === 'counts') {
       const xDist = Math.round(Math.abs(x - n * p0Num))
       const lo = Math.round(n * p0Num - xDist)
       const hi = Math.round(n * p0Num + xDist)
-      if (alternative === 'greater') probStr = `P(X* ≥ ${x}) under H₀`
-      else if (alternative === 'less') probStr = `P(X* ≤ ${x}) under H₀`
-      else probStr = `P(X* ≤ ${lo} or X* ≥ ${hi}) under H₀`
-    } else {
-      if (alternative === 'greater') probStr = `P(p̂* ≥ ${phat.toFixed(3)}) under H₀`
-      else if (alternative === 'less') probStr = `P(p̂* ≤ ${phat.toFixed(3)}) under H₀`
-      else {
-        const lower = (p0Num - dist).toFixed(3)
-        const upper = (p0Num + dist).toFixed(3)
-        probStr = `P(p̂* ≤ ${lower} or p̂* ≥ ${upper}) under H₀`
-      }
+      if (alternative === 'greater') return `P(X* ≥ ${x}) under H₀`
+      if (alternative === 'less') return `P(X* ≤ ${x}) under H₀`
+      return `P(X* ≤ ${lo} or X* ≥ ${hi}) under H₀`
     }
-    const interp = pValue <= 0.05
+    if (alternative === 'greater') return `P(p̂* ≥ ${phat.toFixed(3)}) under H₀`
+    if (alternative === 'less') return `P(p̂* ≤ ${phat.toFixed(3)}) under H₀`
+    const lower = (p0Num - dist).toFixed(3)
+    const upper = (p0Num + dist).toFixed(3)
+    return `P(p̂* ≤ ${lower} or p̂* ≥ ${upper}) under H₀`
+  }, [alternative, graphView, n, p0Num, p0Valid, pValue, phat, simCount, x])
+
+  const interpretationText = (simCount >= 100 && pValue !== null)
+    ? pValue <= 0.05
       ? 'Results like this are especially rare under the null hypothesis.'
       : 'Results like this are not especially rare under the null hypothesis.'
-    return `${probStr} · ${interp}`
-  }, [alternative, graphView, n, p0Num, p0Valid, pValue, phat, simCount, x])
+    : null
 
   const statusLabel = (() => {
     if (phase === 'observing') return `Observed sample — n = ${n}, X = ${x}`
@@ -1294,29 +1292,34 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                 </FloatingTooltip>
               </label>
 
-              {/* 2. p-value headline in gold */}
+              {/* 2. p-value headline in gold — probability statement on hover */}
               <div>
                 <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)] mb-1.5">p-value</div>
-                <div className="font-mono tabular-nums font-bold text-[var(--color-gold)]" style={{ fontSize: '1.75rem', lineHeight: 1.1 }}>
-                  {simCount < 100 || pValue === null
-                    ? '—'
-                    : pValue < 0.001 ? '< 0.001' : pValue.toFixed(3)
-                  }
-                </div>
+                <FloatingTooltip content={pValueTooltip}>
+                  <div className={`inline-block font-mono tabular-nums font-bold text-[var(--color-gold)] ${pValueTooltip ? 'cursor-help' : ''}`} style={{ fontSize: '1.75rem', lineHeight: 1.1 }}>
+                    {simCount < 100 || pValue === null
+                      ? '—'
+                      : pValue < 0.001 ? '< 0.001' : pValue.toFixed(3)
+                    }
+                  </div>
+                </FloatingTooltip>
               </div>
 
-              {/* 3. Factual readout — DM Sans, numbers mono+bold; tooltip with probability rep */}
+              {/* 3. Factual readout + interpretation — plain text, no tooltip */}
               {simCount < 100
                 ? <p className="text-sm text-[var(--color-text)] leading-relaxed">
                     Build at least <strong className="font-mono font-bold">100</strong> repetitions to read a p-value.
                   </p>
-                : <FloatingTooltip content={factualTooltipContent}>
-                    <p className="text-sm text-[var(--color-text)] leading-relaxed cursor-help">
+                : <div className="space-y-1.5">
+                    <p className="text-sm text-[var(--color-text)] leading-relaxed">
                       <strong className="font-mono font-bold">{extremeCount.toLocaleString()}</strong>{' '}of the{' '}
                       <strong className="font-mono font-bold">{simCount.toLocaleString()}</strong>{' '}
                       simulated results were as or more extreme than the observed result.
                     </p>
-                  </FloatingTooltip>
+                    {interpretationText && (
+                      <p className="text-sm text-[var(--color-muted)] leading-relaxed">{interpretationText}</p>
+                    )}
+                  </div>
               }
 
               {stage === 'conclude' && (

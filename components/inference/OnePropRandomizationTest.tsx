@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useStore } from '@/lib/store'
 import { DropZone } from '@/components/explore/DropZone'
-import { OnePropRandomizationCardConfig, OnePropSimCardConfig } from '@/lib/exploreTypes'
+import { OnePropRandomizationCardConfig } from '@/lib/exploreTypes'
 import {
   Alternative,
   OnePropResult,
@@ -502,6 +502,22 @@ function OnePropNullDistPlot({
   )
 }
 
+type StepPhase = 'observing' | 'spinning' | 'computed' | 'plotted'
+
+function PHat({ className = '' }: { className?: string }) {
+  return (
+    <span className={`relative inline-block leading-none ${className}`}>
+      <span>p</span>
+      <span
+        className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[0.34em] text-[0.78em] leading-none"
+        aria-hidden="true"
+      >
+        ^
+      </span>
+    </span>
+  )
+}
+
 // ── Config card ───────────────────────────────────────────────────────────────
 
 type SourceMode = 'data' | 'manual'
@@ -529,8 +545,8 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
   const graphView = config.graphView ?? 'proportions'
   const showNormalCurve = config.showNormalCurve ?? false
   const cardSizeTarget = stage === 'setup'
-    ? { width: 820, height: 520 }
-    : { width: 1080, height: 720 }
+    ? { width: 820, height: 560 }
+    : { width: 980, height: 760 }
 
   const [phase, setPhase] = useState<StepPhase>('observing')
   const [pendingSim, setPendingSim] = useState<OnePropResult | null>(null)
@@ -906,7 +922,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
             <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
               Null hypothesis
             </div>
-            <div className="inline-flex rounded-[20px] bg-[var(--color-accent-light)] px-4 py-3">
+            <div className="inline-flex rounded-[20px] bg-[var(--color-bg)] px-4 py-3">
               <div className="flex flex-wrap items-center gap-2.5 text-sm font-semibold text-[var(--color-text)]">
                 <span>H₀</span>
                 <span>:</span>
@@ -966,7 +982,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                       {catLevels.map(l => <option key={l} value={l}>{l}</option>)}
                     </select>
                     <span className="text-sm text-[var(--color-muted)]">
-                      observed <PHat /> = <span className="font-mono tabular-nums font-semibold text-[var(--color-accent)]">{phat !== null ? phat.toFixed(2) : '—'}</span>
+                      observed <PHat /> = <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{phat !== null ? phat.toFixed(2) : '—'}</span>
                     </span>
                   </div>
                 )}
@@ -1297,540 +1313,6 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
           </div>
         </>
       )}
-    </div>
-  )
-}
-
-// ── Simulation card ───────────────────────────────────────────────────────────
-
-// Step phase for the manual 3-step sequence
-type StepPhase = 'observing' | 'spinning' | 'computed' | 'plotted'
-
-function PHat({ className = '' }: { className?: string }) {
-  return (
-    <span className={`relative inline-block leading-none ${className}`}>
-      <span>p</span>
-      <span
-        className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[0.34em] text-[0.78em] leading-none"
-        aria-hidden="true"
-      >
-        ^
-      </span>
-    </span>
-  )
-}
-
-export function OnePropSimCard({ cardId, config }: { cardId: string; config: OnePropSimCardConfig }) {
-  const { updateExploreCard } = useStore()
-
-  const [phase, setPhase]               = useState<StepPhase>('observing')
-  const [pendingSim, setPendingSim]     = useState<OnePropResult | null>(null)
-  const [displayedSim, setDisplayedSim] = useState<OnePropResult | null>(null)
-  const [graphView, setGraphView]       = useState<GraphView>('proportions')
-  const [isRunning, setIsRunning]       = useState(false)
-  const [runProgress, setRunProgress]   = useState<{ current: number; total: number } | null>(null)
-  const cancelRef = useRef(false)
-
-  const { n, x } = config
-  const phat        = n > 0 ? x / n : 0
-  const p0Num       = parseFloat(config.nullP)
-  const nullDist    = config.nullDist
-  const simCount    = config.simCount
-  const extremeCount = config.extremeCount
-  const alternative  = config.alternative
-  const showNormalCurve = config.showNormalCurve ?? false
-
-  const pValue = simCount > 0 ? extremeCount / simCount : null
-
-  // ── Custom threshold for p-value query ──
-  const [customThreshold, setCustomThreshold] = useState<string>(() =>
-    graphView === 'counts' ? String(x) : (x / Math.max(1, n)).toFixed(4)
-  )
-  // Reset when switching between Counts ↔ Proportions
-  useEffect(() => {
-    setCustomThreshold(graphView === 'counts' ? String(x) : (x / Math.max(1, n)).toFixed(4))
-  }, [graphView]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const customThresholdNum = parseFloat(customThreshold)
-  const thresholdOnCountScale = Number.isFinite(customThresholdNum)
-    ? (graphView === 'counts' ? customThresholdNum : snapThresholdCount(customThresholdNum, n))
-    : Number.NaN
-  const nullCenterCount = n * p0Num
-
-  const customPValue = useMemo(() => {
-    if (nullDist.length === 0 || !Number.isFinite(thresholdOnCountScale)) return null
-    const dist = Math.abs(thresholdOnCountScale - nullCenterCount)
-    const extreme = nullDist.filter(xSim => {
-      if (alternative === 'greater') return xSim >= thresholdOnCountScale
-      if (alternative === 'less')    return xSim <= thresholdOnCountScale
-      return Math.abs(xSim - nullCenterCount) >= dist
-    }).length
-    return extreme / nullDist.length
-  }, [nullDist, thresholdOnCountScale, alternative, nullCenterCount])
-
-  const altSymbol    = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
-
-  function updateAlternative(next: Alternative) {
-    const nextExtremeCount = nullDist.reduce((countExtreme, xSim) => (
-      countExtreme + (isExtremeOneProp(xSim, x, n, p0Num, next) ? 1 : 0)
-    ), 0)
-    updateExploreCard(cardId, {
-      config: {
-        ...config,
-        alternative: next,
-        extremeCount: nextExtremeCount,
-      }
-    })
-  }
-
-  const normMean = graphView === 'counts' ? n * p0Num : p0Num
-  const normSD   = graphView === 'counts'
-    ? Math.sqrt(Math.max(0, n * p0Num * (1 - p0Num)))
-    : Math.sqrt(Math.max(0, p0Num * (1 - p0Num) / Math.max(1, n)))
-
-  // Compute coin layout
-  const { size: coinSize, gap: coinGap, perRow } = getCoinLayout(n)
-
-  // Coin faces to display: based on phase
-  // 'observing' | 'spinning' → observed faces
-  // 'computed' | 'plotted'   → simulated faces (or observed if no sim yet)
-  const showSimFaces = (phase === 'computed' || phase === 'plotted') && displayedSim !== null
-  const displayFaces = useMemo<CoinFace[]>(() => {
-    if (showSimFaces && displayedSim) {
-      return displayedSim.outcomes.map(outcome => outcome ? 'heads' as CoinFace : 'tails' as CoinFace)
-    }
-    return [
-      ...Array(x).fill('heads' as CoinFace),
-      ...Array(Math.max(0, n - x)).fill('tails' as CoinFace),
-    ]
-  }, [showSimFaces, displayedSim, x, n])
-
-  // Staggered reveal delays (cascade effect when coins land after Compute)
-  const revealDelays = useMemo(() => {
-    const maxDelay = Math.min(500, n * 20)
-    return Array.from({ length: n }, (_, i) => Math.round((i / Math.max(1, n - 1)) * maxDelay))
-  }, [n])
-
-  // Staggered spin delays (so they don't all squish at the same time)
-  const spinDelays = useMemo(() => {
-    return Array.from({ length: n }, (_, i) => Math.round((i / Math.max(1, n)) * 220))
-  }, [n])
-
-  // ── Step handlers ──
-
-  function handleRandomize() {
-    // Start spinning; run the simulation now but keep it pending
-    const sim = runOnePropRandomization(n, p0Num)
-    setPendingSim(sim)
-    setPhase('spinning')
-  }
-
-  function handleCompute() {
-    if (!pendingSim) return
-    // Reveal the simulated result
-    setDisplayedSim(pendingSim)
-    setPhase('computed')
-  }
-
-  function handlePlot() {
-    if (!pendingSim) return
-    const newExtreme = isExtremeOneProp(pendingSim.xSim, x, n, p0Num, alternative) ? 1 : 0
-    updateExploreCard(cardId, {
-      config: {
-        ...config,
-        nullDist:      [...nullDist, pendingSim.xSim],
-        simCount:      simCount + 1,
-        extremeCount:  extremeCount + newExtreme,
-      }
-    })
-    setPendingSim(null)
-    setPhase('plotted')
-  }
-
-  // ── Batch runs (skip animation) ──
-  function runBatch(count: number) {
-    if (!Number.isFinite(p0Num) || p0Num < 0 || p0Num > 1) return
-    let newExtreme = 0
-    let last: OnePropResult | null = null
-    const newCounts: number[] = []
-    for (let i = 0; i < count; i++) {
-      const r = runOnePropRandomization(n, p0Num)
-      last = r
-      newCounts.push(r.xSim)
-      if (isExtremeOneProp(r.xSim, x, n, p0Num, alternative)) newExtreme++
-    }
-    if (last) {
-      setDisplayedSim(last)
-      setPendingSim(null)
-      setPhase('plotted')
-    }
-    updateExploreCard(cardId, {
-      config: {
-        ...config,
-        nullDist:     [...nullDist, ...newCounts],
-        simCount:     simCount + count,
-        extremeCount: extremeCount + newExtreme,
-      }
-    })
-  }
-
-  function handleReset() {
-    cancelRef.current = true
-    setIsRunning(false)
-    setRunProgress(null)
-    setPendingSim(null)
-    setDisplayedSim(null)
-    setPhase('observing')
-    updateExploreCard(cardId, {
-      config: { ...config, nullDist: [], simCount: 0, extremeCount: 0 }
-    })
-  }
-
-  // ── Animated batch (Run 1 / Run 10) ──
-  function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)) }
-
-  async function runAnimated(count: number) {
-    if (isRunning || !Number.isFinite(p0Num) || p0Num < 0 || p0Num > 1) return
-    cancelRef.current = false
-    setIsRunning(true)
-
-    // Timing: slower for 1, snappier for 10
-    const spinMs    = count === 1 ? 1200 : 360
-    const computeMs = count === 1 ? 450 : 130
-    const pauseMs   = count === 1 ? 80  : 40
-
-    // Track accumulating counts locally (config prop is stale in async closure)
-    let localNullDist     = [...config.nullDist]
-    let localSimCount     = config.simCount
-    let localExtremeCount = config.extremeCount
-
-    for (let i = 0; i < count; i++) {
-      if (cancelRef.current) break
-      setRunProgress({ current: i + 1, total: count })
-
-      // ① Randomize
-      const sim = runOnePropRandomization(n, p0Num)
-      setPendingSim(sim)
-      setPhase('spinning')
-      await sleep(spinMs)
-      if (cancelRef.current) break
-
-      // ② Compute
-      setDisplayedSim(sim)
-      setPhase('computed')
-      await sleep(computeMs)
-      if (cancelRef.current) break
-
-      // ③ Plot
-      const extreme = isExtremeOneProp(sim.xSim, x, n, p0Num, alternative) ? 1 : 0
-      localNullDist = [...localNullDist, sim.xSim]
-      localSimCount++
-      localExtremeCount += extreme
-      updateExploreCard(cardId, {
-        config: {
-          ...config,
-          nullDist:     localNullDist,
-          simCount:     localSimCount,
-          extremeCount: localExtremeCount,
-        }
-      })
-      setPendingSim(null)
-      setPhase('plotted')
-
-      if (i < count - 1) await sleep(pauseMs)
-    }
-
-    setIsRunning(false)
-    setRunProgress(null)
-    cancelRef.current = false
-  }
-
-  function stopRunning() {
-    cancelRef.current = true
-  }
-
-  // Last displayed sim stats
-  const lastSimExtreme = displayedSim
-    ? isExtremeOneProp(displayedSim.xSim, x, n, p0Num, alternative)
-    : false
-
-  const probabilityLabel = (() => {
-    if (alternative === 'two') {
-      return 'Two-sided p-value = 2 × smaller tail'
-    }
-    const symbol = altOperator(alternative)
-    if (graphView === 'counts') return `P(X ${symbol} ${x})`
-    const observedProp = x / Math.max(1, n)
-    const shown = observedProp.toFixed(4).replace(/^0(?=\.)/, '')
-    return `P(p̂ ${symbol} ${shown})`
-  })()
-
-  // Status label for the coin panel
-  const statusLabel = (() => {
-    if (phase === 'observing') return `Observed sample — n = ${n}, X = ${x}`
-    if (phase === 'spinning')  return 'Simulating under H₀ …'
-    if (phase === 'computed')  return `Simulation result — X = ${displayedSim?.xSim ?? '?'}, p̂ = ${displayedSim ? displayedSim.pSim.toFixed(3) : '?'}`
-    if (phase === 'plotted')   return `Last result — X = ${displayedSim?.xSim ?? '?'}, p̂ = ${displayedSim ? displayedSim.pSim.toFixed(3) : '?'}`
-    return ''
-  })()
-
-  // Compute panel height based on coin grid
-  const coinRows  = Math.ceil(n / perRow)
-  const panelH    = Math.max(64, Math.min(coinRows * (coinSize + coinGap) + 16, 220))
-
-  return (
-    <div className="flex flex-col h-full">
-      <style>{COIN_CSS}</style>
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-4 space-y-4">
-
-        <div className="space-y-3">
-          {/* ── Unified coin panel ── */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden flex flex-col">
-
-            <div className={`px-3 py-1.5 border-b border-[var(--color-border)] flex items-center gap-2 transition-colors duration-300 ${
-              phase === 'spinning' ? 'bg-[var(--color-accent-light)]' :
-              phase === 'computed' ? 'bg-[var(--color-accent-light)]'  :
-              'bg-[var(--color-accent-light)]'
-            }`}>
-              {phase === 'spinning' && (
-                <span className="inline-block w-2 h-2 rounded-full bg-[var(--color-gold)] animate-pulse" />
-              )}
-              {phase === 'computed' && (
-                <span className="inline-block w-2 h-2 rounded-full bg-[var(--color-accent)]" />
-              )}
-              {(phase === 'observing' || phase === 'plotted') && (
-                <span className="inline-block w-2 h-2 rounded-full bg-[var(--color-border)]" />
-              )}
-              <span className="text-xs font-medium text-[var(--color-text)]">{statusLabel}</span>
-            </div>
-
-            <div
-              className="flex flex-wrap content-start overflow-hidden px-3 pt-3 pb-2"
-              style={{
-                gap: coinGap,
-                alignContent: 'flex-start',
-                minHeight: panelH,
-                maxHeight: panelH,
-              }}
-            >
-              {displayFaces.map((face, i) => (
-                <AbraCoin
-                  key={i}
-                  face={face}
-                  size={coinSize}
-                  spinning={phase === 'spinning'}
-                  spinDelay={spinDelays[i] ?? 0}
-                  revealDelay={phase === 'computed' ? (revealDelays[i] ?? 0) : 0}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* ── Slim summary row ── */}
-        </div>
-
-        {/* ── Null distribution ── */}
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 flex flex-col gap-1.5">
-          <div className="flex gap-4 items-stretch">
-            <div className="w-44 flex-shrink-0 flex flex-col gap-3">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
-              <div className="flex flex-col items-start gap-2">
-                <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-[10px]">
-                  {(['proportions', 'counts'] as GraphView[]).map((v, i) => (
-                    <button key={v} onClick={() => setGraphView(v)}
-                      className={`px-2 py-0.5 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${graphView === v ? 'bg-[var(--color-text)] text-[var(--color-surface)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
-                      {v === 'proportions' ? 'Sample Proportions' : 'Counts'}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex flex-col items-start text-[14px] leading-[1.4] text-[var(--color-muted)]">
-                  <label className="flex items-center gap-2 select-none">
-                    <input
-                      type="checkbox"
-                      checked={showNormalCurve}
-                      onChange={e => updateExploreCard(cardId, { config: { ...config, showNormalCurve: e.target.checked } })}
-                      className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
-                    />
-                    Overlay normal curve
-                  </label>
-                  {showNormalCurve && (
-                    <div className="pl-6 pt-1 leading-[1.4] text-[14px]">
-                      <div>Mean = {normMean.toFixed(graphView === 'counts' ? 1 : 4)}</div>
-                      <div>SD = {normSD.toFixed(graphView === 'counts' ? 1 : 4)}</div>
-                    </div>
-                  )}
-                  <div className="pt-2 space-y-1 text-[14px] leading-[1.4]">
-                    <div><span className="font-semibold text-[var(--color-text)]">H₀:</span> p = {config.nullP}</div>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-semibold text-[var(--color-text)]">Hₐ:</span>
-                      <span className="font-medium text-[var(--color-text)]">p</span>
-                      <select
-                        value={alternative}
-                        onChange={e => updateAlternative(e.target.value as Alternative)}
-                        className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-0.5 text-[14px] font-medium text-[var(--color-text)]"
-                      >
-                        <option value="less">&lt;</option>
-                        <option value="greater">&gt;</option>
-                        <option value="two">≠</option>
-                      </select>
-                      <span className="font-medium text-[var(--color-text)]">{config.nullP}</span>
-                    </div>
-                    <div><span className="font-semibold text-[var(--color-text)]">n:</span> {n}</div>
-                    <div><span className="font-semibold text-[var(--color-text)]">p̂:</span> <span className="font-mono tabular-nums font-bold text-[var(--color-accent)]">{phat.toFixed(4)}</span></div>
-                  </div>
-                  <div className="pt-2 space-y-1 leading-[1.4] text-[14px]">
-                    <div>
-                      <span className="font-semibold text-[var(--color-text)]">As or more extreme:</span>{' '}
-                      <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
-                    </div>
-                    {/* Editable p-value threshold */}
-                    <div className="flex items-baseline gap-0.5 flex-wrap text-[14px]">
-                      {alternative === 'two' ? (
-                        <>
-                          <span>
-                            {graphView === 'counts'
-                              ? 'P(X as or more extreme than'
-                              : 'P(p̂ as or more extreme than'}
-                          </span>
-                          <input
-                            type="number"
-                            value={customThreshold}
-                            onChange={e => setCustomThreshold(e.target.value)}
-                            step={graphView === 'counts' ? 1 : 0.01}
-                            min={graphView === 'counts' ? 0 : 0}
-                            max={graphView === 'counts' ? n : 1}
-                            className="w-16 text-center text-[var(--color-accent)] font-semibold bg-transparent border-b border-[var(--color-accent)] focus:outline-none text-[14px] [appearance:textfield] mx-0.5"
-                          />
-                          <span>)</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>P({graphView === 'counts' ? 'X' : 'p̂'} {altOperator(alternative)}</span>
-                          <input
-                            type="number"
-                            value={customThreshold}
-                            onChange={e => setCustomThreshold(e.target.value)}
-                            step={graphView === 'counts' ? 1 : 0.01}
-                            min={graphView === 'counts' ? 0 : 0}
-                            max={graphView === 'counts' ? n : 1}
-                            className="w-16 text-center text-[var(--color-accent)] font-semibold bg-transparent border-b border-[var(--color-accent)] focus:outline-none text-[14px] [appearance:textfield] mx-0.5"
-                          />
-                          <span>)</span>
-                        </>
-                      )}
-                      <span>=</span>
-                      <span className="ml-0.5 font-semibold text-[var(--color-accent)]">
-                        {customPValue !== null
-                          ? customPValue < 0.001 ? '< 0.001' : customPValue.toFixed(4)
-                          : '—'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="min-h-0" style={{ height: 392 }}>
-                {simCount === 0
-                  ? <div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">
-                      Use the step buttons above or batch-run to build the null distribution
-                    </div>
-                  : <OnePropNullDistPlot
-                      counts={nullDist}
-                      xObs={x}
-                      n={n}
-                      p0Num={p0Num}
-                      alternative={alternative}
-                      view={graphView}
-                      showNormalCurve={showNormalCurve}
-                      thresholdVal={Number.isFinite(customThresholdNum)
-                        ? (graphView === 'counts' ? customThresholdNum : thresholdOnCountScale / Math.max(1, n))
-                        : undefined}
-                    />
-                }
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* ── Controls ── */}
-      <div className="flex-shrink-0 flex flex-wrap items-center gap-2 px-4 py-3 border-t border-[var(--color-border)] bg-[var(--color-accent-light)]">
-        <button
-          onClick={handleRandomize}
-          disabled={isRunning || phase === 'spinning' || phase === 'computed'}
-          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-            !isRunning && (phase === 'observing' || phase === 'plotted')
-              ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
-              : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
-          }`}
-        >
-          1. Randomize
-        </button>
-        <button
-          onClick={handleCompute}
-          disabled={isRunning || phase !== 'spinning'}
-          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-            !isRunning && phase === 'spinning'
-              ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
-              : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
-          }`}
-        >
-          2. Compute
-        </button>
-        <button
-          onClick={handlePlot}
-          disabled={isRunning || phase !== 'computed'}
-          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-            !isRunning && phase === 'computed'
-              ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
-              : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
-          }`}
-        >
-          3. Plot
-        </button>
-
-        <span className="text-[var(--color-border)]">|</span>
-        <span className="text-[10px] text-[var(--color-muted)] uppercase tracking-wide">Batch</span>
-
-        {/* Run 1 and Run 10 — animated step-by-step */}
-        {([1, 10] as const).map(cnt => (
-          <button key={cnt} onClick={() => runAnimated(cnt)} disabled={isRunning}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-              isRunning
-                ? 'border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
-                : 'border-[var(--color-border)] text-[var(--color-text)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)]'
-            }`}>
-            Run {cnt}
-          </button>
-        ))}
-
-        {/* Run 100 and Run 1,000 — instant */}
-        {([100, 1000] as const).map(cnt => (
-          <button key={cnt} onClick={() => runBatch(cnt)} disabled={isRunning}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-              isRunning
-                ? 'border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
-                : 'border-[var(--color-border)] text-[var(--color-text)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)]'
-            }`}>
-            Run {cnt.toLocaleString()}
-          </button>
-        ))}
-
-        {isRunning ? (
-          <button onClick={stopRunning}
-            className="rounded-lg border border-[var(--color-danger)] px-3 py-1.5 text-xs font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger-light)] transition-colors ml-auto">
-            {runProgress ? `Stop (${runProgress.current}/${runProgress.total})` : 'Stop'}
-          </button>
-        ) : (
-          <button onClick={handleReset}
-            className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)] transition-colors ml-auto">
-            Reset
-          </button>
-        )}
-      </div>
     </div>
   )
 }

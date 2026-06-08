@@ -29,7 +29,7 @@ import { MeansCard } from '@/components/inference/MeansCard'
 import { ProportionsCard } from '@/components/inference/ProportionsCard'
 import { TwoPropRandomizationTest, TwoPropSimCard } from '@/components/inference/TwoPropRandomizationTest'
 import { TwoMeanRandomizationTest, TwoMeanSimCard } from '@/components/inference/TwoMeanRandomizationTest'
-import { OnePropRandomizationTest, OnePropSimCard } from '@/components/inference/OnePropRandomizationTest'
+import { OnePropRandomizationTest } from '@/components/inference/OnePropRandomizationTest'
 import { RandomGeneratorCard } from '@/components/probability/RandomGeneratorCard'
 import { CompareNormalsCard } from '@/components/probability/CompareNormalsCard'
 import { DiceRollerCard } from '@/components/probability/DiceRollerCard'
@@ -189,7 +189,7 @@ function cardLabel(type: CardConfig['type']): string {
     case 'sim-results':   return 'Roll Results'
     case 'proportions': return 'Proportions'
     case 'one-prop-randomization': return 'One-Proportion Randomization Test'
-    case 'one-prop-sim':           return 'One-Prop Simulation'
+    case 'one-prop-sim':           return 'One-Proportion Randomization Test'
     case 'two-prop-randomization': return 'Two-Prop Randomization Test'
     case 'two-prop-sim':           return 'Randomization Simulation'
     case 'two-mean-randomization': return 'Two-Mean Randomization Test'
@@ -749,8 +749,8 @@ export function ExploreCanvas({
       case 'sim-results':  return { minWidth: 360, minHeight: 360 }
       case 'means':        return { minWidth: 700, minHeight: 460 }
       case 'proportions':  return { minWidth: 820, minHeight: 580 }
-      case 'one-prop-randomization': return { minWidth: 820, minHeight: 520 }
-      case 'one-prop-sim':           return { minWidth: 1080, minHeight: 720 }
+      case 'one-prop-randomization': return { minWidth: 820, minHeight: 560 }
+      case 'one-prop-sim':           return { minWidth: 820, minHeight: 560 }
       case 'two-prop-randomization': return { minWidth: 900, minHeight: 700 }
       case 'two-prop-sim':           return { minWidth: 700, minHeight: 500 }
       case 'two-mean-randomization': return { minWidth: 900, minHeight: 700 }
@@ -1282,9 +1282,32 @@ export function ExploreCanvas({
                               onAssignZone={(zone, colId) => assignVariableToZone(card.id, zone, colId)}
                             />
                           )}
-                          {card.config.type === 'one-prop-sim' && (
-                            <OnePropSimCard cardId={card.id} config={card.config} />
-                          )}
+                          {card.config.type === 'one-prop-sim' && (() => {
+                            const old = card.config
+                            const migrated = {
+                              type: 'one-prop-randomization' as const,
+                              var1ColId: null,
+                              stage: (old.simCount > 0 ? 'simulate' : 'setup') as 'simulate' | 'setup',
+                              sourceMode: 'manual' as const,
+                              manualX: String(old.x),
+                              manualN: String(old.n),
+                              manualLabel: old.successLabel,
+                              nullP: old.nullP,
+                              alternative: old.alternative,
+                              nullDist: old.nullDist,
+                              simCount: old.simCount,
+                              extremeCount: old.extremeCount,
+                              showNormalCurve: old.showNormalCurve,
+                            }
+                            return (
+                              <OnePropRandomizationTest
+                                cardId={card.id}
+                                config={migrated}
+                                onClearZone={z => clearZone(card.id, z)}
+                                onAssignZone={(zone, colId) => assignVariableToZone(card.id, zone, colId)}
+                              />
+                            )
+                          })()}
                           {card.config.type === 'two-prop-randomization' && (
                             <TwoPropRandomizationTest
                               cardId={card.id}

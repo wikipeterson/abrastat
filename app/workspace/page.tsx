@@ -189,9 +189,11 @@ function GroupedAddCardMenu({
 function VariableSidebar({
   open,
   onClose,
+  onSelectVariable,
 }: {
   open: boolean
   onClose: () => void
+  onSelectVariable: () => void
 }) {
   const { grid, selectedColumnIds, toggleColumnSelection } = useStore()
 
@@ -229,7 +231,10 @@ function VariableSidebar({
                 onDragEnd={e => {
                   (e.currentTarget as HTMLElement).style.opacity = ''
                 }}
-                onClick={() => toggleColumnSelection(col.id)}
+                onClick={() => {
+                  toggleColumnSelection(col.id)
+                  onSelectVariable()
+                }}
                 title="Click to select for stats"
                 className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer select-none transition-colors ${
                   isSelected
@@ -781,6 +786,15 @@ function WorkspaceContent() {
     setLibrarySection(nextSection)
   }
 
+  function handleVariableSelection() {
+    const snaps = computeSnaps()
+    setDockState('collapsed')
+    setDockHeight(snaps.collapsed)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('abrastat.dock.state', 'collapsed')
+    }
+  }
+
   function handleSaveClick() {
     setShowSave(true)
   }
@@ -935,7 +949,11 @@ function WorkspaceContent() {
         style={mode === 'lab' && dockState === 'full' ? { display: 'none' } : undefined}
       >
         {mode === 'lab' ? (
-          <VariableSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          <VariableSidebar
+            open={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            onSelectVariable={handleVariableSelection}
+          />
         ) : (
           <LibrarySidebar
             open={sidebarOpen}

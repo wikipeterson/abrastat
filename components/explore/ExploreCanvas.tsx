@@ -759,7 +759,7 @@ export function ExploreCanvas({
     }
   }
 
-  function startResize(e: React.PointerEvent, cardId: string, dir: 'e' | 's' | 'se') {
+  function startResize(e: React.PointerEvent, cardId: string, dir: 'e' | 's' | 'se' | 'w' | 'sw') {
     e.preventDefault()
     e.stopPropagation()
     setContextMenu(null)
@@ -768,13 +768,37 @@ export function ExploreCanvas({
     const { minWidth, minHeight } = getCardMinSize(card)
     const startX = e.clientX, startY = e.clientY
     const startW = card.width, startH = card.height ?? 520
-    const cursor = dir === 'e' ? 'ew-resize' : dir === 's' ? 'ns-resize' : 'nwse-resize'
+    const startCardX = card.x
+    const cursor =
+      dir === 'e' || dir === 'w'
+        ? 'ew-resize'
+        : dir === 's'
+          ? 'ns-resize'
+          : dir === 'se'
+            ? 'nwse-resize'
+            : 'nesw-resize'
     setInteractionCursor(cursor)
 
     function onMove(ev: PointerEvent) {
       const updates: Partial<Omit<ExploreCard, 'id'>> = {}
-      if (dir === 'e' || dir === 'se') updates.width  = Math.max(minWidth, startW + (ev.clientX - startX) / zoomRef.current)
-      if (dir === 's' || dir === 'se') updates.height = Math.max(minHeight, startH + (ev.clientY - startY) / zoomRef.current)
+      const deltaX = (ev.clientX - startX) / zoomRef.current
+      const deltaY = (ev.clientY - startY) / zoomRef.current
+
+      if (dir === 'e' || dir === 'se') {
+        updates.width = Math.max(minWidth, startW + deltaX)
+      }
+
+      if (dir === 'w' || dir === 'sw') {
+        const nextWidth = Math.max(minWidth, startW - deltaX)
+        const appliedDelta = startW - nextWidth
+        updates.width = nextWidth
+        updates.x = startCardX + appliedDelta
+      }
+
+      if (dir === 's' || dir === 'se' || dir === 'sw') {
+        updates.height = Math.max(minHeight, startH + deltaY)
+      }
+
       updateCard(cardId, updates)
     }
     function onUp() {
@@ -1348,6 +1372,17 @@ export function ExploreCanvas({
                       </div>
                       )}
 
+                      {/* Left-edge resize handle */}
+                      {!isMinimized && (
+                      <div
+                        onPointerDown={e => startResize(e, card.id, 'w')}
+                        className="absolute top-0 w-3 h-full cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ left: -5 }}
+                      >
+                        <div className="absolute top-1/2 -translate-y-1/2 right-0.5 w-1.5 h-8 bg-[var(--color-border)] rounded-full" />
+                      </div>
+                      )}
+
                       {/* Bottom-edge resize handle */}
                       {!isMinimized && (
                       <div
@@ -1365,6 +1400,17 @@ export function ExploreCanvas({
                         onPointerDown={e => startResize(e, card.id, 'se')}
                         className="absolute w-5 h-5 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-end"
                         style={{ right: -5, bottom: -5 }}
+                      >
+                        <div className="w-2.5 h-2.5 rounded-sm bg-[var(--color-muted)]" />
+                      </div>
+                      )}
+
+                      {/* SW corner resize handle */}
+                      {!isMinimized && (
+                      <div
+                        onPointerDown={e => startResize(e, card.id, 'sw')}
+                        className="absolute w-5 h-5 cursor-nesw-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-start"
+                        style={{ left: -5, bottom: -5 }}
                       >
                         <div className="w-2.5 h-2.5 rounded-sm bg-[var(--color-muted)]" />
                       </div>

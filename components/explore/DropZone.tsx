@@ -315,36 +315,40 @@ export function DropZone({
               toggleMenu()
             }
           }}
-          className={`${zoneButtonClass} relative h-full min-h-[44px] overflow-visible`}
+          className={`${zoneButtonClass} relative h-full min-h-[44px] overflow-visible flex items-center justify-center`}
         >
           {assignedCol ? (
             <div
               key={assignedCol.id}
-              ref={node => {
-                chipRef.current = node
-                setDragRef(node)
-              }}
-              style={{ transform: CSS.Translate.toString(transform) }}
-              {...listeners}
-              {...attributes}
-              className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none transition-opacity ${isDragging ? 'opacity-30' : 'opacity-100'}`}
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
             >
               <div
+                ref={node => {
+                  chipRef.current = node
+                  setDragRef(node)
+                }}
                 style={{
+                  transform: CSS.Translate.toString(transform),
                   writingMode: 'vertical-rl',
-                  transform: 'rotate(180deg)',
                   animation: swapAnimation ?? 'chip-to-vertical 0.28s ease-out',
                 }}
-                className="flex items-center gap-1.5 px-2 py-2.5 rounded-lg bg-[var(--color-gold-light)] text-[#5A3A00] ring-2 ring-inset ring-[var(--color-gold)] text-sm font-medium cursor-grab active:cursor-grabbing"
+                {...listeners}
+                {...attributes}
+                className={`flex items-center gap-1.5 px-2 py-2.5 rounded-lg bg-[var(--color-gold-light)] text-[#5A3A00] ring-2 ring-inset ring-[var(--color-gold)] text-sm font-medium cursor-grab active:cursor-grabbing select-none transition-opacity ${isDragging ? 'opacity-30' : 'opacity-100'}`}
               >
-                <TypeBadge type={assignedCol.type} />
-                <span>{assignedCol.name}</span>
+                <div
+                  style={{ transform: 'rotate(180deg)' }}
+                  className="flex items-center gap-1.5"
+                >
+                  <TypeBadge type={assignedCol.type} />
+                  <span>{assignedCol.name}</span>
+                </div>
               </div>
             </div>
           ) : (
             <div
               style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-1 text-center"
+              className="px-1 text-center"
             >
               <div className="text-[11px] font-mono font-semibold uppercase tracking-wide text-[var(--color-muted)] leading-tight">{label}</div>
               <div className="mt-2 text-[10px] text-[var(--color-muted)] leading-tight">{hint ?? 'Drop or click to add'}</div>

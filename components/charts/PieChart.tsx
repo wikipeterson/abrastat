@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { areBrushRowsEqual, createPlotlySelectionStyles, extractRowsFromPlotlyPoints, selectedPointIndicesForTrace, useEffectiveBrushSet } from '@/lib/linkedBrush'
+import { createPlotlySelectionStyles, extractRowsFromPlotlyPoints, selectedPointIndicesForTrace, unionBrushRows, useEffectiveBrushSet } from '@/lib/linkedBrush'
 import { useStore } from '@/lib/store'
 import { getFrequencyTable } from '@/lib/statistics'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
@@ -128,13 +128,13 @@ export function PieChart({ colId, groupColId }: PieChartProps) {
         <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
           <button
             onClick={() => setShowPercent(false)}
-            className={`px-2.5 py-1 font-medium transition-colors ${!showPercent ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}
+            className={`px-2.5 py-1 font-medium transition-colors ${!showPercent ? 'bg-[var(--color-text)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}
           >
             Count
           </button>
           <button
             onClick={() => setShowPercent(true)}
-            className={`px-2.5 py-1 font-medium transition-colors border-l border-[var(--color-border)] ${showPercent ? 'bg-slate-700 text-white' : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'}`}
+            className={`px-2.5 py-1 font-medium transition-colors border-l border-[var(--color-border)] ${showPercent ? 'bg-[var(--color-text)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}
           >
             Percent
           </button>
@@ -147,7 +147,7 @@ export function PieChart({ colId, groupColId }: PieChartProps) {
         )}
 
         {tooManyGroups && (
-          <span className="text-xs text-amber-600">Showing first {MAX_GROUPS} of {allGroups.length} groups</span>
+          <span className="text-xs text-[var(--color-gold-text)]">Showing first {MAX_GROUPS} of {allGroups.length} groups</span>
         )}
       </div>
 
@@ -171,12 +171,11 @@ export function PieChart({ colId, groupColId }: PieChartProps) {
           onClick={event => {
             const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
             if (rows.length === 0) return
-            if (areBrushRowsEqual(rows, pinnedBrush)) clearBrush()
-            else setBrushPinned(rows)
+            setBrushPinned(unionBrushRows(pinnedBrush, rows))
           }}
           onSelected={event => {
             const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
-            setBrushPinned(rows)
+            setBrushPinned(unionBrushRows(pinnedBrush, rows))
           }}
           onDeselect={clearBrush}
         />

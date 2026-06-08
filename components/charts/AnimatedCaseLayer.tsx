@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { renderSvgMarkupToPngBlob } from '@/lib/exportDomAsPng'
-import { areBrushRowsEqual, effectiveBrushRows } from '@/lib/linkedBrush'
+import { areBrushRowsEqual, effectiveBrushRows, unionBrushRows } from '@/lib/linkedBrush'
 import { useStore } from '@/lib/store'
 import { linearRegression } from '@/lib/statistics'
 import { sortCategoryValues } from '@/lib/categoryOrder'
@@ -505,7 +505,6 @@ export function AnimatedCaseLayer({
   const pinnedBrush = useStore(state => state.brush.pinned)
   const setBrushHover = useStore(state => state.setBrushHover)
   const setBrushPinned = useStore(state => state.setBrushPinned)
-  const clearBrush = useStore(state => state.clearBrush)
   const wrapRef = useRef<HTMLDivElement>(null)
   const hoverFrameRef = useRef<number | null>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
@@ -799,11 +798,7 @@ export function AnimatedCaseLayer({
           onMouseEnter={() => scheduleHoverRows([point.rowIndex])}
           onMouseLeave={() => scheduleHoverRows([])}
           onClick={() => {
-            if (pinnedBrush.length === 1 && pinnedBrush[0] === point.rowIndex) {
-              clearBrush()
-            } else {
-              setBrushPinned([point.rowIndex])
-            }
+            setBrushPinned(unionBrushRows(pinnedBrush, [point.rowIndex]))
           }}
           style={{
             width: pointRadius * 2,

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
-import { effectiveBrushRows, areBrushRowsEqual } from '@/lib/linkedBrush'
+import { areBrushRowsEqual, effectiveBrushRows, unionBrushRows } from '@/lib/linkedBrush'
 import { useStore } from '@/lib/store'
 import { RowFilter, FilterOp } from '@/types'
 import { EditableCell } from './EditableCell'
@@ -105,7 +105,6 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
   const pinnedBrush = useStore(state => state.brush.pinned)
   const setBrushHover = useStore(state => state.setBrushHover)
   const setBrushPinned = useStore(state => state.setBrushPinned)
-  const clearBrush = useStore(state => state.clearBrush)
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null)
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; rowIndex: number } | null>(null)
@@ -198,11 +197,7 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
   function handleRowClick(rowIndex: number) {
     setSelectedRows(new Set([rowIndex]))
     setActiveCell(null)
-    if (pinnedBrush.length === 1 && pinnedBrush[0] === rowIndex) {
-      clearBrush()
-    } else {
-      setBrushPinned([rowIndex])
-    }
+    setBrushPinned(unionBrushRows(pinnedBrush, [rowIndex]))
   }
 
   const handleCellChange = useCallback((rowIndex: number, colId: string, value: string) => {
@@ -476,7 +471,7 @@ export function DataGrid({ fillHeight = false }: { fillHeight?: boolean }) {
             <button
               key={item.label}
               onClick={() => { item.action(); setContextMenu(null) }}
-              className={`w-full text-left px-4 py-2 hover:bg-[var(--color-accent-light)] ${item.danger ? 'text-red-500' : 'text-[var(--color-text)]'}`}
+              className={`w-full text-left px-4 py-2 hover:bg-[var(--color-accent-light)] ${item.danger ? 'text-[var(--color-danger)]' : 'text-[var(--color-text)]'}`}
             >
               {item.label}
             </button>

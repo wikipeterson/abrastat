@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { areBrushRowsEqual, createPlotlySelectionStyles, extractRowsFromPlotlyPoints, selectedPointIndicesForTrace, useEffectiveBrushSet } from '@/lib/linkedBrush'
+import { createPlotlySelectionStyles, extractRowsFromPlotlyPoints, selectedPointIndicesForTrace, unionBrushRows, useEffectiveBrushSet } from '@/lib/linkedBrush'
 import { useStore } from '@/lib/store'
 import { PlotlyChart } from './PlotlyChart'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -128,7 +128,7 @@ export function SegmentedBar({
             <button
               key={m}
               onClick={() => setMode(m)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${mode === m ? 'bg-[var(--color-accent)] text-white' : 'bg-slate-100 text-[var(--color-muted)] hover:bg-slate-200'}`}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${mode === m ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-border)]'}`}
             >
               {m === 'count' ? 'Counts' : '100% (Proportions)'}
             </button>
@@ -157,12 +157,11 @@ export function SegmentedBar({
           onClick={event => {
             const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
             if (rows.length === 0) return
-            if (areBrushRowsEqual(rows, pinnedBrush)) clearBrush()
-            else setBrushPinned(rows)
+            setBrushPinned(unionBrushRows(pinnedBrush, rows))
           }}
           onSelected={event => {
             const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
-            setBrushPinned(rows)
+            setBrushPinned(unionBrushRows(pinnedBrush, rows))
           }}
           onDeselect={clearBrush}
         />

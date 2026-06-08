@@ -26,6 +26,10 @@ export function areBrushRowsEqual(a: number[], b: number[]): boolean {
   return true
 }
 
+export function unionBrushRows(current: number[], next: number[]): number[] {
+  return normalizeBrushRows([...current, ...next])
+}
+
 export function effectiveBrushRows(hovered: number[], pinned: number[]): number[] {
   return hovered.length > 0 ? hovered : pinned
 }

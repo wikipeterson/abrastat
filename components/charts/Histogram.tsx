@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import type { Data, Annotations, Layout } from 'plotly.js'
-import { areBrushRowsEqual, createPlotlySelectionStyles, extractRowsFromPlotlyPoints, selectedPointIndicesForTrace, useEffectiveBrushSet } from '@/lib/linkedBrush'
+import { createPlotlySelectionStyles, extractRowsFromPlotlyPoints, selectedPointIndicesForTrace, unionBrushRows, useEffectiveBrushSet } from '@/lib/linkedBrush'
 import { useStore } from '@/lib/store'
 import { getNumericValues, getNumericGroup } from '@/lib/gridHelpers'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
@@ -285,12 +285,11 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
             onClick={event => {
               const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
               if (rows.length === 0) return
-              if (areBrushRowsEqual(rows, pinnedBrush)) clearBrush()
-              else setBrushPinned(rows)
+              setBrushPinned(unionBrushRows(pinnedBrush, rows))
             }}
             onSelected={event => {
               const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
-              setBrushPinned(rows)
+              setBrushPinned(unionBrushRows(pinnedBrush, rows))
             }}
             onDeselect={clearBrush}
           />
@@ -447,12 +446,11 @@ function HistogramInner({ col, groupCol, grid, values, stats, orientation, hideA
           onClick={event => {
             const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
             if (rows.length === 0) return
-            if (areBrushRowsEqual(rows, pinnedBrush)) clearBrush()
-            else setBrushPinned(rows)
+            setBrushPinned(unionBrushRows(pinnedBrush, rows))
           }}
           onSelected={event => {
             const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
-            setBrushPinned(rows)
+            setBrushPinned(unionBrushRows(pinnedBrush, rows))
           }}
           onDeselect={clearBrush}
         />

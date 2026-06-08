@@ -130,7 +130,7 @@ function StripOptionCard({
           <span className="text-sm font-semibold text-[var(--color-text)]">{label}</span>
         </div>
         {recommended && (
-          <span className="rounded-full border border-[var(--color-gold)] bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#5A3A00]">
+          <span className="rounded-full border border-[var(--color-gold)] bg-white px-2 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-wide text-[#5A3A00]">
             Recommended
           </span>
         )}
@@ -234,7 +234,7 @@ function WorkspaceContextMenu({
         </div>
         {CARD_OPTION_GROUPS.map(group => (
           <div key={group.id} className="border-b border-[var(--color-border)] last:border-b-0">
-            <div className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+            <div className="px-4 pt-3 pb-1 text-[10px] font-mono font-semibold uppercase tracking-wide text-[var(--color-muted)]">
               {group.label}
             </div>
             <div className="pb-2">
@@ -749,7 +749,7 @@ export function ExploreCanvas({
       case 'sim-results':  return { minWidth: 360, minHeight: 360 }
       case 'means':        return { minWidth: 700, minHeight: 460 }
       case 'proportions':  return { minWidth: 820, minHeight: 580 }
-      case 'one-prop-randomization': return { minWidth: 1180, minHeight: 860 }
+      case 'one-prop-randomization': return { minWidth: 820, minHeight: 520 }
       case 'one-prop-sim':           return { minWidth: 1080, minHeight: 720 }
       case 'two-prop-randomization': return { minWidth: 900, minHeight: 700 }
       case 'two-prop-sim':           return { minWidth: 700, minHeight: 500 }
@@ -819,6 +819,10 @@ export function ExploreCanvas({
       requestAnimationFrame(() => {
         scrollerEl.scrollTop = adjustedStartTop
       })
+    }
+
+    if (brush.pinned.length > 0 || brush.hovered.length > 0) {
+      clearBrush()
     }
 
     setInteractionCursor('grabbing')
@@ -926,7 +930,7 @@ export function ExploreCanvas({
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
           {addCardCatalogOpen ? (
             <div ref={topStripRef} className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
-              <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">
+              <div className="mb-2 flex items-center gap-2 text-[11px] font-mono font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">
                 <Plus size={14} className="text-[var(--color-accent)]" />
                 <span>Add Card</span>
               </div>
@@ -939,7 +943,7 @@ export function ExploreCanvas({
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 {CARD_OPTION_GROUPS.map(group => (
                   <div key={group.id} className="min-w-0">
-                    <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">
+                    <div className="mb-3 text-[10px] font-mono font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">
                       {group.label}
                     </div>
                     <div className="space-y-1">
@@ -959,7 +963,7 @@ export function ExploreCanvas({
             </div>
           ) : selectedCols.length > 0 && suggestionReadingLine && suggestions.length > 0 ? (
             <div ref={topStripRef} className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 pb-3 pt-4">
-              <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">
+              <div className="mb-3 flex items-center gap-2 text-[11px] font-mono font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">
                 <Sparkles size={14} className="text-[var(--color-accent)]" />
                 <span>Smart Suggest</span>
               </div>
@@ -995,7 +999,7 @@ export function ExploreCanvas({
                   <button
                     type="button"
                     onClick={clearBrush}
-                    className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] bg-white text-sm font-semibold text-[var(--color-muted)] transition-colors hover:border-slate-300 hover:text-[var(--color-text)]"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] bg-white text-sm font-semibold text-[var(--color-muted)] transition-colors hover:border-[var(--color-border)] hover:text-[var(--color-text)]"
                     aria-label="Clear highlighted cases"
                     title="Clear highlighted cases"
                   >
@@ -1044,7 +1048,7 @@ export function ExploreCanvas({
                           className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] cursor-grab active:cursor-grabbing select-none"
                         >
                           <div className="min-w-0 flex items-center gap-3">
-                            <span className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide">
+                            <span className="text-sm font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">
                               {getVisibleCardLabel(card)}
                             </span>
                             {card.config.type === 'table' && (() => {
@@ -1062,7 +1066,7 @@ export function ExploreCanvas({
                                       className={`px-3 py-1 text-xs font-medium normal-case tracking-normal transition-colors ${
                                         (tableInputModes[card.id] ?? 'raw') === mode
                                           ? 'bg-[var(--color-accent)] text-white'
-                                          : 'bg-white text-[var(--color-muted)] hover:bg-slate-50'
+                                          : 'bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
                                       }`}
                                     >
                                       {mode === 'raw' ? 'Raw Data' : 'Enter Table'}
@@ -1140,7 +1144,7 @@ export function ExploreCanvas({
                             })()}
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-slate-300 text-xs select-none opacity-0 group-hover:opacity-100 transition-opacity">⠿ drag to move</span>
+                            <span className="text-[var(--color-border)] text-xs select-none opacity-0 group-hover:opacity-100 transition-opacity">⠿ drag to move</span>
                             <button
                               onPointerDown={e => e.stopPropagation()}
                               onClick={() => updateCard(card.id, { minimized: !isMinimized })}
@@ -1153,7 +1157,7 @@ export function ExploreCanvas({
                             <button
                               onPointerDown={e => e.stopPropagation()}
                               onClick={() => removeCard(card.id)}
-                              className="text-[var(--color-muted)] hover:text-red-500 transition-colors text-xl leading-none"
+                              className="text-[var(--color-muted)] hover:text-[var(--color-danger)] transition-colors text-xl leading-none"
                             >
                               ×
                             </button>
@@ -1317,7 +1321,7 @@ export function ExploreCanvas({
                         className="absolute top-0 w-3 h-full cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity"
                         style={{ right: -5 }}
                       >
-                        <div className="absolute top-1/2 -translate-y-1/2 left-0.5 w-1.5 h-8 bg-slate-300 rounded-full" />
+                        <div className="absolute top-1/2 -translate-y-1/2 left-0.5 w-1.5 h-8 bg-[var(--color-border)] rounded-full" />
                       </div>
                       )}
 
@@ -1328,7 +1332,7 @@ export function ExploreCanvas({
                         className="absolute left-0 h-3 w-full cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity"
                         style={{ bottom: -5 }}
                       >
-                        <div className="absolute left-1/2 -translate-x-1/2 bottom-0.5 h-1.5 w-8 bg-slate-300 rounded-full" />
+                        <div className="absolute left-1/2 -translate-x-1/2 bottom-0.5 h-1.5 w-8 bg-[var(--color-border)] rounded-full" />
                       </div>
                       )}
 
@@ -1339,7 +1343,7 @@ export function ExploreCanvas({
                         className="absolute w-5 h-5 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-end"
                         style={{ right: -5, bottom: -5 }}
                       >
-                        <div className="w-2.5 h-2.5 rounded-sm bg-slate-400" />
+                        <div className="w-2.5 h-2.5 rounded-sm bg-[var(--color-muted)]" />
                       </div>
                       )}
                     </div>

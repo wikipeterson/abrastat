@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { areBrushRowsEqual, createPlotlySelectionStyles, extractRowsFromPlotlyPoints, selectedPointIndicesForTrace, useEffectiveBrushSet } from '@/lib/linkedBrush'
+import { createPlotlySelectionStyles, extractRowsFromPlotlyPoints, selectedPointIndicesForTrace, unionBrushRows, useEffectiveBrushSet } from '@/lib/linkedBrush'
 import { useStore } from '@/lib/store'
 import { getNumericValues, getNumericGroup } from '@/lib/gridHelpers'
 import { PlotlyChart } from './PlotlyChart'
@@ -137,12 +137,11 @@ export function BoxPlot({ colId, groupColId, orientation = 'v' }: BoxPlotProps) 
           onClick={event => {
             const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
             if (rows.length === 0) return
-            if (areBrushRowsEqual(rows, pinnedBrush)) clearBrush()
-            else setBrushPinned(rows)
+            setBrushPinned(unionBrushRows(pinnedBrush, rows))
           }}
           onSelected={event => {
             const rows = extractRowsFromPlotlyPoints((event as { points?: unknown[] })?.points as never)
-            setBrushPinned(rows)
+            setBrushPinned(unionBrushRows(pinnedBrush, rows))
           }}
           onDeselect={clearBrush}
         />

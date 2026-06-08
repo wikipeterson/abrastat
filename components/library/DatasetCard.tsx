@@ -145,7 +145,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, onExport
         </div>
         <div className="flex items-center justify-between text-xs text-[var(--color-muted)] mt-auto">
           <span>{dataset.ownerName}</span>
-          <span>{dataset.rowCount} rows</span>
+          <span>{dataset.rowCount.toLocaleString()} rows</span>
         </div>
       </div>
     )
@@ -166,7 +166,7 @@ export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, onExport
       <div className="hidden sm:flex items-center gap-6 text-xs text-[var(--color-muted)] flex-shrink-0">
         <span className="w-28 truncate">{dataset.ownerName}</span>
         <span className="w-20">{isSample ? 'Built-in' : timeAgo(dataset.updatedAt)}</span>
-        <span className="w-16 text-right">{dataset.rowCount} rows</span>
+        <span className="w-16 text-right">{dataset.rowCount.toLocaleString()} rows</span>
       </div>
       <div className="flex sm:opacity-0 sm:group-hover:opacity-100 items-center gap-1 transition-all">
         {onExport && <ExportButton dataset={dataset} onExport={onExport} />}

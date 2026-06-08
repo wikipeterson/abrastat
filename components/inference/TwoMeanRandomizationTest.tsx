@@ -895,8 +895,8 @@ export function TwoMeanSimCard({ cardId, config }: { cardId: string; config: Two
                 )}
               </div>
               <div className="px-3 py-1 flex items-center justify-between border-t border-[var(--color-border)]">
-                <span className="text-[10px] text-[var(--color-muted)]">Simulation #{simCount>0?simCount:'—'}</span>
-                <span className="text-[10px] text-[var(--color-muted)]">{simCount} total</span>
+                <span className="text-[10px] text-[var(--color-muted)]">Simulation #{simCount>0?simCount.toLocaleString():'—'}</span>
+                <span className="text-[10px] text-[var(--color-muted)]">{simCount.toLocaleString()} total</span>
               </div>
             </div>
             <div className="rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] px-3 py-3 text-xs text-[var(--color-muted)] space-y-1">
@@ -938,7 +938,7 @@ export function TwoMeanSimCard({ cardId, config }: { cardId: string; config: Two
             }
           </div>
           <div className="flex items-center gap-3 pt-1.5 border-t border-[var(--color-border)] flex-shrink-0">
-            <span className="text-xs text-[var(--color-muted)]">Extreme: <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}</span>
+            <span className="text-xs text-[var(--color-muted)]">Extreme: <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{extremeCount.toLocaleString()}</span> / {simCount.toLocaleString()}</span>
             <span className="ml-auto text-sm font-mono tabular-nums font-bold text-[var(--color-accent)]">
               {pValue !== null ? `p ≈ ${pValue < 0.001 ? '< 0.001' : pValue.toFixed(4)}` : 'p = —'}
             </span>

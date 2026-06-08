@@ -908,7 +908,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
             <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
               <span><span className="font-semibold text-[var(--color-text)]">Obs:</span> {config.label1}: {data.s1}/{data.n1} = {data.p1.toFixed(3)}, {config.label2}: {data.s2}/{data.n2} = {data.p2.toFixed(3)}</span>
               <span><span className="font-semibold text-[var(--color-text)]">Sim:</span> {currentSimLine}</span>
-              <span className="ml-auto"><span className="font-semibold text-[var(--color-text)]">Total:</span> {simCount}</span>
+              <span className="ml-auto"><span className="font-semibold text-[var(--color-text)]">Total:</span> {simCount.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -934,7 +934,7 @@ export function TwoPropSimCard({ cardId, config }: { cardId: string; config: Two
                 </div>
                 <div className="pt-2 leading-tight">
                   <div>
-                    Extreme: <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{extremeCount}</span> / {simCount}
+                    Extreme: <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{extremeCount.toLocaleString()}</span> / {simCount.toLocaleString()}
                   </div>
                   <div className="pt-1 font-semibold text-[var(--color-accent)]">
                     {pValue!==null?`p ≈ ${pValue<0.001?'< 0.001':pValue.toFixed(4)}`:'p = —'}

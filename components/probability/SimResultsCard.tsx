@@ -410,7 +410,7 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
             <ModeSelector mode={trackedMode} supportsDifference={supportsDifference} onSelect={handleModeChange} />
           )}
           <span className="text-[10px] text-[var(--color-muted)]">
-            {rollCount} {isCoinFlipper ? `group${rollCount !== 1 ? 's' : ''}` : `roll${rollCount !== 1 ? 's' : ''}`}
+            {rollCount.toLocaleString()} {isCoinFlipper ? `group${rollCount !== 1 ? 's' : ''}` : `roll${rollCount !== 1 ? 's' : ''}`}
           </span>
         </div>
         <button
@@ -450,7 +450,7 @@ export function SimResultsCard({ cardId, config }: SimResultsCardProps) {
               = <span className="font-mono tabular-nums font-semibold">{matchingProportion.toFixed(4)}</span>
             </span>
             <span className="text-[11px] text-[var(--color-muted)]">
-              ({matchingCount} of {rollCount || 0})
+              ({matchingCount.toLocaleString()} of {(rollCount || 0).toLocaleString()})
             </span>
           </div>
         </div>

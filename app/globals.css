@@ -28,7 +28,7 @@ html {
   --color-accent-light:  #E2F4F1;
   --color-accent-strong: #0D6E64;
 
-  --color-border:        #DCE6E3;
+  --color-border:        #ECE3D4;  /* warm cream — harmonizes with --color-bg field */
   --color-grid-header:   #0E3D38;
   --color-grid-selected: #E2F4F1;
 

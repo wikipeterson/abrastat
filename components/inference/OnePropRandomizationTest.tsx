@@ -952,7 +952,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                   <option value="two">≠</option>
                   <option value="greater">&gt;</option>
                 </select>
-                <span>p₀</span>
+                <span className="font-mono tabular-nums">{nullP}</span>
               </div>
             </div>
           </div>

@@ -253,7 +253,7 @@ function snapThresholdCount(threshold: number, n: number): number {
 }
 
 function OnePropNullDistPlot({
-  counts, xObs, n, p0Num, alternative, view, showNormalCurve = false, thresholdVal,
+  counts, xObs, n, p0Num, alternative, view, showNormalCurve = false, thresholdVal, forceHistogram = false,
 }: {
   counts: number[]
   xObs: number
@@ -263,6 +263,7 @@ function OnePropNullDistPlot({
   view: GraphView
   showNormalCurve?: boolean
   thresholdVal?: number
+  forceHistogram?: boolean
 }) {
   const clipId = useId()
   const SVG_W = 760
@@ -333,7 +334,7 @@ function OnePropNullDistPlot({
   const seenC = new Map<number, number>()
   const dotStep = Math.min(6, yScale)
   const dotR = Math.max(0.55, Math.min(2.6, dotStep / 2 - 0.15))
-  const showHistogram = values.length >= 120
+  const showHistogram = forceHistogram || values.length >= 250
   const circles = normalizedValues.map(v => {
     const si = seenC.get(v) ?? 0
     seenC.set(v, si + 1)
@@ -546,7 +547,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
   const showNormalCurve = config.showNormalCurve ?? false
   const cardSizeTarget = stage === 'setup'
     ? { width: 820, height: 560 }
-    : { width: 980, height: 760 }
+    : { width: 1100, height: 580 }
 
   const [phase, setPhase] = useState<StepPhase>('observing')
   const [pendingSim, setPendingSim] = useState<OnePropResult | null>(null)
@@ -825,11 +826,15 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
 
   const firstRunGuidance = (() => {
     if (simCount > 0) return null
-    if (phase === 'observing') return `Flipping ${n} coins as if p = ${nullP} — the null world.`
-    if (phase === 'spinning') return `Now compute the simulated result from those ${n} flips.`
-    if (phase === 'computed') return `${displayedSim?.xSim ?? '?'} heads gives p̂* = ${displayedSim ? displayedSim.pSim.toFixed(3) : '?'}. Plot that one simulated sample.`
+    if (phase === 'spinning') return `Flipping ${n} coins as if p = ${nullP} — the null world.`
+    if (phase === 'computed') return `${displayedSim?.xSim ?? '?'} heads → p̂* = ${displayedSim ? displayedSim.pSim.toFixed(3) : '?'}. Now plot it.`
     return null
   })()
+
+  const coinTrayVisible = (phase === 'spinning' || phase === 'computed') && !isRunning
+  const microCopy: string | null = isRunning && runProgress
+    ? `Running ${runProgress.current} of ${runProgress.total}…`
+    : firstRunGuidance
 
   const verdict = (() => {
     if (simCount < 100) {
@@ -852,7 +857,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
 
   const stepLabels = [
     { key: 'setup' as const, label: 'Set up', enabled: true },
-    { key: 'simulate' as const, label: 'Run', enabled: true },
+    { key: 'simulate' as const, label: 'Simulate', enabled: true },
     { key: 'conclude' as const, label: 'Conclude', enabled: hasEnoughToConclude },
   ]
 
@@ -1039,278 +1044,268 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
       )}
 
       {stage !== 'setup' && (
-        <div className="flex h-full min-h-0 flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+        <div className="flex h-full min-h-0 flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
 
-          {/* ── Fixed header: title + actions + stepper + pinned pills ── */}
-          <div className="flex-shrink-0 mb-4 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-[11px] font-mono font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">Randomization Test</div>
-                <h3 className="text-[30px] font-serif italic leading-none text-[var(--color-text)]">One proportion</h3>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {stage === 'simulate' && (
-                  <button
-                    type="button"
-                    onClick={() => goToStage('conclude')}
-                    disabled={!hasEnoughToConclude}
-                    className="rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Conclude →
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => goToStage('setup')}
-                  className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]"
-                >
-                  ← Edit setup
-                </button>
-              </div>
+          {/* ── Row 1: stepper + Edit setup ── */}
+          <div className="flex-shrink-0 flex items-center gap-4 pb-3 border-b border-[var(--color-border)]">
+            <div className="flex-1 min-w-0">{stepper}</div>
+            <button
+              type="button"
+              onClick={() => goToStage('setup')}
+              className="flex-shrink-0 rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]"
+            >
+              ← Edit setup
+            </button>
+          </div>
+
+          {/* ── Row 2: Observed strip ── */}
+          <div className="flex-shrink-0 flex flex-wrap items-center gap-2 py-2.5">
+            <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+              H₀: p = <span className="font-mono tabular-nums font-semibold">{nullP}</span>
             </div>
-
-            {stepper}
-
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                H₀: p = <span className="font-mono tabular-nums font-semibold">{nullP}</span>
-              </div>
-              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                Hₐ: p <span className="px-1 font-semibold">{altOperator(alternative)}</span> <span className="font-mono tabular-nums font-semibold">{nullP}</span>
-              </div>
-              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                n <span className="font-mono tabular-nums font-semibold">{n}</span>
-              </div>
-              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                X <span className="font-mono tabular-nums font-semibold">{x}</span>
-              </div>
-              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                <PHat className="mr-1" /><span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{phat?.toFixed(4) ?? '—'}</span>
-              </div>
-              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                Reps <span className="font-mono tabular-nums font-semibold">{simCount}</span>
-              </div>
+            <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+              Hₐ: p <span className="px-0.5 font-semibold">{altOperator(alternative)}</span> <span className="font-mono tabular-nums font-semibold">{nullP}</span>
+            </div>
+            <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+              Trials n = <span className="font-mono tabular-nums font-semibold">{n}</span>
+            </div>
+            <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+              Successes X = <span className="font-mono tabular-nums font-semibold">{x}</span>
+            </div>
+            <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+              Observed <PHat className="mx-0.5" /> = <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{phat?.toFixed(3) ?? '—'}</span>
+            </div>
+            <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+              Repetitions = <span className="font-mono tabular-nums font-semibold">{simCount}</span>
             </div>
           </div>
 
-          {/* ── Scrollable body ── */}
-          <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_340px]">
+          {/* ── Row 3: Action bar — 1→2→3 · micro-copy · speed up ── */}
+          <div className="flex-shrink-0 flex items-center gap-2 py-2 border-t border-b border-[var(--color-border)]">
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleRandomize}
+                disabled={isRunning || phase === 'spinning' || phase === 'computed'}
+                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
+                  !isRunning && (phase === 'observing' || phase === 'plotted')
+                    ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
+                    : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
+                }`}
+              >
+                1. Randomize
+              </button>
+              <span className="text-[var(--color-border)] text-sm">→</span>
+              <button
+                onClick={handleCompute}
+                disabled={isRunning || phase !== 'spinning'}
+                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
+                  !isRunning && phase === 'spinning'
+                    ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
+                    : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
+                }`}
+              >
+                2. Compute
+              </button>
+              <span className="text-[var(--color-border)] text-sm">→</span>
+              <button
+                onClick={handlePlot}
+                disabled={isRunning || phase !== 'computed'}
+                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
+                  !isRunning && phase === 'computed'
+                    ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
+                    : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
+                }`}
+              >
+                3. Plot
+              </button>
+            </div>
 
-              {/* Left column: coin panel + step controls + null distribution */}
-              <div className="space-y-4">
-                <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
-                  <div className="flex items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-accent-light)] px-3 py-2">
-                    {phase === 'spinning' ? (
-                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--color-gold)]" />
-                    ) : phase === 'computed' ? (
-                      <span className="inline-block h-2 w-2 rounded-full bg-[var(--color-accent)]" />
-                    ) : (
-                      <span className="inline-block h-2 w-2 rounded-full bg-[var(--color-border)]" />
-                    )}
-                    <span className="text-xs font-medium text-[var(--color-text)]">{statusLabel}</span>
-                  </div>
-                  <div
-                    className="flex flex-wrap content-start overflow-hidden px-3 pb-2 pt-3"
-                    style={{ gap: coinGap, alignContent: 'flex-start', minHeight: panelH, maxHeight: panelH }}
-                  >
-                    {displayFaces.map((face, i) => (
-                      <AbraCoin
-                        key={i}
-                        face={face}
-                        size={coinSize}
-                        spinning={phase === 'spinning'}
-                        spinDelay={spinDelays[i] ?? 0}
-                        revealDelay={phase === 'computed' ? (revealDelays[i] ?? 0) : 0}
-                      />
-                    ))}
-                  </div>
+            <div className="flex-1 min-w-0 px-2">
+              {microCopy && (
+                <p className="text-sm text-[var(--color-muted)] truncate">{microCopy}</p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-[var(--color-muted)]">Speed up</span>
+              {([10, 100, 1000] as const).map(cnt => (
+                <button
+                  key={cnt}
+                  onClick={() => cnt === 10 ? runAnimated(cnt) : runBatch(cnt)}
+                  disabled={isRunning}
+                  className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                    isRunning
+                      ? 'border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
+                      : 'border-[var(--color-border)] text-[var(--color-text)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)]'
+                  }`}
+                >
+                  +{cnt.toLocaleString()}
+                </button>
+              ))}
+              {isRunning ? (
+                <button
+                  onClick={stopRunning}
+                  className="rounded-lg border border-[var(--color-danger)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger-light)] transition-colors"
+                >
+                  {runProgress ? `Stop (${runProgress.current}/${runProgress.total})` : 'Stop'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleReset}
+                  className="rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-muted)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)] transition-colors"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* ── Row 4: Main area — plot (flex) + conclusion tools (fixed 250px) ── */}
+          <div className="flex-1 min-h-0 flex gap-4 pt-3">
+
+            {/* Null distribution plot with transient coin overlay */}
+            <div className="relative flex-1 min-w-0 min-h-0">
+              {simCount === 0 && !coinTrayVisible ? (
+                <div className="flex h-full items-center justify-center text-sm text-[var(--color-muted)]">
+                  Click <strong className="mx-1 font-semibold text-[var(--color-text)]">1. Randomize</strong> above to start.
                 </div>
+              ) : (
+                <OnePropNullDistPlot
+                  counts={nullDist}
+                  xObs={x}
+                  n={n}
+                  p0Num={p0Num}
+                  alternative={alternative}
+                  view={graphView}
+                  showNormalCurve={showNormalCurve}
+                  forceHistogram={stage === 'conclude'}
+                  thresholdVal={Number.isFinite(customThresholdNum)
+                    ? (graphView === 'counts' ? customThresholdNum : thresholdOnCountScale / Math.max(1, n))
+                    : undefined}
+                />
+              )}
 
-                <div className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-4">
-                  <div className="mb-3 text-[11px] font-mono font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">One repetition</div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      onClick={handleRandomize}
-                      disabled={isRunning || phase === 'spinning' || phase === 'computed'}
-                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                        !isRunning && (phase === 'observing' || phase === 'plotted')
-                          ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
-                          : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
-                      }`}
-                    >
-                      1. Randomize
-                    </button>
-                    <span className="text-[var(--color-muted)]">→</span>
-                    <button
-                      onClick={handleCompute}
-                      disabled={isRunning || phase !== 'spinning'}
-                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                        !isRunning && phase === 'spinning'
-                          ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
-                          : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
-                      }`}
-                    >
-                      2. Compute
-                    </button>
-                    <span className="text-[var(--color-muted)]">→</span>
-                    <button
-                      onClick={handlePlot}
-                      disabled={isRunning || phase !== 'computed'}
-                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                        !isRunning && phase === 'computed'
-                          ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
-                          : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
-                      }`}
-                    >
-                      3. Plot
-                    </button>
-                  </div>
-                  {firstRunGuidance && (
-                    <p className="mt-3 text-sm text-[var(--color-muted)]">{firstRunGuidance}</p>
+              {/* Transient coin tray — slides up over the plot during hand repetitions */}
+              <div
+                className={`absolute inset-0 flex flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden transition-all duration-300 ease-in-out ${
+                  coinTrayVisible
+                    ? 'translate-y-0 opacity-100'
+                    : 'translate-y-full opacity-0 pointer-events-none'
+                }`}
+              >
+                <div className={`flex-shrink-0 flex items-center gap-2 border-b border-[var(--color-border)] px-3 py-2 ${
+                  phase === 'spinning' ? 'bg-[var(--color-accent-light)]' : 'bg-[var(--color-surface)]'
+                }`}>
+                  {phase === 'spinning' && (
+                    <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--color-gold)]" />
                   )}
+                  {phase === 'computed' && (
+                    <span className="inline-block h-2 w-2 rounded-full bg-[var(--color-accent)]" />
+                  )}
+                  <span className="text-xs font-medium text-[var(--color-text)]">{statusLabel}</span>
                 </div>
-
-                {(simCount > 0 || stage === 'conclude') && (
-                  <div className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-4">
-                    <div className="mb-3 text-[11px] font-mono font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Speed up</div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {[10, 100, 1000].map(cnt => (
-                        <button key={cnt} onClick={() => (cnt === 10 ? runAnimated(10) : runBatch(cnt))} disabled={isRunning}
-                          className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                            isRunning
-                              ? 'border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed'
-                              : 'border-[var(--color-border)] text-[var(--color-text)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)]'
-                          }`}>
-                          Run {cnt.toLocaleString()}
-                        </button>
-                      ))}
-                      {isRunning ? (
-                        <button onClick={stopRunning}
-                          className="ml-auto rounded-lg border border-[var(--color-danger)] px-3 py-2 text-sm font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger-light)] transition-colors">
-                          {runProgress ? `Stop (${runProgress.current}/${runProgress.total})` : 'Stop'}
-                        </button>
-                      ) : (
-                        <button onClick={handleReset}
-                          className="ml-auto rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-[var(--color-muted)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)] transition-colors">
-                          Reset
-                        </button>
-                      )}
-                    </div>
+                <div
+                  className="flex flex-wrap content-start overflow-hidden px-3 pt-3 pb-2"
+                  style={{ gap: coinGap, alignContent: 'flex-start', flex: 1, minHeight: panelH, maxHeight: panelH + 40 }}
+                >
+                  {displayFaces.map((face, i) => (
+                    <AbraCoin
+                      key={i}
+                      face={face}
+                      size={coinSize}
+                      spinning={phase === 'spinning'}
+                      spinDelay={spinDelays[i] ?? 0}
+                      revealDelay={phase === 'computed' ? (revealDelays[i] ?? 0) : 0}
+                    />
+                  ))}
+                </div>
+                {phase === 'computed' && displayedSim && (
+                  <div className="flex-shrink-0 px-4 py-2 text-sm border-t border-[var(--color-border)] bg-[var(--color-surface)]">
+                    <span className="font-mono tabular-nums font-semibold">{displayedSim.xSim}</span>
+                    {' '}heads → <PHat className="inline" />* ={' '}
+                    <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{displayedSim.pSim.toFixed(3)}</span>
                   </div>
                 )}
-
-                <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-[11px] font-mono font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Null distribution</div>
-                      <p className="text-sm text-[var(--color-muted)]">
-                        {simCount === 0 ? 'Do the first repetition by hand, then the distribution will start to grow.' : `${extremeCount} of ${simCount} simulated samples are as or more extreme.`}
-                      </p>
-                    </div>
-                    <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
-                      {(['proportions', 'counts'] as GraphView[]).map((value, index) => (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => patchConfig({
-                            graphView: value,
-                            customThreshold: value === 'counts' ? String(x) : (x / Math.max(1, n)).toFixed(4),
-                          })}
-                          className={`px-2.5 py-1 font-medium transition-colors ${index > 0 ? 'border-l border-[var(--color-border)]' : ''} ${graphView === value ? 'bg-[var(--color-text)] text-[var(--color-surface)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}
-                        >
-                          {value === 'proportions' ? 'Proportions' : 'Counts'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{ height: 260 }}>
-                    {simCount === 0 ? (
-                      <div className="flex h-full items-center justify-center text-sm text-[var(--color-muted)]">
-                        Start with Randomize → Compute → Plot.
-                      </div>
-                    ) : (
-                      <OnePropNullDistPlot
-                        counts={nullDist}
-                        xObs={x}
-                        n={n}
-                        p0Num={p0Num}
-                        alternative={alternative}
-                        view={graphView}
-                        showNormalCurve={showNormalCurve}
-                        thresholdVal={Number.isFinite(customThresholdNum)
-                          ? (graphView === 'counts' ? customThresholdNum : thresholdOnCountScale / Math.max(1, n))
-                          : undefined}
-                      />
-                    )}
-                  </div>
-                </div>
               </div>
-
-              {/* Right column: conclusion tools */}
-              <div className="space-y-4">
-                <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
-                  <div className="text-[11px] font-mono font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Conclusion tools</div>
-                  <div className="mt-3 space-y-3 text-sm">
-                    <label className="flex items-center gap-2 select-none text-[var(--color-text)]">
-                      <input
-                        type="checkbox"
-                        checked={showNormalCurve}
-                        onChange={e => patchConfig({ showNormalCurve: e.target.checked })}
-                        className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
-                      />
-                      Overlay normal curve
-                    </label>
-                    {showNormalCurve && (
-                      <div className="pl-6 text-[var(--color-muted)]">
-                        <div>Mean = {normMean.toFixed(graphView === 'counts' ? 1 : 4)}</div>
-                        <div>SD = {normSD.toFixed(graphView === 'counts' ? 1 : 4)}</div>
-                      </div>
-                    )}
-                    <div className="space-y-1">
-                      <div className="font-medium text-[var(--color-text)]">Editable tail probability</div>
-                      <div className="flex flex-wrap items-center gap-1 text-[var(--color-muted)]">
-                        <span>{graphView === 'counts' ? 'P(X' : 'P(p̂'}</span>
-                        <span>{altOperator(alternative)}</span>
-                        <input
-                          type="number"
-                          value={customThreshold}
-                          onChange={e => patchConfig({ customThreshold: e.target.value })}
-                          step={graphView === 'counts' ? 1 : 0.01}
-                          min={0}
-                          max={graphView === 'counts' ? n : 1}
-                          className="w-20 rounded-md border border-[var(--color-border)] px-2 py-1 text-center text-[var(--color-text)]"
-                        />
-                        <span>) =</span>
-                        <span className="font-semibold text-[var(--color-accent)]">
-                          {customPValue !== null ? (customPValue < 0.001 ? '< 0.001' : customPValue.toFixed(4)) : '—'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="rounded-xl bg-[var(--color-accent-light)] px-3 py-3 text-sm">
-                      {simCount < 100 ? (
-                        <div className="text-[var(--color-muted)]">Too few to trust yet. Build at least 100 repetitions before drawing a conclusion.</div>
-                      ) : (
-                        <>
-                          <div className="font-semibold text-[var(--color-text)]">{extremeCount} of {simCount} as or more extreme</div>
-                          <div className="mt-1 text-[var(--color-muted)]">{verdict}</div>
-                        </>
-                      )}
-                    </div>
-                    {stage === 'conclude' && (
-                      <button
-                        type="button"
-                        onClick={() => goToStage('simulate')}
-                        className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]"
-                      >
-                        ← Simulate more
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
             </div>
+
+            {/* Conclusion tools — fixed 250px */}
+            <div className="w-[250px] flex-shrink-0 flex flex-col gap-3 overflow-y-auto">
+              <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+                {(['proportions', 'counts'] as GraphView[]).map((value, index) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => patchConfig({
+                      graphView: value,
+                      customThreshold: value === 'counts' ? String(x) : (x / Math.max(1, n)).toFixed(4),
+                    })}
+                    className={`flex-1 px-2.5 py-1.5 font-medium transition-colors ${index > 0 ? 'border-l border-[var(--color-border)]' : ''} ${graphView === value ? 'bg-[var(--color-text)] text-[var(--color-surface)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}
+                  >
+                    {value === 'proportions' ? 'Proportions' : 'Counts'}
+                  </button>
+                ))}
+              </div>
+
+              <label className="flex items-center gap-2 select-none text-sm text-[var(--color-text)]">
+                <input
+                  type="checkbox"
+                  checked={showNormalCurve}
+                  onChange={e => patchConfig({ showNormalCurve: e.target.checked })}
+                  className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                />
+                Overlay normal curve
+              </label>
+              {showNormalCurve && (
+                <div className="pl-6 space-y-0.5 text-sm text-[var(--color-muted)]">
+                  <div>Mean = <span className="font-mono tabular-nums">{normMean.toFixed(graphView === 'counts' ? 1 : 4)}</span></div>
+                  <div>SD = <span className="font-mono tabular-nums">{normSD.toFixed(graphView === 'counts' ? 1 : 4)}</span></div>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">Tail probability</div>
+                <div className="flex flex-wrap items-center gap-1 text-sm text-[var(--color-muted)]">
+                  <span>{graphView === 'counts' ? 'P(X' : 'P(p̂'}</span>
+                  <span>{altOperator(alternative)}</span>
+                  <input
+                    type="number"
+                    value={customThreshold}
+                    onChange={e => patchConfig({ customThreshold: e.target.value })}
+                    step={graphView === 'counts' ? 1 : 0.01}
+                    min={0}
+                    max={graphView === 'counts' ? n : 1}
+                    className="w-16 rounded-md border border-[var(--color-border)] px-2 py-1 text-center text-sm text-[var(--color-text)]"
+                  />
+                  <span>) =</span>
+                  <span className="font-mono tabular-nums font-semibold text-[var(--color-accent)]">
+                    {customPValue !== null ? (customPValue < 0.001 ? '< 0.001' : customPValue.toFixed(4)) : '—'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-[var(--color-accent-light)] px-3 py-3 text-sm">
+                {simCount < 100 ? (
+                  <div className="text-[var(--color-muted)]">Too few to trust yet. Build at least 100 repetitions before drawing a conclusion.</div>
+                ) : (
+                  <>
+                    <div className="font-semibold text-[var(--color-text)]">{extremeCount} of {simCount} as or more extreme</div>
+                    <div className="mt-1 text-[var(--color-muted)]">{verdict}</div>
+                  </>
+                )}
+              </div>
+
+              {stage === 'conclude' && (
+                <button
+                  type="button"
+                  onClick={() => goToStage('simulate')}
+                  className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]"
+                >
+                  ← Simulate more
+                </button>
+              )}
+            </div>
+
           </div>
         </div>
       )}

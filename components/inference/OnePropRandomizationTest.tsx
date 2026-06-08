@@ -959,7 +959,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
             </div>
 
             {sourceMode === 'data' ? (
-              <div className="space-y-4 rounded-[22px] bg-white px-0 py-0">
+              <div className="space-y-4 rounded-[20px] bg-[var(--color-bg)] overflow-hidden px-0 py-0">
                 <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
                   <DropZone
                     id={`${cardId}:var1`}
@@ -972,7 +972,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                   />
                 </div>
                 {catLevels.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3 px-4 pb-3">
                     <span className="text-sm font-medium text-[var(--color-muted)]">Success</span>
                     <select
                       value={successLevel}
@@ -988,28 +988,30 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                 )}
               </div>
             ) : (
-              <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--color-muted)]">
-                <input
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={manualX}
-                  onChange={e => patchConfig({ manualX: e.target.value })}
-                  className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center text-sm font-semibold text-[var(--color-text)]"
-                />
-                <span>successes out of</span>
-                <input
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={manualN}
-                  onChange={e => patchConfig({ manualN: e.target.value })}
-                  className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center text-sm font-semibold text-[var(--color-text)]"
-                />
-                <span>trials</span>
-                <span className="text-sm">
-                  observed <PHat /> = <span className="font-mono tabular-nums font-semibold text-[var(--color-accent)]">{phat !== null ? phat.toFixed(2) : '—'}</span>
-                </span>
+              <div className="rounded-[20px] bg-[var(--color-bg)] px-4 py-3">
+                <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--color-muted)]">
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={manualX}
+                    onChange={e => patchConfig({ manualX: e.target.value })}
+                    className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center text-sm font-semibold text-[var(--color-text)]"
+                  />
+                  <span>successes out of</span>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={manualN}
+                    onChange={e => patchConfig({ manualN: e.target.value })}
+                    className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center text-sm font-semibold text-[var(--color-text)]"
+                  />
+                  <span>trials</span>
+                  <span>
+                    observed <PHat /> = <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{phat !== null ? phat.toFixed(2) : '—'}</span>
+                  </span>
+                </div>
               </div>
             )}
 

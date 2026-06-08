@@ -71,6 +71,7 @@ export function DropZone({
   const [popoverPos, setPopoverPos] = useState<{ top: number; left: number; maxHeight: number } | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const buttonRef = useRef<HTMLButtonElement | null>(null)
+  const chipRef = useRef<HTMLDivElement | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
   const rowRefs = useRef<Array<HTMLButtonElement | null>>([])
   const listboxId = useId()
@@ -166,10 +167,17 @@ export function DropZone({
     buttonRef.current?.focus()
   }
 
+  function getAnchorRect(): DOMRect | null {
+    if (assignedCol && chipRef.current) return chipRef.current.getBoundingClientRect()
+    if (buttonRef.current) return buttonRef.current.getBoundingClientRect()
+    return null
+  }
+
   function toggleMenu() {
     if (!onAssign && !assignedCol) return
-    if (!open && buttonRef.current) {
-      setPopoverPos(computePopoverPos(buttonRef.current.getBoundingClientRect()))
+    if (!open) {
+      const anchorRect = getAnchorRect()
+      if (anchorRect) setPopoverPos(computePopoverPos(anchorRect))
     }
     setOpen(prev => !prev)
   }
@@ -312,7 +320,10 @@ export function DropZone({
           {assignedCol ? (
             <div
               key={assignedCol.id}
-              ref={setDragRef}
+              ref={node => {
+                chipRef.current = node
+                setDragRef(node)
+              }}
               style={{ transform: CSS.Translate.toString(transform) }}
               {...listeners}
               {...attributes}
@@ -362,7 +373,10 @@ export function DropZone({
           {assignedCol ? (
             <div
               key={assignedCol.id}
-              ref={setDragRef}
+              ref={node => {
+                chipRef.current = node
+                setDragRef(node)
+              }}
               style={{
                 transform: CSS.Translate.toString(transform),
                 animation: swapAnimation ?? 'chip-to-horizontal 0.28s ease-out',

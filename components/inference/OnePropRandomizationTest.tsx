@@ -998,8 +998,21 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
           </div>
 
           <div className="space-y-2">
-            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-              Observed data
+            <div className="flex items-center justify-between">
+              <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+                Observed data
+              </div>
+              <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+                {(['data', 'manual'] as const).map((m, i) => (
+                  <button
+                    key={m}
+                    onClick={() => patchConfig({ sourceMode: m })}
+                    className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === m ? 'bg-[var(--color-text)] text-[var(--color-surface)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}
+                  >
+                    {m === 'data' ? 'Use data' : 'Enter info'}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {sourceMode === 'data' ? (

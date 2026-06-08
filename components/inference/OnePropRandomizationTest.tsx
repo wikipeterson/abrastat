@@ -546,8 +546,8 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
   const graphView = config.graphView ?? 'proportions'
   const showNormalCurve = config.showNormalCurve ?? false
   const cardSizeTarget = stage === 'setup'
-    ? { width: 820, height: 560 }
-    : { width: 1100, height: 580 }
+    ? { width: 980, height: 720 }
+    : { width: 1180, height: 760 }
 
   const [phase, setPhase] = useState<StepPhase>('observing')
   const [pendingSim, setPendingSim] = useState<OnePropResult | null>(null)
@@ -612,7 +612,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
     if (sourceMode === 'manual') {
       const xVal = parseInt(manualX, 10)
       const nVal = parseInt(manualN, 10)
-      if (!Number.isFinite(xVal) || !Number.isFinite(nVal)) return { n: 0, x: 0, phat: null, error: 'Enter x and n' as string | null }
+      if (!Number.isFinite(xVal) || !Number.isFinite(nVal)) return { n: 0, x: 0, phat: null, error: null as string | null }
       if (nVal <= 0)           return { n: 0, x: 0, phat: null, error: 'n must be > 0' as string | null }
       if (xVal < 0 || xVal > nVal) return { n: 0, x: 0, phat: null, error: '0 ≤ x ≤ n required' as string | null }
       return { n: nVal, x: xVal, phat: xVal / nVal, error: null as string | null }
@@ -655,10 +655,9 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
   }, [alternative, nullCenterCount, nullDist, thresholdOnCountScale])
 
   useEffect(() => {
-    if (!config.customThreshold) {
-      patchConfig({ customThreshold })
-    }
-  }, [graphView, x])
+    patchConfig({ customThreshold: graphView === 'counts' ? String(x) : (x / Math.max(1, n)).toFixed(4) })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graphView, x, n])
 
   const successLabel = sourceMode === 'manual'
     ? (manualLabel.trim() || 'Success')
@@ -843,9 +842,9 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
     const shown = customPValue ?? pValue
     if (shown == null) return 'Keep simulating to build the null distribution.'
     if (shown <= 0.05) {
-      return `A result this extreme would be unusual if the null hypothesis were true, so the data give evidence for the alternative.`
+      return `A result this extreme would be unusual if the null hypothesis were true.`
     }
-    return `Results like this are not especially rare under the null hypothesis, so the data do not give strong evidence for the alternative.`
+    return `Results like this are not especially rare under the null hypothesis.`
   })()
 
   const statusLabel = (() => {

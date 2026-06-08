@@ -877,11 +877,15 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
     return `P(p̂* ≤ ${lower} or p̂* ≥ ${upper}) under H₀`
   }, [alternative, graphView, n, p0Num, p0Valid, pValue, phat, simCount, x])
 
-  const interpretationText = (simCount >= 100 && pValue !== null)
-    ? pValue <= 0.05
-      ? 'Results like this are especially rare under the null hypothesis.'
-      : 'Results like this are not especially rare under the null hypothesis.'
-    : null
+  const interpretationText = useMemo((): React.ReactNode | null => {
+    if (simCount < 100 || pValue === null) return null
+    const word = pValue > 0.10 ? 'common'
+      : pValue > 0.05 ? 'somewhat unusual'
+      : pValue > 0.01 ? 'unusual'
+      : pValue > 0.001 ? 'very rare'
+      : 'extremely rare'
+    return <>Based on the simulation, a result like this is <strong>{word}</strong> when the true proportion is {nullP}.</>
+  }, [nullP, pValue, simCount])
 
   const statusLabel = (() => {
     if (phase === 'observing') return `Observed sample — n = ${n}, X = ${x}`
@@ -1111,7 +1115,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
               Observed <PHat className="mx-0.5" /> = <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{phat?.toFixed(3) ?? '—'}</span>
             </div>
             <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-              Repetitions = <span className="font-mono tabular-nums font-semibold">{simCount}</span>
+              Repetitions = <span className="font-mono tabular-nums font-semibold">{simCount.toLocaleString()}</span>
             </div>
           </div>
 
@@ -1220,14 +1224,14 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
 
               {/* Transient coin tray — slides up over the plot during hand repetitions */}
               <div
-                className={`absolute inset-0 flex flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden transition-all duration-300 ease-in-out ${
+                className={`absolute inset-0 flex flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] overflow-hidden transition-all duration-300 ease-in-out ${
                   coinTrayVisible
                     ? 'translate-y-0 opacity-100'
                     : 'translate-y-full opacity-0 pointer-events-none'
                 }`}
               >
                 <div className={`flex-shrink-0 flex items-center gap-2 border-b border-[var(--color-border)] px-3 py-2 ${
-                  phase === 'spinning' ? 'bg-[var(--color-accent-light)]' : 'bg-[var(--color-surface)]'
+                  phase === 'spinning' ? 'bg-[var(--color-accent-light)]' : 'bg-[var(--color-bg)]'
                 }`}>
                   {phase === 'spinning' && (
                     <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--color-gold)]" />
@@ -1253,7 +1257,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                   ))}
                 </div>
                 {phase === 'computed' && displayedSim && (
-                  <div className="flex-shrink-0 px-4 py-2 text-sm border-t border-[var(--color-border)] bg-[var(--color-surface)]">
+                  <div className="flex-shrink-0 px-4 py-2 text-sm border-t border-[var(--color-border)] bg-[var(--color-bg)]">
                     <span className="font-mono tabular-nums font-semibold">{displayedSim.xSim}</span>
                     {' '}heads → <PHat className="inline" />* ={' '}
                     <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{displayedSim.pSim.toFixed(3)}</span>

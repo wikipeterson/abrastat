@@ -1030,65 +1030,74 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
   )
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto pr-1">
+    <div className="flex h-full min-h-0 flex-col">
       <style>{COIN_CSS}</style>
-      {stage === 'setup' && setupCard}
+      {stage === 'setup' && (
+        <div className="h-full overflow-y-auto pr-1">
+          {setupCard}
+        </div>
+      )}
 
       {stage !== 'setup' && (
-        <>
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-            <div className="mb-5 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="text-[11px] font-mono font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">Randomization Test</div>
-                  <h3 className="text-[30px] font-serif italic leading-none text-[var(--color-text)]">One proportion</h3>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {stage === 'simulate' && (
-                    <button
-                      type="button"
-                      onClick={() => goToStage('conclude')}
-                      disabled={!hasEnoughToConclude}
-                      className="rounded-lg bg-[var(--color-gold)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Conclude →
-                    </button>
-                  )}
+        <div className="flex h-full min-h-0 flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+
+          {/* ── Fixed header: title + actions + stepper + pinned pills ── */}
+          <div className="flex-shrink-0 mb-4 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-[11px] font-mono font-semibold uppercase tracking-[0.28em] text-[var(--color-muted)]">Randomization Test</div>
+                <h3 className="text-[30px] font-serif italic leading-none text-[var(--color-text)]">One proportion</h3>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {stage === 'simulate' && (
                   <button
                     type="button"
-                    onClick={() => goToStage('setup')}
-                    className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]"
+                    onClick={() => goToStage('conclude')}
+                    disabled={!hasEnoughToConclude}
+                    className="rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    ← Edit setup
+                    Conclude →
                   </button>
-                </div>
-              </div>
-
-              {stepper}
-
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                  H₀: p = <span className="font-mono tabular-nums font-semibold">{nullP}</span>
-                </div>
-                <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                  Hₐ: p <span className="px-1 font-semibold">{altOperator(alternative)}</span> <span className="font-mono tabular-nums font-semibold">{nullP}</span>
-                </div>
-                <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                  n <span className="font-mono tabular-nums font-semibold">{n}</span>
-                </div>
-                <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                  X <span className="font-mono tabular-nums font-semibold">{x}</span>
-                </div>
-                <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                  <PHat className="mr-1" /> <span className="font-mono tabular-nums font-semibold">{phat?.toFixed(4) ?? '—'}</span>
-                </div>
-                <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
-                  Repetitions <span className="font-mono tabular-nums font-semibold">{simCount}</span>
-                </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => goToStage('setup')}
+                  className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]"
+                >
+                  ← Edit setup
+                </button>
               </div>
             </div>
 
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_360px]">
+            {stepper}
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                H₀: p = <span className="font-mono tabular-nums font-semibold">{nullP}</span>
+              </div>
+              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                Hₐ: p <span className="px-1 font-semibold">{altOperator(alternative)}</span> <span className="font-mono tabular-nums font-semibold">{nullP}</span>
+              </div>
+              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                n <span className="font-mono tabular-nums font-semibold">{n}</span>
+              </div>
+              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                X <span className="font-mono tabular-nums font-semibold">{x}</span>
+              </div>
+              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                <PHat className="mr-1" /><span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{phat?.toFixed(4) ?? '—'}</span>
+              </div>
+              <div className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-sm text-[var(--color-text)]">
+                Reps <span className="font-mono tabular-nums font-semibold">{simCount}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Scrollable body ── */}
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_340px]">
+
+              {/* Left column: coin panel + step controls + null distribution */}
               <div className="space-y-4">
                 <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
                   <div className="flex items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-accent-light)] px-3 py-2">
@@ -1215,7 +1224,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                       ))}
                     </div>
                   </div>
-                  <div style={{ height: 392 }}>
+                  <div style={{ height: 260 }}>
                     {simCount === 0 ? (
                       <div className="flex h-full items-center justify-center text-sm text-[var(--color-muted)]">
                         Start with Randomize → Compute → Plot.
@@ -1238,19 +1247,8 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                 </div>
               </div>
 
+              {/* Right column: conclusion tools */}
               <div className="space-y-4">
-                <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
-                  <div className="text-[11px] font-mono font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Observed sample</div>
-                  <div className="mt-3 space-y-2 text-sm text-[var(--color-text)]">
-                    <div><span className="font-semibold">H₀:</span> p = <span className="font-mono tabular-nums">{nullP}</span></div>
-                    <div><span className="font-semibold">Hₐ:</span> p {altOperator(alternative)} <span className="font-mono tabular-nums">{nullP}</span></div>
-                    <div><span className="font-semibold">Success:</span> {successLabel}</div>
-                    <div><span className="font-semibold">n:</span> <span className="font-mono tabular-nums">{n}</span></div>
-                    <div><span className="font-semibold">x:</span> <span className="font-mono tabular-nums">{x}</span></div>
-                    <div><span className="font-semibold"><PHat /></span> <span className="font-mono tabular-nums">{phat?.toFixed(4) ?? '—'}</span></div>
-                  </div>
-                </div>
-
                 <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
                   <div className="text-[11px] font-mono font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">Conclusion tools</div>
                   <div className="mt-3 space-y-3 text-sm">
@@ -1311,9 +1309,10 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                   </div>
                 </div>
               </div>
+
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   )

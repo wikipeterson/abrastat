@@ -28,7 +28,7 @@ const PALETTE_VARS: Record<PaletteId, Record<string, string>> = {
     '--color-muted': '#5A726E',
     '--color-accent': '#16A89B',
     '--color-accent-light': '#E2F4F1',
-    '--color-border': '#DCE6E3',
+    '--color-border': '#ECE3D4',
     '--color-grid-header': '#0E3D38',
     '--color-grid-selected': '#E2F4F1',
     '--color-accent-strong': '#0D6E64',

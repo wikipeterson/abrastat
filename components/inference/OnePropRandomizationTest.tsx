@@ -598,7 +598,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
   const graphView = config.graphView ?? 'proportions'
   const showNormalCurve = config.showNormalCurve ?? false
   const cardSizeTarget = stage === 'setup'
-    ? { width: 980, height: 720 }
+    ? { width: 820, height: 560 }
     : { width: 1180, height: 760 }
 
   const [phase, setPhase] = useState<StepPhase>('observing')
@@ -950,9 +950,6 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
           <div className="rounded-xl bg-[var(--color-text)] px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-white">
             Inference
           </div>
-          <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">
-            Randomization Test
-          </div>
         </div>
 
         {stepper}
@@ -998,21 +995,19 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-                Observed data
-              </div>
-              <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
-                {(['data', 'manual'] as const).map((m, i) => (
-                  <button
-                    key={m}
-                    onClick={() => patchConfig({ sourceMode: m })}
-                    className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === m ? 'bg-[var(--color-text)] text-[var(--color-surface)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}
-                  >
-                    {m === 'data' ? 'Use data' : 'Enter info'}
-                  </button>
-                ))}
-              </div>
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+              Observed data
+            </div>
+            <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs self-start w-fit">
+              {(['data', 'manual'] as const).map((m, i) => (
+                <button
+                  key={m}
+                  onClick={() => patchConfig({ sourceMode: m })}
+                  className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === m ? 'bg-[var(--color-text)] text-[var(--color-surface)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}
+                >
+                  {m === 'data' ? 'Use data' : 'Enter info'}
+                </button>
+              ))}
             </div>
 
             {sourceMode === 'data' ? (
@@ -1096,7 +1091,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
       )}
 
       {stage !== 'setup' && (
-        <div className="flex h-full min-h-0 flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
+        <div className="flex h-full min-h-0 flex-col">
 
           {/* ── Row 1: stepper + Edit setup ── */}
           <div className="flex-shrink-0 flex items-center gap-4 pb-3 border-b border-[var(--color-border)]">

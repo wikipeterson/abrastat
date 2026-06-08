@@ -346,8 +346,8 @@ function OnePropNullDistPlot({
   const thresh = (thresholdVal !== undefined && Number.isFinite(thresholdVal)) ? thresholdVal : obsVal
 
   const seenC = new Map<number, number>()
-  const dotStep = Math.min(6, yScale)
-  const dotR = Math.max(0.55, Math.min(2.6, dotStep / 2 - 0.15))
+  const dotStep = Math.min(13, PH / Math.max(1, maxStack))
+  const dotR = Math.max(3, dotStep / 2 - 1)
   const showHistogram = forceHistogram || values.length >= 250
   const circles = normalizedValues.map(v => {
     const si = seenC.get(v) ?? 0
@@ -484,6 +484,7 @@ function OnePropNullDistPlot({
             : circles.map((c, i) => (
                 <circle key={i} cx={c.cx} cy={c.cy} r={dotR}
                   fill={c.extreme ? 'var(--color-gold)' : 'var(--color-accent)'} opacity={0.85}
+                  stroke="white" strokeWidth={0.6}
                   style={i === circles.length - 1 && values.length > 0
                     ? { animation: 'dot-drop-full 700ms ease-out' } : undefined}
                 />
@@ -1024,7 +1025,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                       {catLevels.map(l => <option key={l} value={l}>{l}</option>)}
                     </select>
                     <span className="text-sm text-[var(--color-muted)]">
-                      observed <PHat /> = <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{phat !== null ? phat.toFixed(2) : '—'}</span>
+                      observed <PHat /> = <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{phat !== null ? phat.toFixed(3) : '—'}</span>
                     </span>
                   </div>
                 )}
@@ -1051,7 +1052,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                   />
                   <span>trials</span>
                   <span>
-                    observed <PHat /> = <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{phat !== null ? phat.toFixed(2) : '—'}</span>
+                    observed <PHat /> = <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{phat !== null ? phat.toFixed(3) : '—'}</span>
                   </span>
                 </div>
               </div>
@@ -1312,7 +1313,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                       step={graphView === 'counts' ? 1 : 0.01}
                       min={0}
                       max={graphView === 'counts' ? n : 1}
-                      className="w-16 rounded-md border border-[var(--color-border)] px-2 py-1 text-center text-sm text-[var(--color-text)]"
+                      className="w-20 min-w-[5ch] rounded-md border border-[var(--color-border)] px-2 py-1 text-center text-sm text-[var(--color-text)]"
                     />
                     <span>{tailProbabilityLabel.trailing}</span>
                     <span className="basis-full sm:basis-auto">=</span>
@@ -1331,7 +1332,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                       step={graphView === 'counts' ? 1 : 0.01}
                       min={0}
                       max={graphView === 'counts' ? n : 1}
-                      className="w-16 rounded-md border border-[var(--color-border)] px-2 py-1 text-center text-sm text-[var(--color-text)]"
+                      className="w-20 min-w-[5ch] rounded-md border border-[var(--color-border)] px-2 py-1 text-center text-sm text-[var(--color-text)]"
                     />
                     <span>) =</span>
                     <span className="font-mono tabular-nums font-semibold text-[var(--color-accent)]">

@@ -11,30 +11,40 @@ html {
 }
 
 :root {
-  /* Semantic font tokens — components reference these, never raw family names */
-  --font-sans:  var(--font-dm-sans), system-ui, sans-serif;
-  --font-serif: var(--font-fraunces), Georgia, serif;
-  --font-mono:  var(--font-jetbrains-mono), ui-monospace, monospace;
+  /* ── Type: three typefaces, three jobs. Components reference these, never raw families. ── */
+  --font-sans:  var(--font-dm-sans), system-ui, sans-serif;          /* interface: body, buttons, labels */
+  --font-serif: var(--font-fraunces), Georgia, serif;               /* voice: titles, framing — usually italic */
+  --font-mono:  var(--font-jetbrains-mono), ui-monospace, monospace;/* data: ALL numbers, badges, eyebrows */
 
-  --color-bg:            #F7F2E8;
-  --color-surface:       #FFFFFF;
+  /* ── Color: four semantic roles. Pick by MEANING, never hardcode hex in components. ── */
+
+  --color-bg:            #F7F2E8;  /* CREAM — "set this": input panels (inside white cards) + canvas */
+  --color-surface:       #FFFFFF;  /* WHITE — the answer surface: card bodies, plots, tables */
   --color-text:          #0E3D38;
   --color-muted:         #5A726E;
+
+  /* TEAL — the app & the model: primary actions + theoretical/null/expected */
   --color-accent:        #16A89B;
   --color-accent-light:  #E2F4F1;
+  --color-accent-strong: #0D6E64;
+
   --color-border:        #DCE6E3;
   --color-grid-header:   #0E3D38;
   --color-grid-selected: #E2F4F1;
-  --color-accent-strong: #0D6E64;
+
+  /* GOLD — you & your data / focus: observed statistic, observed line + extreme tail,
+     selected variables, brushed cases. Unified (data == selection). Never decorative,
+     never used for simulated/null values. */
   --color-gold:          #E8920C;
   --color-gold-light:    #FBEAC9;
-  --color-gold-text:     #8A5800;
-  --color-gold-ring:     #F0A82E;
+  --color-gold-text:     #8A5800;  /* gold text on light bg (contrast-safe) */
+  --color-gold-ring:     #F0A82E;  /* outline for selected/observed chips */
+
+  /* DANGER — errors & destructive actions only */
   --color-danger:        #C0392B;
   --color-danger-light:  #FBE9E7;
 
-  /* tinted with the deep-teal ink so it harmonizes with the cream field */
-  --shadow-card: 0 1px 2px rgba(8,38,33,0.05), 0 12px 28px -18px rgba(8,38,33,0.32);
+  --shadow-card:       0 1px 2px rgba(8,38,33,0.05), 0 12px 28px -18px rgba(8,38,33,0.32);
   --shadow-card-hover: 0 1px 2px rgba(8,38,33,0.06), 0 18px 40px -20px rgba(8,38,33,0.40);
 }
 

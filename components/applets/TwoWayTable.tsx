@@ -70,7 +70,7 @@ function ManualInput({
   const textInput =
     'rounded border border-[var(--color-border)] px-2 py-1 text-sm focus:outline-none focus:border-[var(--color-accent)]'
   const numInput =
-    'w-20 text-center rounded border border-[var(--color-border)] px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:border-[var(--color-accent)]'
+    'w-20 text-center rounded border border-[var(--color-border)] px-2 py-1.5 text-sm font-mono tabular-nums focus:outline-none focus:border-[var(--color-accent)]'
 
   return (
     <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] p-4 space-y-5">
@@ -225,7 +225,7 @@ function OutputTable({ data, view }: { data: TwoWayData; view: TableView }) {
   }
 
   const th = 'px-3 py-2 text-xs font-semibold text-[var(--color-muted)] border border-[var(--color-border)]'
-  const td = 'px-3 py-2 text-sm text-center tabular-nums border border-[var(--color-border)]'
+  const td = 'px-3 py-2 text-sm font-mono text-center tabular-nums border border-[var(--color-border)]'
 
   return (
     <table className="border-collapse min-w-full">

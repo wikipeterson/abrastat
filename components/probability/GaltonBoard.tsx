@@ -536,7 +536,7 @@ export function GaltonBoard() {
           <label className="block space-y-1">
             <div className="flex justify-between">
               <span className="text-sm font-medium text-[var(--color-text)]">Rows of pegs</span>
-              <span className="text-sm tabular-nums text-[var(--color-muted)]">{rows}</span>
+              <span className="text-sm font-mono tabular-nums text-[var(--color-muted)]">{rows}</span>
             </div>
             <input
               type="range" min={MIN_ROWS} max={MAX_ROWS} step={1}

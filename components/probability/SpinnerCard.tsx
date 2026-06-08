@@ -767,8 +767,8 @@ export function SpinnerCard() {
                       style={{ background: WHEEL_COLORS[Number(s.id) % WHEEL_COLORS.length] }}
                     />
                     <span className="flex-1 truncate text-[var(--color-text)]">{s.fullLabel}</span>
-                    <span className="font-bold tabular-nums text-[var(--color-text)] w-6 text-right">{count}</span>
-                    <span className="text-[var(--color-muted)] w-14 text-right tabular-nums">
+                    <span className="font-mono tabular-nums font-bold text-[var(--color-text)] w-6 text-right">{count}</span>
+                    <span className="font-mono tabular-nums text-[var(--color-muted)] w-14 text-right">
                       {(pct * 100).toFixed(1)}%
                     </span>
                     {/* Bar showing empirical vs theoretical */}

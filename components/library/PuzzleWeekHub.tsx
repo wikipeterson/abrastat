@@ -41,7 +41,7 @@ type RegisterMode = 'solo' | 'create-team' | 'join-team' | null
 type PuzzleBadge = 'easiest' | 'hardest' | 'favorite'
 
 const BADGE_CONFIG: Record<PuzzleBadge, { label: string; className: string }> = {
-  easiest:  { label: '😌 Easiest',  className: 'bg-sky-100 text-sky-700' },
+  easiest:  { label: '😌 Easiest',  className: 'bg-[var(--color-accent-light)] text-[var(--color-accent-strong)]' },
   hardest:  { label: '🤯 Hardest',  className: 'bg-[var(--color-danger-light)] text-[var(--color-danger)]' },
   favorite: { label: '⭐ Favorite', className: 'bg-[var(--color-gold-light)] text-[var(--color-gold-text)]' },
 }
@@ -589,7 +589,7 @@ export function PuzzleWeekHub() {
                 { value: countdown.seconds, label: 'sec' },
               ] as const).map(({ value, label }) => (
                 <div key={label} className="flex flex-col items-center">
-                  <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-bold tabular-nums text-[var(--color-text)] shadow-sm">
+                  <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-mono tabular-nums font-bold text-[var(--color-text)] shadow-sm">
                     {String(value).padStart(2, '0')}
                   </div>
                   <div className="mt-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)]">
@@ -836,7 +836,7 @@ export function PuzzleWeekHub() {
                     { value: countdown.seconds, label: 'sec' },
                   ] as const).map(({ value, label }) => (
                     <div key={label} className="flex flex-col items-center">
-                      <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-bold tabular-nums text-[var(--color-text)] shadow-sm">
+                      <div className="flex min-w-[3rem] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-2xl font-mono tabular-nums font-bold text-[var(--color-text)] shadow-sm">
                         {String(value).padStart(2, '0')}
                       </div>
                       <div className="mt-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--color-muted)]">

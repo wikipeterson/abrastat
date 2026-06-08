@@ -67,7 +67,7 @@ function ScoreRow({
       <span className="font-medium text-[var(--color-text)]">{cat.label}</span>
       <span
         className={[
-          'w-8 text-right font-bold tabular-nums',
+          'w-8 text-right font-mono tabular-nums font-bold',
           isScored
             ? 'text-[var(--color-text)]'
             : hasPoints
@@ -365,7 +365,7 @@ export function Yacht({ onDone }: Props) {
             <div className="mx-2.5 mt-1 space-y-0.5 border-t border-[var(--color-border)] pt-1">
               <div className="flex justify-between text-xs text-[var(--color-muted)]">
                 <span>Subtotal</span>
-                <span className="font-bold tabular-nums">{upperSubtotal} / 63</span>
+                <span className="font-mono tabular-nums font-bold">{upperSubtotal} / 63</span>
               </div>
               <div
                 className={[
@@ -374,7 +374,7 @@ export function Yacht({ onDone }: Props) {
                 ].join(' ')}
               >
                 <span>Bonus</span>
-                <span className="tabular-nums">{bonusLabel}</span>
+                <span className="font-mono tabular-nums">{bonusLabel}</span>
               </div>
             </div>
           </div>
@@ -398,7 +398,7 @@ export function Yacht({ onDone }: Props) {
             <div className="mx-2.5 mt-1 border-t border-[var(--color-border)] pt-1">
               <div className="flex justify-between text-xs text-[var(--color-muted)]">
                 <span>Lower Total</span>
-                <span className="font-bold tabular-nums">{lowerSubtotal}</span>
+                <span className="font-mono tabular-nums font-bold">{lowerSubtotal}</span>
               </div>
             </div>
           </div>
@@ -411,17 +411,17 @@ export function Yacht({ onDone }: Props) {
           <div className="grid grid-cols-3 gap-3 text-center">
             <div>
               <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)]">Upper</div>
-              <div className="text-xl font-black tabular-nums text-[var(--color-text)]">
+              <div className="text-xl font-mono tabular-nums font-black text-[var(--color-text)]">
                 {upperSubtotal + (bonusAchieved ? 35 : 0)}
               </div>
             </div>
             <div>
               <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)]">Lower</div>
-              <div className="text-xl font-black tabular-nums text-[var(--color-text)]">{lowerSubtotal}</div>
+              <div className="text-xl font-mono tabular-nums font-black text-[var(--color-text)]">{lowerSubtotal}</div>
             </div>
             <div>
               <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)]">Grand Total</div>
-              <div className="text-3xl font-black tabular-nums text-[var(--color-accent)]">{grandTotal}</div>
+              <div className="text-3xl font-mono tabular-nums font-black text-[var(--color-accent)]">{grandTotal}</div>
             </div>
           </div>
         </div>

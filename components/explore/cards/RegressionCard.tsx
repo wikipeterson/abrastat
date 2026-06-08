@@ -215,7 +215,7 @@ export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRe
                 <div key={regression.label} className="flex items-center justify-between gap-3 text-sm">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: regression.color }} />
-                    <span className="font-semibold text-[var(--color-text)] truncate">{regression.label}</span>
+                    <span className="font-serif italic font-semibold text-[var(--color-text)] truncate">{regression.label}</span>
                   </div>
                   <div className="font-mono text-[var(--color-text)] text-right">
                     {yCol.name}&#770; = {fmt(regression.slope)}{xCol.name} {regression.interceptSign} {fmt(Math.abs(regression.intercept))}

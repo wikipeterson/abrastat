@@ -80,7 +80,7 @@ export function ScoreEntry({ score, maxScore, onSubmit, submitting }: Props) {
       {/* Score */}
       <div className="text-center">
         <div className="text-5xl mb-2">{resultEmoji}</div>
-        <div className="text-4xl font-bold text-[var(--color-accent)] tabular-nums">
+        <div className="text-4xl font-mono tabular-nums font-bold text-[var(--color-accent)]">
           {score} <span className="text-lg font-normal text-[var(--color-muted)]">/ {maxScore}</span>
         </div>
         <div className="text-sm text-[var(--color-muted)] mt-1">{pct}% accuracy</div>

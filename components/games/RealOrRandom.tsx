@@ -43,7 +43,7 @@ export function RealOrRandom({ onDone }: Props) {
         <span className="text-[var(--color-muted)]">Round {round + 1} of {ROUNDS_PER_GAME}</span>
         <span className="font-semibold">{totalScore} pts</span>
       </div>
-      <p className="text-sm text-center text-[var(--color-muted)]">
+      <p className="text-sm font-serif italic text-center text-[var(--color-text)]">
         Is this a <strong>real-world relationship</strong> or <strong>random noise</strong>?
       </p>
 
@@ -86,7 +86,7 @@ export function RealOrRandom({ onDone }: Props) {
           <div className={`text-center py-3 rounded-xl font-semibold ${isCorrect ? 'bg-[var(--color-accent-light)] text-[var(--color-accent-strong)]' : 'bg-[var(--color-danger-light)] text-[var(--color-danger)]'}`}>
             {isCorrect ? '✓ Correct! +100 pts' : '✗ Wrong'}
           </div>
-          <div className="text-sm text-center text-[var(--color-muted)] px-2">
+          <div className="text-sm font-serif italic text-center text-[var(--color-text)] px-2">
             {roundData.isReal
               ? <>This was <strong>real data</strong>: {roundData.scenarioLabel}</>
               : <>This was <strong>random noise</strong> — no real relationship</>

@@ -69,7 +69,7 @@ export function Leaderboard({ gameId, highlightInitials, compact }: LeaderboardP
               <span className="flex-1 text-sm font-mono font-bold text-[var(--color-text)] tracking-widest">
                 {e.initials}
               </span>
-              <span className="text-sm font-semibold text-[var(--color-accent)] tabular-nums">
+              <span className="text-sm font-mono tabular-nums font-semibold text-[var(--color-accent)]">
                 {e.score}
               </span>
             </div>

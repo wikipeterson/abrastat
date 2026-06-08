@@ -547,8 +547,8 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
                       <p className="text-[10px] text-[var(--color-muted)] mb-1">{confidenceLevel}% Confidence Interval</p>
                       <p className="text-xs font-mono font-medium">({fmt(result.ci[0])}, {fmt(result.ci[1])})</p>
                     </div>
-                    <div className="rounded-xl border border-sky-200 bg-sky-50 p-3">
-                      <p className="text-xs font-semibold text-sky-700 mb-1">{confidenceLevel}% Confidence Interval</p>
+                    <div className="rounded-xl border border-[var(--color-accent-light)] bg-[var(--color-accent-light)] p-3">
+                      <p className="text-xs font-mono font-semibold text-[var(--color-accent-strong)] mb-1">{confidenceLevel}% Confidence Interval</p>
                       <p className="text-xs text-[var(--color-muted)] leading-relaxed">
                         We are {confidenceLevel}% confident that {hasGroup ? 'the true difference in proportions' : 'the true population proportion'} lies between {fmt(result.ci[0])} and {fmt(result.ci[1])}.
                       </p>

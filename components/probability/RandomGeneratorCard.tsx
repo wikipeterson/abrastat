@@ -106,13 +106,13 @@ export function RandomGeneratorCard() {
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-sm font-semibold text-[var(--color-text)]">Output</div>
+              <div className="text-sm font-serif italic font-semibold text-[var(--color-text)]">Output</div>
               <div className="text-xs text-[var(--color-muted)]">
                 Random integers from {normalizedMin} to {normalizedMax}
               </div>
             </div>
             <div className="text-sm text-[var(--color-muted)]">
-              Mean: <span className="font-semibold text-[var(--color-text)]">{summary.mean}</span>
+              Mean: <span className="font-mono tabular-nums font-semibold text-[var(--color-text)]">{summary.mean}</span>
             </div>
           </div>
 

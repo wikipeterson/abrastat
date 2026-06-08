@@ -78,7 +78,7 @@ export function MoreVariability({ onDone }: Props) {
         <span className="text-[var(--color-muted)]">Round {round + 1} of {ROUNDS_PER_GAME}</span>
         <span className="font-semibold">{totalScore} pts</span>
       </div>
-      <p className="text-sm text-center text-[var(--color-muted)]">Which distribution has <strong>more variability</strong>?</p>
+      <p className="text-sm font-serif italic text-center text-[var(--color-text)]">Which distribution has <strong>more variability</strong>?</p>
 
       <div className="grid grid-cols-2 gap-3">
         {(['left', 'right'] as Side[]).map(side => (

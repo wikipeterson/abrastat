@@ -46,7 +46,7 @@ export function GuessCorrelation({ onDone }: Props) {
     <div className="space-y-4">
       <div className="flex items-center justify-between text-sm">
         <span className="text-[var(--color-muted)]">Round {round + 1} of {ROUNDS_PER_GAME}</span>
-        <span className="font-semibold text-[var(--color-text)]">Score: {totalSoFar}</span>
+        <span className="font-semibold text-[var(--color-text)]">Score: <span className="font-mono tabular-nums">{totalSoFar}</span></span>
       </div>
 
       <PlotlyChart
@@ -79,7 +79,7 @@ export function GuessCorrelation({ onDone }: Props) {
             />
             <span className="text-sm text-[var(--color-muted)] w-6">+1</span>
           </div>
-          <div className="text-center text-2xl font-bold tabular-nums text-[var(--color-accent)]">
+          <div className="text-center text-2xl font-mono tabular-nums font-bold text-[var(--color-accent)]">
             r = {guess.toFixed(2)}
           </div>
           <button
@@ -94,15 +94,15 @@ export function GuessCorrelation({ onDone }: Props) {
           <div className="grid grid-cols-3 text-center gap-2">
             <div className="bg-[var(--color-bg)] rounded-xl p-3">
               <div className="text-xs text-[var(--color-muted)] mb-1">Your guess</div>
-              <div className="text-xl font-bold tabular-nums">{guess.toFixed(2)}</div>
+              <div className="text-xl font-mono tabular-nums font-bold">{guess.toFixed(2)}</div>
             </div>
             <div className="bg-[var(--color-accent-light)] rounded-xl p-3">
               <div className="text-xs text-[var(--color-muted)] mb-1">Actual r</div>
-              <div className="text-xl font-bold tabular-nums text-[var(--color-accent)]">{target.toFixed(2)}</div>
+              <div className="text-xl font-mono tabular-nums font-bold text-[var(--color-accent)]">{target.toFixed(2)}</div>
             </div>
             <div className={`rounded-xl p-3 ${(roundScore ?? 0) >= 80 ? 'bg-[var(--color-accent-light)]' : (roundScore ?? 0) >= 50 ? 'bg-[var(--color-gold-light)]' : 'bg-[var(--color-danger-light)]'}`}>
               <div className="text-xs text-[var(--color-muted)] mb-1">Points</div>
-              <div className="text-xl font-bold tabular-nums">{roundScore}</div>
+              <div className="text-xl font-mono tabular-nums font-bold">{roundScore}</div>
             </div>
           </div>
           <button

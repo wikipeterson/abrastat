@@ -136,7 +136,7 @@ export function GameHub({ onChromeChange }: GameHubProps) {
                 <div className="p-4 flex items-center gap-3 border-b border-[var(--color-border)]">
                   <span className="text-2xl flex-shrink-0">{game.icon}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-[var(--color-text)] text-sm">{game.title}</div>
+                    <div className="font-serif italic font-semibold text-[var(--color-text)] text-sm">{game.title}</div>
                     <div className="text-xs text-[var(--color-muted)] mt-0.5 leading-snug">{game.description}</div>
                   </div>
                   <button
@@ -205,7 +205,7 @@ export function GameHub({ onChromeChange }: GameHubProps) {
         ) : (
           <div className="text-center space-y-1 py-2">
             <div className="text-[var(--color-accent-strong)] font-semibold">✓ Score submitted!</div>
-            <div className="text-4xl font-bold text-[var(--color-accent)] tabular-nums">
+            <div className="text-4xl font-mono tabular-nums font-bold text-[var(--color-accent)]">
               {state.score} <span className="text-lg font-normal text-[var(--color-muted)]">/ {gameMeta.maxScore}</span>
             </div>
           </div>

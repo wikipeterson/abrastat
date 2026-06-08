@@ -69,7 +69,7 @@ export function MeanVsMedian({ onDone }: Props) {
         <span className="text-[var(--color-muted)]">Round {round + 1} of {ROUNDS_PER_GAME}</span>
         <span className="font-semibold">{totalScore} pts</span>
       </div>
-      <p className="text-sm text-center text-[var(--color-muted)]">
+      <p className="text-sm font-serif italic text-center text-[var(--color-text)]">
         For this distribution, which is larger — the <strong>mean</strong> or the <strong>median</strong>?
       </p>
 

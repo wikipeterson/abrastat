@@ -957,7 +957,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
         {stepper}
 
         <div className="text-sm font-serif italic leading-snug text-[var(--color-text)]">
-          If the null hypothesis were true, would our sample result be unusual enough to make us doubt it?
+          If the null hypothesis were true, would results like ours be unlikely?
         </div>
 
         <div className="space-y-4">

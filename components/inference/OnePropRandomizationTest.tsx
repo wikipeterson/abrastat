@@ -200,7 +200,7 @@ function AbraCoin({
 interface CoinLayout { size: number; gap: number; perRow: number }
 
 function getCoinLayout(n: number): CoinLayout {
-  // Coin size in px; shrinks as n grows. perRow uses ~940px (tray width on 1280px card).
+  // Coin size in px; shrinks as n grows. perRow uses ~1040px (tray width on 1380px card).
   const size =
     n <=  12 ? 60 :
     n <=  20 ? 52 :
@@ -210,7 +210,7 @@ function getCoinLayout(n: number): CoinLayout {
     n <= 160 ? 20 :
                15
   const gap     = Math.max(4, Math.round(size * 0.10))
-  const perRow  = Math.max(1, Math.floor(940 / (size + gap)))
+  const perRow  = Math.max(1, Math.floor(1040 / (size + gap)))
   return { size, gap, perRow }
 }
 
@@ -603,7 +603,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
   const showNormalCurve = config.showNormalCurve ?? false
   const cardSizeTarget = stage === 'setup'
     ? { width: 820, height: 640 }
-    : { width: 1280, height: 760 }
+    : { width: 1380, height: 760 }
 
   const [phase, setPhase] = useState<StepPhase>('observing')
   const [pendingSim, setPendingSim] = useState<OnePropResult | null>(null)

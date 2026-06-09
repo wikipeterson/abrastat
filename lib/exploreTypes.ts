@@ -153,6 +153,23 @@ export interface TwoPropRandomizationCardConfig {
   type: 'two-prop-randomization'
   var1ColId: string | null
   var2ColId: string | null
+  stage?: 'setup' | 'simulate' | 'conclude'
+  sourceMode?: 'data' | 'manual'
+  successLevel?: string
+  groupA?: string
+  groupB?: string
+  manualS1?: string
+  manualN1?: string
+  manualS2?: string
+  manualN2?: string
+  manualLabel1?: string
+  manualLabel2?: string
+  alternative?: import('./randomizationTest').Alternative
+  nullDiff?: string
+  nullDist?: number[]
+  simCount?: number
+  extremeCount?: number
+  showNormalCurve?: boolean
 }
 
 export interface TwoPropSimCardConfig {
@@ -181,6 +198,20 @@ export interface TwoMeanRandomizationCardConfig {
   var1ColId: string | null
   var2ColId: string | null
   dataShape?: 'grouping' | 'two-quant'
+  stage?: 'setup' | 'simulate' | 'conclude'
+  sourceMode?: 'data' | 'manual'
+  groupA?: string
+  groupB?: string
+  manualLabel1?: string
+  manualLabel2?: string
+  manualValues1?: string
+  manualValues2?: string
+  alternative?: import('./randomizationTest').Alternative
+  nullDiff?: string
+  nullDist?: number[]
+  simCount?: number
+  extremeCount?: number
+  showNormalCurve?: boolean
 }
 
 export interface TwoMeanSimCardConfig {

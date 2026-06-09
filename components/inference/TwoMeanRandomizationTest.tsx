@@ -13,35 +13,35 @@ import {
   runTwoMeanRandomization,
 } from '@/lib/randomizationTest'
 
-// ── Stage type ────────────────────────────────────────────────────────────────
+// ── Animation stage ───────────────────────────────────────────────────────────
 
-type Stage =
+type AnimStage =
   | 'observed'    | 'pooling'     | 'pooled'
   | 'shuffling'   | 'shuffled'
   | 'reassigning' | 'reassigned'
   | 'computing'   | 'plotting'    | 'done'
+
+type CardStage = 'setup' | 'simulate' | 'conclude'
 
 interface CardLayout { w:number; h:number; stepX:number; stepY:number; perRow:number }
 interface CardPos    { x:number; y:number; rotation:number; delay:number; faceDown:boolean }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CANVAS_W        = 640
-const HEADER_H        = 24
-const CARD_TOP_Y      = 8
-const COL_W           = 240
-const POOL_DUR        = 480
-const SHUFFLE_DUR     = 180
-const DEAL_DUR        = 260
-const NUM_SH_PHASES   = 6
+const CANVAS_W      = 640
+const HEADER_H      = 24
+const CARD_TOP_Y    = 8
+const COL_W         = 240
+const POOL_DUR      = 480
+const SHUFFLE_DUR   = 180
+const DEAL_DUR      = 260
+const NUM_SH_PHASES = 6
 
 const COL_CX = {
   left:   CANVAS_W * 0.28,
   center: CANVAS_W * 0.5,
   right:  CANVAS_W * 0.72,
 }
-
-// ── Layout helpers ────────────────────────────────────────────────────────────
 
 function getCanvasHeight(n1: number, n2: number): number {
   const n = n1 + n2
@@ -106,11 +106,9 @@ function dealDelay(idx: number, n: number): number {
   return idx * Math.min(180, 1800 / n)
 }
 
-// ── Position map ──────────────────────────────────────────────────────────────
-
 function computePositions(
   data: TwoMeanData,
-  stage: Stage,
+  stage: AnimStage,
   assignment: number[],
   shufflePhase: number,
   pileCY: number,
@@ -127,15 +125,10 @@ function computePositions(
     g2.forEach((c,i) => { const {x,y} = getSlotXY(i, COL_CX.right, layout, g2.length); pos.set(c.id, {x,y,rotation:0,delay:0,faceDown:false}) })
     return pos
   }
-
   if (stage === 'pooling' || stage === 'pooled') {
-    cases.forEach(c => {
-      const {x,y,rotation} = pilePos(c.id, layout, pileCY)
-      pos.set(c.id, {x,y,rotation,delay:0,faceDown:true})
-    })
+    cases.forEach(c => { const {x,y,rotation} = pilePos(c.id, layout, pileCY); pos.set(c.id, {x,y,rotation,delay:0,faceDown:true}) })
     return pos
   }
-
   if (stage === 'shuffling') {
     const ph = shufflePhase < 1 ? 1 : shufflePhase
     cases.forEach(c => {
@@ -145,30 +138,18 @@ function computePositions(
     })
     return pos
   }
-
   if (stage === 'shuffled') {
-    cases.forEach(c => {
-      const {x,y,rotation} = shufflePhasePos(c.id, NUM_SH_PHASES, layout, pileCY)
-      pos.set(c.id, {x,y,rotation,delay:0,faceDown:true})
-    })
+    cases.forEach(c => { const {x,y,rotation} = shufflePhasePos(c.id, NUM_SH_PHASES, layout, pileCY); pos.set(c.id, {x,y,rotation,delay:0,faceDown:true}) })
     return pos
   }
-
   if (stage === 'reassigning') {
     const aSet  = new Set(assignment)
     const g1Sim = cases.filter(c =>  aSet.has(c.id))
     const g2Sim = cases.filter(c => !aSet.has(c.id))
-    g1Sim.forEach((c,i) => {
-      const {x,y} = getSlotXY(i, COL_CX.left, layout, n1)
-      pos.set(c.id, {x,y,rotation:0,delay:dealDelay(i, n),faceDown:true})
-    })
-    g2Sim.forEach((c,i) => {
-      const {x,y} = getSlotXY(i, COL_CX.right, layout, n - n1)
-      pos.set(c.id, {x,y,rotation:0,delay:dealDelay(n1 + i, n),faceDown:true})
-    })
+    g1Sim.forEach((c,i) => { const {x,y} = getSlotXY(i, COL_CX.left,  layout, n1);     pos.set(c.id, {x,y,rotation:0,delay:dealDelay(i, n),faceDown:true}) })
+    g2Sim.forEach((c,i) => { const {x,y} = getSlotXY(i, COL_CX.right, layout, n - n1); pos.set(c.id, {x,y,rotation:0,delay:dealDelay(n1 + i, n),faceDown:true}) })
     return pos
   }
-
   if (stage === 'reassigned') {
     const aSet  = new Set(assignment)
     const g1Sim = cases.filter(c =>  aSet.has(c.id))
@@ -177,7 +158,6 @@ function computePositions(
     g2Sim.forEach((c,i) => { const {x,y} = getSlotXY(i, COL_CX.right, layout, n - n1); pos.set(c.id, {x,y,rotation:0,delay:0,faceDown:true}) })
     return pos
   }
-
   // computing / plotting / done: face-up
   const aSet  = new Set(assignment)
   const g1Sim = cases.filter(c =>  aSet.has(c.id))
@@ -187,7 +167,42 @@ function computePositions(
   return pos
 }
 
-// ── Null distribution plot (dynamic x-axis) ───────────────────────────────────
+function colMeanStats(cases: TwoMeanData['cases'], group: 0|1, assignment: number[]|null, stage: AnimStage) {
+  const useObs = stage === 'observed' || stage === 'pooling'
+  let members: typeof cases
+  if (useObs) members = cases.filter(c => c.group === group)
+  else if (assignment) {
+    const s = new Set(assignment)
+    members = group === 0 ? cases.filter(c => s.has(c.id)) : cases.filter(c => !s.has(c.id))
+  } else return { n: 0, mean: 0 }
+  const n = members.length
+  const mean = n > 0 ? members.reduce((sum, c) => sum + c.value, 0) / n : 0
+  return { n, mean }
+}
+
+function getTwoMeanNullSummary(data: TwoMeanData) {
+  const N = data.cases.length
+  if (N <= 1 || data.n1 <= 0 || data.n2 <= 0) return { mean: 0, sd: 0 }
+  const grandMean = data.cases.reduce((s, c) => s + c.value, 0) / N
+  const totalSS = data.cases.reduce((s, c) => s + (c.value - grandMean) ** 2, 0)
+  const permVar = totalSS * (1 / data.n1 + 1 / data.n2) / (N - 1)
+  return { mean: 0, sd: Math.sqrt(Math.max(0, permVar)) }
+}
+
+function parseValues(text: string): { values: number[]; error: string | null } {
+  const trimmed = text.trim()
+  if (!trimmed) return { values: [], error: null }
+  const tokens = trimmed.split(/[\s,\n]+/).filter(Boolean)
+  const values: number[] = []
+  for (const token of tokens) {
+    const n = Number(token)
+    if (!isFinite(n)) return { values: [], error: `Invalid value: "${token}"` }
+    values.push(n)
+  }
+  return { values, error: null }
+}
+
+// ── Null distribution plot ────────────────────────────────────────────────────
 
 function formatTick(v: number, range: number): string {
   if (range >= 100) return v.toFixed(0)
@@ -201,21 +216,18 @@ function MeanNullDistPlot({ values, diffObs, alternative, showNormalCurve = fals
 }) {
   const clipId = useId()
   const SVG_W = 760
-  const MG = { t: 14, r: 16, b: 30, l: 16 }
+  const MG = { t: 14, r: 16, b: 42, l: 16 }
   const plotHeight = 320
   const SVG_H = plotHeight + MG.t + MG.b
   const PW = SVG_W - MG.l - MG.r, PH = SVG_H - MG.t - MG.b
 
-  // Dynamic x-axis range — include diffObs even if no sims yet
   const allPoints = values.length > 0 ? [...values, diffObs] : [diffObs - 1, diffObs, diffObs + 1]
-  const rawMin = Math.min(...allPoints)
-  const rawMax = Math.max(...allPoints)
+  const rawMin = Math.min(...allPoints), rawMax = Math.max(...allPoints)
   const rawRange = rawMax - rawMin
   const pad = Math.max(0.01, rawRange * 0.12)
-  const xLo    = rawMin - pad
-  const xHi    = rawMax + pad
+  const xLo = rawMin - pad, xHi = rawMax + pad
   const xRange = xHi - xLo
-  const xOf    = (v: number) => ((v - xLo) / xRange) * PW
+  const xOf = (v: number) => ((v - xLo) / xRange) * PW
 
   const targetBins = Math.max(28, Math.min(72, Math.round(PW / 12)))
   const bucket = Math.max(xRange / targetBins, 1e-6)
@@ -223,10 +235,7 @@ function MeanNullDistPlot({ values, diffObs, alternative, showNormalCurve = fals
   const binCenter = (bin: number) => xLo + bin * bucket
 
   const stackCounts = new Map<number, number>()
-  values.forEach(v => {
-    const bin = binOf(v)
-    stackCounts.set(bin, (stackCounts.get(bin) ?? 0) + 1)
-  })
+  values.forEach(v => { const bin = binOf(v); stackCounts.set(bin, (stackCounts.get(bin) ?? 0) + 1) })
   const maxStack = Math.max(1, ...Array.from(stackCounts.values()))
 
   const normalStats = (() => {
@@ -254,30 +263,19 @@ function MeanNullDistPlot({ values, diffObs, alternative, showNormalCurve = fals
   const dotR = Math.max(0.55, Math.min(2.6, dotStep / 2 - 0.15))
   const circles = values.map(v => {
     const bin = binOf(v)
-    const si = seenC2.get(bin) ?? 0
-    seenC2.set(bin, si + 1)
+    const si = seenC2.get(bin) ?? 0; seenC2.set(bin, si + 1)
     return { cx: xOf(binCenter(bin)), cy: PH - (si + 1) * dotStep + dotStep / 2, extreme: isExtremeResult(v, diffObs, alternative) }
   })
 
-  const normalPath = (() => {
-    if (!normalStats) return ''
-    return normalStats.samples
-      .map(s => `${xOf(s.x)},${Math.min(PH, Math.max(0, PH - s.expectedCount * yScale))}`)
-      .join(' ')
-  })()
+  const normalPath = normalStats
+    ? normalStats.samples.map(s => `${xOf(s.x)},${Math.min(PH, Math.max(0, PH - s.expectedCount * yScale))}`).join(' ')
+    : ''
 
   const obsX = xOf(diffObs)
   let shade = ''
-  if (alternative === 'greater') {
-    shade = `M${obsX},0 H${PW} V${PH} H${obsX} Z`
-  } else if (alternative === 'less') {
-    shade = `M0,0 H${obsX} V${PH} H0 Z`
-  } else {
-    const absD = Math.abs(diffObs)
-    const xL = Math.max(0, xOf(-absD))
-    const xR = Math.min(PW, xOf(absD))
-    shade = `M0,0 H${xL} V${PH} H0 Z M${xR},0 H${PW} V${PH} H${xR} Z`
-  }
+  if (alternative === 'greater') shade = `M${obsX},0 H${PW} V${PH} H${obsX} Z`
+  else if (alternative === 'less') shade = `M0,0 H${obsX} V${PH} H0 Z`
+  else { const absD = Math.abs(diffObs); const xL = Math.max(0, xOf(-absD)); const xR = Math.min(PW, xOf(absD)); shade = `M0,0 H${xL} V${PH} H0 Z M${xR},0 H${PW} V${PH} H${xR} Z` }
 
   const ticks = Array.from({ length: 5 }, (_, i) => xLo + (i / 4) * xRange)
 
@@ -291,9 +289,7 @@ function MeanNullDistPlot({ values, diffObs, alternative, showNormalCurve = fals
         {ticks.map((v, i) => (
           <g key={i} transform={`translate(${xOf(v)},${PH})`}>
             <line y2={3} stroke="var(--color-muted)" strokeWidth={1}/>
-            <text y={12} textAnchor="middle" fontSize={8} fill="var(--color-muted)" fontFamily="DM Sans,sans-serif">
-              {formatTick(v, xRange)}
-            </text>
+            <text y={12} textAnchor="middle" fontSize={8} fill="var(--color-muted)" fontFamily="DM Sans,sans-serif">{formatTick(v, xRange)}</text>
           </g>
         ))}
         <g clipPath={`url(#${clipId})`}>
@@ -301,330 +297,13 @@ function MeanNullDistPlot({ values, diffObs, alternative, showNormalCurve = fals
             <circle key={i} cx={c.cx} cy={c.cy} r={dotR} fill={c.extreme?'var(--color-gold)':'var(--color-accent)'} opacity={0.85}
               style={i===circles.length-1&&values.length>0?{animation:'dot-drop-full 700ms ease-out'}:undefined}/>
           ))}
-          {normalPath && (
-            <polyline
-              points={normalPath}
-              fill="none"
-              stroke="var(--color-accent)"
-              strokeWidth={2}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-          )}
+          {normalPath && <polyline points={normalPath} fill="none" stroke="var(--color-accent)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round"/>}
         </g>
         <line x1={obsX} y1={0} x2={obsX} y2={PH} stroke="var(--color-gold)" strokeWidth={1.8} strokeDasharray="4,3"/>
         <text x={obsX+(diffObs>=0?3:-3)} y={5} textAnchor={diffObs>=0?'start':'end'} fontSize={8} fill="var(--color-gold-text)" fontFamily="DM Sans,sans-serif" fontWeight="600">obs</text>
-        <text x={PW/2} y={PH+24} textAnchor="middle" fontSize={9} fill="var(--color-muted)" fontFamily="DM Sans,sans-serif">Simulated x̄₁ − x̄₂</text>
+        <text x={PW/2} y={PH+30} textAnchor="middle" fontSize={9} fill="var(--color-muted)" fontFamily="DM Sans,sans-serif">Simulated x̄₁ − x̄₂</text>
       </g>
     </svg>
-  )
-}
-
-function getTwoMeanNullSummary(data: TwoMeanData) {
-  const N = data.cases.length
-  if (N <= 1 || data.n1 <= 0 || data.n2 <= 0) return { mean: 0, sd: 0 }
-  const grandMean = data.cases.reduce((s, c) => s + c.value, 0) / N
-  const totalSS = data.cases.reduce((s, c) => s + (c.value - grandMean) ** 2, 0)
-  const permVar = totalSS * (1 / data.n1 + 1 / data.n2) / (N - 1)
-  return { mean: 0, sd: Math.sqrt(Math.max(0, permVar)) }
-}
-
-// ── Step definitions ──────────────────────────────────────────────────────────
-
-const STEPS: { label:string; stages:Stage[] }[] = [
-  { label:'1. Pool',     stages:['observed','done'] },
-  { label:'2. Shuffle',  stages:['pooled'] },
-  { label:'3. Reassign', stages:['shuffled'] },
-  { label:'4. Compute',  stages:['reassigned'] },
-  { label:'5. Record',   stages:['computing'] },
-]
-
-const CAPTIONS: Record<Stage,string> = {
-  observed:   'Observed data',
-  pooling:    'Pooling cases…',
-  pooled:     'Pooled — ready to shuffle',
-  shuffling:  'Shuffling…',
-  shuffled:   'Shuffled — ready to reassign',
-  reassigning:'Dealing cards one by one…',
-  reassigned: 'Assigned face-down — ready to compute',
-  computing:  'Simulated means revealed',
-  plotting:   'Recording on null distribution…',
-  done:       'Done',
-}
-
-function colMeanStats(cases: TwoMeanData['cases'], group: 0|1, assignment: number[]|null, stage: Stage) {
-  const useObs = stage === 'observed' || stage === 'pooling'
-  let members: typeof cases
-  if (useObs) {
-    members = cases.filter(c => c.group === group)
-  } else if (assignment) {
-    const s = new Set(assignment)
-    members = group === 0 ? cases.filter(c => s.has(c.id)) : cases.filter(c => !s.has(c.id))
-  } else {
-    return { n: 0, mean: 0 }
-  }
-  const n = members.length
-  const mean = n > 0 ? members.reduce((sum, c) => sum + c.value, 0) / n : 0
-  return { n, mean }
-}
-
-function parseValues(text: string): { values: number[]; error: string | null } {
-  const trimmed = text.trim()
-  if (!trimmed) return { values: [], error: null }
-  const tokens = trimmed.split(/[\s,\n]+/).filter(Boolean)
-  const values: number[] = []
-  for (const token of tokens) {
-    const n = Number(token)
-    if (!isFinite(n)) return { values: [], error: `Invalid value: "${token}"` }
-    values.push(n)
-  }
-  return { values, error: null }
-}
-
-// ── Config card ───────────────────────────────────────────────────────────────
-
-type SourceMode = 'data' | 'manual'
-interface Props {
-  cardId: string
-  config: TwoMeanRandomizationCardConfig
-  onClearZone: (z: string) => void
-  onAssignZone: (zone: 'var1' | 'var2', colId: string) => boolean
-}
-
-export function TwoMeanRandomizationTest({ cardId, config, onClearZone, onAssignZone }: Props) {
-  const { grid, updateExploreCard, addTwoMeanSimCard, exploreCards } = useStore()
-  const dataShape = config.dataShape ?? 'grouping'
-
-  const [sourceMode, setSourceMode]     = useState<SourceMode>('data')
-  const [alternative, setAlternative]   = useState<Alternative>('two')
-  const [nullDiff, setNullDiff]         = useState('0')
-  const [groupA, setGroupA]             = useState('')
-  const [groupB, setGroupB]             = useState('')
-  const [manualLabel1, setManualLabel1] = useState('Group 1')
-  const [manualLabel2, setManualLabel2] = useState('Group 2')
-  const [manualValues1, setManualValues1] = useState('')
-  const [manualValues2, setManualValues2] = useState('')
-
-  const quantCol = config.var1ColId ? (grid.columns.find(c => c.id === config.var1ColId) ?? null) : null
-  const secondCol = config.var2ColId ? (grid.columns.find(c => c.id === config.var2ColId) ?? null) : null
-
-  function handleNativeDrop(zone: 'var1' | 'var2') {
-    return (e: React.DragEvent) => {
-      const colId = e.dataTransfer.getData('text/plain')
-      if (!colId) return; e.preventDefault()
-      onAssignZone(zone, colId)
-    }
-  }
-
-  function handleNativeDragOver(e: React.DragEvent) {
-    if (e.dataTransfer.types.includes('text/plain')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' }
-  }
-
-  const groupLevels = useMemo(() =>
-    dataShape === 'grouping' && config.var2ColId
-      ? [...new Set(grid.rows.map(r => String(r[config.var2ColId!] ?? '').trim()).filter(Boolean))].sort()
-      : [],
-    [dataShape, grid.rows, config.var2ColId])
-
-  useEffect(() => {
-    if (groupLevels.length >= 2) {
-      setGroupA(c => (c && groupLevels.includes(c)) ? c : groupLevels[0])
-      setGroupB(c => (c && groupLevels.includes(c) && c !== groupLevels[0]) ? c : groupLevels[1])
-    }
-  }, [groupLevels])
-
-  const parsed1 = useMemo(() => parseValues(manualValues1), [manualValues1])
-  const parsed2 = useMemo(() => parseValues(manualValues2), [manualValues2])
-
-  const data = useMemo<TwoMeanData | null>(() => {
-    if (sourceMode === 'manual') {
-      if (parsed1.error || parsed2.error || parsed1.values.length === 0 || parsed2.values.length === 0) return null
-      return buildTwoMeanData(parsed1.values, parsed2.values, manualLabel1.trim() || 'Group 1', manualLabel2.trim() || 'Group 2')
-    }
-    if (!config.var1ColId || !config.var2ColId) return null
-    const values1: number[] = []
-    const values2: number[] = []
-    if (dataShape === 'two-quant') {
-      const label1 = quantCol?.name ?? 'Variable 1'
-      const label2 = secondCol?.name ?? 'Variable 2'
-      for (const row of grid.rows) {
-        const v1 = Number(row[config.var1ColId])
-        const v2 = Number(row[config.var2ColId])
-        if (isFinite(v1)) values1.push(v1)
-        if (isFinite(v2)) values2.push(v2)
-      }
-      if (values1.length === 0 || values2.length === 0) return null
-      return buildTwoMeanData(values1, values2, label1, label2)
-    }
-    if (!groupA || !groupB) return null
-    for (const row of grid.rows) {
-      const quant = Number(row[config.var1ColId])
-      const grp = String(row[config.var2ColId] ?? '').trim()
-      if (!isFinite(quant) || !grp) continue
-      if (grp === groupA) values1.push(quant)
-      else if (grp === groupB) values2.push(quant)
-    }
-    if (values1.length === 0 || values2.length === 0) return null
-    return buildTwoMeanData(values1, values2, groupA, groupB)
-  }, [config.var1ColId, config.var2ColId, dataShape, grid.rows, groupA, groupB, manualValues1, manualValues2, manualLabel1, manualLabel2, parsed1, parsed2, quantCol?.name, secondCol?.name, sourceMode])
-
-  function handleLaunch() {
-    if (!data) return
-    const myCard = exploreCards.find(c => c.id === cardId)
-    if (!myCard) return
-    const existing = exploreCards.find(c =>
-      c.config.type === 'two-mean-sim' &&
-      c.config.label1 === data.group1Label &&
-      c.config.values1.length === data.n1
-    )
-    if (existing) return
-    addTwoMeanSimCard({
-      values1: data.cases.filter(c => c.group === 0).map(c => c.value),
-      values2: data.cases.filter(c => c.group === 1).map(c => c.value),
-      label1: data.group1Label,
-      label2: data.group2Label,
-      alternative,
-      nullDiff,
-    }, myCard)
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-white px-4 py-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[var(--color-muted)]">Source</span>
-          <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
-            {(['data', 'manual'] as SourceMode[]).map((m, i) => (
-              <button key={m} onClick={() => setSourceMode(m)}
-                className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === m ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}>
-                {m === 'data' ? 'Use Data' : 'Enter Info'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {sourceMode === 'data' ? (
-          <>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-[var(--color-muted)]">Data shape</span>
-              <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
-                {([
-                  { key: 'grouping', label: 'Quant + Group' },
-                  { key: 'two-quant', label: 'Two Quant Variables' },
-                ] as const).map((option, i) => (
-                  <button
-                    key={option.key}
-                    onClick={() => {
-                      const current = useStore.getState().exploreCards.find(c => c.id === cardId)
-                      if (!current || current.config.type !== 'two-mean-randomization') return
-                      const nextVar2 =
-                        option.key === 'grouping'
-                          ? (secondCol?.type === 'categorical' ? current.config.var2ColId : null)
-                          : (secondCol?.type === 'numeric' ? current.config.var2ColId : null)
-                      updateExploreCard(cardId, {
-                        config: {
-                          ...current.config,
-                          dataShape: option.key,
-                          var2ColId: nextVar2,
-                        },
-                      })
-                      setGroupA('')
-                      setGroupB('')
-                    }}
-                    className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${dataShape === option.key ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var1')}>
-                <DropZone id={`${cardId}:var1`} label={dataShape === 'two-quant' ? 'Variable 1' : 'Quantitative Variable'} hint="numeric only" assignedCol={quantCol} onClear={() => onClearZone('var1')} onAssign={colId => onAssignZone('var1', colId)} allowedTypes={['numeric']} />
-              </div>
-              <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var2')}>
-                <DropZone id={`${cardId}:var2`} label={dataShape === 'two-quant' ? 'Variable 2' : 'Group By'} hint={dataShape === 'two-quant' ? 'numeric only' : 'categorical only'} assignedCol={secondCol} onClear={() => onClearZone('var2')} onAssign={colId => onAssignZone('var2', colId)} allowedTypes={dataShape === 'two-quant' ? ['numeric'] : ['categorical']} />
-              </div>
-            </div>
-            {dataShape === 'grouping' && groupLevels.length > 2 && (
-              <div className="flex gap-2">
-                {(['Compare', 'vs.'] as const).map((lbl, idx) => {
-                  const [val, setter, other] = idx === 0 ? [groupA, setGroupA, groupB] : [groupB, setGroupB, groupA]
-                  return (
-                    <div key={lbl} className="flex-1 flex items-center gap-1.5">
-                      <span className="text-[10px] font-semibold text-[var(--color-muted)] flex-shrink-0">{lbl}</span>
-                      <select value={val} onChange={e => setter(e.target.value)}
-                        className="flex-1 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white">
-                        {groupLevels.filter(g => g !== other).map(g => <option key={g} value={g}>{g}</option>)}
-                      </select>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-            {data && (
-              <div className="rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] px-4 py-2 text-center text-sm">
-                <span className="text-[var(--color-muted)]">x̄₁ − x̄₂ = {data.mean1.toFixed(3)} − {data.mean2.toFixed(3)} = </span>
-                <span className="font-mono tabular-nums font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</span>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {([
-              { label: manualLabel1, setLabel: setManualLabel1, values: manualValues1, setValues: setManualValues1, parsed: parsed1, placeholder: '3.1, 4.5, 2.8…' },
-              { label: manualLabel2, setLabel: setManualLabel2, values: manualValues2, setValues: setManualValues2, parsed: parsed2, placeholder: '5.2, 6.1, 4.9…' },
-            ] as const).map((side, idx) => (
-              <div key={idx} className="space-y-1.5">
-                <input value={side.label} onChange={e => side.setLabel(e.target.value)}
-                  placeholder={`Group ${idx + 1}`}
-                  className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm bg-white text-[var(--color-text)]" />
-                <textarea value={side.values} onChange={e => side.setValues(e.target.value)}
-                  placeholder={side.placeholder}
-                  rows={3}
-                  className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-xs font-mono bg-white text-[var(--color-text)] resize-none" />
-                <div className="text-[10px] text-[var(--color-muted)]">
-                  {side.parsed.error
-                    ? <span className="text-[var(--color-danger)]">{side.parsed.error}</span>
-                    : side.parsed.values.length > 0
-                      ? `n = ${side.parsed.values.length},  x̄ = ${(side.parsed.values.reduce((a,b)=>a+b,0)/side.parsed.values.length).toFixed(3)}`
-                      : 'Enter values separated by commas or spaces'}
-                </div>
-              </div>
-            ))}
-            {data && (
-              <div className="col-span-2 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] px-4 py-2 text-center text-sm">
-                <span className="text-[var(--color-muted)]">x̄₁ − x̄₂ = {data.mean1.toFixed(3)} − {data.mean2.toFixed(3)} = </span>
-                <span className="font-mono tabular-nums font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-3 pt-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[var(--color-muted)] tracking-wide">H₀: μ₁ − μ₂ =</span>
-            <input type="number" step="any" value={nullDiff} onChange={e => setNullDiff(e.target.value)}
-              className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white" />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[var(--color-muted)] tracking-wide">Hₐ:</span>
-            <span className="text-sm font-mono tabular-nums font-medium text-[var(--color-text)]">μ₁ − μ₂</span>
-            <select value={alternative} onChange={e => setAlternative(e.target.value as Alternative)}
-              className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-white">
-              <option value="less">&lt;</option>
-              <option value="greater">&gt;</option>
-              <option value="two">≠</option>
-            </select>
-            <span className="text-sm font-mono tabular-nums font-medium text-[var(--color-text)]">{nullDiff}</span>
-          </div>
-          <button onClick={handleLaunch} disabled={!data}
-            className="ml-auto rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity">
-            Launch Simulation →
-          </button>
-        </div>
-      </div>
-    </div>
   )
 }
 
@@ -635,14 +314,719 @@ function MeanColStatLabel({ cx, n, mean, highlight }: {
 }) {
   return (
     <div style={{position:'absolute',left:cx,top:5,transform:'translateX(-50%)',textAlign:'center',pointerEvents:'none'}}>
-      <div className={`rounded-lg px-2 py-0.5 text-[10px] font-semibold transition-colors ${highlight?'bg-[var(--color-accent)] text-white':'bg-[var(--color-bg)] text-[var(--color-muted)]'}`}>
+      <div className={`rounded-lg px-2 py-0.5 text-[10px] font-semibold transition-colors ${highlight?'bg-[var(--color-accent)] text-white':'bg-[var(--color-accent-light)] text-[var(--color-muted)]'}`}>
         n={n}, x̄={mean.toFixed(3)}
       </div>
     </div>
   )
 }
 
-// ── TwoMeanSimCard ─────────────────────────────────────────────────────────────
+const CAPTIONS: Record<AnimStage, string> = {
+  observed:    'Observed data',
+  pooling:     'Pooling cases…',
+  pooled:      'Pooled — ready to shuffle',
+  shuffling:   'Shuffling…',
+  shuffled:    'Shuffled — ready to reassign',
+  reassigning: 'Dealing one by one…',
+  reassigned:  'Assigned face-down — ready to compute',
+  computing:   'Simulated means revealed',
+  plotting:    'Recording on null distribution…',
+  done:        'Done',
+}
+
+const ANIM_STEPS: { label: string; active: AnimStage[] }[] = [
+  { label: '1. Pool',     active: ['observed','done'] },
+  { label: '2. Shuffle',  active: ['pooled']          },
+  { label: '3. Reassign', active: ['shuffled']        },
+  { label: '4. Compute',  active: ['reassigned']      },
+  { label: '5. Record',   active: ['computing']       },
+]
+
+// ── Main component ────────────────────────────────────────────────────────────
+
+interface Props {
+  cardId: string
+  config: TwoMeanRandomizationCardConfig
+  onClearZone: (z: string) => void
+  onAssignZone: (zone: 'var1' | 'var2', colId: string) => boolean
+}
+
+export function TwoMeanRandomizationTest({ cardId, config, onClearZone, onAssignZone }: Props) {
+  const { grid, updateExploreCard } = useStore()
+
+  const cardStage    = config.stage       ?? 'setup'
+  const dataShape    = config.dataShape   ?? 'grouping'
+  const sourceMode   = config.sourceMode  ?? 'data'
+  const groupA       = config.groupA      ?? ''
+  const groupB       = config.groupB      ?? ''
+  const manualLabel1 = config.manualLabel1 ?? 'Group 1'
+  const manualLabel2 = config.manualLabel2 ?? 'Group 2'
+  const manualValues1 = config.manualValues1 ?? ''
+  const manualValues2 = config.manualValues2 ?? ''
+  const alternative  = config.alternative  ?? 'two'
+  const nullDiff     = config.nullDiff     ?? '0'
+  const nullDist     = config.nullDist     ?? []
+  const simCount     = config.simCount     ?? 0
+  const extremeCount = config.extremeCount ?? 0
+  const showNormalCurve = config.showNormalCurve ?? false
+
+  function patchConfig(partial: Partial<TwoMeanRandomizationCardConfig>) {
+    updateExploreCard(cardId, {
+      config: {
+        ...config,
+        stage: cardStage, dataShape, sourceMode, groupA, groupB,
+        manualLabel1, manualLabel2, manualValues1, manualValues2,
+        alternative, nullDiff, nullDist, simCount, extremeCount, showNormalCurve,
+        ...partial,
+      },
+    })
+  }
+
+  // Card sizing
+  const cardSizeTarget = cardStage === 'setup'
+    ? { width: 820, height: 640 }
+    : { width: 1380, height: 760 }
+
+  useEffect(() => {
+    updateExploreCard(cardId, cardSizeTarget)
+  }, [cardId, cardSizeTarget.height, cardSizeTarget.width, updateExploreCard]) // eslint-disable-line
+
+  // Local animation state
+  const [animStage,    setAnimStage]     = useState<AnimStage>('observed')
+  const [shufflePhase, setShufflePhase]  = useState(0)
+  const [assignment,   setAssignment]    = useState<number[]>([])
+  const [currentResult,setCurrentResult] = useState<TwoMeanResult | null>(null)
+  const [highlightSim, setHighlightSim]  = useState(false)
+  const [isRunning,    setIsRunning]     = useState(false)
+  const cancelRef = useRef(false)
+  const resultRef = useRef<TwoMeanResult | null>(null)
+  const dataRef   = useRef<TwoMeanData | null>(null)
+  const altRef    = useRef(alternative)
+  useEffect(() => { altRef.current = alternative }, [alternative])
+
+  // Derived data
+  const quantCol  = config.var1ColId ? (grid.columns.find(c => c.id === config.var1ColId) ?? null) : null
+  const secondCol = config.var2ColId ? (grid.columns.find(c => c.id === config.var2ColId) ?? null) : null
+
+  const groupLevels = useMemo(() =>
+    dataShape === 'grouping' && config.var2ColId
+      ? [...new Set(grid.rows.map(r => String(r[config.var2ColId!] ?? '').trim()).filter(Boolean))].sort()
+      : [],
+    [dataShape, grid.rows, config.var2ColId])
+
+  useEffect(() => {
+    if (groupLevels.length >= 2) {
+      const nextA = groupA && groupLevels.includes(groupA) ? groupA : groupLevels[0]
+      const nextB = groupB && groupLevels.includes(groupB) && groupB !== nextA ? groupB : (groupLevels.find(g => g !== nextA) ?? '')
+      if (nextA !== groupA || nextB !== groupB) patchConfig({ groupA: nextA, groupB: nextB })
+    }
+  }, [groupLevels]) // eslint-disable-line
+
+  const parsed1 = useMemo(() => parseValues(manualValues1), [manualValues1])
+  const parsed2 = useMemo(() => parseValues(manualValues2), [manualValues2])
+
+  const data = useMemo<TwoMeanData | null>(() => {
+    if (sourceMode === 'manual') {
+      if (parsed1.error || parsed2.error || parsed1.values.length === 0 || parsed2.values.length === 0) return null
+      return buildTwoMeanData(parsed1.values, parsed2.values, manualLabel1.trim()||'Group 1', manualLabel2.trim()||'Group 2')
+    }
+    if (!config.var1ColId || !config.var2ColId) return null
+    const values1: number[] = [], values2: number[] = []
+    if (dataShape === 'two-quant') {
+      const label1 = quantCol?.name ?? 'Variable 1', label2 = secondCol?.name ?? 'Variable 2'
+      for (const row of grid.rows) {
+        const v1 = Number(row[config.var1ColId]), v2 = Number(row[config.var2ColId])
+        if (isFinite(v1)) values1.push(v1); if (isFinite(v2)) values2.push(v2)
+      }
+      if (values1.length === 0 || values2.length === 0) return null
+      return buildTwoMeanData(values1, values2, label1, label2)
+    }
+    if (!groupA || !groupB) return null
+    for (const row of grid.rows) {
+      const quant = Number(row[config.var1ColId])
+      const grp   = String(row[config.var2ColId] ?? '').trim()
+      if (!isFinite(quant) || !grp) continue
+      if (grp === groupA) values1.push(quant); else if (grp === groupB) values2.push(quant)
+    }
+    if (values1.length === 0 || values2.length === 0) return null
+    return buildTwoMeanData(values1, values2, groupA, groupB)
+  }, [config.var1ColId, config.var2ColId, dataShape, grid.rows, groupA, groupB, manualValues1, manualValues2, manualLabel1, manualLabel2, parsed1, parsed2, quantCol?.name, secondCol?.name, sourceMode])
+
+  useEffect(() => { dataRef.current = data }, [data])
+
+  const pValue      = simCount > 0 ? extremeCount / simCount : null
+  const nullSummary = useMemo(() => data ? getTwoMeanNullSummary(data) : { mean: 0, sd: 0 }, [data])
+
+  // Animation layout
+  const cases        = data?.cases ?? []
+  const layout       = getCardLayout(cases.length)
+  const canvasH      = data ? getCanvasHeight(data.n1, data.n2) : 118
+  const pileCY       = HEADER_H + (canvasH - HEADER_H) / 2
+  const isAnimating  = ['pooling','shuffling','reassigning','plotting'].includes(animStage)
+  const cardTransDur = animStage === 'shuffling' ? SHUFFLE_DUR : animStage === 'reassigning' ? DEAL_DUR : POOL_DUR
+
+  const positions = useMemo(
+    () => data ? computePositions(data, animStage, assignment, shufflePhase, pileCY) : new Map<number, CardPos>(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data, animStage, assignment, shufflePhase, pileCY]
+  )
+
+  const aSet = useMemo(() => new Set(assignment), [assignment])
+
+  // Stage machine
+  useEffect(() => {
+    if (!['pooling','reassigning'].includes(animStage)) return
+    const id = animStage === 'pooling'
+      ? setTimeout(() => setAnimStage('pooled'), POOL_DUR + 80)
+      : setTimeout(() => setAnimStage('reassigned'), dealStaggerMax(cases.length) + DEAL_DUR + 120)
+    return () => clearTimeout(id)
+  }, [animStage, cases.length])
+
+  useEffect(() => {
+    if (animStage !== 'shuffling') { if (shufflePhase !== 0) setShufflePhase(0); return }
+    if (shufflePhase === 0) return
+    const id = setTimeout(() => {
+      if (shufflePhase >= NUM_SH_PHASES) { setAnimStage('shuffled'); setShufflePhase(0) }
+      else setShufflePhase(p => p + 1)
+    }, SHUFFLE_DUR + 15)
+    return () => clearTimeout(id)
+  }, [animStage, shufflePhase])
+
+  function handleStep() {
+    if (isAnimating || isRunning || !data) return
+    if (animStage === 'observed' || animStage === 'done') { setAnimStage('pooling') }
+    else if (animStage === 'pooled')   { setAnimStage('shuffling'); setShufflePhase(1) }
+    else if (animStage === 'shuffled') {
+      const result = runTwoMeanRandomization(data)
+      resultRef.current = result; setAssignment(result.assignment); setCurrentResult(result); setAnimStage('reassigning')
+    }
+    else if (animStage === 'reassigned') { setHighlightSim(true); setAnimStage('computing') }
+    else if (animStage === 'computing')  {
+      setHighlightSim(false); setAnimStage('plotting')
+      const result = resultRef.current
+      if (!result) return
+      window.setTimeout(() => {
+        const newDist    = [...nullDist, result.diffSim]
+        const newCount   = simCount + 1
+        const newExtreme = extremeCount + (isExtremeResult(result.diffSim, data.diffObs, alternative) ? 1 : 0)
+        patchConfig({ nullDist: newDist, simCount: newCount, extremeCount: newExtreme })
+        setAnimStage('done')
+      }, 320)
+    }
+  }
+
+  function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)) }
+
+  async function runAnimated(count: number) {
+    if (isRunning || isAnimating || !data) return
+    cancelRef.current = false; setIsRunning(true)
+    let localDist = [...nullDist], localCount = simCount, localExtreme = extremeCount
+    for (let i = 0; i < count; i++) {
+      if (cancelRef.current) break
+      setHighlightSim(false); setAnimStage('pooling')
+      await sleep(POOL_DUR + 100); if (cancelRef.current) break
+      setAnimStage('shuffling'); setShufflePhase(1)
+      await sleep(NUM_SH_PHASES * (SHUFFLE_DUR + 15) + 40); if (cancelRef.current) break
+      const result = runTwoMeanRandomization(dataRef.current!)
+      resultRef.current = result; setAssignment(result.assignment); setCurrentResult(result)
+      setAnimStage('reassigning')
+      await sleep(dealStaggerMax(dataRef.current!.cases.length) + DEAL_DUR + 140); if (cancelRef.current) break
+      setHighlightSim(true); setAnimStage('computing')
+      await sleep(220); if (cancelRef.current) break
+      setHighlightSim(false); setAnimStage('plotting')
+      await sleep(320); if (cancelRef.current) break
+      localDist = [...localDist, result.diffSim]; localCount += 1
+      localExtreme += isExtremeResult(result.diffSim, dataRef.current!.diffObs, altRef.current) ? 1 : 0
+      patchConfig({ nullDist: localDist, simCount: localCount, extremeCount: localExtreme })
+      setAnimStage('done')
+      if (i < count - 1) await sleep(40)
+    }
+    setIsRunning(false); cancelRef.current = false
+  }
+
+  function runBatch(count: number) {
+    if (isRunning || isAnimating || !data) return
+    const diffs: number[] = []; let newExtreme = 0; let last: TwoMeanResult | null = null
+    for (let i = 0; i < count; i++) {
+      const r = runTwoMeanRandomization(data); last = r; diffs.push(r.diffSim)
+      if (isExtremeResult(r.diffSim, data.diffObs, alternative)) newExtreme++
+    }
+    if (last) { setAssignment(last.assignment); setCurrentResult(last) }
+    setAnimStage('done')
+    patchConfig({ nullDist: [...nullDist, ...diffs], simCount: simCount + count, extremeCount: extremeCount + newExtreme })
+  }
+
+  function handleClear() {
+    cancelRef.current = true; setIsRunning(false)
+    setAnimStage('observed'); setShufflePhase(0); setAssignment([]); setCurrentResult(null); setHighlightSim(false)
+    patchConfig({ nullDist: [], simCount: 0, extremeCount: 0 })
+  }
+
+  function handleNativeDrop(zone: 'var1' | 'var2') {
+    return (e: React.DragEvent) => {
+      const colId = e.dataTransfer.getData('text/plain')
+      if (!colId) return; e.preventDefault(); onAssignZone(zone, colId)
+    }
+  }
+  function handleNativeDragOver(e: React.DragEvent) {
+    if (e.dataTransfer.types.includes('text/plain')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' }
+  }
+
+  const overlayVisible = !isRunning && animStage !== 'observed' && animStage !== 'done'
+
+  const showSplit    = !['pooling','pooled','shuffling','shuffled','reassigning'].includes(animStage)
+  const showCenter   = ['pooling','pooled','shuffling','shuffled','reassigning'].includes(animStage)
+  const showFaceUp   = ['computing','plotting','done'].includes(animStage)
+  const showColStats = showSplit && showFaceUp
+  const leftStats    = colMeanStats(cases, 0, showFaceUp ? assignment : null, animStage)
+  const rightStats   = colMeanStats(cases, 1, showFaceUp ? assignment : null, animStage)
+  const altSymbol    = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
+  const label1       = sourceMode === 'manual' ? (manualLabel1.trim()||'Group 1') : dataShape === 'two-quant' ? (quantCol?.name ?? 'Variable 1') : (groupA || 'Group 1')
+  const label2       = sourceMode === 'manual' ? (manualLabel2.trim()||'Group 2') : dataShape === 'two-quant' ? (secondCol?.name ?? 'Variable 2') : (groupB || 'Group 2')
+
+  // Stepper
+  const hasEnoughToConclude = simCount >= 100
+  const stepLabels = [
+    { key: 'setup' as CardStage,    label: 'Set up',   enabled: true },
+    { key: 'simulate' as CardStage, label: 'Simulate', enabled: true },
+    { key: 'conclude' as CardStage, label: 'Conclude', enabled: hasEnoughToConclude },
+  ]
+  const stepper = (
+    <div className="flex flex-wrap items-center gap-3 md:flex-nowrap md:gap-4">
+      {stepLabels.map((step, index) => {
+        const active = cardStage === step.key
+        return (
+          <div key={step.key} className="flex min-w-0 flex-1 items-center gap-3">
+            <button type="button" disabled={!step.enabled}
+              onClick={() => step.enabled && patchConfig({ stage: step.key })}
+              className="flex items-center gap-3 disabled:cursor-not-allowed">
+              <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                active ? 'bg-[var(--color-accent)] text-white'
+                  : step.enabled ? 'bg-[var(--color-accent-light)] text-[var(--color-muted)]'
+                  : 'bg-[var(--color-border)] text-[var(--color-muted)] opacity-50'
+              }`}>{index + 1}</span>
+              <span className={`text-sm font-semibold transition-colors ${
+                active ? 'text-[var(--color-text)]'
+                  : step.enabled ? 'text-[var(--color-muted)]'
+                  : 'text-[var(--color-muted)] opacity-40'
+              }`}>{step.label}</span>
+            </button>
+            {index < stepLabels.length - 1 && <div className="hidden h-px flex-1 bg-[var(--color-border)] md:block"/>}
+          </div>
+        )
+      })}
+    </div>
+  )
+
+  // ── Setup stage ──────────────────────────────────────────────────────────────
+
+  if (cardStage === 'setup') {
+    return (
+      <div className="h-full overflow-y-auto">
+        <div className="space-y-4 px-2 py-1">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-[var(--color-text)] px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-white">
+              Inference
+            </div>
+          </div>
+          {stepper}
+          <div className="text-sm font-serif italic leading-snug text-[var(--color-text)]">
+            Is the difference in means more than chance variation?
+          </div>
+
+          <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4">
+            {/* Source toggle */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--color-muted)]">Source</span>
+              <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+                {(['data','manual'] as const).map((m,i) => (
+                  <button key={m} onClick={() => patchConfig({ sourceMode: m })}
+                    className={`px-2.5 py-1 font-medium transition-colors ${i>0?'border-l border-[var(--color-border)]':''} ${sourceMode===m?'bg-[var(--color-text)] text-[var(--color-surface)]':'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
+                    {m === 'data' ? 'Use data' : 'Enter info'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {sourceMode === 'data' ? (
+              <>
+                {/* Data shape */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--color-muted)]">Data shape</span>
+                  <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+                    {([
+                      { key: 'grouping' as const, label: 'Quant + Group' },
+                      { key: 'two-quant' as const, label: 'Two Quant Variables' },
+                    ]).map((option, i) => (
+                      <button key={option.key} onClick={() => {
+                        const nextVar2 = option.key === 'grouping'
+                          ? (secondCol?.type === 'categorical' ? config.var2ColId : null)
+                          : (secondCol?.type === 'numeric' ? config.var2ColId : null)
+                        patchConfig({ dataShape: option.key, var2ColId: nextVar2 ?? null })
+                      }}
+                        className={`px-2.5 py-1 font-medium transition-colors ${i>0?'border-l border-[var(--color-border)]':''} ${dataShape===option.key?'bg-[var(--color-text)] text-[var(--color-surface)]':'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Drop zones */}
+                <div className="flex gap-2">
+                  <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var1')}>
+                    <DropZone id={`${cardId}:var1`} label={dataShape === 'two-quant' ? 'Variable 1' : 'Quantitative Variable'} hint="numeric only" assignedCol={quantCol} onClear={() => onClearZone('var1')} onAssign={colId => onAssignZone('var1', colId)} allowedTypes={['numeric']}/>
+                  </div>
+                  <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var2')}>
+                    <DropZone id={`${cardId}:var2`} label={dataShape === 'two-quant' ? 'Variable 2' : 'Group By'} hint={dataShape === 'two-quant' ? 'numeric only' : 'categorical only'} assignedCol={secondCol} onClear={() => onClearZone('var2')} onAssign={colId => onAssignZone('var2', colId)} allowedTypes={dataShape === 'two-quant' ? ['numeric'] : ['categorical']}/>
+                  </div>
+                </div>
+
+                {dataShape === 'grouping' && groupLevels.length > 2 && (
+                  <div className="flex gap-2">
+                    {(['Compare','vs.'] as const).map((lbl, idx) => {
+                      const [val, other] = idx === 0 ? [groupA, groupB] : [groupB, groupA]
+                      return (
+                        <div key={lbl} className="flex-1 flex items-center gap-1.5">
+                          <span className="text-[10px] font-semibold text-[var(--color-muted)] flex-shrink-0">{lbl}</span>
+                          <select value={val} onChange={e => patchConfig(idx===0?{groupA:e.target.value}:{groupB:e.target.value})}
+                            className="flex-1 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm text-[var(--color-text)] bg-[var(--color-surface)]">
+                            {groupLevels.filter(g => g !== other).map(g => <option key={g} value={g}>{g}</option>)}
+                          </select>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {data && (
+                  <div className="rounded-xl bg-[var(--color-accent-light)] border border-[var(--color-border)] px-4 py-2 text-center text-sm">
+                    <span className="text-[var(--color-muted)]">x̄₁ − x̄₂ = {data.mean1.toFixed(3)} − {data.mean2.toFixed(3)} = </span>
+                    <span className="font-mono tabular-nums font-bold text-[var(--color-gold)]">{data.diffObs.toFixed(3)}</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {([
+                  { label: manualLabel1, setLabel: (v: string) => patchConfig({ manualLabel1: v }), values: manualValues1, setValues: (v: string) => patchConfig({ manualValues1: v }), parsed: parsed1, placeholder: '3.1, 4.5, 2.8…' },
+                  { label: manualLabel2, setLabel: (v: string) => patchConfig({ manualLabel2: v }), values: manualValues2, setValues: (v: string) => patchConfig({ manualValues2: v }), parsed: parsed2, placeholder: '5.2, 6.1, 4.9…' },
+                ]).map((side, idx) => (
+                  <div key={idx} className="space-y-1.5">
+                    <input value={side.label} onChange={e => side.setLabel(e.target.value)} placeholder={`Group ${idx + 1}`}
+                      className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)]"/>
+                    <textarea value={side.values} onChange={e => side.setValues(e.target.value)} placeholder={side.placeholder} rows={3}
+                      className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-xs font-mono bg-[var(--color-surface)] text-[var(--color-text)] resize-none"/>
+                    <div className="text-[10px] text-[var(--color-muted)]">
+                      {side.parsed.error
+                        ? <span className="text-[var(--color-danger)]">{side.parsed.error}</span>
+                        : side.parsed.values.length > 0
+                          ? `n = ${side.parsed.values.length},  x̄ = ${(side.parsed.values.reduce((a,b)=>a+b,0)/side.parsed.values.length).toFixed(3)}`
+                          : 'Enter values separated by commas or spaces'}
+                    </div>
+                  </div>
+                ))}
+                {data && (
+                  <div className="col-span-2 rounded-xl bg-[var(--color-accent-light)] border border-[var(--color-border)] px-4 py-2 text-center text-sm">
+                    <span className="text-[var(--color-muted)]">x̄₁ − x̄₂ = {data.mean1.toFixed(3)} − {data.mean2.toFixed(3)} = </span>
+                    <span className="font-mono tabular-nums font-bold text-[var(--color-gold)]">{data.diffObs.toFixed(3)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* H₀ / Hₐ */}
+            <div className="space-y-2">
+              <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">Hypotheses</div>
+              <div className="inline-flex rounded-[20px] bg-[var(--color-bg)] px-4 py-3">
+                <div className="flex flex-wrap items-center gap-2.5 text-sm font-semibold text-[var(--color-text)]">
+                  <span>H₀ : μ₁ − μ₂ =</span>
+                  <input type="number" step="any" value={nullDiff} onChange={e => patchConfig({ nullDiff: e.target.value })}
+                    className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center text-sm font-semibold text-[var(--color-text)] shadow-sm"/>
+                  <span className="ml-2">Hₐ : μ₁ − μ₂</span>
+                  <select value={alternative} onChange={e => patchConfig({ alternative: e.target.value as Alternative })}
+                    className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm">
+                    <option value="less">&lt;</option>
+                    <option value="greater">&gt;</option>
+                    <option value="two">≠</option>
+                  </select>
+                  <span className="font-mono tabular-nums">{nullDiff}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button onClick={() => patchConfig({ stage: 'simulate' })} disabled={!data}
+            className="rounded-[18px] bg-[var(--color-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40">
+            Start simulating →
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Simulate / Conclude stage ─────────────────────────────────────────────────
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+
+      {/* Row 1: stepper + ← Edit setup */}
+      <div className="flex-shrink-0 flex items-center gap-4 pb-3 border-b border-[var(--color-border)]">
+        <div className="flex-1 min-w-0">{stepper}</div>
+        <button type="button" onClick={() => patchConfig({ stage: 'setup' })}
+          className="flex-shrink-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]">
+          ← Edit setup
+        </button>
+      </div>
+
+      {/* Row 2: observed strip */}
+      <div className="flex-shrink-0 flex flex-wrap items-center gap-2 py-2.5">
+        <div className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-sm text-[var(--color-text)]">
+          H₀: μ₁ − μ₂ = <span className="font-mono tabular-nums font-semibold">{nullDiff}</span>
+        </div>
+        <div className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-sm text-[var(--color-text)]">
+          Hₐ: μ₁ − μ₂ <span className="px-0.5 font-semibold">{altSymbol}</span> <span className="font-mono tabular-nums font-semibold">{nullDiff}</span>
+        </div>
+        {data && (
+          <>
+            <div className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-sm text-[var(--color-text)]">
+              <span className="font-semibold">{label1}</span>: x̄₁ = <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{data.mean1.toFixed(3)}</span>
+            </div>
+            <div className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-sm text-[var(--color-text)]">
+              <span className="font-semibold">{label2}</span>: x̄₂ = <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{data.mean2.toFixed(3)}</span>
+            </div>
+            <div className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-sm text-[var(--color-text)]">
+              x̄₁ − x̄₂ = <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{data.diffObs.toFixed(3)}</span>
+            </div>
+          </>
+        )}
+        <div className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-sm text-[var(--color-text)]">
+          Reps = <span className="font-mono tabular-nums font-semibold">{simCount.toLocaleString()}</span>
+        </div>
+      </div>
+
+      {/* Row 3: action bar */}
+      <div className="flex-shrink-0 flex items-center gap-2 py-2 border-t border-b border-[var(--color-border)]">
+        <div className="flex items-center gap-1.5">
+          {ANIM_STEPS.map(step => {
+            const active = step.active.includes(animStage) && !isAnimating && !isRunning
+            return (
+              <button key={step.label} onClick={handleStep} disabled={!active}
+                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
+                  active
+                    ? 'bg-[var(--color-accent)] text-white hover:brightness-105'
+                    : 'border border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed opacity-40'
+                }`}>
+                {step.label}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="flex-1 min-w-0 px-2">
+          {simCount >= 1 && animStage === 'done' && !isRunning ? (
+            <p className="text-sm text-[var(--color-muted)]">
+              Another? <strong className="font-semibold text-[var(--color-text)]">1. Pool</strong> again — or speed up with +10 / +100 / +1,000.
+            </p>
+          ) : isRunning ? (
+            <p className="text-sm text-[var(--color-muted)]">Running…</p>
+          ) : null}
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-[0.1em]">Speed up</span>
+          {simCount > 0 && ([10, 100, 1000] as const).map(cnt => (
+            <button key={cnt}
+              onClick={() => cnt === 10 ? runAnimated(cnt) : runBatch(cnt)}
+              disabled={isRunning || isAnimating}
+              className="rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-text)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+              +{cnt.toLocaleString()}
+            </button>
+          ))}
+          {isRunning ? (
+            <button onClick={() => { cancelRef.current = true }}
+              className="rounded-lg border border-[var(--color-danger)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger-light)] transition-colors">
+              Stop
+            </button>
+          ) : simCount > 0 ? (
+            <button onClick={handleClear}
+              className="rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-muted)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)] transition-colors">
+              Clear
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Row 4: eyebrow */}
+      <div className="flex-shrink-0 pt-2 pb-0.5">
+        <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+          Null distribution — {simCount.toLocaleString()} repetition{simCount !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {/* Row 5: main area */}
+      <div className="flex-1 min-h-0 flex gap-4">
+
+        {/* Left: null distribution + overlay */}
+        <div className="relative flex-1 min-w-0 min-h-0">
+          {simCount === 0 && !overlayVisible ? (
+            <div className="flex h-full items-center justify-center text-sm text-[var(--color-muted)]">
+              Click <strong className="mx-1 font-semibold text-[var(--color-text)]">1. Pool</strong> above to start.
+            </div>
+          ) : (
+            <MeanNullDistPlot values={nullDist} diffObs={data?.diffObs ?? 0} alternative={alternative} showNormalCurve={showNormalCurve}/>
+          )}
+
+          {/* Transient overlay */}
+          <div className={`absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] overflow-hidden px-4 py-4 transition-all duration-300 ease-in-out ${
+            overlayVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
+          }`}>
+
+            <div className="flex-shrink-0 flex items-center justify-between w-full" style={{ maxWidth: CANVAS_W }}>
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.16em] text-[var(--color-muted)]">
+                {CAPTIONS[animStage]}
+              </span>
+              <div className="flex items-center gap-4 text-xs text-[var(--color-muted)]">
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block rounded-sm bg-[var(--color-accent)] flex-shrink-0" style={{width:8,height:13}}/>
+                  {label1}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block rounded-sm bg-[var(--color-gold)] flex-shrink-0" style={{width:8,height:13}}/>
+                  {label2}
+                </span>
+              </div>
+            </div>
+
+            {/* Card animation canvas */}
+            <div className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden" style={{ width: CANVAS_W }}>
+              <div className="relative bg-[var(--color-bg)] border-b border-[var(--color-border)]" style={{width:CANVAS_W, height:HEADER_H}}>
+                <span style={{position:'absolute',left:COL_CX.left,top:showColStats?15:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{label1}</span>
+                {showCenter && <span style={{position:'absolute',left:COL_CX.center,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,color:'var(--color-muted)'}}>Pooled</span>}
+                <span style={{position:'absolute',left:COL_CX.right,top:showColStats?15:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{label2}</span>
+                {showColStats && (
+                  <>
+                    <MeanColStatLabel cx={COL_CX.left}  n={leftStats.n}  mean={leftStats.mean}  highlight={highlightSim}/>
+                    <MeanColStatLabel cx={COL_CX.right} n={rightStats.n} mean={rightStats.mean} highlight={highlightSim}/>
+                  </>
+                )}
+              </div>
+              <div className="relative bg-[var(--color-surface)] overflow-hidden" style={{width:CANVAS_W,height:canvasH,transition:'height 400ms ease'}}>
+                <div className="absolute inset-y-0 transition-all duration-500" style={{
+                  left:COL_CX.left-COL_W/2-4,width:COL_W+8,
+                  background:showSplit?'rgba(14,165,160,0.04)':'transparent',
+                  borderRight:showSplit?'1px dashed rgba(14,165,160,0.2)':'none',
+                }}/>
+                <div className="absolute inset-y-0 transition-all duration-500" style={{
+                  left:COL_CX.right-COL_W/2-4,width:COL_W+8,
+                  background:showSplit?'rgba(245,158,11,0.04)':'transparent',
+                  borderLeft:showSplit?'1px dashed rgba(245,158,11,0.2)':'none',
+                }}/>
+                {cases.map(c => {
+                  const p  = positions.get(c.id) ?? {x:-50,y:-50,rotation:0,delay:0,faceDown:false}
+                  const fd = p.faceDown
+                  const inG1 = assignment.length > 0 ? aSet.has(c.id) : c.group === 0
+                  const bg  = fd ? 'var(--color-accent-strong)' : inG1 ? 'var(--color-accent)' : 'var(--color-gold)'
+                  const bdr = fd ? 'var(--color-accent-strong)' : inG1 ? 'var(--color-accent-strong)' : 'var(--color-gold-ring)'
+                  return (
+                    <div key={c.id} style={{
+                      position:'absolute',left:p.x,top:p.y,width:layout.w,height:layout.h,
+                      transition:`left ${cardTransDur}ms ease-in-out,top ${cardTransDur}ms ease-in-out,transform ${cardTransDur}ms ease-in-out,background-color 160ms,border-color 160ms`,
+                      transitionDelay:`${p.delay}ms`,transform:`rotate(${p.rotation}deg)`,
+                      borderRadius:Math.max(2,Math.floor(layout.w/7)),
+                      backgroundColor:bg,border:`${Math.max(1,Math.floor(layout.w/14))}px solid ${bdr}`,
+                      boxShadow:fd?'0 2px 5px rgba(0,0,0,0.20)':'0 1px 2px rgba(0,0,0,0.10)',boxSizing:'border-box',
+                      display:'flex',alignItems:'center',justifyContent:'center',
+                    }}>
+                      {!fd && layout.w >= 18 && (
+                        <span style={{
+                          fontSize: Math.max(5, Math.min(9, layout.w * 0.28)),
+                          color: inG1 ? 'var(--color-accent-strong)' : 'var(--color-gold-text)',
+                          fontFamily:'DM Sans,monospace',fontWeight:600,lineHeight:1,overflow:'hidden',
+                          maxWidth:layout.w-2,textAlign:'center',
+                        }}>
+                          {Math.abs(c.value) >= 100 ? c.value.toFixed(0) : Math.abs(c.value) >= 10 ? c.value.toFixed(1) : c.value.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* CTA button */}
+            {animStage !== 'plotting' && (
+              <button onClick={handleStep}
+                disabled={isAnimating || !ANIM_STEPS.some(s => s.active.includes(animStage))}
+                className="rounded-xl bg-[var(--color-accent)] px-8 py-2.5 text-sm font-semibold text-white hover:brightness-105 disabled:opacity-40 transition-colors">
+                {animStage === 'pooled'      ? '2. Shuffle →'
+                : animStage === 'shuffled'   ? '3. Reassign →'
+                : animStage === 'reassigned' ? '4. Compute →'
+                : animStage === 'computing'  ? '5. Record →'
+                : '→'}
+              </button>
+            )}
+
+            {/* Sim result line */}
+            {currentResult && showFaceUp && (
+              <p className="text-sm text-[var(--color-muted)] text-center">
+                <span className="font-semibold text-[var(--color-text)]">{label1}</span> x̄ = <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{currentResult.mean1Sim.toFixed(3)}</span>
+                {' · '}
+                <span className="font-semibold text-[var(--color-text)]">{label2}</span> x̄ = <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{currentResult.mean2Sim.toFixed(3)}</span>
+                {' → x̄₁ − x̄₂ = '}
+                <span className="font-mono tabular-nums font-bold text-[var(--color-gold)]">{currentResult.diffSim.toFixed(3)}</span>
+                {data && isExtremeResult(currentResult.diffSim, data.diffObs, alternative) && <span className="ml-1 text-[var(--color-gold)]">★</span>}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Right panel */}
+        <div className="w-[200px] flex-shrink-0 flex flex-col gap-4">
+
+          <label className="flex items-center gap-2 select-none text-sm text-[var(--color-text)]">
+            <input type="checkbox" checked={showNormalCurve}
+              onChange={e => patchConfig({ showNormalCurve: e.target.checked })}
+              className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"/>
+            <span>Overlay normal curve</span>
+          </label>
+          <div className="text-xs text-[var(--color-muted)] -mt-2 leading-tight">
+            <div>Mean = <span className="font-mono tabular-nums">{nullSummary.mean.toFixed(3)}</span></div>
+            <div>SD = <span className="font-mono tabular-nums">{nullSummary.sd.toFixed(3)}</span></div>
+          </div>
+
+          <div>
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)] mb-1.5">p-value</div>
+            <div className="font-mono tabular-nums font-bold text-[var(--color-gold)]" style={{ fontSize: '1.75rem', lineHeight: 1.1 }}>
+              {simCount < 100 || pValue === null ? '—' : pValue < 0.001 ? '< 0.001' : pValue.toFixed(3)}
+            </div>
+          </div>
+
+          {simCount < 100 ? (
+            <p className="text-sm text-[var(--color-text)] leading-relaxed">
+              Build at least <strong className="font-mono font-bold">100</strong> repetitions to read a p-value.
+            </p>
+          ) : (
+            <p className="text-sm text-[var(--color-text)] leading-relaxed">
+              <strong className="font-mono font-bold">{extremeCount.toLocaleString()}</strong>{' '}of the{' '}
+              <strong className="font-mono font-bold">{simCount.toLocaleString()}</strong>{' '}
+              simulated results were as or more extreme.
+            </p>
+          )}
+
+          {cardStage === 'conclude' && (
+            <button type="button" onClick={() => patchConfig({ stage: 'simulate' })}
+              className="mt-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]">
+              ← Simulate more
+            </button>
+          )}
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
+// ── TwoMeanSimCard — preserved for legacy saves ───────────────────────────────
 
 export function TwoMeanSimCard({ cardId, config }: { cardId: string; config: TwoMeanSimCardConfig }) {
   const { updateExploreCard } = useStore()
@@ -652,11 +1036,11 @@ export function TwoMeanSimCard({ cardId, config }: { cardId: string; config: Two
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [config.values1, config.values2, config.label1, config.label2])
 
-  const [stage, setStage]                 = useState<Stage>('observed')
-  const [shufflePhase, setShufflePhase]   = useState(0)
-  const [assignment, setAssignment]       = useState<number[]>([])
-  const [currentResult, setCurrentResult] = useState<TwoMeanResult | null>(null)
-  const [highlightSim, setHighlightSim]   = useState(false)
+  const [animStage,    setAnimStage]     = useState<AnimStage>('observed')
+  const [shufflePhase, setShufflePhase]  = useState(0)
+  const [assignment,   setAssignment]    = useState<number[]>([])
+  const [currentResult,setCurrentResult] = useState<TwoMeanResult | null>(null)
+  const [highlightSim, setHighlightSim]  = useState(false)
 
   const nullDist     = config.nullDist
   const simCount     = config.simCount
@@ -664,148 +1048,118 @@ export function TwoMeanSimCard({ cardId, config }: { cardId: string; config: Two
   const alternative  = config.alternative
   const nullDiff     = config.nullDiff
 
-  const cases     = data.cases
-  const layout    = getCardLayout(cases.length)
-  const canvasH   = getCanvasHeight(data.n1, data.n2)
-  const pileCY    = HEADER_H + (canvasH - HEADER_H) / 2
-  const isAnimating = ['pooling','shuffling','reassigning','plotting'].includes(stage)
-  const pValue    = simCount > 0 ? extremeCount / simCount : null
-  const positions = computePositions(data, stage, assignment, shufflePhase, pileCY)
-  const cardTransDur = stage === 'shuffling' ? SHUFFLE_DUR : stage === 'reassigning' ? DEAL_DUR : POOL_DUR
+  const cases        = data.cases
+  const layout       = getCardLayout(cases.length)
+  const canvasH      = getCanvasHeight(data.n1, data.n2)
+  const pileCY       = HEADER_H + (canvasH - HEADER_H) / 2
+  const isAnimating  = ['pooling','shuffling','reassigning','plotting'].includes(animStage)
+  const pValue       = simCount > 0 ? extremeCount / simCount : null
+  const positions    = computePositions(data, animStage, assignment, shufflePhase, pileCY)
+  const cardTransDur = animStage === 'shuffling' ? SHUFFLE_DUR : animStage === 'reassigning' ? DEAL_DUR : POOL_DUR
   const showNormalCurve = config.showNormalCurve ?? false
-  const nullSummary = useMemo(() => getTwoMeanNullSummary(data), [data])
+  const nullSummary  = useMemo(() => getTwoMeanNullSummary(data), [data])
 
-  const dataRef   = useRef(data)
-  const altRef    = useRef(alternative)
-  const resultRef = useRef<TwoMeanResult | null>(null)
+  const dataRef    = useRef(data)
+  const altRef     = useRef(alternative)
+  const resultRef  = useRef<TwoMeanResult | null>(null)
   useEffect(()=>{ dataRef.current = data },[data])
   useEffect(()=>{ altRef.current = alternative },[alternative])
 
-  // ── Stage machine ──────────────────────────────────────────────────────────
+  const aSet = useMemo(() => new Set(assignment), [assignment])
+
   useEffect(() => {
-    if (!['pooling','reassigning','plotting'].includes(stage)) return
+    if (!['pooling','reassigning','plotting'].includes(animStage)) return
     let id: ReturnType<typeof setTimeout>
-    if (stage === 'pooling') {
-      id = setTimeout(() => setStage('pooled'), POOL_DUR + 80)
-    } else if (stage === 'reassigning') {
-      const total = dealStaggerMax(dataRef.current.cases.length) + DEAL_DUR + 120
-      id = setTimeout(() => setStage('reassigned'), total)
-    } else if (stage === 'plotting') {
+    if (animStage === 'pooling') {
+      id = setTimeout(() => setAnimStage('pooled'), POOL_DUR + 80)
+    } else if (animStage === 'reassigning') {
+      id = setTimeout(() => setAnimStage('reassigned'), dealStaggerMax(dataRef.current.cases.length) + DEAL_DUR + 120)
+    } else {
       id = setTimeout(() => {
         const result = resultRef.current
         if (result) {
-          const newDist    = [...nullDist, result.diffSim]
-          const newCount   = simCount + 1
-          const newExtreme = extremeCount + (isExtremeResult(result.diffSim, dataRef.current.diffObs, altRef.current) ? 1 : 0)
-          updateExploreCard(cardId, { config: { ...config, nullDist: newDist, simCount: newCount, extremeCount: newExtreme } })
+          updateExploreCard(cardId, { config: {
+            ...config,
+            nullDist: [...nullDist, result.diffSim],
+            simCount: simCount + 1,
+            extremeCount: extremeCount + (isExtremeResult(result.diffSim, dataRef.current.diffObs, altRef.current) ? 1 : 0),
+          }})
         }
-        setStage('done')
+        setAnimStage('done')
       }, 320)
     }
     return () => clearTimeout(id)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage])
+  }, [animStage])
 
-  // ── Shuffle phase machine ──────────────────────────────────────────────────
   useEffect(() => {
-    if (stage !== 'shuffling') { if (shufflePhase !== 0) setShufflePhase(0); return }
+    if (animStage !== 'shuffling') { if (shufflePhase !== 0) setShufflePhase(0); return }
     if (shufflePhase === 0) return
     const id = setTimeout(() => {
-      if (shufflePhase >= NUM_SH_PHASES) { setStage('shuffled'); setShufflePhase(0) }
+      if (shufflePhase >= NUM_SH_PHASES) { setAnimStage('shuffled'); setShufflePhase(0) }
       else setShufflePhase(p => p + 1)
     }, SHUFFLE_DUR + 15)
     return () => clearTimeout(id)
-  }, [stage, shufflePhase])
+  }, [animStage, shufflePhase])
 
   function handleStep() {
     if (isAnimating) return
-    if (stage === 'observed' || stage === 'done')  { setStage('pooling') }
-    else if (stage === 'pooled')   { setStage('shuffling'); setShufflePhase(1) }
-    else if (stage === 'shuffled') {
+    if (animStage === 'observed' || animStage === 'done') { setAnimStage('pooling') }
+    else if (animStage === 'pooled')    { setAnimStage('shuffling'); setShufflePhase(1) }
+    else if (animStage === 'shuffled')  {
       const result = runTwoMeanRandomization(data)
-      resultRef.current = result; setAssignment(result.assignment); setCurrentResult(result); setStage('reassigning')
+      resultRef.current = result; setAssignment(result.assignment); setCurrentResult(result); setAnimStage('reassigning')
     }
-    else if (stage === 'reassigned') { setHighlightSim(true); setStage('computing') }
-    else if (stage === 'computing')  { setHighlightSim(false); setStage('plotting') }
+    else if (animStage === 'reassigned') { setHighlightSim(true); setAnimStage('computing') }
+    else if (animStage === 'computing')  { setHighlightSim(false); setAnimStage('plotting') }
   }
 
   function runBatch(count: number) {
-    const diffs: number[] = []
-    let newExtreme = 0
-    let last: TwoMeanResult | null = null
+    const diffs: number[] = []; let newExtreme = 0; let last: TwoMeanResult | null = null
     for (let i = 0; i < count; i++) {
-      const r = runTwoMeanRandomization(data)
-      last = r
-      diffs.push(r.diffSim)
+      const r = runTwoMeanRandomization(data); last = r; diffs.push(r.diffSim)
       if (isExtremeResult(r.diffSim, data.diffObs, alternative)) newExtreme++
     }
-    if (last) {
-      setAssignment(last.assignment)
-      setCurrentResult(last)
-    }
-    setStage('done')
-    updateExploreCard(cardId, { config: {
-      ...config,
-      nullDist: [...nullDist, ...diffs],
-      simCount: simCount + count,
-      extremeCount: extremeCount + newExtreme,
-    }})
+    if (last) { setAssignment(last.assignment); setCurrentResult(last) }
+    setAnimStage('done')
+    updateExploreCard(cardId, { config: { ...config, nullDist: [...nullDist, ...diffs], simCount: simCount + count, extremeCount: extremeCount + newExtreme } })
   }
 
   function handleReset() {
-    setStage('observed'); setShufflePhase(0); setAssignment([]); setCurrentResult(null); setHighlightSim(false)
+    setAnimStage('observed'); setShufflePhase(0); setAssignment([]); setCurrentResult(null); setHighlightSim(false)
     updateExploreCard(cardId, { config: { ...config, nullDist: [], simCount: 0, extremeCount: 0 } })
   }
 
-  const POOL_STAGES: Stage[] = ['pooling','pooled','shuffling','shuffled','reassigning']
-  const showSplit    = !POOL_STAGES.includes(stage)
-  const showCenter   = POOL_STAGES.includes(stage)
-  const showFaceUp   = ['computing','plotting','done'].includes(stage)
+  const showSplit    = !['pooling','pooled','shuffling','shuffled','reassigning'].includes(animStage)
+  const showCenter   = ['pooling','pooled','shuffling','shuffled','reassigning'].includes(animStage)
+  const showFaceUp   = ['computing','plotting','done'].includes(animStage)
   const showColStats = showSplit && showFaceUp
+  const leftStats    = colMeanStats(cases, 0, showFaceUp ? assignment : null, animStage)
+  const rightStats   = colMeanStats(cases, 1, showFaceUp ? assignment : null, animStage)
+  const altStatement = `μ₁ − μ₂ ${alternative==='less'?'<':alternative==='greater'?'>':'≠'} ${nullDiff}`
 
-  const leftStats  = colMeanStats(cases, 0, showFaceUp ? assignment : null, stage)
-  const rightStats = colMeanStats(cases, 1, showFaceUp ? assignment : null, stage)
-  const altSymbol  = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
-  const altStatement = `μ₁ − μ₂ ${altSymbol} ${nullDiff}`
-
-  const aSet = useMemo(() => new Set(assignment), [assignment])
+  const STEPS = [
+    {label:'1. Pool',stages:['observed','done']},{label:'2. Shuffle',stages:['pooled']},
+    {label:'3. Reassign',stages:['shuffled']},{label:'4. Compute',stages:['reassigned']},{label:'5. Record',stages:['computing']},
+  ]
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-4 space-y-4">
         <div className="grid gap-4 xl:grid-cols-[680px_minmax(320px,1fr)]">
-          {/* Animation canvas */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
             <div className="overflow-x-auto flex justify-center">
               <div className="w-fit">
                 <div className="relative bg-[var(--color-bg)] border-b border-[var(--color-border)] flex-shrink-0" style={{width:CANVAS_W,height:HEADER_H}}>
                   <span style={{position:'absolute',left:COL_CX.left,top:showColStats?15:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label1}</span>
                   {showCenter&&<span style={{position:'absolute',left:COL_CX.center,top:'50%',transform:'translate(-50%,-50%)',fontSize:11,color:'var(--color-muted)'}}>Pooled</span>}
                   <span style={{position:'absolute',left:COL_CX.right,top:showColStats?15:'50%',transform:showColStats?'translateX(-50%)':'translate(-50%,-50%)',fontSize:11,fontWeight:600,color:'var(--color-text)'}}>{config.label2}</span>
-                  {showColStats && (
-                    <>
-                      <MeanColStatLabel cx={COL_CX.left}  n={leftStats.n}  mean={leftStats.mean}  highlight={highlightSim}/>
-                      <MeanColStatLabel cx={COL_CX.right} n={rightStats.n} mean={rightStats.mean} highlight={highlightSim}/>
-                    </>
-                  )}
+                  {showColStats&&(<><MeanColStatLabel cx={COL_CX.left} n={leftStats.n} mean={leftStats.mean} highlight={highlightSim}/><MeanColStatLabel cx={COL_CX.right} n={rightStats.n} mean={rightStats.mean} highlight={highlightSim}/></>)}
                 </div>
-
-                <div className="relative bg-white flex-shrink-0 overflow-hidden" style={{width:CANVAS_W,height:canvasH,transition:'height 400ms ease'}}>
-                  <div className="absolute inset-y-0 transition-all duration-500" style={{
-                    left:COL_CX.left-COL_W/2-4,width:COL_W+8,
-                    background:showSplit?'rgba(14,165,160,0.04)':'transparent',
-                    borderRight:showSplit?'1px dashed rgba(14,165,160,0.2)':'none',
-                  }}/>
-                  <div className="absolute inset-y-0 transition-all duration-500" style={{
-                    left:COL_CX.right-COL_W/2-4,width:COL_W+8,
-                    background:showSplit?'rgba(245,158,11,0.04)':'transparent',
-                    borderLeft:showSplit?'1px dashed rgba(245,158,11,0.2)':'none',
-                  }}/>
+                <div className="relative bg-[var(--color-surface)] flex-shrink-0 overflow-hidden" style={{width:CANVAS_W,height:canvasH,transition:'height 400ms ease'}}>
                   {cases.map(c => {
                     const p = positions.get(c.id) ?? {x:-50,y:-50,rotation:0,delay:0,faceDown:false}
-                    const fd = p.faceDown
-                    // face-up: teal for group 1, amber for group 2
-                    const inG1 = assignment.length > 0 ? aSet.has(c.id) : c.group === 0
+                    const fd = p.faceDown; const inG1 = assignment.length > 0 ? aSet.has(c.id) : c.group === 0
                     const bg  = fd ? 'var(--color-accent-strong)' : inG1 ? 'var(--color-accent)' : 'var(--color-gold)'
                     const bdr = fd ? 'var(--color-accent-strong)' : inG1 ? 'var(--color-accent-strong)' : 'var(--color-gold-ring)'
                     return (
@@ -819,161 +1173,93 @@ export function TwoMeanSimCard({ cardId, config }: { cardId: string; config: Two
                         display:'flex',alignItems:'center',justifyContent:'center',
                       }}>
                         {!fd && layout.w >= 18 && (
-                          <span style={{
-                            fontSize: Math.max(5, Math.min(9, layout.w * 0.28)),
-                            color: inG1 ? 'var(--color-accent-strong)' : 'var(--color-gold-text)',
-                            fontFamily:'DM Sans,monospace',
-                            fontWeight:600,
-                            lineHeight:1,
-                            overflow:'hidden',
-                            maxWidth:layout.w-2,
-                            textAlign:'center',
-                          }}>
-                            {Math.abs(c.value) >= 100
-                              ? c.value.toFixed(0)
-                              : Math.abs(c.value) >= 10
-                                ? c.value.toFixed(1)
-                                : c.value.toFixed(2)}
+                          <span style={{fontSize:Math.max(5,Math.min(9,layout.w*0.28)),color:inG1?'var(--color-accent-strong)':'var(--color-gold-text)',fontFamily:'DM Sans,monospace',fontWeight:600,lineHeight:1,overflow:'hidden',maxWidth:layout.w-2,textAlign:'center'}}>
+                            {Math.abs(c.value)>=100?c.value.toFixed(0):Math.abs(c.value)>=10?c.value.toFixed(1):c.value.toFixed(2)}
                           </span>
                         )}
                       </div>
                     )
                   })}
                 </div>
-
                 <div className="flex-shrink-0 border-t border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5" style={{width:CANVAS_W}}>
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
-                      <span className="inline-block rounded-sm bg-[var(--color-accent)] flex-shrink-0" style={{width:8,height:13,boxShadow:'0 1px 2px rgba(0,0,0,0.15)'}}/>
-                      {config.label1}
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
-                      <span className="inline-block rounded-sm bg-[var(--color-gold)] flex-shrink-0" style={{width:8,height:13,boxShadow:'0 1px 2px rgba(0,0,0,0.15)'}}/>
-                      {config.label2}
-                    </div>
-                    <span className="ml-auto text-[10px] italic text-[var(--color-muted)]">{CAPTIONS[stage]}</span>
+                    <span className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]"><span className="inline-block rounded-sm bg-[var(--color-accent)] flex-shrink-0" style={{width:8,height:13}}/>{config.label1}</span>
+                    <span className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]"><span className="inline-block rounded-sm bg-[var(--color-gold)] flex-shrink-0" style={{width:8,height:13}}/>{config.label2}</span>
+                    <span className="ml-auto text-[10px] italic text-[var(--color-muted)]">{CAPTIONS[animStage]}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Stats + hypotheses */}
           <div className="space-y-4">
-            <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
-              <div className="grid text-xs" style={{gridTemplateColumns:'auto 1fr 1fr 1fr'}}>
-                <div className="px-2 py-1.5 bg-[var(--color-bg)] border-b border-[var(--color-border)]"/>
-                {[config.label1, config.label2, 'x̄₁ − x̄₂'].map(h => (
-                  <div key={h} className="px-2 py-1.5 bg-[var(--color-bg)] border-b border-[var(--color-border)] text-center font-semibold text-[var(--color-muted)] truncate">{h}</div>
-                ))}
-                <div className="px-2 py-1.5 font-semibold text-[var(--color-muted)] bg-[var(--color-bg)] text-[10px] flex items-center">Obs.</div>
-                <div className="px-2 py-1.5 text-center text-[var(--color-text)]">n={data.n1}<br/><span className="font-bold">{data.mean1.toFixed(3)}</span></div>
-                <div className="px-2 py-1.5 text-center text-[var(--color-text)]">n={data.n2}<br/><span className="font-bold">{data.mean2.toFixed(3)}</span></div>
-                <div className="px-2 py-1.5 text-center font-mono tabular-nums font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</div>
-                {currentResult ? (
-                  <>
-                    <div className={`px-2 py-1.5 text-[10px] font-semibold flex items-center text-[var(--color-muted)] ${highlightSim?'bg-[var(--color-accent-light)]':''}`}>Sim.</div>
-                    {[{n:data.n1,mean:currentResult.mean1Sim},{n:data.n2,mean:currentResult.mean2Sim}].map((cell,i) => (
-                      <div key={i} className={`px-2 py-1.5 text-center text-[var(--color-text)] ${highlightSim?'bg-[var(--color-accent-light)]':''}`}>
-                        n={cell.n}<br/><span className="font-bold">{cell.mean.toFixed(3)}</span>
-                      </div>
-                    ))}
-                    <div className={`px-2 py-1.5 text-center ${highlightSim?'bg-[var(--color-accent-light)]':''}`}>
-                      <span className={`font-bold ${isExtremeResult(currentResult.diffSim,data.diffObs,alternative)?'text-[var(--color-accent)]':'text-[var(--color-text)]'}`}>
-                        {currentResult.diffSim.toFixed(3)}
-                      </span>
-                      {isExtremeResult(currentResult.diffSim,data.diffObs,alternative)&&<span className="text-[10px] text-[var(--color-accent)] ml-0.5">★</span>}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="px-2 py-1.5 text-[10px] text-[var(--color-muted)] opacity-30">Sim.</div>
-                    <div className="px-2 py-1.5 text-center text-[var(--color-muted)] opacity-30">—</div>
-                    <div className="px-2 py-1.5 text-center text-[var(--color-muted)] opacity-30">—</div>
-                    <div className="px-2 py-1.5 text-center text-[var(--color-muted)] opacity-30">—</div>
-                  </>
-                )}
-              </div>
-              <div className="px-3 py-1 flex items-center justify-between border-t border-[var(--color-border)]">
-                <span className="text-[10px] text-[var(--color-muted)]">Simulation #{simCount>0?simCount.toLocaleString():'—'}</span>
-                <span className="text-[10px] text-[var(--color-muted)]">{simCount.toLocaleString()} total</span>
-              </div>
-            </div>
             <div className="rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] px-3 py-3 text-xs text-[var(--color-muted)] space-y-1">
               <div><span className="font-semibold">H₀:</span> μ₁ − μ₂ = {nullDiff}</div>
-              <div><span className="font-semibold">H₁:</span> {altStatement}</div>
+              <div><span className="font-semibold">Hₐ:</span> {altStatement}</div>
             </div>
-            <div className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-3 text-xs text-[var(--color-muted)] grid grid-cols-3 gap-2">
-              <span>n₁={data.n1}</span>
-              <span>n₂={data.n2}</span>
-              <span>N={cases.length}</span>
+            {currentResult ? (
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+                <div className="grid text-xs" style={{gridTemplateColumns:'auto 1fr 1fr 1fr'}}>
+                  <div className="px-2 py-1.5 bg-[var(--color-bg)] border-b border-[var(--color-border)]"/>
+                  {[config.label1, config.label2, 'x̄₁ − x̄₂'].map(h => (
+                    <div key={h} className="px-2 py-1.5 bg-[var(--color-bg)] border-b border-[var(--color-border)] text-center font-semibold text-[var(--color-muted)] truncate">{h}</div>
+                  ))}
+                  <div className="px-2 py-1.5 font-semibold text-[var(--color-muted)] bg-[var(--color-bg)] text-[10px] flex items-center">Obs.</div>
+                  <div className="px-2 py-1.5 text-center">n={data.n1}<br/><span className="font-bold">{data.mean1.toFixed(3)}</span></div>
+                  <div className="px-2 py-1.5 text-center">n={data.n2}<br/><span className="font-bold">{data.mean2.toFixed(3)}</span></div>
+                  <div className="px-2 py-1.5 text-center font-mono tabular-nums font-bold text-[var(--color-accent)]">{data.diffObs.toFixed(3)}</div>
+                  <div className={`px-2 py-1.5 text-[10px] font-semibold flex items-center text-[var(--color-muted)] ${highlightSim?'bg-[var(--color-accent-light)]':''}`}>Sim.</div>
+                  {[{n:data.n1,mean:currentResult.mean1Sim},{n:data.n2,mean:currentResult.mean2Sim}].map((cell,i) => (
+                    <div key={i} className={`px-2 py-1.5 text-center ${highlightSim?'bg-[var(--color-accent-light)]':''}`}>n={cell.n}<br/><span className="font-bold">{cell.mean.toFixed(3)}</span></div>
+                  ))}
+                  <div className={`px-2 py-1.5 text-center ${highlightSim?'bg-[var(--color-accent-light)]':''}`}>
+                    <span className={`font-bold ${isExtremeResult(currentResult.diffSim,data.diffObs,alternative)?'text-[var(--color-accent)]':'text-[var(--color-text)]'}`}>{currentResult.diffSim.toFixed(3)}</span>
+                    {isExtremeResult(currentResult.diffSim,data.diffObs,alternative)&&<span className="text-[10px] text-[var(--color-accent)] ml-0.5">★</span>}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3 text-xs text-[var(--color-muted)]">
+              <label className="flex items-center gap-2 select-none mb-2">
+                <input type="checkbox" checked={showNormalCurve} onChange={e => updateExploreCard(cardId, { config: { ...config, showNormalCurve: e.target.checked } })} className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"/>
+                <span>Overlay normal curve</span>
+              </label>
+              <div>Mean = {nullSummary.mean.toFixed(3)}</div>
+              <div>SD = {nullSummary.sd.toFixed(3)}</div>
+              <div className="pt-2">Extreme: <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{extremeCount.toLocaleString()}</span> / {simCount.toLocaleString()}</div>
+              <div className="pt-1 font-semibold text-[var(--color-accent)]">{pValue!==null?`p ≈ ${pValue<0.001?'< 0.001':pValue.toFixed(4)}`:'p = —'}</div>
             </div>
           </div>
         </div>
-
-        {/* Null distribution */}
-        <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 flex flex-col gap-1.5">
-          <div className="flex items-start justify-between gap-3 flex-shrink-0">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-[var(--color-muted)]">Null Distribution</span>
-            <div className="flex flex-col items-end gap-1">
-              <label className="flex items-center gap-2 text-xs text-[var(--color-muted)] select-none">
-                <input
-                  type="checkbox"
-                  checked={showNormalCurve}
-                  onChange={e => updateExploreCard(cardId, { config: { ...config, showNormalCurve: e.target.checked } })}
-                  className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
-                />
-                <span>Overlay normal curve</span>
-              </label>
-              <div className="text-[11px] text-[var(--color-muted)] text-right leading-tight">
-                <div>Mean = {nullSummary.mean.toFixed(3)}</div>
-                <div>SD = {nullSummary.sd.toFixed(3)}</div>
-              </div>
-            </div>
-          </div>
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
           <div className="min-h-0" style={{height: simCount === 0 ? 180 : 180}}>
             {simCount === 0
               ? <div className="flex items-center justify-center h-full text-xs text-[var(--color-muted)]">Run simulations to build the null distribution</div>
               : <MeanNullDistPlot values={nullDist} diffObs={data.diffObs} alternative={alternative} showNormalCurve={showNormalCurve}/>
             }
           </div>
-          <div className="flex items-center gap-3 pt-1.5 border-t border-[var(--color-border)] flex-shrink-0">
+          <div className="flex items-center gap-3 pt-1.5 border-t border-[var(--color-border)]">
             <span className="text-xs text-[var(--color-muted)]">Extreme: <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{extremeCount.toLocaleString()}</span> / {simCount.toLocaleString()}</span>
-            <span className="ml-auto text-sm font-mono tabular-nums font-bold text-[var(--color-accent)]">
-              {pValue !== null ? `p ≈ ${pValue < 0.001 ? '< 0.001' : pValue.toFixed(4)}` : 'p = —'}
-            </span>
+            <span className="ml-auto text-sm font-mono tabular-nums font-bold text-[var(--color-accent)]">{pValue !== null ? `p ≈ ${pValue < 0.001 ? '< 0.001' : pValue.toFixed(4)}` : 'p = —'}</span>
           </div>
         </div>
       </div>
-
-      {/* Controls */}
       <div className="flex-shrink-0 flex flex-wrap items-center gap-2 px-4 py-3 border-t border-[var(--color-border)] bg-[var(--color-bg)]">
         <div className="flex items-center gap-1">
           {STEPS.map(({label,stages})=>{
-            const active = (stages as Stage[]).includes(stage) && !isAnimating
-            return (
-              <button key={label} onClick={handleStep} disabled={!active}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-all ${
-                  active ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-white shadow-sm scale-105'
-                          : 'border-[var(--color-border)] text-[var(--color-muted)] opacity-30 cursor-default'
-                }`}>
-                {label}
-              </button>
-            )
+            const active=(stages as AnimStage[]).includes(animStage)&&!isAnimating
+            return (<button key={label} onClick={handleStep} disabled={!active}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-all ${active?'bg-[var(--color-accent)] border-[var(--color-accent)] text-white shadow-sm scale-105':'border-[var(--color-border)] text-[var(--color-muted)] opacity-30 cursor-default'}`}>
+              {label}
+            </button>)
           })}
         </div>
-        {isAnimating && <span className="text-xs italic text-[var(--color-muted)]">Animating…</span>}
+        {isAnimating&&<span className="text-xs italic text-[var(--color-muted)]">Animating…</span>}
         <div className="w-px h-5 bg-[var(--color-border)] mx-1"/>
-        {[1,10,100,1000].map(n => (
-          <button key={n} onClick={()=>runBatch(n)} disabled={isAnimating}
-            className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-            Run {n.toLocaleString()}
-          </button>
-        ))}
-        <button onClick={handleReset} disabled={isAnimating}
-          className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-          Reset
-        </button>
+        {[1,10,100,1000].map(n=>(<button key={n} onClick={()=>runBatch(n)} disabled={isAnimating}
+          className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          Run {n.toLocaleString()}
+        </button>))}
+        <button onClick={handleReset} disabled={isAnimating} className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] hover:bg-[var(--color-surface)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Reset</button>
       </div>
     </div>
   )

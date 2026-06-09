@@ -691,8 +691,8 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'compare-normals' ? { type: 'compare-normals' } :
       type === 'generator'       ? { type: 'generator' } :
       type === 'proportions'  ? { type: 'proportions', var1ColId: null, var2ColId: null } :
-      type === 'two-prop-randomization' ? { type: 'two-prop-randomization', var1ColId: null, var2ColId: null } :
-      type === 'two-mean-randomization' ? { type: 'two-mean-randomization', var1ColId: null, var2ColId: null, dataShape: 'grouping' } :
+      type === 'two-prop-randomization' ? { type: 'two-prop-randomization', var1ColId: null, var2ColId: null, stage: 'setup' as const, sourceMode: 'manual' as const, alternative: 'less' as const, nullDiff: '0', nullDist: [], simCount: 0, extremeCount: 0, showNormalCurve: false } :
+      type === 'two-mean-randomization' ? { type: 'two-mean-randomization', var1ColId: null, var2ColId: null, dataShape: 'grouping' as const, stage: 'setup' as const, sourceMode: 'data' as const, alternative: 'two' as const, nullDiff: '0', nullDist: [], simCount: 0, extremeCount: 0, showNormalCurve: false } :
       type === 'means'        ? { type: 'means', var1ColId: null, var2ColId: null } :
       type === 'dice-roller'  ? { type: 'dice-roller', linkedResultsCardId: null, trackedMode: 'sum' } :
       type === 'sim-results'  ? { type: 'sim-results', sourceCardId: '', sourceLabel: '', trackedMode: 'sum', valueMode: 'count', thresholdOp: '>=', thresholdValue: 1, supportsDifference: false, minValue: 1, maxValue: 6, rolls: [], values: [] } :
@@ -712,8 +712,8 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'distribution'    ? { width: 700, height: 540 } :
       type === 'compare-normals' ? { width: 860, height: 680 } :
       type === 'proportions'     ? { width: 860, height: 620 } :
-      type === 'two-prop-randomization' ? { width: 980, height: 560 } :
-      type === 'two-mean-randomization' ? { width: 980, height: 560 } :
+      type === 'two-prop-randomization' ? { width: 820, height: 640 } :
+      type === 'two-mean-randomization' ? { width: 820, height: 640 } :
       type === 'dice-roller' ? { width: 760, height: 700 } :
                            { width: 620, height: 520 }
     const FLOW_GAP = 32

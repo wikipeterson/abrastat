@@ -790,9 +790,9 @@ export function ExploreCanvas({
       case 'proportions':  return { minWidth: 820, minHeight: 580 }
       case 'one-prop-randomization': return { minWidth: 980, minHeight: 720 }
       case 'one-prop-sim':           return { minWidth: 820, minHeight: 560 }
-      case 'two-prop-randomization': return { minWidth: 900, minHeight: 700 }
+      case 'two-prop-randomization': return { minWidth: 820, minHeight: 640 }
       case 'two-prop-sim':           return { minWidth: 700, minHeight: 500 }
-      case 'two-mean-randomization': return { minWidth: 900, minHeight: 700 }
+      case 'two-mean-randomization': return { minWidth: 820, minHeight: 640 }
       case 'two-mean-sim':           return { minWidth: 700, minHeight: 500 }
       default:             return { minWidth: 360, minHeight: 280 }
     }

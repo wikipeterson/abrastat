@@ -200,17 +200,17 @@ function AbraCoin({
 interface CoinLayout { size: number; gap: number; perRow: number }
 
 function getCoinLayout(n: number): CoinLayout {
-  // Coin size in px; shrinks as n grows
+  // Coin size in px; shrinks as n grows. perRow uses ~840px (tray width on 1180px card).
   const size =
-    n <=  12 ? 46 :
-    n <=  20 ? 40 :
-    n <=  35 ? 32 :
-    n <=  55 ? 25 :
-    n <=  90 ? 19 :
-    n <= 160 ? 14 :
-               11
-  const gap     = Math.max(3, Math.round(size * 0.10))
-  const perRow  = Math.max(1, Math.floor(640 / (size + gap)))
+    n <=  12 ? 60 :
+    n <=  20 ? 52 :
+    n <=  35 ? 44 :
+    n <=  55 ? 36 :
+    n <=  90 ? 28 :
+    n <= 160 ? 20 :
+               15
+  const gap     = Math.max(4, Math.round(size * 0.10))
+  const perRow  = Math.max(1, Math.floor(840 / (size + gap)))
   return { size, gap, perRow }
 }
 
@@ -848,7 +848,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
     [n],
   )
   const coinRows = Math.ceil(n / perRow)
-  const panelH = Math.max(64, Math.min(coinRows * (coinSize + coinGap) + 16, 220))
+  const panelH = Math.max(80, Math.min(coinRows * (coinSize + coinGap) + 20, 300))
   const hasEnoughToConclude = simCount >= 100
 
   const firstRunGuidance = (() => {

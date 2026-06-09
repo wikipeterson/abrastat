@@ -291,6 +291,8 @@ export function ExploreCanvas({
   const zoomRef = useRef(1)
   const prevCardIdsRef = useRef<string[]>([])
   const hasMountedRef = useRef(false)
+  const prevCardSizesRef = useRef<Map<string, { width: number; height: number }>>(new Map())
+  const isInteractingRef = useRef(false)
   // Stable ref so the column-change effect can read latest cards without
   // cards being in its dependency array (which would cause an update loop).
   const cardsRef = useRef(cards)
@@ -320,21 +322,22 @@ export function ExploreCanvas({
     const scroller = scrollRef.current
     if (!scroller) return
 
-    const cardHeight = card.minimized ? MINIMIZED_HEIGHT : (card.height ?? 520)
-    const targetLeft = Math.max(
-      0,
-      card.x * zoomRef.current + (card.width * zoomRef.current) / 2 - scroller.clientWidth / 2,
-    )
-    const targetTop = Math.max(
-      0,
-      card.y * zoomRef.current + (cardHeight * zoomRef.current) / 2 - scroller.clientHeight / 2,
-    )
+    const z = zoomRef.current
+    const cardH = card.minimized ? MINIMIZED_HEIGHT : (card.height ?? 520)
+    const scaledW = card.width * z
+    const scaledH = cardH * z
+    const vpW = scroller.clientWidth
+    const vpH = scroller.clientHeight
+    const MARGIN = 24
 
-    scroller.scrollTo({
-      left: targetLeft,
-      top: targetTop,
-      behavior,
-    })
+    // Center horizontally
+    const targetLeft = Math.max(0, card.x * z + scaledW / 2 - vpW / 2)
+    // Center vertically if card fits; otherwise align top with a margin so the header stays visible
+    const targetTop = scaledH <= vpH
+      ? Math.max(0, card.y * z + scaledH / 2 - vpH / 2)
+      : Math.max(0, card.y * z - MARGIN)
+
+    scroller.scrollTo({ left: targetLeft, top: targetTop, behavior })
   }, [])
 
   useEffect(() => {
@@ -355,6 +358,40 @@ export function ExploreCanvas({
 
     requestAnimationFrame(() => {
       centerCardInView(addedCard)
+    })
+  }, [cards, centerCardInView])
+
+  // Re-frame when a card's dimensions change (e.g. stage transitions on inference cards)
+  useEffect(() => {
+    let changedCard: ExploreCard | undefined
+
+    for (const card of cards) {
+      const prev = prevCardSizesRef.current.get(card.id)
+      const h = card.minimized ? MINIMIZED_HEIGHT : (card.height ?? 520)
+      if (prev && (prev.width !== card.width || prev.height !== h)) {
+        changedCard = card
+        break
+      }
+    }
+
+    // Keep size cache in sync
+    const cardIds = new Set(cards.map(c => c.id))
+    for (const id of prevCardSizesRef.current.keys()) {
+      if (!cardIds.has(id)) prevCardSizesRef.current.delete(id)
+    }
+    for (const card of cards) {
+      const h = card.minimized ? MINIMIZED_HEIGHT : (card.height ?? 520)
+      prevCardSizesRef.current.set(card.id, { width: card.width, height: h })
+    }
+
+    if (!changedCard || isInteractingRef.current) return
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const behavior: ScrollBehavior = reducedMotion ? 'instant' : 'smooth'
+    const capturedCard = changedCard
+
+    requestAnimationFrame(() => {
+      centerCardInView(capturedCard, behavior)
     })
   }, [cards, centerCardInView])
 
@@ -717,6 +754,7 @@ export function ExploreCanvas({
     if (!card) return
     const startX = e.clientX, startY = e.clientY
     const startCardX = card.x, startCardY = card.y
+    isInteractingRef.current = true
     setInteractionCursor('grabbing')
 
     function onMove(ev: PointerEvent) {
@@ -726,6 +764,7 @@ export function ExploreCanvas({
       })
     }
     function onUp() {
+      isInteractingRef.current = false
       setInteractionCursor(null)
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
@@ -777,6 +816,7 @@ export function ExploreCanvas({
           : dir === 'se'
             ? 'nwse-resize'
             : 'nesw-resize'
+    isInteractingRef.current = true
     setInteractionCursor(cursor)
 
     function onMove(ev: PointerEvent) {
@@ -802,6 +842,7 @@ export function ExploreCanvas({
       updateCard(cardId, updates)
     }
     function onUp() {
+      isInteractingRef.current = false
       setInteractionCursor(null)
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
@@ -849,6 +890,7 @@ export function ExploreCanvas({
       clearBrush()
     }
 
+    isInteractingRef.current = true
     setInteractionCursor('grabbing')
 
     function onMove(ev: PointerEvent) {
@@ -857,6 +899,7 @@ export function ExploreCanvas({
     }
 
     function onUp() {
+      isInteractingRef.current = false
       setInteractionCursor(null)
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)

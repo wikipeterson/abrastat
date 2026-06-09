@@ -716,9 +716,40 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'two-mean-randomization' ? { width: 980, height: 560 } :
       type === 'dice-roller' ? { width: 760, height: 700 } :
                            { width: 620, height: 520 }
-    const rightmostX = state.exploreCards.reduce((max, card) => Math.max(max, card.x + card.width), 20)
-    const startX = opts?.position?.x ?? Math.max(1040 + (idx % 2) * 500, rightmostX + 40)
-    const startY = opts?.position?.y ?? 24 + Math.floor(idx / 2) * 520
+    const FLOW_GAP = 32
+    const FLOW_ORIGIN_X = 24
+    const FLOW_ORIGIN_Y = 24
+    const FLOW_MAX_ROW_WIDTH = 2200
+
+    let startX: number
+    let startY: number
+
+    if (opts?.position) {
+      startX = opts.position.x
+      startY = opts.position.y
+    } else if (analysisCards.length === 0) {
+      startX = FLOW_ORIGIN_X
+      startY = FLOW_ORIGIN_Y
+    } else {
+      // Find the lowest row of cards then try placing to its right; wrap if needed
+      const maxY = Math.max(...analysisCards.map(c => c.y))
+      const lastRowCards = analysisCards.filter(c => c.y >= maxY - 300)
+      const rightmost = lastRowCards.reduce((best, c) =>
+        c.x + c.width > best.x + best.width ? c : best
+      )
+      const candidateX = rightmost.x + rightmost.width + FLOW_GAP
+      if (candidateX + width <= FLOW_MAX_ROW_WIDTH) {
+        startX = candidateX
+        startY = rightmost.y
+      } else {
+        const tallest = lastRowCards.reduce((best, c) =>
+          c.y + (c.height ?? 520) > best.y + (best.height ?? 520) ? c : best
+        )
+        startX = FLOW_ORIGIN_X
+        startY = tallest.y + (tallest.height ?? 520) + FLOW_GAP
+      }
+    }
+
     const { x, y } = findOpenCardPosition(state.exploreCards, startX, startY, width, height)
     return { exploreCards: [...state.exploreCards, { id: uuid(), config, x, y, width, height }] }
   }),

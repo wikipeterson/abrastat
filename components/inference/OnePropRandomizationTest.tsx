@@ -200,7 +200,7 @@ function AbraCoin({
 interface CoinLayout { size: number; gap: number; perRow: number }
 
 function getCoinLayout(n: number): CoinLayout {
-  // Coin size in px; shrinks as n grows. perRow uses ~840px (tray width on 1180px card).
+  // Coin size in px; shrinks as n grows. perRow uses ~940px (tray width on 1280px card).
   const size =
     n <=  12 ? 60 :
     n <=  20 ? 52 :
@@ -210,7 +210,7 @@ function getCoinLayout(n: number): CoinLayout {
     n <= 160 ? 20 :
                15
   const gap     = Math.max(4, Math.round(size * 0.10))
-  const perRow  = Math.max(1, Math.floor(840 / (size + gap)))
+  const perRow  = Math.max(1, Math.floor(940 / (size + gap)))
   return { size, gap, perRow }
 }
 
@@ -603,7 +603,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
   const showNormalCurve = config.showNormalCurve ?? false
   const cardSizeTarget = stage === 'setup'
     ? { width: 820, height: 640 }
-    : { width: 1180, height: 760 }
+    : { width: 1280, height: 760 }
 
   const [phase, setPhase] = useState<StepPhase>('observing')
   const [pendingSim, setPendingSim] = useState<OnePropResult | null>(null)
@@ -851,15 +851,19 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
   const panelH = Math.max(80, Math.min(coinRows * (coinSize + coinGap) + 20, 300))
   const hasEnoughToConclude = simCount >= 100
 
-  const firstRunGuidance = (() => {
+  const firstRunGuidance = ((): React.ReactNode => {
     if (simCount > 0) return null
-    if (phase === 'spinning') return `Flipping ${n} coins as if p = ${nullP} — the null world.`
-    if (phase === 'computed') return `${displayedSim?.xSim ?? '?'} heads → p̂* = ${displayedSim ? displayedSim.pSim.toFixed(3) : '?'}. Now plot it.`
+    if (phase === 'spinning') return (
+      <span>{n} coins flipped. Now <strong className="font-semibold text-[var(--color-text)]">count</strong> the <strong className="font-semibold text-[var(--color-text)]">heads</strong>.</span>
+    )
+    if (phase === 'computed' && displayedSim) return (
+      <span>{displayedSim.xSim} heads → p̂* = <strong className="font-mono tabular-nums font-bold text-[var(--color-gold)]">{displayedSim.pSim.toFixed(3)}</strong>. Plot drops it on the distribution.</span>
+    )
     return null
   })()
 
   const coinTrayVisible = (phase === 'spinning' || phase === 'computed') && !isRunning
-  const microCopy: string | null = isRunning && runProgress
+  const microCopy: React.ReactNode = isRunning && runProgress
     ? `Running ${runProgress.current} of ${runProgress.total}…`
     : firstRunGuidance
 
@@ -1183,15 +1187,14 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
             </div>
 
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-medium text-[var(--color-muted)]">Speed up</span>
-              {([10, 100, 1000] as const).map(cnt => (
+              <span className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-[0.1em]">Speed up</span>
+              {simCount > 0 && ([10, 100, 1000] as const).map(cnt => (
                 <button
                   key={cnt}
                   onClick={() => cnt === 10 ? runAnimated(cnt) : runBatch(cnt)}
-                  disabled={isRunning || simCount === 0}
-                  title={simCount === 0 ? 'Complete one repetition by hand first' : undefined}
+                  disabled={isRunning}
                   className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                    isRunning || simCount === 0
+                    isRunning
                       ? 'border-[var(--color-border)] text-[var(--color-muted)] bg-[var(--color-surface)] cursor-not-allowed opacity-50'
                       : 'border-[var(--color-border)] text-[var(--color-text)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)]'
                   }`}
@@ -1206,19 +1209,26 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                 >
                   {runProgress ? `Stop (${runProgress.current}/${runProgress.total})` : 'Stop'}
                 </button>
-              ) : (
+              ) : simCount > 0 ? (
                 <button
                   onClick={handleClear}
                   className="rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-muted)] bg-[var(--color-surface)] hover:bg-[var(--color-accent-light)] transition-colors"
                 >
                   Clear
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
 
+          {/* ── Eyebrow: null distribution label ── */}
+          <div className="flex-shrink-0 pt-2 pb-0.5">
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
+              Null distribution — {simCount.toLocaleString()} repetition{simCount !== 1 ? 's' : ''}
+            </span>
+          </div>
+
           {/* ── Row 4: Main area — plot (flex) + conclusion tools (fixed 250px) ── */}
-          <div className="flex-1 min-h-0 flex gap-4 pt-3">
+          <div className="flex-1 min-h-0 flex gap-4">
 
             {/* Null distribution plot with transient coin overlay */}
             <div className="relative flex-1 min-w-0 min-h-0">
@@ -1241,26 +1251,29 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
 
               {/* Transient coin tray — slides up over the plot during hand repetitions */}
               <div
-                className={`absolute inset-0 flex flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] overflow-hidden transition-all duration-300 ease-in-out ${
+                className={`absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] overflow-hidden px-6 py-5 transition-all duration-300 ease-in-out ${
                   coinTrayVisible
                     ? 'translate-y-0 opacity-100'
                     : 'translate-y-full opacity-0 pointer-events-none'
                 }`}
               >
-                <div className={`flex-shrink-0 flex items-center gap-2 border-b border-[var(--color-border)] px-3 py-2 ${
-                  phase === 'spinning' ? 'bg-[var(--color-accent-light)]' : 'bg-[var(--color-bg)]'
-                }`}>
-                  {phase === 'spinning' && (
-                    <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--color-gold)]" />
-                  )}
-                  {phase === 'computed' && (
-                    <span className="inline-block h-2 w-2 rounded-full bg-[var(--color-accent)]" />
-                  )}
-                  <span className="text-xs font-medium text-[var(--color-text)]">{statusLabel}</span>
-                </div>
+                {/* Title */}
+                {phase === 'spinning' && (
+                  <p className="font-serif italic text-xl text-[var(--color-text)] text-center">
+                    Flipping {n} coins under H₀…
+                  </p>
+                )}
+                {phase === 'computed' && displayedSim && (
+                  <p className="text-xl text-center">
+                    <span className="font-mono tabular-nums font-bold text-[var(--color-gold)]">{displayedSim.xSim} heads</span>
+                    <span className="font-sans text-[var(--color-text)]"> of {n}</span>
+                  </p>
+                )}
+
+                {/* Coins */}
                 <div
-                  className="flex flex-wrap content-start overflow-hidden px-3 pt-3 pb-2"
-                  style={{ gap: coinGap, alignContent: 'flex-start', flex: 1, minHeight: panelH, maxHeight: panelH + 40 }}
+                  className="flex flex-wrap justify-center"
+                  style={{ gap: coinGap, maxWidth: '100%' }}
                 >
                   {displayFaces.map((face, i) => (
                     <AbraCoin
@@ -1273,13 +1286,23 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                     />
                   ))}
                 </div>
+
+                {/* Formula */}
                 {phase === 'computed' && displayedSim && (
-                  <div className="flex-shrink-0 px-4 py-2 text-sm border-t border-[var(--color-border)] bg-[var(--color-bg)]">
-                    <span className="font-mono tabular-nums font-semibold">{displayedSim.xSim}</span>
-                    {' '}heads → <PHat className="inline" />* ={' '}
-                    <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{displayedSim.pSim.toFixed(3)}</span>
-                  </div>
+                  <p className="text-sm text-[var(--color-text)] text-center">
+                    <PHat className="inline" />* = {displayedSim.xSim}/{n} ={' '}
+                    <span className="font-mono tabular-nums font-bold text-[var(--color-gold)]">{displayedSim.pSim.toFixed(3)}</span>
+                    {' '}— one simulated sample
+                  </p>
                 )}
+
+                {/* CTA button */}
+                <button
+                  onClick={phase === 'spinning' ? handleCompute : handlePlot}
+                  className="rounded-xl bg-[var(--color-accent)] px-8 py-2.5 text-sm font-semibold text-white hover:brightness-105 transition-colors"
+                >
+                  {phase === 'spinning' ? '2. Compute →' : '3. Plot it →'}
+                </button>
               </div>
             </div>
 

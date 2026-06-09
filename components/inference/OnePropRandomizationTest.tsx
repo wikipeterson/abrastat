@@ -881,14 +881,14 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
     return `P(p̂* ≤ ${lower} or p̂* ≥ ${upper}) under H₀`
   }, [alternative, graphView, n, p0Num, p0Valid, pValue, phat, simCount, x])
 
-  const interpretationText = useMemo((): React.ReactNode | null => {
-    if (simCount < 100 || pValue === null) return null
+  const interpretationText = useMemo((): string => {
+    if (simCount < 100 || pValue === null) return ''
     const word = pValue > 0.10 ? 'common'
       : pValue > 0.05 ? 'somewhat unusual'
       : pValue > 0.01 ? 'unusual'
       : pValue > 0.001 ? 'very rare'
       : 'extremely rare'
-    return <>Based on the simulation, a result like this is <strong>{word}</strong> when the true proportion is {nullP}.</>
+    return `Based on the simulation, a result like this is ${word} when the true proportion is ${nullP}.`
   }, [nullP, pValue, simCount])
 
   const statusLabel = (() => {
@@ -1321,21 +1321,18 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
                 </FloatingTooltip>
               </div>
 
-              {/* 3. Factual readout + interpretation — plain text, no tooltip */}
+              {/* 3. Factual readout — hover reveals interpretation */}
               {simCount < 100
                 ? <p className="text-sm text-[var(--color-text)] leading-relaxed">
                     Build at least <strong className="font-mono font-bold">100</strong> repetitions to read a p-value.
                   </p>
-                : <div className="space-y-1.5">
-                    <p className="text-sm text-[var(--color-text)] leading-relaxed">
+                : <FloatingTooltip content={interpretationText}>
+                    <p className="text-sm text-[var(--color-text)] leading-relaxed cursor-default">
                       <strong className="font-mono font-bold">{extremeCount.toLocaleString()}</strong>{' '}of the{' '}
                       <strong className="font-mono font-bold">{simCount.toLocaleString()}</strong>{' '}
                       simulated results were as or more extreme than the observed result.
                     </p>
-                    {interpretationText && (
-                      <p className="text-sm text-[var(--color-muted)] leading-relaxed">{interpretationText}</p>
-                    )}
-                  </div>
+                  </FloatingTooltip>
               }
 
               {stage === 'conclude' && (

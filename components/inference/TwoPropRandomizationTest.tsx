@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useStore } from '@/lib/store'
 import { DropZone } from '@/components/explore/DropZone'
 import { TwoPropRandomizationCardConfig, TwoPropSimCardConfig } from '@/lib/exploreTypes'
+import { FloatingTooltip } from './_shared'
 import {
   Alternative,
   TwoProportionData,
@@ -189,15 +190,19 @@ function getNullDistributionSummary(data: TwoProportionData) {
 
 // ── Null distribution plot ────────────────────────────────────────────────────
 
-function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }: {
-  values: number[]; diffObs: number; alternative: Alternative; showNormalCurve?: boolean
+function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false, forceHistogram = false }: {
+  values: number[]; diffObs: number; alternative: Alternative; showNormalCurve?: boolean; forceHistogram?: boolean
 }) {
   const clipId = useId()
   const SVG_W = 760
   const MG = { t: 14, r: 16, b: 42, l: 16 }
   const plotHeight = 320
+  const tickFontSize = 13
+  const axisLabelFontSize = 14
+  const markerFontSize = 11
   const SVG_H = plotHeight + MG.t + MG.b
-  const PW = SVG_W - MG.l - MG.r, PH = SVG_H - MG.t - MG.b
+  const PW = SVG_W - MG.l - MG.r
+  const PH = SVG_H - MG.t - MG.b
 
   const normalizedValues = values.map(v => Number(v.toFixed(6)))
   const uniqueValues = Array.from(new Set(normalizedValues)).sort((a, b) => a - b)
@@ -226,74 +231,149 @@ function NullDistPlot({ values, diffObs, alternative, showNormalCurve = false }:
   normalizedValues.forEach(v => { stackCounts.set(v, (stackCounts.get(v) ?? 0) + 1) })
   const maxStack = Math.max(1, ...Array.from(stackCounts.values()))
 
+  const showHistogram = forceHistogram || values.length >= 250
+
+  const histogramBars = useMemo(() => {
+    if (!showHistogram) return []
+    const binCount = Math.min(28, Math.max(10, Math.round(Math.sqrt(values.length))))
+    const binWidth = xSpan / binCount
+    const bins = Array.from({ length: binCount }, (_, index) => ({
+      x0: xMin + index * binWidth,
+      x1: xMin + (index + 1) * binWidth,
+      count: 0,
+      extreme: false,
+    }))
+    normalizedValues.forEach(value => {
+      const ratio = Math.max(0, Math.min(0.999999, (value - xMin) / xSpan))
+      const index = Math.min(binCount - 1, Math.floor(ratio * binCount))
+      bins[index].count += 1
+    })
+    bins.forEach(bin => {
+      const mid = (bin.x0 + bin.x1) / 2
+      bin.extreme = isExtremeResult(mid, diffObs, alternative)
+    })
+    return bins.filter(bin => bin.count > 0)
+  }, [alternative, diffObs, normalizedValues, showHistogram, values.length, xMin, xSpan])
+
+  const maxHistCount = histogramBars.length > 0 ? Math.max(...histogramBars.map(b => b.count)) : 0
+  const maxDisplayMax = showHistogram ? maxHistCount : maxStack
+
+  const histBinWidth = showHistogram
+    ? xSpan / Math.min(28, Math.max(10, Math.round(Math.sqrt(values.length))))
+    : bucket
+
   const normalStats = (() => {
     if (!showNormalCurve || values.length < 2) return null
-    const mean = values.reduce((sum, value) => sum + value, 0) / values.length
-    const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length
+    const mean = values.reduce((sum, v) => sum + v, 0) / values.length
+    const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length
     const sd = Math.sqrt(variance)
     if (!Number.isFinite(sd) || sd <= 0) return null
     const samples = Array.from({ length: 241 }, (_, i) => {
-      const x = xMin + (xSpan * i) / 240
+      const x = xMin + (i / 240) * xSpan
       const z = (x - mean) / sd
       const pdf = Math.exp(-0.5 * z * z) / (sd * Math.sqrt(2 * Math.PI))
-      return { x, expectedCount: values.length * pdf * bucket }
+      return { x, expectedCount: values.length * pdf * histBinWidth }
     })
-    return { mean, sd, samples }
+    return { samples }
   })()
 
-  const maxCurveCount = normalStats ? Math.max(...normalStats.samples.map(sample => sample.expectedCount)) : 0
+  const maxCurveCountRaw = normalStats ? Math.max(...normalStats.samples.map(s => s.expectedCount)) : 0
+  const maxCurveCount = Math.min(maxCurveCountRaw, Math.max(maxDisplayMax * 1.35, 1))
   const topPad = 10
-  const yMaxCount = Math.max(maxStack, maxCurveCount) * 1.12
+  const yMaxCount = Math.max(maxDisplayMax, maxCurveCount) * 1.12
   const yScale = (PH - topPad) / Math.max(1, yMaxCount)
 
-  const seenC2 = new Map<number,number>()
-  const dotStep = Math.min(6, yScale)
-  const dotR    = Math.max(0.55, Math.min(2.6, dotStep / 2 - 0.15))
-  const circles = values.map(v => {
-    const b  = v
-    const si = seenC2.get(b) ?? 0
-    seenC2.set(b, si+1)
-    return { cx:xOf(b), cy:PH - (si + 1) * dotStep + dotStep / 2, extreme:isExtremeResult(v, diffObs, alternative) }
+  const seenC2 = new Map<number, number>()
+  const dotStep = Math.min(20, PH / Math.max(1, maxStack))
+  const dotR = Math.max(4.5, dotStep / 2 - 0.8)
+  const circles = normalizedValues.map(v => {
+    const si = seenC2.get(v) ?? 0
+    seenC2.set(v, si + 1)
+    return { cx: xOf(v), cy: PH - (si + 1) * dotStep + dotStep / 2, extreme: isExtremeResult(v, diffObs, alternative) }
   })
 
-  const normalPath = (() => {
+  const normalPath = normalStats
+    ? normalStats.samples
+        .map(s => `${xOf(s.x)},${Math.min(PH, Math.max(0, PH - s.expectedCount * yScale))}`)
+        .join(' ')
+    : ''
+
+  const normalFillPath = (() => {
     if (!normalStats) return ''
-    return normalStats.samples
-      .map(sample => `${xOf(sample.x)},${Math.min(PH, Math.max(0, PH - sample.expectedCount * yScale))}`)
-      .join(' ')
+    const samp = normalStats.samples
+    const yPt = (s: { x: number; expectedCount: number }) =>
+      Math.min(PH, Math.max(0, PH - s.expectedCount * yScale))
+    const makeFill = (pts: typeof samp) => {
+      if (pts.length === 0) return ''
+      const inner = pts.map(s => `${xOf(s.x)},${yPt(s)}`).join(' L')
+      return `M${xOf(pts[0].x)},${PH} L${inner} L${xOf(pts[pts.length - 1].x)},${PH} Z`
+    }
+    const absDiff = Math.abs(diffObs)
+    if (alternative === 'greater') return makeFill(samp.filter(s => s.x >= diffObs))
+    if (alternative === 'less')    return makeFill(samp.filter(s => s.x <= diffObs))
+    return makeFill(samp.filter(s => s.x <= -absDiff)) + ' ' +
+           makeFill(samp.filter(s => s.x >= absDiff))
   })()
 
   const obsX = xOf(diffObs)
   let shade = ''
-  if (alternative === 'greater') shade=`M${obsX},0 H${PW} V${PH} H${obsX} Z`
-  else if (alternative === 'less') shade=`M0,0 H${obsX} V${PH} H0 Z`
-  else { const xL=xOf(-Math.abs(diffObs)),xR=xOf(Math.abs(diffObs)); shade=`M0,0 H${xL} V${PH} H0 Z M${xR},0 H${PW} V${PH} H${xR} Z` }
+  if (alternative === 'greater') shade = `M${obsX},0 H${PW} V${PH} H${obsX} Z`
+  else if (alternative === 'less') shade = `M0,0 H${obsX} V${PH} H0 Z`
+  else { const xL = xOf(-Math.abs(diffObs)), xR = xOf(Math.abs(diffObs)); shade = `M0,0 H${xL} V${PH} H0 Z M${xR},0 H${PW} V${PH} H${xR} Z` }
 
   return (
     <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full h-full">
       <style>{`@keyframes dot-drop-full{from{transform:translateY(-${PH}px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
-      <defs><clipPath id={clipId}><rect x={0} y={0} width={PW} height={PH}/></clipPath></defs>
+      <defs><clipPath id={clipId}><rect x={0} y={0} width={PW} height={PH} /></clipPath></defs>
       <g transform={`translate(${MG.l},${MG.t})`}>
-        <path d={shade} fill="var(--color-gold)" opacity={0.10}/>
-        <line x1={0} y1={PH} x2={PW} y2={PH} stroke="var(--color-text)" strokeWidth={1.5}/>
-        {tickValues.map(v => (
-          <g key={v} transform={`translate(${xOf(v)},${PH})`}>
-            <line y2={3} stroke="var(--color-muted)" strokeWidth={1}/>
-            <text y={12} textAnchor="middle" fontSize={8} fill="var(--color-muted)" fontFamily="DM Sans,sans-serif">{tickLabel(v)}</text>
+        <path d={shade} fill="var(--color-gold)" opacity={0.10} />
+        <line x1={0} y1={PH} x2={PW} y2={PH} stroke="var(--color-text)" strokeWidth={1.5} />
+        {tickValues.map((v, i) => (
+          <g key={i} transform={`translate(${xOf(v)},${PH})`}>
+            <line y2={3} stroke="var(--color-muted)" strokeWidth={1} />
+            <text y={18} textAnchor="middle" fontSize={tickFontSize} fill="var(--color-muted)" fontFamily="DM Sans,sans-serif">{tickLabel(v)}</text>
           </g>
         ))}
         <g clipPath={`url(#${clipId})`}>
-          {circles.map((c,i) => (
-            <circle key={i} cx={c.cx} cy={c.cy} r={dotR} fill={c.extreme?'var(--color-gold)':'var(--color-accent)'} opacity={0.85}
-              style={i===circles.length-1&&values.length>0?{animation:'dot-drop-full 700ms ease-out'}:undefined}/>
-          ))}
+          {normalFillPath && (
+            <path d={normalFillPath} fill="var(--color-accent)" opacity={0.28} />
+          )}
+          {showHistogram
+            ? histogramBars.map((bar, i) => {
+                const x0 = xOf(bar.x0)
+                const x1 = xOf(bar.x1)
+                const barHeight = bar.count * yScale
+                return (
+                  <rect
+                    key={i}
+                    x={x0 + 0.8}
+                    y={Math.max(0, PH - barHeight)}
+                    width={Math.max(1.2, x1 - x0 - 1.6)}
+                    height={Math.max(1.2, barHeight)}
+                    rx={2}
+                    fill={bar.extreme ? 'var(--color-gold)' : 'var(--color-accent)'}
+                    opacity={0.82}
+                  />
+                )
+              })
+            : circles.map((c, i) => (
+                <circle key={i} cx={c.cx} cy={c.cy} r={dotR}
+                  fill={c.extreme ? 'var(--color-gold)' : 'var(--color-accent)'} opacity={0.85}
+                  stroke="white" strokeWidth={0.8}
+                  style={i === circles.length - 1 && values.length > 0
+                    ? { animation: 'dot-drop-full 700ms ease-out' } : undefined}
+                />
+              ))}
           {normalPath && (
-            <polyline points={normalPath} fill="none" stroke="var(--color-accent)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round"/>
+            <polyline points={normalPath} fill="none" stroke="var(--color-accent)" strokeWidth={2}
+              strokeLinejoin="round" strokeLinecap="round" />
           )}
         </g>
-        <line x1={obsX} y1={0} x2={obsX} y2={PH} stroke="var(--color-gold)" strokeWidth={1.8} strokeDasharray="4,3"/>
-        <text x={obsX+(diffObs>=0?3:-3)} y={5} textAnchor={diffObs>=0?'start':'end'} fontSize={8} fill="var(--color-gold-text)" fontFamily="DM Sans,sans-serif" fontWeight="600">obs</text>
-        <text x={PW/2} y={PH+30} textAnchor="middle" fontSize={9} fill="var(--color-muted)" fontFamily="DM Sans,sans-serif">Simulated p̂₁ − p̂₂</text>
+        <line x1={obsX} y1={0} x2={obsX} y2={PH} stroke="var(--color-gold)" strokeWidth={1.8} strokeDasharray="4,3" />
+        <text x={obsX + (diffObs >= 0 ? 3 : -3)} y={7}
+          textAnchor={diffObs >= 0 ? 'start' : 'end'}
+          fontSize={markerFontSize} fill="var(--color-gold-text)" fontFamily="DM Sans,sans-serif" fontWeight="600">obs</text>
+        <text x={PW / 2} y={PH + 30} textAnchor="middle" fontSize={axisLabelFontSize} fill="var(--color-muted)" fontFamily="DM Sans,sans-serif">Simulated p̂₁ − p̂₂</text>
       </g>
     </svg>
   )
@@ -453,6 +533,15 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone, onAssign
 
   const pValue      = simCount > 0 ? extremeCount / simCount : null
   const nullSummary = useMemo(() => data ? getNullDistributionSummary(data) : { mean: 0, sd: 0 }, [data])
+
+  const pValueTooltip = useMemo((): string => {
+    if (pValue === null || simCount < 100 || !data) return ''
+    const pStr = pValue < 0.001 ? '< 0.001' : `= ${pValue.toFixed(3)}`
+    const diffStr = data.diffObs.toFixed(3)
+    if (alternative === 'greater') return `P(p̂₁* − p̂₂* ≥ ${diffStr}) under H₀ ${pStr}`
+    if (alternative === 'less') return `P(p̂₁* − p̂₂* ≤ ${diffStr}) under H₀ ${pStr}`
+    return `P(|p̂₁* − p̂₂*| ≥ |${diffStr}|) under H₀ ${pStr}`
+  }, [alternative, data, pValue, simCount])
 
   // Animation layout
   const cases        = data?.cases ?? []
@@ -890,7 +979,7 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone, onAssign
               Click <strong className="mx-1 font-semibold text-[var(--color-text)]">1. Pool</strong> above to start.
             </div>
           ) : (
-            <NullDistPlot values={nullDist} diffObs={data?.diffObs ?? 0} alternative={alternative} showNormalCurve={showNormalCurve}/>
+            <NullDistPlot values={nullDist} diffObs={data?.diffObs ?? 0} alternative={alternative} showNormalCurve={showNormalCurve} forceHistogram={cardStage === 'conclude'}/>
           )}
 
           {/* Transient overlay — slides up during manual stepping */}
@@ -996,19 +1085,19 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone, onAssign
             <input type="checkbox" checked={showNormalCurve}
               onChange={e => patchConfig({ showNormalCurve: e.target.checked })}
               className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"/>
-            <span>Overlay normal curve</span>
+            <FloatingTooltip content={`Normal approximation of null distribution · mean = ${nullSummary.mean.toFixed(3)} · SD = ${nullSummary.sd.toFixed(4)}`}>
+              <span className="underline decoration-dotted underline-offset-2 cursor-help">Overlay normal curve</span>
+            </FloatingTooltip>
           </label>
-          <div className="text-xs text-[var(--color-muted)] -mt-2 leading-tight">
-            <div>Mean = <span className="font-mono tabular-nums">{nullSummary.mean.toFixed(3)}</span></div>
-            <div>SD = <span className="font-mono tabular-nums">{nullSummary.sd.toFixed(3)}</span></div>
-          </div>
 
           {/* p-value */}
           <div>
             <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)] mb-1.5">p-value</div>
-            <div className="font-mono tabular-nums font-bold text-[var(--color-gold)]" style={{ fontSize: '1.75rem', lineHeight: 1.1 }}>
-              {simCount < 100 || pValue === null ? '—' : pValue < 0.001 ? '< 0.001' : pValue.toFixed(3)}
-            </div>
+            <FloatingTooltip content={pValueTooltip}>
+              <div className={`inline-block font-mono tabular-nums font-bold text-[var(--color-gold)] ${pValueTooltip ? 'cursor-help' : ''}`} style={{ fontSize: '1.75rem', lineHeight: 1.1 }}>
+                {simCount < 100 || pValue === null ? '—' : pValue < 0.001 ? '< 0.001' : pValue.toFixed(3)}
+              </div>
+            </FloatingTooltip>
           </div>
 
           {/* Extreme count */}

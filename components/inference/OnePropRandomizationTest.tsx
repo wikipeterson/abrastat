@@ -865,20 +865,21 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
 
   const pValueTooltip = useMemo((): string => {
     if (pValue === null || simCount < 100 || phat === null || !p0Valid) return ''
+    const pStr = pValue < 0.001 ? '< 0.001' : `= ${pValue.toFixed(3)}`
     const dist = Math.abs(phat - p0Num)
     if (graphView === 'counts') {
       const xDist = Math.round(Math.abs(x - n * p0Num))
       const lo = Math.round(n * p0Num - xDist)
       const hi = Math.round(n * p0Num + xDist)
-      if (alternative === 'greater') return `P(X* ≥ ${x}) under H₀`
-      if (alternative === 'less') return `P(X* ≤ ${x}) under H₀`
-      return `P(X* ≤ ${lo} or X* ≥ ${hi}) under H₀`
+      if (alternative === 'greater') return `P(X* ≥ ${x}) under H₀ ${pStr}`
+      if (alternative === 'less') return `P(X* ≤ ${x}) under H₀ ${pStr}`
+      return `P(X* ≤ ${lo} or X* ≥ ${hi}) under H₀ ${pStr}`
     }
-    if (alternative === 'greater') return `P(p̂* ≥ ${phat.toFixed(3)}) under H₀`
-    if (alternative === 'less') return `P(p̂* ≤ ${phat.toFixed(3)}) under H₀`
+    if (alternative === 'greater') return `P(p̂* ≥ ${phat.toFixed(3)}) under H₀ ${pStr}`
+    if (alternative === 'less') return `P(p̂* ≤ ${phat.toFixed(3)}) under H₀ ${pStr}`
     const lower = (p0Num - dist).toFixed(3)
     const upper = (p0Num + dist).toFixed(3)
-    return `P(p̂* ≤ ${lower} or p̂* ≥ ${upper}) under H₀`
+    return `P(p̂* ≤ ${lower} or p̂* ≥ ${upper}) under H₀ ${pStr}`
   }, [alternative, graphView, n, p0Num, p0Valid, pValue, phat, simCount, x])
 
   const interpretationText = useMemo((): string => {

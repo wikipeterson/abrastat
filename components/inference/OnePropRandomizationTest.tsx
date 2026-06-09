@@ -1178,7 +1178,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
 
             <div className="flex-1 min-w-0 px-2">
               {simCount >= 1 && phase === 'plotted' && !isRunning ? (
-                <p className="text-sm text-[var(--color-muted)] truncate">
+                <p className="text-sm text-[var(--color-muted)]">
                   Another? <strong className="font-semibold text-[var(--color-text)]">Randomize</strong> again — or speed up with +10 / +100 / +1,000.
                 </p>
               ) : microCopy ? (

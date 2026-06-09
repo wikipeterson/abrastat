@@ -632,7 +632,7 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone, onAssign
         <div className="space-y-3 px-2 py-1">
           {stepper}
           <div className="text-sm font-serif italic leading-snug text-[var(--color-text)]">
-            Is there a real difference, or could chance explain the gap?
+            How plausible is it that chance alone could produce a difference this large?
           </div>
 
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3.5 space-y-3">

@@ -313,36 +313,6 @@ function ColStatLabel({ cx, n, s, p, highlight, layout }: {
   )
 }
 
-function FractionInput({ label, numLabel, denLabel, numValue, denValue, onChangeNum, onChangeDen }: {
-  label:string; numLabel:string; denLabel:string
-  numValue:string; denValue:string
-  onChangeNum:(v:string)=>void; onChangeDen:(v:string)=>void
-}) {
-  const num=parseInt(numValue,10), den=parseInt(denValue,10)
-  const phat=(Number.isFinite(num)&&Number.isFinite(den)&&den>0&&num>=0&&num<=den)?(num/den).toFixed(3):'—'
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="text-center">
-        <span className="text-base font-bold text-[var(--color-text)]">{label}</span>
-        <span className="text-xs text-[var(--color-muted)] ml-1">= {numLabel}/{denLabel}</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="flex flex-col items-end gap-1 text-xs font-mono text-[var(--color-muted)]" style={{paddingBottom:2}}>
-          <span className="py-1.5">{numLabel}</span>
-          <span className="py-1.5">{denLabel}</span>
-        </div>
-        <div className="flex flex-col items-center">
-          <input type="number" min={0} step={1} value={numValue} onChange={e=>onChangeNum(e.target.value)} placeholder=" "
-            className="w-16 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)] [appearance:textfield]"/>
-          <div className="my-0.5 w-[4.5rem] border-t-2 border-[var(--color-text)]"/>
-          <input type="number" min={1} step={1} value={denValue} onChange={e=>onChangeDen(e.target.value)} placeholder=" "
-            className="w-16 text-center rounded-lg border border-[var(--color-border)] px-1 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)] [appearance:textfield]"/>
-        </div>
-      </div>
-      <div className="text-sm text-[var(--color-muted)]">= <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{phat}</span></div>
-    </div>
-  )
-}
 
 const CAPTIONS: Record<AnimStage,string> = {
   observed:    'Observed data',
@@ -650,9 +620,16 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone, onAssign
   // ── Setup stage ──────────────────────────────────────────────────────────────
 
   if (cardStage === 'setup') {
+    const fmtPhat = (v: number | null | undefined) => v != null ? v.toFixed(2) : '—'
+    const fmtDiff = (v: number | null | undefined) => {
+      if (v == null) return '—'
+      return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2)
+    }
+    const showGrid = sourceMode === 'manual' || !!data
+
     return (
       <div className="h-full overflow-y-auto">
-        <div className="space-y-4 px-2 py-1">
+        <div className="space-y-3 px-2 py-1">
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-[var(--color-text)] px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-white">
               Inference
@@ -663,22 +640,23 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone, onAssign
             Is there a real difference, or could chance explain the gap?
           </div>
 
-          <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3.5 space-y-3">
             {/* Source toggle */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-[var(--color-muted)]">Source</span>
-              <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--color-muted)]">Source</span>
+              <div className="flex rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden text-xs">
                 {(['data','manual'] as const).map((m,i) => (
                   <button key={m} onClick={() => patchConfig({ sourceMode: m })}
-                    className={`px-2.5 py-1 font-medium transition-colors ${i>0?'border-l border-[var(--color-border)]':''} ${sourceMode===m?'bg-[var(--color-text)] text-[var(--color-surface)]':'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
+                    className={`px-3 py-1.5 font-semibold transition-colors ${i>0?'border-l border-[var(--color-border)]':''} ${sourceMode===m?'bg-[var(--color-accent-strong)] text-white':'text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
                     {m === 'data' ? 'Use data' : 'Enter info'}
                   </button>
                 ))}
               </div>
             </div>
 
-            {sourceMode === 'data' ? (
-              <>
+            {/* Variable pickers (data mode only) */}
+            {sourceMode === 'data' && (
+              <div className="space-y-2">
                 <div className="flex gap-2">
                   <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var1')}>
                     <DropZone id={`${cardId}:var1`} label="Response Variable" hint="categorical only" assignedCol={responseCol} onClear={() => onClearZone('var1')} onAssign={colId => onAssignZone('var1', colId)} allowedTypes={['categorical']}/>
@@ -712,70 +690,95 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone, onAssign
                     })}
                   </div>
                 )}
-                {data && (
-                  <div className="rounded-xl bg-[var(--color-accent-light)] border border-[var(--color-border)] px-4 py-2 text-sm space-y-1.5">
-                    <div className="text-[var(--color-muted)]">
-                      Success: <span className="font-semibold text-[var(--color-text)]">{successLevel}</span>
-                    </div>
-                    <div className="text-[var(--color-muted)]">
-                      <span className="font-semibold text-[var(--color-text)]">{data.group1Label}</span>: p̂₁ = {data.s1}/{data.n1} = <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{data.p1.toFixed(3)}</span>
-                      <span className="mx-3">|</span>
-                      <span className="font-semibold text-[var(--color-text)]">{data.group2Label}</span>: p̂₂ = {data.s2}/{data.n2} = <span className="font-mono tabular-nums font-bold text-[var(--color-text)]">{data.p2.toFixed(3)}</span>
-                    </div>
-                    <div className="text-[var(--color-muted)]">
-                      p̂₁ − p̂₂ = <span className="font-mono tabular-nums font-bold text-[var(--color-gold)]">{data.diffObs.toFixed(3)}</span>
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs text-[var(--color-muted)] mb-1">Group 1 name</label>
-                    <input value={manualLabel1} onChange={e => patchConfig({ manualLabel1: e.target.value })} placeholder="Group 1"
-                      className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)]"/>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-[var(--color-muted)] mb-1">Group 2 name</label>
-                    <input value={manualLabel2} onChange={e => patchConfig({ manualLabel2: e.target.value })} placeholder="Group 2"
-                      className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)]"/>
-                  </div>
-                </div>
-                <div className="flex items-center justify-around py-1">
-                  <FractionInput label="p̂₁" numLabel="x₁" denLabel="n₁" numValue={manualS1} denValue={manualN1}
-                    onChangeNum={v => patchConfig({ manualS1: v })} onChangeDen={v => patchConfig({ manualN1: v })}/>
-                  <div className="w-px h-20 bg-[var(--color-border)]"/>
-                  <FractionInput label="p̂₂" numLabel="x₂" denLabel="n₂" numValue={manualS2} denValue={manualN2}
-                    onChangeNum={v => patchConfig({ manualS2: v })} onChangeDen={v => patchConfig({ manualN2: v })}/>
-                </div>
-                {data && (
-                  <div className="rounded-xl bg-[var(--color-accent-light)] border border-[var(--color-border)] px-4 py-2 text-center text-sm">
-                    <span className="text-[var(--color-muted)]">p̂₁ − p̂₂ = {data.p1.toFixed(3)} − {data.p2.toFixed(3)} = </span>
-                    <span className="font-mono tabular-nums font-bold text-[var(--color-gold)]">{data.diffObs.toFixed(3)}</span>
-                  </div>
-                )}
               </div>
             )}
 
-            {/* H₀ / Hₐ */}
-            <div className="space-y-2">
-              <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">Hypotheses</div>
-              <div className="inline-flex rounded-[20px] bg-[var(--color-bg)] px-4 py-3">
-                <div className="flex flex-wrap items-center gap-2.5 text-sm font-semibold text-[var(--color-text)]">
-                  <span>H₀ : p₁ − p₂ =</span>
-                  <input type="number" min={-1} max={1} step={0.01} value={nullDiff}
-                    onChange={e => patchConfig({ nullDiff: e.target.value })}
-                    className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center text-sm font-semibold text-[var(--color-text)] shadow-sm"/>
-                  <span className="ml-2">Hₐ : p₁ − p₂</span>
-                  <select value={alternative} onChange={e => patchConfig({ alternative: e.target.value as Alternative })}
-                    className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm">
-                    <option value="less">&lt;</option>
-                    <option value="greater">&gt;</option>
-                    <option value="two">≠</option>
-                  </select>
-                  <span className="font-mono tabular-nums">{nullDiff}</span>
+            {/* Two group rows + observed diff */}
+            {showGrid && (
+              <div className="grid items-center gap-y-2 gap-x-3.5" style={{gridTemplateColumns:'auto 1fr'}}>
+                {/* Group 1 row */}
+                <input value={sourceMode==='manual'?manualLabel1:(data?.group1Label??'')}
+                  readOnly={sourceMode==='data'}
+                  onChange={e => patchConfig({ manualLabel1: e.target.value })}
+                  placeholder="Group 1"
+                  className="w-28 font-mono text-[13px] font-semibold rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-[7px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] read-only:opacity-70"/>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-[15px] font-semibold text-[var(--color-text)] whitespace-nowrap">p̂<sub>1</sub> =</span>
+                  {sourceMode === 'manual' ? (
+                    <>
+                      <input type="number" min={0} step={1} value={manualS1} onChange={e => patchConfig({ manualS1: e.target.value })}
+                        className="w-16 font-mono text-[15px] font-semibold text-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-[6px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"/>
+                      <span className="font-mono text-[17px] text-[var(--color-muted)] font-medium">/</span>
+                      <input type="number" min={1} step={1} value={manualN1} onChange={e => patchConfig({ manualN1: e.target.value })}
+                        className="w-16 font-mono text-[15px] font-semibold text-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-[6px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"/>
+                    </>
+                  ) : (
+                    <span className="font-mono text-[15px] font-semibold text-[var(--color-text)]">{data?.s1}/{data?.n1}</span>
+                  )}
+                  <span className="font-mono text-[15px] font-bold text-[var(--color-text)] ml-0.5 whitespace-nowrap">
+                    <span className="font-medium text-[var(--color-muted)] mr-1">=</span>{fmtPhat(data?.p1)}
+                  </span>
                 </div>
+
+                {/* Group 2 row */}
+                <input value={sourceMode==='manual'?manualLabel2:(data?.group2Label??'')}
+                  readOnly={sourceMode==='data'}
+                  onChange={e => patchConfig({ manualLabel2: e.target.value })}
+                  placeholder="Group 2"
+                  className="w-28 font-mono text-[13px] font-semibold rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-[7px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] read-only:opacity-70"/>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-[15px] font-semibold text-[var(--color-text)] whitespace-nowrap">p̂<sub>2</sub> =</span>
+                  {sourceMode === 'manual' ? (
+                    <>
+                      <input type="number" min={0} step={1} value={manualS2} onChange={e => patchConfig({ manualS2: e.target.value })}
+                        className="w-16 font-mono text-[15px] font-semibold text-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-[6px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"/>
+                      <span className="font-mono text-[17px] text-[var(--color-muted)] font-medium">/</span>
+                      <input type="number" min={1} step={1} value={manualN2} onChange={e => patchConfig({ manualN2: e.target.value })}
+                        className="w-16 font-mono text-[15px] font-semibold text-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-[6px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"/>
+                    </>
+                  ) : (
+                    <span className="font-mono text-[15px] font-semibold text-[var(--color-text)]">{data?.s2}/{data?.n2}</span>
+                  )}
+                  <span className="font-mono text-[15px] font-bold text-[var(--color-text)] ml-0.5 whitespace-nowrap">
+                    <span className="font-medium text-[var(--color-muted)] mr-1">=</span>{fmtPhat(data?.p2)}
+                  </span>
+                </div>
+
+                {/* Divider */}
+                <div className="col-span-2 h-px bg-[var(--color-border)] my-0.5"/>
+
+                {/* Observed difference */}
+                <div className="col-span-2 flex items-center gap-2.5">
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--color-muted)]">Observed difference</span>
+                  <span className="font-mono text-lg font-bold text-[var(--color-gold)] whitespace-nowrap">
+                    p̂<sub style={{fontSize:'11px'}}>1</sub> − p̂<sub style={{fontSize:'11px'}}>2</sub>
+                    <span className="font-medium text-[var(--color-muted)] mx-1.5">=</span>
+                    {fmtDiff(data?.diffObs)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Hypotheses bar */}
+            <div className="flex items-center gap-5 flex-wrap bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-3.5 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[15px] font-semibold text-[var(--color-text)] whitespace-nowrap">
+                  H<sub>0</sub> : p<sub>1</sub> − p<sub>2</sub> = <span className="text-[var(--color-muted)]">0</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[15px] font-semibold text-[var(--color-muted)] whitespace-nowrap">
+                  H<sub>a</sub> : p<sub>1</sub> − p<sub>2</sub>
+                </span>
+                <div className="flex rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] overflow-hidden">
+                  {([['less','<'],['two','≠'],['greater','>']] as const).map(([val,sym]) => (
+                    <button key={val} onClick={() => patchConfig({ alternative: val })}
+                      className={`font-mono text-[15px] font-semibold px-2.5 py-1 transition-colors ${alternative===val?'bg-[var(--color-surface)] text-[var(--color-accent-strong)] shadow-[inset_0_1px_3px_rgba(8,38,33,0.12)]':'text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
+                      {sym}
+                    </button>
+                  ))}
+                </div>
+                <span className="font-mono text-[15px] font-semibold text-[var(--color-muted)]">0</span>
               </div>
             </div>
           </div>

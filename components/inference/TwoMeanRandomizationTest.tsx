@@ -621,9 +621,16 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone, onAssign
   // ── Setup stage ──────────────────────────────────────────────────────────────
 
   if (cardStage === 'setup') {
+    const fmtMean = (v: number | null | undefined) => v != null ? v.toFixed(3) : '—'
+    const fmtDiff = (v: number | null | undefined) => {
+      if (v == null) return '—'
+      return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(3)
+    }
+    const showGrid = sourceMode === 'manual' || !!data
+
     return (
       <div className="h-full overflow-y-auto">
-        <div className="space-y-4 px-2 py-1">
+        <div className="space-y-3 px-2 py-1">
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-[var(--color-text)] px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-white">
               Inference
@@ -634,29 +641,29 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone, onAssign
             Is the difference in means more than chance variation?
           </div>
 
-          <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3.5 space-y-3">
             {/* Source toggle */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-[var(--color-muted)]">Source</span>
-              <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--color-muted)]">Source</span>
+              <div className="flex rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden text-xs">
                 {(['data','manual'] as const).map((m,i) => (
                   <button key={m} onClick={() => patchConfig({ sourceMode: m })}
-                    className={`px-2.5 py-1 font-medium transition-colors ${i>0?'border-l border-[var(--color-border)]':''} ${sourceMode===m?'bg-[var(--color-text)] text-[var(--color-surface)]':'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
+                    className={`px-3 py-1.5 font-semibold transition-colors ${i>0?'border-l border-[var(--color-border)]':''} ${sourceMode===m?'bg-[var(--color-accent-strong)] text-white':'text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
                     {m === 'data' ? 'Use data' : 'Enter info'}
                   </button>
                 ))}
               </div>
             </div>
 
-            {sourceMode === 'data' ? (
-              <>
-                {/* Data shape */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-[var(--color-muted)]">Data shape</span>
-                  <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+            {/* Variable pickers (data mode only) */}
+            {sourceMode === 'data' && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--color-muted)]">Data shape</span>
+                  <div className="flex rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden text-xs">
                     {([
                       { key: 'grouping' as const, label: 'Quant + Group' },
-                      { key: 'two-quant' as const, label: 'Two Quant Variables' },
+                      { key: 'two-quant' as const, label: 'Two Quant Vars' },
                     ]).map((option, i) => (
                       <button key={option.key} onClick={() => {
                         const nextVar2 = option.key === 'grouping'
@@ -664,14 +671,12 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone, onAssign
                           : (secondCol?.type === 'numeric' ? config.var2ColId : null)
                         patchConfig({ dataShape: option.key, var2ColId: nextVar2 ?? null })
                       }}
-                        className={`px-2.5 py-1 font-medium transition-colors ${i>0?'border-l border-[var(--color-border)]':''} ${dataShape===option.key?'bg-[var(--color-text)] text-[var(--color-surface)]':'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
+                        className={`px-3 py-1.5 font-semibold transition-colors ${i>0?'border-l border-[var(--color-border)]':''} ${dataShape===option.key?'bg-[var(--color-accent-strong)] text-white':'text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
                         {option.label}
                       </button>
                     ))}
                   </div>
                 </div>
-
-                {/* Drop zones */}
                 <div className="flex gap-2">
                   <div className="flex-1" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop('var1')}>
                     <DropZone id={`${cardId}:var1`} label={dataShape === 'two-quant' ? 'Variable 1' : 'Quantitative Variable'} hint="numeric only" assignedCol={quantCol} onClear={() => onClearZone('var1')} onAssign={colId => onAssignZone('var1', colId)} allowedTypes={['numeric']}/>
@@ -680,7 +685,6 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone, onAssign
                     <DropZone id={`${cardId}:var2`} label={dataShape === 'two-quant' ? 'Variable 2' : 'Group By'} hint={dataShape === 'two-quant' ? 'numeric only' : 'categorical only'} assignedCol={secondCol} onClear={() => onClearZone('var2')} onAssign={colId => onAssignZone('var2', colId)} allowedTypes={dataShape === 'two-quant' ? ['numeric'] : ['categorical']}/>
                   </div>
                 </div>
-
                 {dataShape === 'grouping' && groupLevels.length > 2 && (
                   <div className="flex gap-2">
                     {(['Compare','vs.'] as const).map((lbl, idx) => {
@@ -697,60 +701,93 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone, onAssign
                     })}
                   </div>
                 )}
-
-                {data && (
-                  <div className="rounded-xl bg-[var(--color-accent-light)] border border-[var(--color-border)] px-4 py-2 text-center text-sm">
-                    <span className="text-[var(--color-muted)]">x̄₁ − x̄₂ = {data.mean1.toFixed(3)} − {data.mean2.toFixed(3)} = </span>
-                    <span className="font-mono tabular-nums font-bold text-[var(--color-gold)]">{data.diffObs.toFixed(3)}</span>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {([
-                  { label: manualLabel1, setLabel: (v: string) => patchConfig({ manualLabel1: v }), values: manualValues1, setValues: (v: string) => patchConfig({ manualValues1: v }), parsed: parsed1, placeholder: '3.1, 4.5, 2.8…' },
-                  { label: manualLabel2, setLabel: (v: string) => patchConfig({ manualLabel2: v }), values: manualValues2, setValues: (v: string) => patchConfig({ manualValues2: v }), parsed: parsed2, placeholder: '5.2, 6.1, 4.9…' },
-                ]).map((side, idx) => (
-                  <div key={idx} className="space-y-1.5">
-                    <input value={side.label} onChange={e => side.setLabel(e.target.value)} placeholder={`Group ${idx + 1}`}
-                      className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-sm bg-[var(--color-surface)] text-[var(--color-text)]"/>
-                    <textarea value={side.values} onChange={e => side.setValues(e.target.value)} placeholder={side.placeholder} rows={3}
-                      className="w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-xs font-mono bg-[var(--color-surface)] text-[var(--color-text)] resize-none"/>
-                    <div className="text-[10px] text-[var(--color-muted)]">
-                      {side.parsed.error
-                        ? <span className="text-[var(--color-danger)]">{side.parsed.error}</span>
-                        : side.parsed.values.length > 0
-                          ? `n = ${side.parsed.values.length},  x̄ = ${(side.parsed.values.reduce((a,b)=>a+b,0)/side.parsed.values.length).toFixed(3)}`
-                          : 'Enter values separated by commas or spaces'}
-                    </div>
-                  </div>
-                ))}
-                {data && (
-                  <div className="col-span-2 rounded-xl bg-[var(--color-accent-light)] border border-[var(--color-border)] px-4 py-2 text-center text-sm">
-                    <span className="text-[var(--color-muted)]">x̄₁ − x̄₂ = {data.mean1.toFixed(3)} − {data.mean2.toFixed(3)} = </span>
-                    <span className="font-mono tabular-nums font-bold text-[var(--color-gold)]">{data.diffObs.toFixed(3)}</span>
-                  </div>
-                )}
               </div>
             )}
 
-            {/* H₀ / Hₐ */}
-            <div className="space-y-2">
-              <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">Hypotheses</div>
-              <div className="inline-flex rounded-[20px] bg-[var(--color-bg)] px-4 py-3">
-                <div className="flex flex-wrap items-center gap-2.5 text-sm font-semibold text-[var(--color-text)]">
-                  <span>H₀ : μ₁ − μ₂ =</span>
-                  <input type="number" step="any" value={nullDiff} onChange={e => patchConfig({ nullDiff: e.target.value })}
-                    className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center text-sm font-semibold text-[var(--color-text)] shadow-sm"/>
-                  <span className="ml-2">Hₐ : μ₁ − μ₂</span>
-                  <select value={alternative} onChange={e => patchConfig({ alternative: e.target.value as Alternative })}
-                    className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm">
-                    <option value="less">&lt;</option>
-                    <option value="greater">&gt;</option>
-                    <option value="two">≠</option>
-                  </select>
-                  <span className="font-mono tabular-nums">{nullDiff}</span>
+            {/* Two group rows + observed diff */}
+            {showGrid && (
+              <div className="grid items-center gap-y-2 gap-x-3.5" style={{gridTemplateColumns:'auto 1fr'}}>
+                {/* Group 1 row */}
+                {sourceMode === 'manual' ? (
+                  <input value={manualLabel1} onChange={e => patchConfig({ manualLabel1: e.target.value })} placeholder="Group 1"
+                    className="w-28 font-mono text-[13px] font-semibold rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-[7px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"/>
+                ) : (
+                  <span className="w-28 font-mono text-[13px] font-semibold text-[var(--color-text)] truncate">{label1}</span>
+                )}
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <span className="font-mono text-[15px] font-semibold text-[var(--color-text)] whitespace-nowrap">x̄<sub>1</sub> =</span>
+                  {sourceMode === 'manual' ? (
+                    <input type="text" value={manualValues1} onChange={e => patchConfig({ manualValues1: e.target.value })}
+                      placeholder="3.1, 4.5, 2.8…"
+                      className="flex-1 min-w-0 font-mono text-xs rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-[6px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"/>
+                  ) : null}
+                  <span className="font-mono text-[15px] font-bold text-[var(--color-text)] whitespace-nowrap shrink-0">
+                    <span className="font-medium text-[var(--color-muted)] mr-1">=</span>{fmtMean(data?.mean1)}
+                    {data && <span className="text-xs font-normal text-[var(--color-muted)] ml-1.5">(n = {data.n1})</span>}
+                  </span>
+                  {sourceMode === 'manual' && parsed1.error && (
+                    <span className="w-full text-[11px] text-[var(--color-danger)]">{parsed1.error}</span>
+                  )}
                 </div>
+
+                {/* Group 2 row */}
+                {sourceMode === 'manual' ? (
+                  <input value={manualLabel2} onChange={e => patchConfig({ manualLabel2: e.target.value })} placeholder="Group 2"
+                    className="w-28 font-mono text-[13px] font-semibold rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-[7px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"/>
+                ) : (
+                  <span className="w-28 font-mono text-[13px] font-semibold text-[var(--color-text)] truncate">{label2}</span>
+                )}
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <span className="font-mono text-[15px] font-semibold text-[var(--color-text)] whitespace-nowrap">x̄<sub>2</sub> =</span>
+                  {sourceMode === 'manual' ? (
+                    <input type="text" value={manualValues2} onChange={e => patchConfig({ manualValues2: e.target.value })}
+                      placeholder="5.2, 6.1, 4.9…"
+                      className="flex-1 min-w-0 font-mono text-xs rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-[6px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"/>
+                  ) : null}
+                  <span className="font-mono text-[15px] font-bold text-[var(--color-text)] whitespace-nowrap shrink-0">
+                    <span className="font-medium text-[var(--color-muted)] mr-1">=</span>{fmtMean(data?.mean2)}
+                    {data && <span className="text-xs font-normal text-[var(--color-muted)] ml-1.5">(n = {data.n2})</span>}
+                  </span>
+                  {sourceMode === 'manual' && parsed2.error && (
+                    <span className="w-full text-[11px] text-[var(--color-danger)]">{parsed2.error}</span>
+                  )}
+                </div>
+
+                {/* Divider */}
+                <div className="col-span-2 h-px bg-[var(--color-border)] my-0.5"/>
+
+                {/* Observed difference */}
+                <div className="col-span-2 flex items-center gap-2.5">
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--color-muted)]">Observed difference</span>
+                  <span className="font-mono text-lg font-bold text-[var(--color-gold)] whitespace-nowrap">
+                    x̄<sub style={{fontSize:'11px'}}>1</sub> − x̄<sub style={{fontSize:'11px'}}>2</sub>
+                    <span className="font-medium text-[var(--color-muted)] mx-1.5">=</span>
+                    {fmtDiff(data?.diffObs)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Hypotheses bar */}
+            <div className="flex items-center gap-5 flex-wrap bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-3.5 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[15px] font-semibold text-[var(--color-text)] whitespace-nowrap">
+                  H<sub>0</sub> : μ<sub>1</sub> − μ<sub>2</sub> = <span className="text-[var(--color-muted)]">0</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[15px] font-semibold text-[var(--color-muted)] whitespace-nowrap">
+                  H<sub>a</sub> : μ<sub>1</sub> − μ<sub>2</sub>
+                </span>
+                <div className="flex rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] overflow-hidden">
+                  {([['less','<'],['two','≠'],['greater','>']] as const).map(([val,sym]) => (
+                    <button key={val} onClick={() => patchConfig({ alternative: val })}
+                      className={`font-mono text-[15px] font-semibold px-2.5 py-1 transition-colors ${alternative===val?'bg-[var(--color-surface)] text-[var(--color-accent-strong)] shadow-[inset_0_1px_3px_rgba(8,38,33,0.12)]':'text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
+                      {sym}
+                    </button>
+                  ))}
+                </div>
+                <span className="font-mono text-[15px] font-semibold text-[var(--color-muted)]">0</span>
               </div>
             </div>
           </div>

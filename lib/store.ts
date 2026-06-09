@@ -710,7 +710,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'one-prop-randomization' ? { width: 980, height: 720 } :
       type === 'means'       ? { width: 760, height: 500 } :
       type === 'distribution'    ? { width: 700, height: 540 } :
-      type === 'compare-normals' ? { width: 760, height: 560 } :
+      type === 'compare-normals' ? { width: 860, height: 680 } :
       type === 'proportions'     ? { width: 860, height: 620 } :
       type === 'two-prop-randomization' ? { width: 980, height: 560 } :
       type === 'two-mean-randomization' ? { width: 980, height: 560 } :

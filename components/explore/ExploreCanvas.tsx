@@ -782,7 +782,7 @@ export function ExploreCanvas({
       case 'regression':   return { minWidth: 400, minHeight: 340 }
       case 'regression-by-eye': return { minWidth: 520, minHeight: 500 }
       case 'distribution':    return { minWidth: 660, minHeight: 480 }
-      case 'compare-normals': return { minWidth: 620, minHeight: 480 }
+      case 'compare-normals': return { minWidth: 860, minHeight: 680 }
       case 'generator':       return { minWidth: 460, minHeight: 440 }
       case 'dice-roller':  return { minWidth: 760, minHeight: 700 }
       case 'sim-results':  return { minWidth: 360, minHeight: 360 }

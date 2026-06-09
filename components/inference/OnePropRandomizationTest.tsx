@@ -314,7 +314,7 @@ function OnePropNullDistPlot({
 }) {
   const clipId = useId()
   const SVG_W = 760
-  const MG = { t: 14, r: 16, b: 30, l: 16 }
+  const MG = { t: 14, r: 16, b: 42, l: 16 }
   const plotHeight = 320
   const tickFontSize = 13
   const axisLabelFontSize = 14

@@ -955,12 +955,6 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
 
   const setupCard = (
       <div className="space-y-4 px-2 py-1">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-[var(--color-text)] px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-white">
-            Inference
-          </div>
-        </div>
-
         {stepper}
 
         <div className="text-sm font-serif italic leading-snug text-[var(--color-text)]">

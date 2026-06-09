@@ -1115,6 +1115,11 @@ export function ExploreCanvas({
                           className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] cursor-grab active:cursor-grabbing select-none"
                         >
                           <div className="min-w-0 flex items-center gap-3">
+                            {(['one-prop-randomization','one-prop-sim','two-prop-randomization','two-prop-sim','two-mean-randomization','two-mean-sim'] as const).includes(card.config.type as never) && (
+                              <span className="flex-shrink-0 rounded-lg bg-[var(--color-accent-strong)] px-2 py-0.5 text-[9px] font-mono font-bold uppercase tracking-[0.18em] text-white">
+                                Inference
+                              </span>
+                            )}
                             <span className="text-sm font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">
                               {getVisibleCardLabel(card)}
                             </span>

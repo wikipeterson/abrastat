@@ -631,11 +631,6 @@ export function TwoMeanRandomizationTest({ cardId, config, onClearZone, onAssign
     return (
       <div className="h-full overflow-y-auto">
         <div className="space-y-3 px-2 py-1">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-[var(--color-text)] px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-white">
-              Inference
-            </div>
-          </div>
           {stepper}
           <div className="text-sm font-serif italic leading-snug text-[var(--color-text)]">
             Is the difference in means more than chance variation?

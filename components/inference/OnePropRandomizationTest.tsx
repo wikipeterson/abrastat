@@ -393,13 +393,17 @@ function OnePropNullDistPlot({
   const maxHistCount = histogramBars.length > 0 ? Math.max(...histogramBars.map(b => b.count)) : 0
   const maxDisplayMax = showHistogram ? maxHistCount : maxStack
 
+  const histBinWidth = showHistogram
+    ? xRange / Math.min(28, Math.max(10, Math.round(Math.sqrt(values.length))))
+    : bucket
+
   const normalStats = (() => {
     if (!showNormalCurve || values.length < 2 || normSD <= 0) return null
     const samples = Array.from({ length: 241 }, (_, i) => {
       const x = xLo + (i / 240) * xRange
       const z = (x - nullCenter) / normSD
       const pdf = Math.exp(-0.5 * z * z) / (normSD * Math.sqrt(2 * Math.PI))
-      return { x, expectedCount: values.length * pdf * bucket }
+      return { x, expectedCount: values.length * pdf * histBinWidth }
     })
     return { samples }
   })()

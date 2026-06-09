@@ -967,117 +967,97 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
           If the null hypothesis were true, would results like ours be unlikely?
         </div>
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-              Null hypothesis
-            </div>
-            <div className="inline-flex rounded-[20px] bg-[var(--color-bg)] px-4 py-3">
-              <div className="flex flex-wrap items-center gap-2.5 text-sm font-semibold text-[var(--color-text)]">
-                <span>H₀</span>
-                <span>:</span>
-                <span>p =</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={nullP}
-                  onChange={e => patchConfig({ nullP: e.target.value })}
-                  className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center text-sm font-semibold text-[var(--color-text)] shadow-sm"
-                />
-                <span className="ml-1">Hₐ</span>
-                <span>:</span>
-                <span>p</span>
-                <select
-                  value={alternative}
-                  onChange={e => updateAlternative(e.target.value as Alternative)}
-                  className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm"
-                >
-                  <option value="less">&lt;</option>
-                  <option value="two">≠</option>
-                  <option value="greater">&gt;</option>
-                </select>
-                <span className="font-mono tabular-nums">{nullP}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-[var(--color-muted)]">
-              Observed data
-            </div>
-            <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs self-start w-fit">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3.5 space-y-3">
+          {/* Source toggle */}
+          <div className="flex items-center gap-2.5">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--color-muted)]">Source</span>
+            <div className="flex rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden text-xs">
               {(['data', 'manual'] as const).map((m, i) => (
                 <button
                   key={m}
                   onClick={() => patchConfig({ sourceMode: m })}
-                  className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === m ? 'bg-[var(--color-text)] text-[var(--color-surface)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}
+                  className={`px-3 py-1.5 font-semibold transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === m ? 'bg-[var(--color-accent-strong)] text-white' : 'text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}
                 >
                   {m === 'data' ? 'Use data' : 'Enter info'}
                 </button>
               ))}
             </div>
+          </div>
 
-            {sourceMode === 'data' ? (
-              <div className="space-y-4 rounded-[20px] bg-[var(--color-bg)] overflow-hidden px-0 py-0">
-                <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
-                  <DropZone
-                    id={`${cardId}:var1`}
-                    label="Categorical Variable"
-                    hint="categorical only"
-                    assignedCol={catCol}
-                    onClear={() => onClearZone('var1')}
-                    onAssign={colId => onAssignZone('var1', colId)}
-                    allowedTypes={['categorical']}
-                  />
-                </div>
-                {catLevels.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-3 px-4 pb-3">
-                    <span className="text-sm font-medium text-[var(--color-muted)]">Success</span>
-                    <select
-                      value={successLevel}
-                      onChange={e => patchConfig({ successLevel: e.target.value })}
-                      className="min-w-[200px] rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text)]"
-                    >
-                      {catLevels.map(l => <option key={l} value={l}>{l}</option>)}
-                    </select>
-                    <span className="text-sm text-[var(--color-muted)]">
-                      observed <PHat /> = <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{phat !== null ? phat.toFixed(3) : '—'}</span>
-                    </span>
-                  </div>
-                )}
+          {/* Hypotheses bar */}
+          <div className="flex items-center gap-5 flex-wrap bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-3.5 py-2.5">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[15px] font-semibold text-[var(--color-text)] whitespace-nowrap">H<sub>0</sub> : p =</span>
+              <input
+                type="number" min={0} max={1} step={0.01} value={nullP}
+                onChange={e => patchConfig({ nullP: e.target.value })}
+                className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center font-mono text-[15px] font-semibold text-[var(--color-text)] shadow-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[15px] font-semibold text-[var(--color-muted)] whitespace-nowrap">H<sub>a</sub> : p</span>
+              <select
+                value={alternative}
+                onChange={e => updateAlternative(e.target.value as Alternative)}
+                className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 font-mono text-[15px] font-semibold text-[var(--color-text)] shadow-sm"
+              >
+                <option value="less">&lt;</option>
+                <option value="two">≠</option>
+                <option value="greater">&gt;</option>
+              </select>
+              <span className="font-mono text-[15px] font-semibold text-[var(--color-muted)] tabular-nums">{nullP}</span>
+            </div>
+          </div>
+
+          {/* Observed data */}
+          {sourceMode === 'data' ? (
+            <div className="space-y-2">
+              <div onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
+                <DropZone
+                  id={`${cardId}:var1`}
+                  label="Categorical Variable"
+                  hint="categorical only"
+                  assignedCol={catCol}
+                  onClear={() => onClearZone('var1')}
+                  onAssign={colId => onAssignZone('var1', colId)}
+                  allowedTypes={['categorical']}
+                />
               </div>
-            ) : (
-              <div className="rounded-[20px] bg-[var(--color-bg)] px-4 py-3">
-                <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--color-muted)]">
-                  <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={manualX}
-                    onChange={e => patchConfig({ manualX: e.target.value })}
-                    className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center text-sm font-semibold text-[var(--color-text)]"
-                  />
-                  <span>successes out of</span>
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={manualN}
-                    onChange={e => patchConfig({ manualN: e.target.value })}
-                    className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center text-sm font-semibold text-[var(--color-text)]"
-                  />
-                  <span>trials</span>
-                  <span>
+              {catLevels.length > 0 && (
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-sm text-[var(--color-muted)]">Success</span>
+                  <select
+                    value={successLevel}
+                    onChange={e => patchConfig({ successLevel: e.target.value })}
+                    className="min-w-[200px] rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text)]"
+                  >
+                    {catLevels.map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                  <span className="text-sm text-[var(--color-muted)]">
                     observed <PHat /> = <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{phat !== null ? phat.toFixed(3) : '—'}</span>
                   </span>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--color-muted)]">
+              <input
+                type="number" min={0} step={1} value={manualX}
+                onChange={e => patchConfig({ manualX: e.target.value })}
+                className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center font-mono text-[15px] font-semibold text-[var(--color-text)]"
+              />
+              <span>successes out of</span>
+              <input
+                type="number" min={1} step={1} value={manualN}
+                onChange={e => patchConfig({ manualN: e.target.value })}
+                className="w-20 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-center font-mono text-[15px] font-semibold text-[var(--color-text)]"
+              />
+              <span>trials</span>
+              <span>observed <PHat /> = <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{phat !== null ? phat.toFixed(3) : '—'}</span></span>
+            </div>
+          )}
 
-            {error && <div className="text-sm text-rose-500">{error}</div>}
-          </div>
+          {error && <div className="text-sm text-rose-500">{error}</div>}
         </div>
 
         <button

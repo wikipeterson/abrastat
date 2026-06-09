@@ -654,6 +654,27 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone, onAssign
               </div>
             </div>
 
+            {/* Hypotheses bar */}
+            <div className="flex items-center gap-5 flex-wrap bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-3.5 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[15px] font-semibold text-[var(--color-text)] whitespace-nowrap">
+                  H<sub>0</sub> : p<sub>1</sub> − p<sub>2</sub> = <span className="text-[var(--color-muted)]">0</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[15px] font-semibold text-[var(--color-muted)] whitespace-nowrap">
+                  H<sub>a</sub> : p<sub>1</sub> − p<sub>2</sub>
+                </span>
+                <select value={alternative} onChange={e => patchConfig({ alternative: e.target.value as Alternative })}
+                  className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 font-mono text-[15px] font-semibold text-[var(--color-text)] shadow-sm">
+                  <option value="less">&lt;</option>
+                  <option value="two">≠</option>
+                  <option value="greater">&gt;</option>
+                </select>
+                <span className="font-mono text-[15px] font-semibold text-[var(--color-muted)]">0</span>
+              </div>
+            </div>
+
             {/* Variable pickers (data mode only) */}
             {sourceMode === 'data' && (
               <div className="space-y-2">
@@ -744,43 +765,13 @@ export function TwoPropRandomizationTest({ cardId, config, onClearZone, onAssign
                   </span>
                 </div>
 
-                {/* Divider */}
+                {/* Divider + observed difference */}
                 <div className="col-span-2 h-px bg-[var(--color-border)] my-0.5"/>
-
-                {/* Observed difference */}
-                <div className="col-span-2 flex items-center gap-2.5">
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--color-muted)]">Observed difference</span>
-                  <span className="font-mono text-lg font-bold text-[var(--color-gold)] whitespace-nowrap">
-                    p̂<sub style={{fontSize:'11px'}}>1</sub> − p̂<sub style={{fontSize:'11px'}}>2</sub>
-                    <span className="font-medium text-[var(--color-muted)] mx-1.5">=</span>
-                    {fmtDiff(data?.diffObs)}
-                  </span>
+                <div className="col-span-2 text-sm text-[var(--color-muted)]">
+                  observed p̂<sub>1</sub> − p̂<sub>2</sub> = <span className="font-mono tabular-nums font-semibold text-[var(--color-gold)]">{fmtDiff(data?.diffObs)}</span>
                 </div>
               </div>
             )}
-
-            {/* Hypotheses bar */}
-            <div className="flex items-center gap-5 flex-wrap bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-3.5 py-2.5">
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-[15px] font-semibold text-[var(--color-text)] whitespace-nowrap">
-                  H<sub>0</sub> : p<sub>1</sub> − p<sub>2</sub> = <span className="text-[var(--color-muted)]">0</span>
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-[15px] font-semibold text-[var(--color-muted)] whitespace-nowrap">
-                  H<sub>a</sub> : p<sub>1</sub> − p<sub>2</sub>
-                </span>
-                <div className="flex rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] overflow-hidden">
-                  {([['less','<'],['two','≠'],['greater','>']] as const).map(([val,sym]) => (
-                    <button key={val} onClick={() => patchConfig({ alternative: val })}
-                      className={`font-mono text-[15px] font-semibold px-2.5 py-1 transition-colors ${alternative===val?'bg-[var(--color-surface)] text-[var(--color-accent-strong)] shadow-[inset_0_1px_3px_rgba(8,38,33,0.12)]':'text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}>
-                      {sym}
-                    </button>
-                  ))}
-                </div>
-                <span className="font-mono text-[15px] font-semibold text-[var(--color-muted)]">0</span>
-              </div>
-            </div>
           </div>
 
           <button onClick={() => patchConfig({ stage: 'simulate' })} disabled={!data}

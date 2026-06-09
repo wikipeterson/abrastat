@@ -602,7 +602,7 @@ export function OnePropRandomizationTest({ cardId, config, onClearZone, onAssign
   const graphView = config.graphView ?? 'proportions'
   const showNormalCurve = config.showNormalCurve ?? false
   const cardSizeTarget = stage === 'setup'
-    ? { width: 820, height: 560 }
+    ? { width: 820, height: 640 }
     : { width: 1180, height: 760 }
 
   const [phase, setPhase] = useState<StepPhase>('observing')

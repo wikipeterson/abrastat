@@ -1006,7 +1006,7 @@ export function ExploreCanvas({
                   Using: {selectedCols.map(col => col.name).join(' × ')}
                 </div>
               )}
-              <div className="max-h-[260px] overflow-y-auto overflow-x-hidden pr-1">
+              <div className="overflow-x-hidden pr-1" style={{ maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 {CARD_OPTION_GROUPS.map(group => (
                   <div key={group.id} className="min-w-0">

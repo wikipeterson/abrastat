@@ -48,6 +48,20 @@ type RegressionSummary = {
   color: string
 }
 
+function HattedVariable({ name }: { name: string }) {
+  return (
+    <span className="relative inline-block pr-[0.08em]">
+      {name}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[0.52em] text-[0.68em] leading-none"
+      >
+        ^
+      </span>
+    </span>
+  )
+}
+
 export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRemove, hideHeader }: RegressionCardProps) {
   const { grid, exploreCards, addLinkedGraphCard, updateExploreCard } = useStore()
 
@@ -457,14 +471,14 @@ export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRe
                     <span className="font-serif italic font-semibold text-[var(--color-text)] truncate">{regression.label}</span>
                   </div>
                   <div className="font-mono text-[var(--color-text)] text-right">
-                    {yCol.name}&#770; = {fmt(regression.slope)}{xCol.name} {regression.interceptSign} {fmt(Math.abs(regression.intercept))}
+                    <HattedVariable name={yCol.name} /> = {fmt(regression.slope)}{xCol.name} {regression.interceptSign} {fmt(Math.abs(regression.intercept))}
                   </div>
                 </div>
               ))}
             </div>
           ) : primary ? (
             <div className="font-mono text-lg font-semibold text-[var(--color-text)]">
-              {yCol.name}&#770; = {fmt(primary.slope)}{xCol.name} {primary.interceptSign} {fmt(Math.abs(primary.intercept))}
+              <HattedVariable name={yCol.name} /> = {fmt(primary.slope)}{xCol.name} {primary.interceptSign} {fmt(Math.abs(primary.intercept))}
             </div>
           ) : null}
         </div>

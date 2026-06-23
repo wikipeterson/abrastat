@@ -340,6 +340,24 @@ export function ExploreCanvas({
     scroller.scrollTo({ left: targetLeft, top: targetTop, behavior })
   }, [])
 
+  const alignTopCardInView = useCallback((behavior: ScrollBehavior = 'instant') => {
+    const scroller = scrollRef.current
+    if (!scroller) return
+
+    const topCard = cards
+      .filter(card => card.config.type !== 'data-grid')
+      .sort((a, b) => (a.y - b.y) || (a.x - b.x))[0]
+
+    if (!topCard) return
+
+    const MARGIN = 24
+    scroller.scrollTo({
+      left: scroller.scrollLeft,
+      top: Math.max(0, topCard.y * zoomRef.current - MARGIN),
+      behavior,
+    })
+  }, [cards])
+
   useEffect(() => {
     const currentIds = cards.map(card => card.id)
 
@@ -875,14 +893,10 @@ export function ExploreCanvas({
     const startY = e.clientY
     const startLeft = scrollerEl.scrollLeft
     const startTop = scrollerEl.scrollTop
-    let adjustedStartTop = startTop
-
     if (selectedColumnIds.length > 0) {
-      const dismissedStripHeight = topStripRef.current?.offsetHeight ?? 0
-      adjustedStartTop = Math.max(0, startTop - dismissedStripHeight)
       setSelectedColumnIds([])
       requestAnimationFrame(() => {
-        scrollerEl.scrollTop = adjustedStartTop
+        alignTopCardInView('instant')
       })
     }
 
@@ -895,7 +909,7 @@ export function ExploreCanvas({
 
     function onMove(ev: PointerEvent) {
       scrollerEl.scrollLeft = startLeft - (ev.clientX - startX)
-      scrollerEl.scrollTop = adjustedStartTop - (ev.clientY - startY)
+      scrollerEl.scrollTop = startTop - (ev.clientY - startY)
     }
 
     function onUp() {

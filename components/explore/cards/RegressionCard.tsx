@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useLayoutEffect } from 'react'
 import { useStore } from '@/lib/store'
 import { linearRegression } from '@/lib/statistics'
 import { getNumericPairs } from '@/lib/gridHelpers'
@@ -49,13 +49,16 @@ type RegressionSummary = {
 }
 
 export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRemove, hideHeader }: RegressionCardProps) {
-  const { grid, exploreCards, addLinkedGraphCard } = useStore()
+  const { grid, exploreCards, addLinkedGraphCard, updateExploreCard } = useStore()
 
   const [showInference, setShowInference] = useState(false)
   const [nullValue, setNullValue] = useState('0')
   const [altHyp, setAltHyp] = useState<AltHyp>('two')
   const [confLevel, setConfLevel] = useState(95)
   const [confInput, setConfInput] = useState('95')
+
+  // Ref on the scrollable body so we can auto-fit the card height to its content
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   function handleNativeDrop(zone: 'x' | 'y' | 'group') {
     return (e: React.DragEvent) => {
@@ -181,6 +184,22 @@ export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRe
   }, [primary, groupCol, nullValue, altHyp, confLevel])
 
   const inferenceAvailable = !!slopeInf
+
+  // Auto-fit the card's stored height to its content so it never shows an internal
+  // scrollbar in normal use. Cards on the canvas are fixed-height boxes; we grow/shrink
+  // card.height by exactly the scroll container's overflow whenever the CONTENT changes
+  // (data, inference toggle, hypothesis inputs). Keyed on content — never on height — so
+  // it never fights a manual resize. The retained overflow-auto is the manual-shrink safety net.
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    if (!el || !currentCard) return
+    const overflow = el.scrollHeight - el.clientHeight
+    if (Math.abs(overflow) > 1) {
+      const next = Math.max(340, (currentCard.height ?? 520) + overflow)
+      if (next !== currentCard.height) updateExploreCard(cardId, { height: next })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showInference, regressions.length, !!slopeInf, nullValue, altHyp, confLevel, xCol?.name, yCol?.name, groupCol, cardId])
 
   const content = (() => {
     if (!xCol || !yCol) {
@@ -496,7 +515,7 @@ export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRe
         />
       </div>
 
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto">
         {content}
       </div>
     </div>

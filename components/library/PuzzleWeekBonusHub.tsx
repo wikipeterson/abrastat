@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ArrowLeft, Calendar, Menu } from 'lucide-react'
+import { ArrowLeft, Menu } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { signOut } from '@/lib/auth'
 import { canManagePuzzleWeekIdentity } from '@/lib/featureFlags'
@@ -3588,7 +3588,7 @@ export function PuzzleWeekBonusHub() {
   const menuContent = (
     <div className="flex flex-col gap-0.5">
       <Link
-        href="https://puzzleweek.abrastat.com"
+        href="https://abrastat.com"
         onClick={() => setMenuOpen(false)}
         className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]"
       >
@@ -3630,7 +3630,7 @@ export function PuzzleWeekBonusHub() {
       >
         {/* Nav bar */}
         <div className="flex flex-shrink-0 items-center justify-between gap-2 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3">
-          <Link href="https://puzzleweek.abrastat.com" className="select-none flex-shrink-0">
+          <Link href="https://abrastat.com" className="select-none flex-shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="AbraStat" style={{ width: '100px', height: 'auto' }} />
           </Link>
@@ -3692,7 +3692,7 @@ export function PuzzleWeekBonusHub() {
 
           {/* Header */}
           <div className="flex relative items-center py-2">
-            <Link href="https://puzzleweek.abrastat.com" className="relative z-10 flex-shrink-0 select-none">
+            <Link href="https://abrastat.com" className="relative z-10 flex-shrink-0 select-none">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(200px, 24vw, 320px)', height: 'auto' }} />
             </Link>
@@ -3703,10 +3703,6 @@ export function PuzzleWeekBonusHub() {
               >
                 Logic Puzzles
               </h1>
-              <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] shadow-sm">
-                <Calendar className="h-3 w-3" />
-                Puzzle Week 2026 extras
-              </div>
             </div>
             <div className="relative z-10 ml-auto flex flex-shrink-0 items-center">
               <button

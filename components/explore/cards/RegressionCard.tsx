@@ -1,12 +1,17 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useStore } from '@/lib/store'
 import { linearRegression } from '@/lib/statistics'
 import { getNumericPairs } from '@/lib/gridHelpers'
 import { ABRA_COLORS } from '@/lib/plotlyTheme'
 import { DropZone } from '../DropZone'
 import { EmptyState } from '@/components/ui/EmptyState'
+import jStat from 'jstat'
+
+const jS = jStat as unknown as {
+  studentt: { cdf: (x: number, df: number) => number; inv: (p: number, df: number) => number }
+}
 
 interface RegressionCardProps {
   cardId: string
@@ -17,8 +22,15 @@ interface RegressionCardProps {
   hideHeader?: boolean
 }
 
+type AltHyp = 'less' | 'two' | 'greater'
+
 function fmt(n: number): string {
   return parseFloat(n.toPrecision(4)).toLocaleString()
+}
+
+function fmtP(p: number): string {
+  if (p < 0.001) return '<.001'
+  return p.toFixed(3)
 }
 
 type RegressionSummary = {
@@ -38,6 +50,12 @@ type RegressionSummary = {
 
 export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRemove, hideHeader }: RegressionCardProps) {
   const { grid, exploreCards, addLinkedGraphCard } = useStore()
+
+  const [showInference, setShowInference] = useState(false)
+  const [nullValue, setNullValue] = useState('0')
+  const [altHyp, setAltHyp] = useState<AltHyp>('two')
+  const [confLevel, setConfLevel] = useState(95)
+  const [confInput, setConfInput] = useState('95')
 
   function handleNativeDrop(zone: 'x' | 'y' | 'group') {
     return (e: React.DragEvent) => {
@@ -136,6 +154,34 @@ export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRe
 
   const primary = regressions[0] ?? null
 
+  // Slope inference derived quantities — recompute whenever inputs change
+  const slopeInf = useMemo(() => {
+    if (!primary || primary.n < 3 || groupCol) return null
+    const n = primary.n
+    const ssRes = primary.residuals.reduce((s, r) => s + r * r, 0)
+    const ser = Math.sqrt(ssRes / (n - 2))               // residual SE (df-corrected)
+    const xbar = primary.xs.reduce((s, x) => s + x, 0) / n
+    const ssX = primary.xs.reduce((s, x) => s + (x - xbar) ** 2, 0)
+    if (ssX === 0) return null
+    const se = ser / Math.sqrt(ssX)                       // SE of slope
+    const df = n - 2
+    const c = isFinite(parseFloat(nullValue)) ? parseFloat(nullValue) : 0
+    const t = (primary.slope - c) / se
+    let p = altHyp === 'two'
+      ? 2 * (1 - jS.studentt.cdf(Math.abs(t), df))
+      : altHyp === 'greater'
+        ? 1 - jS.studentt.cdf(t, df)
+        : jS.studentt.cdf(t, df)
+    p = Math.max(0, Math.min(1, p))
+    const tStar = jS.studentt.inv(1 - (1 - confLevel / 100) / 2, df)
+    const ciLo = primary.slope - tStar * se
+    const ciHi = primary.slope + tStar * se
+    const ciExcludes = c < ciLo || c > ciHi
+    return { se, t, df, p, tStar, ciLo, ciHi, ciExcludes, c }
+  }, [primary, groupCol, nullValue, altHyp, confLevel])
+
+  const inferenceAvailable = !!slopeInf
+
   const content = (() => {
     if (!xCol || !yCol) {
       return <EmptyState icon="📉" title="Drop two numeric variables" description="Choose an Explanatory Variable and a Response Variable to fit a linear model." />
@@ -149,6 +195,167 @@ export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRe
     if (!regressions.length) {
       return <EmptyState icon="📉" title="Not enough paired data" description="Need at least two rows with valid values in both variables." />
     }
+
+    // Compact one-row stat strip used when inference section is open
+    const compactStrip = primary && !groupCol ? (
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-xl bg-[var(--color-bg)] px-3 py-2 text-xs font-mono">
+        {[
+          { label: 'r', value: primary.r.toFixed(4) },
+          { label: 'r²', value: primary.r2.toFixed(4) },
+          { label: 'slope', value: fmt(primary.slope) },
+          { label: 'intercept', value: fmt(primary.intercept) },
+          { label: 'n', value: String(primary.n) },
+          { label: 'RMSE', value: fmt(primary.rmse) },
+        ].map((item, i) => (
+          <span key={item.label} className="flex items-center gap-1">
+            {i > 0 && <span className="text-[var(--color-border)] mr-1.5">·</span>}
+            <span className="text-[var(--color-muted)]">{item.label}</span>
+            <span className="font-semibold text-[var(--color-text)]">{item.value}</span>
+          </span>
+        ))}
+      </div>
+    ) : null
+
+    // Full 6-tile grid used when inference is hidden
+    const fullTiles = (
+      <div className={`grid gap-3 ${groupCol ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-2 lg:grid-cols-3'}`}>
+        {(groupCol ? regressions.map(regression => ({
+          key: regression.label,
+          label: regression.label,
+          value: `r = ${regression.r.toFixed(4)}`,
+          sub: `r² = ${regression.r2.toFixed(4)} • n = ${regression.n} • RMSE = ${fmt(regression.rmse)}`,
+          color: regression.color,
+        })) : primary ? [
+          { key: 'r', label: 'r', value: primary.r.toFixed(4), sub: 'correlation' },
+          { key: 'r2', label: 'r²', value: primary.r2.toFixed(4), sub: `${(primary.r2 * 100).toFixed(1)}% explained` },
+          { key: 'slope', label: 'Slope', value: fmt(primary.slope), sub: `per +1 ${xCol.name}` },
+          { key: 'intercept', label: 'Intercept', value: fmt(primary.intercept), sub: `when ${xCol.name} = 0` },
+          { key: 'n', label: 'n', value: String(primary.n), sub: 'paired rows' },
+          { key: 'rmse', label: 'RMSE', value: fmt(primary.rmse), sub: 'typical prediction error' },
+        ] : []).map(item => (
+          <div key={item.label} className="bg-[var(--color-bg)] rounded-xl p-3 text-center">
+            {groupCol && 'color' in item ? (
+              <div className="flex items-center justify-center gap-2 text-xs text-[var(--color-muted)] mb-0.5">
+                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                <span>{item.label}</span>
+              </div>
+            ) : (
+              <div className="text-xs text-[var(--color-muted)] mb-0.5">{item.label}</div>
+            )}
+            <div className="font-mono font-semibold text-[var(--color-text)] text-base">{item.value}</div>
+            <div className="text-[10px] text-[var(--color-muted)] mt-0.5 leading-tight">{item.sub}</div>
+          </div>
+        ))}
+      </div>
+    )
+
+    // Inference section
+    const inferenceSection = showInference && slopeInf ? (
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+
+        {/* Header row */}
+        <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 border-b border-[var(--color-border)] flex-wrap gap-y-2">
+          <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.22em] text-[var(--color-muted)]">
+            Inference for the slope · β₁
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--color-muted)] font-mono">Confidence</span>
+            <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+              {([90, 95, 99] as const).map((lvl, i) => (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => { setConfLevel(lvl); setConfInput(String(lvl)) }}
+                  className={`px-2.5 py-1 font-mono font-semibold transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${confLevel === lvl && String(lvl) === confInput ? 'bg-[var(--color-accent-strong)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}
+                >
+                  {lvl}%
+                </button>
+              ))}
+            </div>
+            <input
+              type="number" min={50} max={99.9} step={0.1}
+              value={confInput}
+              onChange={e => {
+                const raw = e.target.value
+                setConfInput(raw)
+                const v = parseFloat(raw)
+                if (isFinite(v) && v >= 50 && v <= 99.9) setConfLevel(v)
+              }}
+              className="w-16 rounded-lg border border-[var(--color-border)] bg-white px-2 py-1 text-center font-mono text-xs font-semibold text-[var(--color-text)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+            />
+          </div>
+        </div>
+
+        {/* Hypotheses */}
+        <div className="px-3.5 py-2.5 bg-[var(--color-bg)] border-b border-[var(--color-border)]">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm font-semibold text-[var(--color-text)] whitespace-nowrap">
+                H<sub>0</sub> : β₁ =
+              </span>
+              <input
+                type="number" step="any"
+                value={nullValue}
+                onChange={e => setNullValue(e.target.value)}
+                className="w-20 rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-center font-mono text-sm font-semibold text-[var(--color-text)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm font-semibold text-[var(--color-muted)] whitespace-nowrap">
+                H<sub>a</sub> : β₁
+              </span>
+              <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-sm font-mono">
+                {(['less', 'two', 'greater'] as AltHyp[]).map((alt, i) => (
+                  <button
+                    key={alt}
+                    type="button"
+                    onClick={() => setAltHyp(alt)}
+                    className={`px-2.5 py-1 font-semibold transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${altHyp === alt ? 'bg-[var(--color-accent-strong)] text-white' : 'bg-white text-[var(--color-muted)] hover:bg-[var(--color-accent-light)]'}`}
+                  >
+                    {alt === 'less' ? '<' : alt === 'two' ? '≠' : '>'}
+                  </button>
+                ))}
+              </div>
+              <span className="font-mono text-sm font-semibold text-[var(--color-muted)]">
+                {isFinite(parseFloat(nullValue)) ? parseFloat(nullValue).toString() : '?'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Test-stat strip */}
+        <div className="grid grid-cols-4 divide-x divide-[var(--color-border)] border-b border-[var(--color-border)]">
+          {[
+            { label: 'SE', value: slopeInf.se.toFixed(4) },
+            { label: 't', value: slopeInf.t.toFixed(3) },
+            { label: 'df', value: String(slopeInf.df) },
+            { label: 'p', value: fmtP(slopeInf.p), highlight: true },
+          ].map(cell => (
+            <div key={cell.label} className="flex flex-col items-center justify-center py-2.5 px-2">
+              <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.16em] text-[var(--color-muted)] mb-1">
+                {cell.label}
+              </div>
+              <div className={`font-mono tabular-nums font-bold text-base leading-tight ${cell.highlight ? 'text-[var(--color-accent-strong)]' : 'text-[var(--color-text)]'}`}>
+                {cell.value}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* CI bar */}
+        <div className="px-3.5 py-3">
+          <div className="font-mono font-bold text-[var(--color-gold)] text-sm">
+            {confLevel}% CI for slope &nbsp;→&nbsp; {slopeInf.ciLo.toFixed(3)} to {slopeInf.ciHi.toFixed(3)}
+          </div>
+          <div className="mt-1 text-xs text-[var(--color-muted)] leading-snug">
+            {slopeInf.ciExcludes
+              ? `Interval excludes ${slopeInf.c} → evidence the slope ≠ ${slopeInf.c}.`
+              : `Interval contains ${slopeInf.c} → not enough evidence the slope ≠ ${slopeInf.c}.`}
+          </div>
+        </div>
+
+      </div>
+    ) : null
 
     return (
       <div className="space-y-4">
@@ -203,6 +410,19 @@ export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRe
           >
             Residual Plot
           </button>
+          {inferenceAvailable && (
+            <button
+              type="button"
+              onClick={() => setShowInference(v => !v)}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                showInference
+                  ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+                  : 'border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
+              }`}
+            >
+              Slope Inference
+            </button>
+          )}
         </div>
 
         <div className="bg-[var(--color-accent-light)] rounded-xl px-4 py-3">
@@ -230,36 +450,9 @@ export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRe
           ) : null}
         </div>
 
-        <div className={`grid gap-3 ${groupCol ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-2 lg:grid-cols-3'}`}>
-          {(groupCol ? regressions.map(regression => ({
-            key: regression.label,
-            label: regression.label,
-            value: `r = ${regression.r.toFixed(4)}`,
-            sub: `r² = ${regression.r2.toFixed(4)} • n = ${regression.n} • RMSE = ${fmt(regression.rmse)}`,
-            color: regression.color,
-          })) : primary ? [
-            { key: 'r', label: 'r', value: primary.r.toFixed(4), sub: 'correlation' },
-            { key: 'r2', label: 'r²', value: primary.r2.toFixed(4), sub: `${(primary.r2 * 100).toFixed(1)}% explained` },
-            { key: 'slope', label: 'Slope', value: fmt(primary.slope), sub: `per +1 ${xCol.name}` },
-            { key: 'intercept', label: 'Intercept', value: fmt(primary.intercept), sub: `when ${xCol.name} = 0` },
-            { key: 'n', label: 'n', value: String(primary.n), sub: 'paired rows' },
-            { key: 'rmse', label: 'RMSE', value: fmt(primary.rmse), sub: 'typical prediction error' },
-          ] : []).map(item => (
-            <div key={item.label} className="bg-[var(--color-bg)] rounded-xl p-3 text-center">
-              {groupCol && 'color' in item ? (
-                <div className="flex items-center justify-center gap-2 text-xs text-[var(--color-muted)] mb-0.5">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span>{item.label}</span>
-                </div>
-              ) : (
-                <div className="text-xs text-[var(--color-muted)] mb-0.5">{item.label}</div>
-              )}
-              <div className="font-mono font-semibold text-[var(--color-text)] text-base">{item.value}</div>
-              <div className="text-[10px] text-[var(--color-muted)] mt-0.5 leading-tight">{item.sub}</div>
-            </div>
-          ))}
-        </div>
+        {showInference && !groupCol ? compactStrip : fullTiles}
 
+        {inferenceSection}
       </div>
     )
   })()

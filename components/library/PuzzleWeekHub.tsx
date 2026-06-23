@@ -498,7 +498,7 @@ export function PuzzleWeekHub() {
         {/* ── Mobile header: stacked ── */}
         <div className="sm:hidden space-y-3">
           <div className="flex items-center justify-between">
-            <Link href="/home" className="select-none" aria-label="Return to AbraStat">
+            <Link href="https://abrastat.com" className="select-none" aria-label="Return to AbraStat">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.svg" alt="AbraStat" style={{ width: '150px', height: 'auto' }} />
             </Link>
@@ -537,7 +537,7 @@ export function PuzzleWeekHub() {
 
         {/* ── Desktop header: logo | absolute-center title | sign out ── */}
         <div className="hidden sm:flex relative items-center py-2">
-          <Link href="/home" className="relative z-10 flex-shrink-0 select-none" aria-label="Return to AbraStat">
+          <Link href="https://abrastat.com" className="relative z-10 flex-shrink-0 select-none" aria-label="Return to AbraStat">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(200px, 24vw, 320px)', height: 'auto' }} />
           </Link>

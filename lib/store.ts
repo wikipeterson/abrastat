@@ -708,7 +708,7 @@ export const useStore = create<AbraStatStore>((set) => ({
       type === 'table'       ? { width: 960, height: 740 } :
       type === 'regression-by-eye' ? { width: 860, height: 700 } :
       type === 'one-prop-randomization' ? { width: 980, height: 720 } :
-      type === 'means'       ? { width: 760, height: 500 } :
+      type === 'means'       ? { width: 760, height: 720 } :
       type === 'distribution'    ? { width: 700, height: 540 } :
       type === 'compare-normals' ? { width: 860, height: 680 } :
       type === 'proportions'     ? { width: 860, height: 620 } :

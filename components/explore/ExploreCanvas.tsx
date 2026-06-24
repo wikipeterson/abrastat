@@ -804,7 +804,7 @@ export function ExploreCanvas({
       case 'generator':       return { minWidth: 460, minHeight: 440 }
       case 'dice-roller':  return { minWidth: 760, minHeight: 700 }
       case 'sim-results':  return { minWidth: 360, minHeight: 360 }
-      case 'means':        return { minWidth: 700, minHeight: 460 }
+      case 'means':        return { minWidth: 700, minHeight: 600 }
       case 'proportions':  return { minWidth: 820, minHeight: 580 }
       case 'one-prop-randomization': return { minWidth: 980, minHeight: 720 }
       case 'one-prop-sim':           return { minWidth: 820, minHeight: 560 }

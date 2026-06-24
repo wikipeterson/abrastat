@@ -19,8 +19,9 @@ html {
 
   /* ── Color: four semantic roles. Pick by MEANING, never hardcode hex in components. ── */
 
-  --color-bg:            #EAE0CD;  /* CREAM — canvas / workspace behind cards */
+  --color-bg:            #EAE0CD;  /* CREAM canvas — deepened so white cards lift off the field */
   --color-surface:       #FFFFFF;  /* WHITE — the answer surface: card bodies, plots, tables */
+  --color-panel:         #F6F0E3;  /* INSET — input panels inside white cards (the middle rung: canvas < panel < card) */
   --color-text:          #0E3D38;
   --color-muted:         #5A726E;
 
@@ -30,8 +31,7 @@ html {
   --color-accent-strong: #0D6E64;
   --color-accent-chip:   #CFE9E3;  /* deeper mint for filter/variable chips */
 
-  --color-border:        #D6C9B0;  /* warm taupe — crisp edge on cards, panels, dropzones */
-  --color-panel:         #F6F0E3;  /* in-card input panels: sits between card white and canvas cream */
+  --color-border:        #D6C9B0;  /* warm taupe — visible edge on every card, panel & dropzone */
   --color-grid-header:   #0E3D38;
   --color-grid-selected: #E2F4F1;
 

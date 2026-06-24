@@ -228,7 +228,12 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
 
   const chartTraces = useMemo(() => {
     if (!result) return null
-    const absMax = Math.max(4.5, Math.abs(result.stat) * 1.4 + 0.5)
+    // Fixed, readable range. When |z| exceeds it we flag the statistic at the tail edge
+    // with an arrow rather than zooming out until the bell curve collapses to a spike.
+    const RANGE = 4.5
+    const absMax = RANGE
+    const off = Math.abs(result.stat) > RANGE
+    const markerX = off ? Math.sign(result.stat) * RANGE : result.stat
     const nPts = 300
     const xs = Array.from({ length: nPts }, (_, i) => -absMax + (2 * absMax * i) / (nPts - 1))
     const ys = xs.map(x => jS.normal.pdf(x, 0, 1))
@@ -242,41 +247,110 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
         x: [fromX, ...pts, toX],
         y: [0, ...pts.map(x => jS.normal.pdf(x, 0, 1)), 0],
         fill: 'tozeroy' as const,
-        fillcolor: 'rgba(239,68,68,0.20)',
-        line: { color: 'rgba(239,68,68,0.4)', width: 1 },
+        fillcolor: 'rgba(232,146,12,0.18)',
+        line: { color: 'rgba(232,146,12,0.4)', width: 1 },
         hoverinfo: 'skip' as const,
         showlegend: false,
       }
     }
     const shades = []
     const absStat = Math.abs(result.stat)
-    if (alternative === 'less') {
-      const t = shadeTrace(-absMax, result.stat); if (t) shades.push(t)
-    } else if (alternative === 'greater') {
-      const t = shadeTrace(result.stat, absMax); if (t) shades.push(t)
-    } else {
-      const t1 = shadeTrace(-absMax, -absStat); if (t1) shades.push(t1)
-      const t2 = shadeTrace(absStat, absMax); if (t2) shades.push(t2)
+    if (!off) {
+      if (alternative === 'less') {
+        const t = shadeTrace(-absMax, result.stat); if (t) shades.push(t)
+      } else if (alternative === 'greater') {
+        const t = shadeTrace(result.stat, absMax); if (t) shades.push(t)
+      } else {
+        const t1 = shadeTrace(-absMax, -absStat); if (t1) shades.push(t1)
+        const t2 = shadeTrace(absStat, absMax); if (t2) shades.push(t2)
+      }
     }
     return {
       traces: [
         ...shades,
         { type: 'scatter' as const, mode: 'lines' as const, x: xs, y: ys, line: { color: accentColor, width: 2 }, hoverinfo: 'skip' as const, showlegend: false },
-        { type: 'scatter' as const, mode: 'lines' as const, x: [result.stat, result.stat], y: [0, Math.min(jS.normal.pdf(result.stat, 0, 1) * 1.05, yMax)], line: { color: goldColor, width: 2, dash: 'dash' as const }, hoverinfo: 'skip' as const, showlegend: false },
+        { type: 'scatter' as const, mode: 'lines' as const, x: [markerX, markerX], y: [0, Math.min(jS.normal.pdf(markerX, 0, 1) * 1.05, yMax)], line: { color: goldColor, width: 2, dash: 'dash' as const }, hoverinfo: 'skip' as const, showlegend: false },
       ],
       absMax,
       yMax,
+      off,
+      markerX,
     }
-  }, [alternative, result])
+  }, [alternative, result, accentColor, goldColor])
 
   const rejected = result ? result.p < alphaVal : false
   const altSymbol = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
   const h0Label = effectiveHasGroup ? 'p₁ − p₂ =' : 'p ='
   const altLabel = effectiveHasGroup ? 'p₁ − p₂' : 'p'
   const altStatement = `${altLabel} ${altSymbol} ${h0}`
+  const confidenceLevelNum = isFinite(confidenceVal) ? confidenceVal : 95
   const procedureLabel = effectiveHasGroup
     ? (mode === 'test' ? '2-proportion z-test' : '2-proportion z-interval')
     : (mode === 'test' ? '1-proportion z-test' : '1-proportion z-interval')
+
+  // ── Setup panel (procedure toggle + H₀/Hₐ/α for tests, Confidence always). Pairs with
+  //    the chart at matched height in test mode; goes full width for intervals. ──
+  const setupPanel = (
+    <div className="bg-[var(--color-bg)] rounded-xl p-3 flex flex-col gap-2.5 justify-center">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Procedure</span>
+        <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+          {([
+            ['test', procedureLabel.replace('interval', 'test')],
+            ['interval', procedureLabel.replace('test', 'interval')],
+          ] as [ProcedureMode, string][]).map(([nextMode, label], i) => (
+            <button
+              key={nextMode}
+              onClick={() => setMode(nextMode)}
+              className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${mode === nextMode ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 items-center">
+        {mode === 'test' && (
+          <>
+            <label className="text-xs text-[var(--color-muted)] whitespace-nowrap">H₀: {h0Label}</label>
+            <div><input type="number" min={effectiveHasGroup ? -1 : 0} max={1} step={0.01} value={h0} onChange={e => setH0(e.target.value)} className="w-20 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" /></div>
+
+            <span className="text-xs text-[var(--color-muted)]">Hₐ:</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-mono font-medium text-[var(--color-text)]">{altLabel}</span>
+              <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-sm font-mono">
+                {(['less', 'two-sided', 'greater'] as Alternative[]).map((a, i) => (
+                  <button key={a} onClick={() => setAlternative(a)} className={`px-2.5 py-1 font-semibold transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alternative === a ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}>
+                    {a === 'less' ? '<' : a === 'two-sided' ? '≠' : '>'}
+                  </button>
+                ))}
+              </div>
+              <span className="text-sm font-mono font-medium text-[var(--color-muted)]">{h0}</span>
+            </div>
+
+            <label className="text-xs text-[var(--color-muted)]">α =</label>
+            <div><input type="number" min={0.0001} max={0.9999} step={0.001} value={alpha} onChange={e => setAlpha(e.target.value)} className="w-24 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" /></div>
+          </>
+        )}
+
+        <label className="text-xs text-[var(--color-muted)] whitespace-nowrap">Confidence</label>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+            {[90, 95, 99].map((lvl, i) => (
+              <button key={lvl} onClick={() => setConfidenceLevel(String(lvl))} className={`px-2.5 py-1 font-mono font-semibold transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${confidenceVal === lvl ? 'bg-[var(--color-accent-strong)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}>
+                {lvl}%
+              </button>
+            ))}
+          </div>
+          <div className={`flex items-center rounded-lg border bg-white px-2 ${![90, 95, 99].includes(confidenceVal) ? 'border-[var(--color-gold-ring)]' : 'border-[var(--color-border)]'}`}>
+            <input type="number" min={50} max={99.9} step={0.1} value={confidenceLevel} onChange={e => setConfidenceLevel(e.target.value)} className="w-10 py-1 text-xs font-mono font-semibold text-right bg-transparent focus:outline-none" />
+            <span className="text-xs font-mono font-semibold text-[var(--color-muted)]">%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="h-full flex flex-col gap-3 overflow-hidden text-sm">
@@ -336,228 +410,162 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
           </div>
         </div>
       ) : (
-        <div className="flex flex-col md:grid md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-3 flex-1 min-h-0">
-          <div className="min-h-0 flex flex-col gap-3">
-            {!useManual && responseLevels.length > 1 && (
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-xs text-[var(--color-muted)] whitespace-nowrap">Success</span>
-                <select value={successLevel} onChange={e => setSuccessLevel(e.target.value)} className="flex-1 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]">
-                  {responseLevels.map(level => <option key={level} value={level}>{level}</option>)}
-                </select>
-              </div>
-            )}
+        <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-auto">
+          {/* data-source pickers — full width */}
+          {!useManual && responseLevels.length > 1 && (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-xs text-[var(--color-muted)] whitespace-nowrap">Success</span>
+              <select value={successLevel} onChange={e => setSuccessLevel(e.target.value)} className="flex-1 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]">
+                {responseLevels.map(level => <option key={level} value={level}>{level}</option>)}
+              </select>
+            </div>
+          )}
 
-            {!useManual && hasGroup && groupLevels.length > 2 && (
-              <div className="flex gap-2 flex-shrink-0">
-                {([['Compare', groupA, setGroupA, groupB], ['vs.', groupB, setGroupB, groupA]] as [string, string, (v: string) => void, string][]).map(
-                  ([label, value, setter, other]) => (
-                    <div key={label} className="flex-1 flex items-center gap-1.5">
-                      <span className="text-[10px] font-semibold text-[var(--color-muted)] flex-shrink-0">{label}</span>
-                      <select value={value} onChange={e => setter(e.target.value)} className="flex-1 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]">
-                        {groupLevels.filter(g => g !== other).map(g => <option key={g} value={g}>{g}</option>)}
-                      </select>
-                    </div>
-                  ),
-                )}
-              </div>
-            )}
+          {!useManual && hasGroup && groupLevels.length > 2 && (
+            <div className="flex gap-2 flex-shrink-0">
+              {([['Compare', groupA, setGroupA, groupB], ['vs.', groupB, setGroupB, groupA]] as [string, string, (v: string) => void, string][]).map(
+                ([label, value, setter, other]) => (
+                  <div key={label} className="flex-1 flex items-center gap-1.5">
+                    <span className="text-[10px] font-semibold text-[var(--color-muted)] flex-shrink-0">{label}</span>
+                    <select value={value} onChange={e => setter(e.target.value)} className="flex-1 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]">
+                      {groupLevels.filter(g => g !== other).map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                  </div>
+                ),
+              )}
+            </div>
+          )}
 
-            {useManual && (
-              <div className="bg-[var(--color-bg)] rounded-xl p-3 flex-shrink-0 space-y-2">
+          {useManual && (
+            <div className="bg-[var(--color-bg)] rounded-xl p-3 flex-shrink-0 space-y-2">
+              <div className="grid gap-2 grid-cols-2">
+                <label className="text-xs text-[var(--color-muted)]">
+                  n₁
+                  <input type="number" min={1} step={1} value={manualN1} onChange={e => setManualN1(e.target.value)} className="mt-1 w-full px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
+                </label>
+                <label className="text-xs text-[var(--color-muted)]">
+                  x₁
+                  <input type="number" min={0} step={1} value={manualX1} onChange={e => setManualX1(e.target.value)} className="mt-1 w-full px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
+                </label>
+              </div>
+              {manualKind === 'two' && (
                 <div className="grid gap-2 grid-cols-2">
                   <label className="text-xs text-[var(--color-muted)]">
-                    n₁
-                    <input type="number" min={1} step={1} value={manualN1} onChange={e => setManualN1(e.target.value)} className="mt-1 w-full px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
+                    n₂
+                    <input type="number" min={1} step={1} value={manualN2} onChange={e => setManualN2(e.target.value)} className="mt-1 w-full px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
                   </label>
                   <label className="text-xs text-[var(--color-muted)]">
-                    x₁
-                    <input type="number" min={0} step={1} value={manualX1} onChange={e => setManualX1(e.target.value)} className="mt-1 w-full px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
+                    x₂
+                    <input type="number" min={0} step={1} value={manualX2} onChange={e => setManualX2(e.target.value)} className="mt-1 w-full px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
                   </label>
-                </div>
-                {manualKind === 'two' && (
-                  <div className="grid gap-2 grid-cols-2">
-                    <label className="text-xs text-[var(--color-muted)]">
-                      n₂
-                      <input type="number" min={1} step={1} value={manualN2} onChange={e => setManualN2(e.target.value)} className="mt-1 w-full px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
-                    </label>
-                    <label className="text-xs text-[var(--color-muted)]">
-                      x₂
-                      <input type="number" min={0} step={1} value={manualX2} onChange={e => setManualX2(e.target.value)} className="mt-1 w-full px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
-                    </label>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="bg-[var(--color-bg)] rounded-xl p-3 flex-shrink-0 space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Procedure</span>
-                <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
-                  {([
-                    ['test', procedureLabel.replace('interval', 'test')],
-                    ['interval', procedureLabel.replace('test', 'interval')],
-                  ] as [ProcedureMode, string][]).map(([nextMode, label], i) => (
-                    <button
-                      key={nextMode}
-                      onClick={() => setMode(nextMode)}
-                      className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${mode === nextMode ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {mode === 'test' ? (
-                <>
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">H₀: {h0Label}</label>
-                    <input type="number" min={effectiveHasGroup ? -1 : 0} max={1} step={0.01} value={h0} onChange={e => setH0(e.target.value)} className="w-24 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Hₐ:</span>
-                    <select
-                      value={alternative}
-                      onChange={e => setAlternative(e.target.value as Alternative)}
-                      className="w-20 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
-                    >
-                      <option value="less">&lt;</option>
-                      <option value="two-sided">≠</option>
-                      <option value="greater">&gt;</option>
-                    </select>
-                    <span className="text-xs font-mono font-medium text-[var(--color-text)]">{altStatement}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">α =</label>
-                    <input
-                      type="number"
-                      min={0.0001}
-                      max={0.9999}
-                      step={0.001}
-                      value={alpha}
-                      onChange={e => setAlpha(e.target.value)}
-                      className="w-24 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
-                    />
-                  </div>
-                </>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Level</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={99.99}
-                    step={1}
-                    value={confidenceLevel}
-                    onChange={e => setConfidenceLevel(e.target.value)}
-                    className="w-24 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
-                  />
-                  <span className="text-xs text-[var(--color-muted)]">% confidence</span>
                 </div>
               )}
             </div>
+          )}
 
-            {((useManual && manualSummary1) || (!useManual && (oneSampleSummary || groupedSummaries.a))) && (
-              <div className="flex-shrink-0">
-                <p className="text-[10px] font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">Summary Statistics</p>
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr className="text-[var(--color-muted)] text-[10px]">
-                      <th className="text-left font-semibold pb-1 pr-2">Group</th>
-                      <th className="text-right font-semibold pb-1 px-2">n</th>
-                      <th className="text-right font-semibold pb-1 px-2">x</th>
-                      <th className="text-right font-semibold pb-1 pl-2">p̂</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--color-border)]">
-                    {effectiveHasGroup ? (
-                      useManual ? (
-                        <>
-                          {manualSummary1 && <PropSummaryRow label="Group 1" s={manualSummary1} />}
-                          {manualSummary2 && <PropSummaryRow label="Group 2" s={manualSummary2} />}
-                        </>
-                      ) : (
-                      <>
-                        {groupedSummaries.a && <PropSummaryRow label={groupA || 'Group A'} s={groupedSummaries.a} />}
-                        {groupedSummaries.b && <PropSummaryRow label={groupB || 'Group B'} s={groupedSummaries.b} />}
-                      </>
-                      )
-                    ) : (
-                      useManual
-                        ? manualSummary1 && <PropSummaryRow label="Successes" s={manualSummary1} />
-                        : oneSampleSummary && <PropSummaryRow label={successLevel || 'Success'} s={oneSampleSummary} />
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {!result && (
-              <p className="text-xs text-[var(--color-muted)] italic flex-shrink-0">
-                {useManual
-                  ? 'Enter valid counts to compute results.'
-                  : !successLevel
-                    ? 'Choose a success level.'
-                  : hasGroup && (!groupA || !groupB)
-                    ? 'Assign a grouping variable with at least 2 distinct values.'
-                    : hasGroup && (!groupedSummaries.a || !groupedSummaries.b)
-                      ? 'Need data in both groups.'
-                      : 'Need non-empty categorical data to compute results.'}
-              </p>
-            )}
-          </div>
-
-          <div className="min-h-0 flex flex-col gap-3">
-            {mode === 'test' && chartTraces && result && (
-              <div className="flex-shrink-0 rounded-xl overflow-hidden border border-[var(--color-border)]">
+          {/* setup + chart at matched height; chart only for tests */}
+          {mode === 'test' && chartTraces && result ? (
+            <div className="grid md:grid-cols-2 gap-3 items-stretch flex-shrink-0">
+              {setupPanel}
+              <div className="rounded-xl overflow-hidden border border-[var(--color-border)] bg-white flex items-center">
                 <PlotlyChart
                   data={chartTraces.traces as never}
                   layout={{
                     xaxis: { range: [-chartTraces.absMax, chartTraces.absMax], title: { text: 'z', font: { size: 11 } }, zeroline: false, showgrid: false },
                     yaxis: { visible: false, range: [0, chartTraces.yMax * 1.12] },
                     margin: { t: 8, r: 8, b: 32, l: 8 },
-                    height: 140,
+                    height: 168,
                     showlegend: false,
-                    annotations: [{ x: result.stat, y: chartTraces.yMax * 1.08, text: `z = ${fmt(result.stat, 3)}`, showarrow: false, font: { size: 11, color: goldTextColor }, xanchor: result.stat >= 0 ? 'right' : 'left' }],
+                    annotations: chartTraces.off
+                      ? [{ x: chartTraces.markerX, y: chartTraces.yMax * 0.5, ax: chartTraces.markerX > 0 ? -36 : 36, ay: 0, text: `z = ${fmt(result.stat, 3)}`, showarrow: true, arrowhead: 3, arrowsize: 1, arrowwidth: 2, arrowcolor: goldColor, font: { size: 11, color: goldTextColor }, xanchor: chartTraces.markerX > 0 ? 'right' : 'left' }]
+                      : [{ x: result.stat, y: chartTraces.yMax * 1.08, text: `z = ${fmt(result.stat, 3)}`, showarrow: false, font: { size: 11, color: goldTextColor }, xanchor: result.stat >= 0 ? 'right' : 'left' }],
                   }}
                 />
               </div>
-            )}
+            </div>
+          ) : (
+            <div className="flex-shrink-0">{setupPanel}</div>
+          )}
 
-            {result && (
-              <div className="space-y-2.5 flex-shrink-0">
-                {mode === 'test' ? (
-                  <>
-                    <div className="grid gap-2 grid-cols-2">
-                      <StatBox label="z-statistic" value={fmt(result.stat, 4)} />
-                      <StatBox label="p-value" value={fmtP(result.p)} highlight={rejected ? 'reject' : 'keep'} />
-                    </div>
+          {/* summary statistics — full width */}
+          {((useManual && manualSummary1) || (!useManual && (oneSampleSummary || groupedSummaries.a))) && (
+            <div className="flex-shrink-0">
+              <p className="text-[10px] font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">Summary Statistics</p>
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="text-[var(--color-muted)] text-[10px]">
+                    <th className="text-left font-semibold pb-1 pr-2">Group</th>
+                    <th className="text-right font-semibold pb-1 px-2">n</th>
+                    <th className="text-right font-semibold pb-1 px-2">x</th>
+                    <th className="text-right font-semibold pb-1 pl-2">p̂</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)]">
+                  {effectiveHasGroup ? (
+                    useManual ? (
+                      <>
+                        {manualSummary1 && <PropSummaryRow label="Group 1" s={manualSummary1} />}
+                        {manualSummary2 && <PropSummaryRow label="Group 2" s={manualSummary2} />}
+                      </>
+                    ) : (
+                      <>
+                        {groupedSummaries.a && <PropSummaryRow label={groupA || 'Group A'} s={groupedSummaries.a} />}
+                        {groupedSummaries.b && <PropSummaryRow label={groupB || 'Group B'} s={groupedSummaries.b} />}
+                      </>
+                    )
+                  ) : (
+                    useManual
+                      ? manualSummary1 && <PropSummaryRow label="Successes" s={manualSummary1} />
+                      : oneSampleSummary && <PropSummaryRow label={successLevel || 'Success'} s={oneSampleSummary} />
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-                    <div className={`rounded-xl p-3 border ${rejected ? 'bg-[var(--color-danger-light)] border-[var(--color-danger)]' : 'bg-[var(--color-accent-light)] border-[var(--color-border)]'}`}>
-                      <p className={`text-xs font-semibold mb-1 ${rejected ? 'text-[var(--color-danger)]' : 'text-[var(--color-accent-strong)]'}`}>{rejected ? 'Reject H₀' : 'Fail to Reject H₀'}</p>
-                      <p className="text-xs text-[var(--color-muted)] leading-relaxed">
-                        {rejected
-                          ? `At α = ${alpha}, there is sufficient evidence to conclude ${altStatement}.`
-                          : `At α = ${alpha}, there is not sufficient evidence to conclude ${altStatement}.`}
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="rounded-xl border border-[var(--color-border)] bg-white p-3">
-                      <p className="text-[10px] text-[var(--color-muted)] mb-1">{confidenceLevel}% Confidence Interval</p>
-                      <p className="text-xs font-mono font-medium">({fmt(result.ci[0])}, {fmt(result.ci[1])})</p>
-                    </div>
-                    <div className="rounded-xl border border-[var(--color-accent-light)] bg-[var(--color-accent-light)] p-3">
-                      <p className="text-xs font-mono font-semibold text-[var(--color-accent-strong)] mb-1">{confidenceLevel}% Confidence Interval</p>
-                      <p className="text-xs text-[var(--color-muted)] leading-relaxed">
-                        We are {confidenceLevel}% confident that {hasGroup ? 'the true difference in proportions' : 'the true population proportion'} lies between {fmt(result.ci[0])} and {fmt(result.ci[1])}.
-                      </p>
-                    </div>
-                  </>
-                )}
+          {/* results strip — full width (tests). Reject = gold (observed/extreme), fail = teal. */}
+          {result && mode === 'test' && (
+            <>
+              <div className="grid gap-2 grid-cols-[1fr_1fr_1.6fr] flex-shrink-0">
+                <StatBox label="z-statistic" value={fmt(result.stat, 4)} highlight="gold" />
+                <StatBox label="p-value" value={fmtP(result.p)} />
+                <StatBox label={`${confidenceLevelNum}% CI`} value={`(${fmt(result.ci[0])}, ${fmt(result.ci[1])})`} />
               </div>
-            )}
-          </div>
+              <div className={`rounded-xl p-3 border flex-shrink-0 ${rejected ? 'bg-[var(--color-gold-light)] border-[var(--color-gold-ring)]' : 'bg-[var(--color-accent-light)] border-[var(--color-border)]'}`}>
+                <p className={`text-xs font-semibold mb-1 ${rejected ? 'text-[var(--color-gold-text)]' : 'text-[var(--color-accent-strong)]'}`}>{rejected ? 'Reject H₀' : 'Fail to Reject H₀'}</p>
+                <p className="text-xs text-[var(--color-muted)] leading-relaxed">
+                  {rejected
+                    ? `At α = ${alpha}, there is sufficient evidence to conclude ${altStatement}.`
+                    : `At α = ${alpha}, there is not sufficient evidence to conclude ${altStatement}.`}
+                </p>
+              </div>
+            </>
+          )}
+
+          {/* CI only — full width (intervals) */}
+          {result && mode === 'interval' && (
+            <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 flex-shrink-0">
+              <p className="text-[10px] text-[var(--color-muted)] uppercase tracking-wide mb-1">{confidenceLevelNum}% Confidence Interval</p>
+              <p className="text-sm font-mono font-semibold text-[var(--color-text)] mb-1.5">({fmt(result.ci[0])}, {fmt(result.ci[1])})</p>
+              <p className="text-xs text-[var(--color-muted)] leading-relaxed">
+                We are {confidenceLevelNum}% confident that {effectiveHasGroup ? 'the true difference in proportions' : 'the true population proportion'} lies between {fmt(result.ci[0])} and {fmt(result.ci[1])}.
+              </p>
+            </div>
+          )}
+
+          {!result && (
+            <p className="text-xs text-[var(--color-muted)] italic flex-shrink-0">
+              {useManual
+                ? 'Enter valid counts to compute results.'
+                : !successLevel
+                  ? 'Choose a success level.'
+                  : hasGroup && (!groupA || !groupB)
+                    ? 'Assign a grouping variable with at least 2 distinct values.'
+                    : hasGroup && (!groupedSummaries.a || !groupedSummaries.b)
+                      ? 'Need data in both groups.'
+                      : 'Need non-empty categorical data to compute results.'}
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -575,11 +583,11 @@ function PropSummaryRow({ label, s }: { label: string; s: PropSummary }) {
   )
 }
 
-function StatBox({ label, value, highlight }: { label: string; value: string; highlight?: 'reject' | 'keep' }) {
+function StatBox({ label, value, highlight }: { label: string; value: string; highlight?: 'gold' | 'keep' }) {
   return (
-    <div className={`rounded-xl border p-3 ${highlight === 'reject' ? 'border-[var(--color-danger)] bg-[var(--color-danger-light)]' : highlight === 'keep' ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]' : 'border-[var(--color-border)] bg-[var(--color-surface)]'}`}>
-      <p className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wide mb-1">{label}</p>
-      <p className="text-base font-mono tabular-nums font-semibold text-[var(--color-text)]">{value}</p>
+    <div className={`rounded-xl p-3 text-center ${highlight === 'gold' ? 'bg-[var(--color-gold-light)]' : highlight === 'keep' ? 'bg-[var(--color-accent-light)]' : 'bg-[var(--color-bg)]'}`}>
+      <p className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wide mb-0.5">{label}</p>
+      <p className={`text-base font-mono tabular-nums font-semibold ${highlight === 'gold' ? 'text-[var(--color-gold-text)]' : highlight === 'keep' ? 'text-[var(--color-accent-strong)]' : 'text-[var(--color-text)]'}`}>{value}</p>
     </div>
   )
 }

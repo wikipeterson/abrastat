@@ -231,7 +231,7 @@ export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRe
 
     // Compact one-row stat strip used when inference section is open
     const compactStrip = primary && !groupCol ? (
-      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-xl bg-[var(--color-bg)] px-3 py-2 text-xs font-mono">
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-xl bg-[var(--color-panel)] px-3 py-2 text-xs font-mono">
         {[
           { label: 'r', value: primary.r.toFixed(4) },
           { label: 'r²', value: primary.r2.toFixed(4) },
@@ -266,7 +266,7 @@ export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRe
           { key: 'n', label: 'n', value: String(primary.n), sub: 'paired rows' },
           { key: 'rmse', label: 'RMSE', value: fmt(primary.rmse), sub: 'typical prediction error' },
         ] : []).map(item => (
-          <div key={item.label} className="bg-[var(--color-bg)] rounded-xl p-3 text-center">
+          <div key={item.label} className="bg-[var(--color-panel)] rounded-xl p-3 text-center">
             {groupCol && 'color' in item ? (
               <div className="flex items-center justify-center gap-2 text-xs text-[var(--color-muted)] mb-0.5">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
@@ -320,7 +320,7 @@ export function RegressionCard({ cardId, config, onClearZone, onAssignZone, onRe
         </div>
 
         {/* Hypotheses */}
-        <div className="px-3.5 py-2.5 bg-[var(--color-bg)] border-b border-[var(--color-border)]">
+        <div className="px-3.5 py-2.5 bg-[var(--color-panel)] border-b border-[var(--color-border)]">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <div className="flex items-center gap-2">
               <span className="font-mono text-sm font-semibold text-[var(--color-text)] whitespace-nowrap">

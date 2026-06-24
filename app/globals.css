@@ -19,7 +19,7 @@ html {
 
   /* ── Color: four semantic roles. Pick by MEANING, never hardcode hex in components. ── */
 
-  --color-bg:            #F7F2E8;  /* CREAM — "set this": input panels (inside white cards) + canvas */
+  --color-bg:            #EAE0CD;  /* CREAM — canvas / workspace behind cards */
   --color-surface:       #FFFFFF;  /* WHITE — the answer surface: card bodies, plots, tables */
   --color-text:          #0E3D38;
   --color-muted:         #5A726E;
@@ -28,8 +28,10 @@ html {
   --color-accent:        #16A89B;
   --color-accent-light:  #E2F4F1;
   --color-accent-strong: #0D6E64;
+  --color-accent-chip:   #CFE9E3;  /* deeper mint for filter/variable chips */
 
-  --color-border:        #ECE3D4;  /* warm cream — harmonizes with --color-bg field */
+  --color-border:        #D6C9B0;  /* warm taupe — crisp edge on cards, panels, dropzones */
+  --color-panel:         #F6F0E3;  /* in-card input panels: sits between card white and canvas cream */
   --color-grid-header:   #0E3D38;
   --color-grid-selected: #E2F4F1;
 

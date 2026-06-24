@@ -400,7 +400,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
         </label>
       </div>
 
-      <div className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-3 overflow-x-auto">
+      <div className="flex-shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-3 overflow-x-auto">
         <div className="flex min-w-max items-center gap-1.5 text-sm sm:text-base font-serif text-[var(--color-text)] whitespace-nowrap">
           <span>P(</span>
           {direction === 'between' ? (
@@ -480,7 +480,7 @@ export function DistributionCard({ preFill }: DistributionCardProps) {
         />
       </div>
 
-      <div className="flex-shrink-0 text-center py-2 px-4 bg-[var(--color-bg)] rounded-xl border border-[var(--color-border)]">
+      <div className="flex-shrink-0 text-center py-2 px-4 bg-[var(--color-panel)] rounded-xl border border-[var(--color-border)]">
         <span className="text-sm font-mono font-semibold text-[var(--color-text)]">
           {direction === 'between'
             ? `P(${lower} ≤ ${distSymbol} ≤ ${upper}) = ${probabilityDisplay || '—'}`

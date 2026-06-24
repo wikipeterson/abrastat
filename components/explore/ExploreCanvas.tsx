@@ -121,7 +121,7 @@ function StripOptionCard({
       className={`min-w-[220px] max-w-[280px] rounded-2xl border px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${
         recommended
           ? 'border-[var(--color-gold)] bg-[var(--color-gold-light)]'
-          : 'border-[var(--color-border)] bg-[var(--color-bg)]'
+          : 'border-[var(--color-border)] bg-[var(--color-panel)]'
       }`}
     >
       <div className="mb-2 flex items-start justify-between gap-3">
@@ -155,7 +155,7 @@ function CompactCatalogRow({
       title={label}
       className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-accent-light)]"
     >
-      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-bg)] text-base leading-none">
+      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-panel)] text-base leading-none">
         {icon}
       </span>
       <span className="truncate">{label}</span>
@@ -1134,7 +1134,7 @@ export function ExploreCanvas({
                                 Inference
                               </span>
                             )}
-                            <span className="text-sm font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">
+                            <span className="text-sm font-mono font-semibold text-[var(--color-text)] uppercase tracking-wide">
                               {getVisibleCardLabel(card)}
                             </span>
                             {card.config.type === 'table' && (() => {
@@ -1152,7 +1152,7 @@ export function ExploreCanvas({
                                       className={`px-3 py-1 text-xs font-medium normal-case tracking-normal transition-colors ${
                                         (tableInputModes[card.id] ?? 'raw') === mode
                                           ? 'bg-[var(--color-accent)] text-white'
-                                          : 'bg-white text-[var(--color-muted)] hover:bg-[var(--color-bg)]'
+                                          : 'bg-white text-[var(--color-muted)] hover:bg-[var(--color-panel)]'
                                       }`}
                                     >
                                       {mode === 'raw' ? 'Raw Data' : 'Enter Table'}

@@ -236,7 +236,7 @@ export function DataDock({ state, setState, height, setHeight, upperRef }: DataD
                 ? `${f.colName} between ${f.value} and ${f.value2 ?? '?'}`
                 : `${f.colName} ${f.op} ${f.value}`
               return (
-                <span key={f.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--color-accent-light)] text-[var(--color-accent)] border border-[var(--color-accent)]/30">
+                <span key={f.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--color-accent-chip)] text-[var(--color-accent-strong)] border border-[var(--color-accent)]/30">
                   {label}
                   <button onClick={() => setRowFilters(activeFilters.filter(x => x.id !== f.id))} className="hover:text-[var(--color-accent-strong)] ml-0.5" aria-label="Remove filter">
                     <X size={10} />

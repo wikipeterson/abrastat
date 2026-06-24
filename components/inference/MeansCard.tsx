@@ -361,7 +361,7 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
   // ── Setup panel (left of the chart). Labels in a grid column so they align even when
   //    the H₀ parameter label is long (μ₁ − μ₂). α shows for tests only; Confidence always. ──
   const setupPanel = (
-    <div className="bg-[var(--color-bg)] rounded-xl p-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 items-center content-center">
+    <div className="bg-[var(--color-panel)] rounded-xl p-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 items-center content-center">
       {isZProcedure(effectiveProcedure) && (
         <>
           <label className="text-xs text-[var(--color-muted)] whitespace-nowrap">σ (known)</label>
@@ -377,7 +377,7 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
             <span className="text-sm font-mono font-medium text-[var(--color-text)]">{altMu}</span>
             <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-sm font-mono">
               {(['less', 'two-sided', 'greater'] as Alternative[]).map((a, i) => (
-                <button key={a} onClick={() => setAlternative(a)} className={`px-2.5 py-1 font-semibold transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alternative === a ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}>
+                <button key={a} onClick={() => setAlternative(a)} className={`px-2.5 py-1 font-semibold transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alternative === a ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-panel)]'}`}>
                   {a === 'less' ? '<' : a === 'two-sided' ? '≠' : '>'}
                 </button>
               ))}
@@ -392,7 +392,7 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
       <div className="flex items-center gap-1.5 flex-wrap">
         <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
           {[90, 95, 99].map((lvl, i) => (
-            <button key={lvl} onClick={() => setConfLevel(String(lvl))} className={`px-2.5 py-1 font-mono font-semibold transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${parseFloat(confLevel) === lvl ? 'bg-[var(--color-accent-strong)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}>
+            <button key={lvl} onClick={() => setConfLevel(String(lvl))} className={`px-2.5 py-1 font-mono font-semibold transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${parseFloat(confLevel) === lvl ? 'bg-[var(--color-accent-strong)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-panel)]'}`}>
               {lvl}%
             </button>
           ))}
@@ -437,7 +437,7 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
             key={p}
             onClick={() => setProcedure(p)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
-              effectiveProcedure === p ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] border-[var(--color-border)] hover:bg-[var(--color-bg)]'
+              effectiveProcedure === p ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]' : 'bg-[var(--color-surface)] text-[var(--color-muted)] border-[var(--color-border)] hover:bg-[var(--color-panel)]'
             }`}
           >
             {procLabels[p]}
@@ -569,7 +569,7 @@ function SummaryRow({ label, s }: { label: string; s: SummaryStats }) {
 
 function StatBox({ label, value, highlight }: { label: string; value: string; highlight?: 'gold' | 'keep' }) {
   return (
-    <div className={`rounded-xl p-3 text-center ${highlight === 'gold' ? 'bg-[var(--color-gold-light)]' : highlight === 'keep' ? 'bg-[var(--color-accent-light)]' : 'bg-[var(--color-bg)]'}`}>
+    <div className={`rounded-xl p-3 text-center ${highlight === 'gold' ? 'bg-[var(--color-gold-light)]' : highlight === 'keep' ? 'bg-[var(--color-accent-light)]' : 'bg-[var(--color-panel)]'}`}>
       <p className="text-[10px] font-mono text-[var(--color-muted)] mb-0.5">{label}</p>
       <p className={`text-base font-semibold font-mono tabular-nums ${highlight === 'gold' ? 'text-[var(--color-gold-text)]' : highlight === 'keep' ? 'text-[var(--color-accent-strong)]' : 'text-[var(--color-text)]'}`}>{value}</p>
     </div>

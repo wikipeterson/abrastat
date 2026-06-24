@@ -291,7 +291,7 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
   // ── Setup panel (procedure toggle + H₀/Hₐ/α for tests, Confidence always). Pairs with
   //    the chart at matched height in test mode; goes full width for intervals. ──
   const setupPanel = (
-    <div className="bg-[var(--color-bg)] rounded-xl p-3 flex flex-col gap-2.5 justify-center">
+    <div className="bg-[var(--color-panel)] rounded-xl p-3 flex flex-col gap-2.5 justify-center">
       <div className="flex items-center gap-2">
         <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Procedure</span>
         <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
@@ -302,7 +302,7 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
             <button
               key={nextMode}
               onClick={() => setMode(nextMode)}
-              className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${mode === nextMode ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}
+              className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${mode === nextMode ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-panel)]'}`}
             >
               {label}
             </button>
@@ -321,7 +321,7 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
               <span className="text-sm font-mono font-medium text-[var(--color-text)]">{altLabel}</span>
               <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-sm font-mono">
                 {(['less', 'two-sided', 'greater'] as Alternative[]).map((a, i) => (
-                  <button key={a} onClick={() => setAlternative(a)} className={`px-2.5 py-1 font-semibold transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alternative === a ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}>
+                  <button key={a} onClick={() => setAlternative(a)} className={`px-2.5 py-1 font-semibold transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alternative === a ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-panel)]'}`}>
                     {a === 'less' ? '<' : a === 'two-sided' ? '≠' : '>'}
                   </button>
                 ))}
@@ -338,7 +338,7 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
         <div className="flex items-center gap-1.5 flex-wrap">
           <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
             {[90, 95, 99].map((lvl, i) => (
-              <button key={lvl} onClick={() => setConfidenceLevel(String(lvl))} className={`px-2.5 py-1 font-mono font-semibold transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${confidenceVal === lvl ? 'bg-[var(--color-accent-strong)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}>
+              <button key={lvl} onClick={() => setConfidenceLevel(String(lvl))} className={`px-2.5 py-1 font-mono font-semibold transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${confidenceVal === lvl ? 'bg-[var(--color-accent-strong)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-panel)]'}`}>
                 {lvl}%
               </button>
             ))}
@@ -364,7 +364,7 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
             <button
               key={nextMode}
               onClick={() => setSourceMode(nextMode)}
-              className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === nextMode ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}
+              className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${sourceMode === nextMode ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-panel)]'}`}
             >
               {label}
             </button>
@@ -381,7 +381,7 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
                 <button
                   key={nextKind}
                   onClick={() => setManualKind(nextKind)}
-                  className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${manualKind === nextKind ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}
+                  className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${manualKind === nextKind ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-panel)]'}`}
                 >
                   {label}
                 </button>
@@ -437,7 +437,7 @@ export function ProportionsCard({ cardId, config, onClearZone, onAssignZone }: P
           )}
 
           {useManual && (
-            <div className="bg-[var(--color-bg)] rounded-xl p-3 flex-shrink-0 space-y-2">
+            <div className="bg-[var(--color-panel)] rounded-xl p-3 flex-shrink-0 space-y-2">
               <div className="grid gap-2 grid-cols-2">
                 <label className="text-xs text-[var(--color-muted)]">
                   n₁
@@ -585,7 +585,7 @@ function PropSummaryRow({ label, s }: { label: string; s: PropSummary }) {
 
 function StatBox({ label, value, highlight }: { label: string; value: string; highlight?: 'gold' | 'keep' }) {
   return (
-    <div className={`rounded-xl p-3 text-center ${highlight === 'gold' ? 'bg-[var(--color-gold-light)]' : highlight === 'keep' ? 'bg-[var(--color-accent-light)]' : 'bg-[var(--color-bg)]'}`}>
+    <div className={`rounded-xl p-3 text-center ${highlight === 'gold' ? 'bg-[var(--color-gold-light)]' : highlight === 'keep' ? 'bg-[var(--color-accent-light)]' : 'bg-[var(--color-panel)]'}`}>
       <p className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wide mb-0.5">{label}</p>
       <p className={`text-base font-mono tabular-nums font-semibold ${highlight === 'gold' ? 'text-[var(--color-gold-text)]' : highlight === 'keep' ? 'text-[var(--color-accent-strong)]' : 'text-[var(--color-text)]'}`}>{value}</p>
     </div>

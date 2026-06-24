@@ -43,7 +43,7 @@ export function GridToolbar() {
               return (
                 <span
                   key={f.id}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--color-accent-light)] text-[var(--color-accent)] border border-[var(--color-accent)]/30"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--color-accent-chip)] text-[var(--color-accent-strong)] border border-[var(--color-accent)]/30"
                 >
                   {label}
                   <button

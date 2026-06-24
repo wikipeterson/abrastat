@@ -77,8 +77,8 @@ function MultiVarDropZone({ id, varCols, onClearVar, onAssignVar }: {
           isOver
             ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
             : varCols.length === 0
-              ? 'border-dashed border-[var(--color-border)] bg-[var(--color-bg)]'
-              : 'border-[var(--color-border)] bg-[var(--color-bg)]'
+              ? 'border-dashed border-[var(--color-border)] bg-[var(--color-panel)]'
+              : 'border-[var(--color-border)] bg-[var(--color-panel)]'
         }`}
       >
         {varCols.length === 0 ? (

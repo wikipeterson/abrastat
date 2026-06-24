@@ -88,7 +88,6 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
   const accentColor = getCssVar('--color-accent', '#16A89B')
   const goldColor = getCssVar('--color-gold', '#E8920C')
   const goldTextColor = getCssVar('--color-gold-text', '#8A5800')
-  const mutedColor = getCssVar('--color-muted', '#5A726E')
 
   function handleNativeDrop(zone: 'var1' | 'var2') {
     return (e: React.DragEvent) => {
@@ -141,6 +140,8 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
   const [alternative, setAlternative] = useState<Alternative>('two-sided')
   const [alpha, setAlpha] = useState('0.05')
   const [sigma, setSigma] = useState('')
+  // Confidence level for the reported interval — independent of α (the test's significance).
+  const [confLevel, setConfLevel] = useState('95')
 
   const data1 = useMemo(() => {
     const id = config.var1ColId
@@ -186,6 +187,9 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
     if (!isFinite(alphaVal) || alphaVal <= 0 || alphaVal >= 1) return null
     const h0Val = parseFloat(h0)
     if (isTestProcedure(effectiveProcedure) && !isFinite(h0Val)) return null
+    // CI half-percentile from the confidence level (not α): 1 - (1-conf)/2 = (1+conf)/2
+    const confVal = parseFloat(confLevel)
+    const ciHalf = isFinite(confVal) && confVal > 0 && confVal < 100 ? (1 + confVal / 100) / 2 : 0.975
 
     if (var2IsCategorical && statsA && statsB) {
       const { n: n1, mean: m1, sd: s1 } = statsA
@@ -195,7 +199,7 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
       const num = (s1 ** 2 / n1 + s2 ** 2 / n2) ** 2
       const den = (s1 ** 2 / n1) ** 2 / (n1 - 1) + (s2 ** 2 / n2) ** 2 / (n2 - 1)
       const df = num / den
-      const tStar = jS.studentt.inv(1 - alphaVal / 2, df)
+      const tStar = jS.studentt.inv(ciHalf, df)
       const diff = m1 - m2
       if (effectiveProcedure === 'two-sample-t-test') {
         const t = (diff - h0Val) / se
@@ -209,7 +213,7 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
       if (!stats1) return null
       const { n, mean, se } = stats1
       const df = n - 1
-      const tStar = jS.studentt.inv(1 - alphaVal / 2, df)
+      const tStar = jS.studentt.inv(ciHalf, df)
       if (effectiveProcedure === 'one-sample-t-test') {
         const t = (mean - h0Val) / se
         const p = calcP(t, df, alternative)
@@ -223,7 +227,7 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
       if (!stats1 || !isFinite(sigmaVal) || sigmaVal <= 0) return null
       const { n, mean } = stats1
       const se = sigmaVal / Math.sqrt(n)
-      const zStar = jS.normal.inv(1 - alphaVal / 2, 0, 1)
+      const zStar = jS.normal.inv(ciHalf, 0, 1)
       if (effectiveProcedure === 'one-sample-z-test') {
         const z = (mean - h0Val) / se
         const p = calcP(z, null, alternative)
@@ -241,7 +245,7 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
       const num = (s1 ** 2 / n1 + s2 ** 2 / n2) ** 2
       const den = (s1 ** 2 / n1) ** 2 / (n1 - 1) + (s2 ** 2 / n2) ** 2 / (n2 - 1)
       const df = num / den
-      const tStar = jS.studentt.inv(1 - alphaVal / 2, df)
+      const tStar = jS.studentt.inv(ciHalf, df)
       const diff = m1 - m2
       if (effectiveProcedure === 'two-sample-t-test') {
         const t = (diff - h0Val) / se
@@ -267,7 +271,7 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
       if (!ds) return null
       const { n, mean, se } = ds
       const df = n - 1
-      const tStar = jS.studentt.inv(1 - alphaVal / 2, df)
+      const tStar = jS.studentt.inv(ciHalf, df)
       if (effectiveProcedure === 'paired-t-test') {
         const t = (mean - h0Val) / se
         const p = calcP(t, df, alternative)
@@ -277,12 +281,17 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
     }
 
     return null
-  }, [effectiveProcedure, var2IsCategorical, stats1, stats2, statsA, statsB, h0, alpha, alternative, sigma, config.var1ColId, config.var2ColId, grid.rows])
+  }, [effectiveProcedure, var2IsCategorical, stats1, stats2, statsA, statsB, h0, alpha, alternative, sigma, confLevel, config.var1ColId, config.var2ColId, grid.rows])
 
   const chartTraces = useMemo(() => {
     if (!result || result.stat === null || result.statLabel === null) return null
     const { stat, df } = result
-    const absMax = Math.max(4.5, Math.abs(stat) * 1.4 + 0.5)
+    // Fixed, readable range. When the statistic lands beyond it we flag it at the edge
+    // instead of zooming out until the curve collapses to a spike.
+    const RANGE = 4.5
+    const absMax = RANGE
+    const off = Math.abs(stat) > RANGE
+    const markerX = off ? Math.sign(stat) * RANGE : stat
     const nPts = 300
     const xs = Array.from({ length: nPts }, (_, i) => -absMax + (2 * absMax) * i / (nPts - 1))
     const pdf = df !== null ? (x: number) => { try { return jS.studentt.pdf(x, df) } catch { return 0 } } : (x: number) => jS.normal.pdf(x, 0, 1)
@@ -297,32 +306,36 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
         x: [fromX, ...pts, toX],
         y: [0, ...pts.map(pdf), 0],
         fill: 'tozeroy' as const,
-        fillcolor: 'rgba(239,68,68,0.20)',
-        line: { color: 'rgba(239,68,68,0.4)', width: 1 },
+        fillcolor: 'rgba(232,146,12,0.18)',
+        line: { color: 'rgba(232,146,12,0.4)', width: 1 },
         hoverinfo: 'skip' as const,
         showlegend: false,
       }
     }
     const shades = []
     const absStat = Math.abs(stat)
-    if (alternative === 'less') {
-      const t = shadeTrace(-absMax, stat); if (t) shades.push(t)
-    } else if (alternative === 'greater') {
-      const t = shadeTrace(stat, absMax); if (t) shades.push(t)
-    } else {
-      const t1 = shadeTrace(-absMax, -absStat); if (t1) shades.push(t1)
-      const t2 = shadeTrace(absStat, absMax); if (t2) shades.push(t2)
+    if (!off) {
+      if (alternative === 'less') {
+        const t = shadeTrace(-absMax, stat); if (t) shades.push(t)
+      } else if (alternative === 'greater') {
+        const t = shadeTrace(stat, absMax); if (t) shades.push(t)
+      } else {
+        const t1 = shadeTrace(-absMax, -absStat); if (t1) shades.push(t1)
+        const t2 = shadeTrace(absStat, absMax); if (t2) shades.push(t2)
+      }
     }
     return {
       traces: [
         ...shades,
         { type: 'scatter' as const, mode: 'lines' as const, x: xs, y: ys, line: { color: accentColor, width: 2 }, hoverinfo: 'skip' as const, showlegend: false },
-        { type: 'scatter' as const, mode: 'lines' as const, x: [stat, stat], y: [0, Math.min(pdf(stat) * 1.05, yMax)], line: { color: goldColor, width: 2, dash: 'dash' as const }, hoverinfo: 'skip' as const, showlegend: false },
+        { type: 'scatter' as const, mode: 'lines' as const, x: [markerX, markerX], y: [0, Math.min(pdf(markerX) * 1.05, yMax)], line: { color: goldColor, width: 2, dash: 'dash' as const }, hoverinfo: 'skip' as const, showlegend: false },
       ],
       absMax,
       yMax,
+      off,
+      markerX,
     }
-  }, [result, alternative])
+  }, [result, alternative, accentColor, goldColor])
 
   const testResult = result && result.stat !== null && result.statLabel !== null ? result as TestResult & { stat: number; statLabel: string } : null
   const alphaVal = parseFloat(alpha)
@@ -333,6 +346,7 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
   const h0Label = isPairedProcedure ? 'μ_d =' : (hasBoth || var2IsCategorical) ? 'μ₁ − μ₂ =' : 'μ ='
   const altMu = isPairedProcedure ? 'μ_d' : (hasBoth || var2IsCategorical) ? 'μ₁ − μ₂' : 'μ'
   const altSymbol = alternative === 'less' ? '<' : alternative === 'greater' ? '>' : '≠'
+  const confLevelNum = isFinite(parseFloat(confLevel)) ? parseFloat(confLevel) : 95
   const procLabels: Record<Procedure, string> = {
     'one-sample-t-test': '1-sample t-test',
     'one-sample-t-interval': '1-sample t-interval',
@@ -343,6 +357,53 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
     'paired-t-test': 'Paired t-test',
     'paired-t-interval': 'Paired t-interval',
   }
+
+  // ── Setup panel (left of the chart). Labels in a grid column so they align even when
+  //    the H₀ parameter label is long (μ₁ − μ₂). α shows for tests only; Confidence always. ──
+  const setupPanel = (
+    <div className="bg-[var(--color-bg)] rounded-xl p-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 items-center content-center">
+      {isZProcedure(effectiveProcedure) && (
+        <>
+          <label className="text-xs text-[var(--color-muted)] whitespace-nowrap">σ (known)</label>
+          <div><input type="number" value={sigma} onChange={e => setSigma(e.target.value)} placeholder="e.g. 10" className="w-28 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" /></div>
+        </>
+      )}
+      {isTestProcedure(effectiveProcedure) && (
+        <>
+          <label className="text-xs text-[var(--color-muted)] whitespace-nowrap">H₀: {h0Label}</label>
+          <div><input type="number" value={h0} onChange={e => setH0(e.target.value)} className="w-20 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" /></div>
+          <span className="text-xs text-[var(--color-muted)]">Hₐ:</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-mono font-medium text-[var(--color-text)]">{altMu}</span>
+            <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-sm font-mono">
+              {(['less', 'two-sided', 'greater'] as Alternative[]).map((a, i) => (
+                <button key={a} onClick={() => setAlternative(a)} className={`px-2.5 py-1 font-semibold transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alternative === a ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}>
+                  {a === 'less' ? '<' : a === 'two-sided' ? '≠' : '>'}
+                </button>
+              ))}
+            </div>
+            <span className="text-sm font-mono font-medium text-[var(--color-muted)]">{h0}</span>
+          </div>
+          <label className="text-xs text-[var(--color-muted)]">α =</label>
+          <div><input type="number" min={0.0001} max={0.9999} step={0.001} value={alpha} onChange={e => setAlpha(e.target.value)} className="w-24 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" /></div>
+        </>
+      )}
+      <label className="text-xs text-[var(--color-muted)] whitespace-nowrap">Confidence</label>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
+          {[90, 95, 99].map((lvl, i) => (
+            <button key={lvl} onClick={() => setConfLevel(String(lvl))} className={`px-2.5 py-1 font-mono font-semibold transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${parseFloat(confLevel) === lvl ? 'bg-[var(--color-accent-strong)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}>
+              {lvl}%
+            </button>
+          ))}
+        </div>
+        <div className={`flex items-center rounded-lg border bg-white px-2 ${![90, 95, 99].includes(parseFloat(confLevel)) ? 'border-[var(--color-gold-ring)]' : 'border-[var(--color-border)]'}`}>
+          <input type="number" min={50} max={99.9} step={0.1} value={confLevel} onChange={e => setConfLevel(e.target.value)} className="w-10 py-1 text-xs font-mono font-semibold text-right bg-transparent focus:outline-none" />
+          <span className="text-xs font-mono font-semibold text-[var(--color-muted)]">%</span>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="h-full flex flex-col gap-3 overflow-hidden text-sm">
@@ -392,146 +453,102 @@ export function MeansCard({ cardId, config, onClearZone, onAssignZone }: Props) 
           </div>
         </div>
       ) : (
-        <div className="flex flex-col md:grid md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-3 flex-1 min-h-0">
-          <div className="min-h-0 flex flex-col gap-3">
-            <div className="bg-[var(--color-bg)] rounded-xl p-3 flex-shrink-0 space-y-2">
-              {isZProcedure(effectiveProcedure) && (
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">σ (known)</label>
-                  <input type="number" value={sigma} onChange={e => setSigma(e.target.value)} placeholder="e.g. 10" className="flex-1 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
-                </div>
-              )}
-              {isTestProcedure(effectiveProcedure) && (
-                <>
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">H₀: {h0Label}</label>
-                    <input type="number" value={h0} onChange={e => setH0(e.target.value)} className="w-20 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">Hₐ:</span>
-                    <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-xs">
-                      {(['less', 'two-sided', 'greater'] as Alternative[]).map((a, i) => (
-                        <button key={a} onClick={() => setAlternative(a)} className={`px-2.5 py-1 font-medium transition-colors ${i > 0 ? 'border-l border-[var(--color-border)]' : ''} ${alternative === a ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-bg)]'}`}>
-                          {a === 'less' ? '< (left)' : a === 'two-sided' ? '≠ (two)' : '> (right)'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-[var(--color-muted)] w-20 flex-shrink-0">α =</label>
-                <input
-                  type="number"
-                  min={0.0001}
-                  max={0.9999}
-                  step={0.001}
-                  value={alpha}
-                  onChange={e => setAlpha(e.target.value)}
-                  className="w-24 px-2 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
-                />
-              </div>
-            </div>
-
-            {(stats1 || statsA) && (
-              <div className="flex-shrink-0">
-                <p className="text-[10px] font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">Summary Statistics</p>
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr className="text-[var(--color-muted)] text-[10px]">
-                      <th className="text-left font-semibold pb-1 pr-2">Variable</th>
-                      <th className="text-right font-semibold pb-1 px-2">n</th>
-                      <th className="text-right font-semibold pb-1 px-2">x̄</th>
-                      <th className="text-right font-semibold pb-1 px-2">s</th>
-                      <th className="text-right font-semibold pb-1 pl-2">SE</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--color-border)]">
-                    {var2IsCategorical ? (
-                      <>
-                        {statsA && <SummaryRow label={label1} s={statsA} />}
-                        {statsB && <SummaryRow label={label2} s={statsB} />}
-                      </>
-                    ) : (
-                      <>
-                        {stats1 && var1Col && <SummaryRow label={var1Col.name} s={stats1} />}
-                        {stats2 && var2Col && <SummaryRow label={var2Col.name} s={stats2} />}
-                      </>
-                    )}
-                  </tbody>
-                </table>
-                {isPairedProcedure && result?.diffN !== undefined && <p className="text-[10px] text-[var(--color-muted)] mt-1 italic">{result.diffN} matched pairs used</p>}
-              </div>
-            )}
-
-            {!result && (
-              <p className="text-xs text-[var(--color-muted)] italic flex-shrink-0">
-                {isZProcedure(effectiveProcedure) && (!sigma || !isFinite(parseFloat(sigma)) || parseFloat(sigma) <= 0)
-                  ? 'Enter the known population standard deviation (σ) above.'
-                  : var2IsCategorical && (!groupA || !groupB)
-                    ? 'Assign a grouping variable with at least 2 distinct values.'
-                    : 'Need n ≥ 2 to compute results.'}
-              </p>
-            )}
-          </div>
-
-          <div className="min-h-0 flex flex-col gap-3">
-            {isTestProcedure(effectiveProcedure) && chartTraces && testResult && (
-              <div className="flex-shrink-0 rounded-xl overflow-hidden border border-[var(--color-border)]">
+        <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-auto">
+          {/* setup + chart at matched height; chart only for tests */}
+          {isTestProcedure(effectiveProcedure) && chartTraces && testResult ? (
+            <div className="grid md:grid-cols-2 gap-3 items-stretch flex-shrink-0">
+              {setupPanel}
+              <div className="rounded-xl overflow-hidden border border-[var(--color-border)] bg-white flex items-center">
                 <PlotlyChart
                   data={chartTraces.traces as never}
                   layout={{
                     xaxis: { range: [-chartTraces.absMax, chartTraces.absMax], title: { text: testResult.statLabel === 'z' ? 'z' : `t (df = ${fmt(result?.df ?? 0, 3)})`, font: { size: 11 } }, zeroline: false, showgrid: false },
                     yaxis: { visible: false, range: [0, chartTraces.yMax * 1.12] },
                     margin: { t: 8, r: 8, b: 32, l: 8 },
-                    height: 140,
+                    height: 168,
                     showlegend: false,
-                    annotations: [{ x: testResult.stat, y: chartTraces.yMax * 1.08, text: `${testResult.statLabel} = ${fmt(testResult.stat, 3)}`, showarrow: false, font: { size: 11, color: goldTextColor }, xanchor: testResult.stat >= 0 ? 'right' : 'left' }],
+                    annotations: chartTraces.off
+                      ? [{ x: chartTraces.markerX, y: chartTraces.yMax * 0.5, ax: chartTraces.markerX > 0 ? -36 : 36, ay: 0, text: `${testResult.statLabel} = ${fmt(testResult.stat, 3)}`, showarrow: true, arrowhead: 3, arrowsize: 1, arrowwidth: 2, arrowcolor: goldColor, font: { size: 11, color: goldTextColor }, xanchor: chartTraces.markerX > 0 ? 'right' : 'left' }]
+                      : [{ x: testResult.stat, y: chartTraces.yMax * 1.08, text: `${testResult.statLabel} = ${fmt(testResult.stat, 3)}`, showarrow: false, font: { size: 11, color: goldTextColor }, xanchor: testResult.stat >= 0 ? 'right' : 'left' }],
                   }}
                 />
               </div>
-            )}
+            </div>
+          ) : (
+            <div className="flex-shrink-0">{setupPanel}</div>
+          )}
 
-            {result && (
-              <div className="space-y-2.5 flex-shrink-0">
-                {isTestProcedure(effectiveProcedure) && (
-                  <>
-                    <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 space-y-1">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-[var(--color-muted)] w-6">H₀</span>
-                        <span className="text-xs font-mono font-medium">{h0Label} {h0}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-[var(--color-muted)] w-6">Hₐ</span>
-                        <span className="text-xs font-mono font-medium">{altMu} {altSymbol} {h0}</span>
-                      </div>
-                    </div>
-                    <div className={`grid gap-2 ${result.df !== null ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                      <StatBox label={`${result.statLabel}-statistic`} value={fmt(result.stat ?? NaN, 4)} />
-                      {result.df !== null && <StatBox label="df" value={fmt(result.df, 4)} />}
-                      <StatBox label="p-value" value={fmtP(result.p ?? NaN)} highlight={rejected ? 'reject' : 'keep'} />
-                    </div>
-                  </>
-                )}
+          {/* summary statistics — full width */}
+          {(stats1 || statsA) && (
+            <div className="flex-shrink-0">
+              <p className="text-[10px] font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-1.5">Summary Statistics</p>
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="text-[var(--color-muted)] text-[10px]">
+                    <th className="text-left font-semibold pb-1 pr-2">Variable</th>
+                    <th className="text-right font-semibold pb-1 px-2">n</th>
+                    <th className="text-right font-semibold pb-1 px-2">x̄</th>
+                    <th className="text-right font-semibold pb-1 px-2">s</th>
+                    <th className="text-right font-semibold pb-1 pl-2">SE</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)]">
+                  {var2IsCategorical ? (
+                    <>
+                      {statsA && <SummaryRow label={label1} s={statsA} />}
+                      {statsB && <SummaryRow label={label2} s={statsB} />}
+                    </>
+                  ) : (
+                    <>
+                      {stats1 && var1Col && <SummaryRow label={var1Col.name} s={stats1} />}
+                      {stats2 && var2Col && <SummaryRow label={var2Col.name} s={stats2} />}
+                    </>
+                  )}
+                </tbody>
+              </table>
+              {isPairedProcedure && result?.diffN !== undefined && <p className="text-[10px] text-[var(--color-muted)] mt-1 italic">{result.diffN} matched pairs used</p>}
+            </div>
+          )}
 
-                <div className="rounded-xl border border-[var(--color-border)] bg-white p-3">
-                  <p className="text-[10px] text-[var(--color-muted)] mb-1">{Math.round((1 - alphaVal) * 100)}% Confidence Interval</p>
-                  <p className="text-xs font-mono font-medium">({fmt(result.ci[0])}, {fmt(result.ci[1])})</p>
-                </div>
+          {/* results strip — full width (tests) */}
+          {result && isTestProcedure(effectiveProcedure) && (
+            <div className={`grid gap-2 flex-shrink-0 ${result.df !== null ? 'grid-cols-[1fr_0.7fr_1fr_1.6fr]' : 'grid-cols-[1fr_1fr_1.6fr]'}`}>
+              <StatBox label={`${result.statLabel}-statistic`} value={fmt(result.stat ?? NaN, 4)} highlight="gold" />
+              {result.df !== null && <StatBox label="df" value={fmt(result.df, 4)} />}
+              <StatBox label="p-value" value={fmtP(result.p ?? NaN)} />
+              <StatBox label={`${confLevelNum}% CI`} value={`(${fmt(result.ci[0])}, ${fmt(result.ci[1])})`} />
+            </div>
+          )}
 
-                {isTestProcedure(effectiveProcedure) && (
-                  <div className={`rounded-xl p-3 border ${rejected ? 'bg-[var(--color-danger-light)] border-[var(--color-danger)]' : 'bg-[var(--color-accent-light)] border-[var(--color-border)]'}`}>
-                    <p className={`text-xs font-semibold mb-1 ${rejected ? 'text-[var(--color-danger)]' : 'text-[var(--color-accent-strong)]'}`}>{rejected ? 'Reject H₀' : 'Fail to Reject H₀'}</p>
-                    <p className="text-xs text-[var(--color-muted)] leading-relaxed">
-                      {rejected
-                        ? `At α = ${alpha}, there is sufficient evidence to conclude ${altMu} ${altSymbol} ${h0}.`
-                        : `At α = ${alpha}, there is not sufficient evidence to conclude ${altMu} ${altSymbol} ${h0}.`}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          {/* CI only — full width (intervals) */}
+          {result && !isTestProcedure(effectiveProcedure) && (
+            <div className="rounded-xl border border-[var(--color-border)] bg-white p-3 flex-shrink-0">
+              <p className="text-[10px] text-[var(--color-muted)] mb-1">{confLevelNum}% Confidence Interval</p>
+              <p className="text-sm font-mono font-medium">({fmt(result.ci[0])}, {fmt(result.ci[1])})</p>
+            </div>
+          )}
+
+          {/* conclusion — full width (tests). Reject = gold (observed/extreme), fail = teal (consistent w/ null). */}
+          {result && isTestProcedure(effectiveProcedure) && (
+            <div className={`rounded-xl p-3 border flex-shrink-0 ${rejected ? 'bg-[var(--color-gold-light)] border-[var(--color-gold-ring)]' : 'bg-[var(--color-accent-light)] border-[var(--color-border)]'}`}>
+              <p className={`text-xs font-semibold mb-1 ${rejected ? 'text-[var(--color-gold-text)]' : 'text-[var(--color-accent-strong)]'}`}>{rejected ? 'Reject H₀' : 'Fail to Reject H₀'}</p>
+              <p className="text-xs text-[var(--color-muted)] leading-relaxed">
+                {rejected
+                  ? `At α = ${alpha}, there is sufficient evidence to conclude ${altMu} ${altSymbol} ${h0}.`
+                  : `At α = ${alpha}, there is not sufficient evidence to conclude ${altMu} ${altSymbol} ${h0}.`}
+              </p>
+            </div>
+          )}
+
+          {!result && (
+            <p className="text-xs text-[var(--color-muted)] italic flex-shrink-0">
+              {isZProcedure(effectiveProcedure) && (!sigma || !isFinite(parseFloat(sigma)) || parseFloat(sigma) <= 0)
+                ? 'Enter the known population standard deviation (σ) above.'
+                : var2IsCategorical && (!groupA || !groupB)
+                  ? 'Assign a grouping variable with at least 2 distinct values.'
+                  : 'Need n ≥ 2 to compute results.'}
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -550,11 +567,11 @@ function SummaryRow({ label, s }: { label: string; s: SummaryStats }) {
   )
 }
 
-function StatBox({ label, value, highlight }: { label: string; value: string; highlight?: 'reject' | 'keep' }) {
+function StatBox({ label, value, highlight }: { label: string; value: string; highlight?: 'gold' | 'keep' }) {
   return (
-    <div className={`rounded-xl p-3 text-center ${highlight === 'reject' ? 'bg-[var(--color-danger-light)]' : highlight === 'keep' ? 'bg-[var(--color-accent-light)]' : 'bg-[var(--color-bg)]'}`}>
+    <div className={`rounded-xl p-3 text-center ${highlight === 'gold' ? 'bg-[var(--color-gold-light)]' : highlight === 'keep' ? 'bg-[var(--color-accent-light)]' : 'bg-[var(--color-bg)]'}`}>
       <p className="text-[10px] font-mono text-[var(--color-muted)] mb-0.5">{label}</p>
-      <p className={`text-base font-semibold font-mono tabular-nums ${highlight === 'reject' ? 'text-[var(--color-danger)]' : highlight === 'keep' ? 'text-[var(--color-accent-strong)]' : 'text-[var(--color-text)]'}`}>{value}</p>
+      <p className={`text-base font-semibold font-mono tabular-nums ${highlight === 'gold' ? 'text-[var(--color-gold-text)]' : highlight === 'keep' ? 'text-[var(--color-accent-strong)]' : 'text-[var(--color-text)]'}`}>{value}</p>
     </div>
   )
 }

@@ -24,6 +24,7 @@ const APPLET_LINKS = [
   { href: '/applets/random-number-generator', label: 'Random Number Generator' },
   { href: '/applets/spinner', label: 'Spinner' },
   { href: '/applets/galton-board', label: 'Galton Board' },
+  { href: '/applets/lady-tasting-tea', label: 'Lady Tasting Tea' },
 ]
 
 export function AppletShell({

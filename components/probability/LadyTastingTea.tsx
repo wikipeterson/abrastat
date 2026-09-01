@@ -256,6 +256,8 @@ export function LadyTastingTea() {
     setStudentScore(total)
     setStudentMilkCorrect(milkCorrect)
     setPhase('revealed')
+    setSimCounts(prev => ({ ...prev, [total]: (prev[total] || 0) + 1 }))
+    setTotalSims(prev => prev + 1)
   }, [arrangement, selected])
 
   const addSims = useCallback((n: number) => {

@@ -580,6 +580,24 @@ function AppletsBrowser() {
           </Link>
 
           <Link
+            href="/applets/sampling-words"
+            className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-start gap-4">
+              <div className="text-3xl leading-none">📄</div>
+              <div className="space-y-1">
+                <div className="text-lg font-serif italic font-semibold text-[var(--color-text)]">Sampling Words</div>
+                <p className="text-sm text-[var(--color-muted)] max-w-md">
+                  Take repeated random samples from the Gettysburg Address and compare precision at different sample sizes.
+                </p>
+              </div>
+            </div>
+            <span className="self-start sm:self-auto px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-accent)] text-white whitespace-nowrap">
+              Open
+            </span>
+          </Link>
+
+          <Link
             href="/applets/lady-tasting-tea"
             className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-card)] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:shadow-md transition-shadow"
           >

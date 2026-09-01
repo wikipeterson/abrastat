@@ -25,6 +25,7 @@ const APPLET_LINKS = [
   { href: '/applets/spinner', label: 'Spinner' },
   { href: '/applets/galton-board', label: 'Galton Board' },
   { href: '/applets/lady-tasting-tea', label: 'Lady Tasting Tea' },
+  { href: '/applets/sampling-words', label: 'Sampling Words' },
 ]
 
 export function AppletShell({

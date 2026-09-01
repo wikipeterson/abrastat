@@ -324,16 +324,19 @@ export function LadyTastingTea() {
         </div>
       </div>
 
+      {/* Two-column layout: tea service left, simulation right */}
+      <div className="grid grid-cols-2 gap-4 items-start">
+
       {/* Tea service */}
       <div
         className="rounded-2xl border overflow-hidden shadow-sm"
         style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
       >
-        <div className="px-6 py-6">
+        <div className="px-4 py-5">
           {/* Cup row */}
           <div
-            className="flex justify-center gap-2"
-            style={{ overflow: 'visible', minHeight: 140 }}
+            className="flex justify-center gap-1.5"
+            style={{ overflow: 'visible', minHeight: 120 }}
           >
             {Array(8)
               .fill(null)
@@ -416,7 +419,7 @@ export function LadyTastingTea() {
                   <div
                     key={i}
                     className="flex flex-col items-center flex-shrink-0"
-                    style={{ width: 80 }}
+                    style={{ width: 60 }}
                   >
                     {/* Label above (revealed only) */}
                     <div
@@ -450,8 +453,8 @@ export function LadyTastingTea() {
                       <img
                         src="/applets/lady-tasting-tea/teacup.png"
                         alt={`Cup ${i + 1}`}
-                        width={64}
-                        height={58}
+                        width={52}
+                        height={46}
                         draggable={false}
                         style={{ display: 'block', userSelect: 'none' }}
                       />
@@ -613,6 +616,8 @@ export function LadyTastingTea() {
           )}
         </div>
       </div>
+
+      </div> {/* end two-column grid */}
     </div>
   )
 }

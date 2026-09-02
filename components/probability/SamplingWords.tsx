@@ -14,9 +14,9 @@ const DOT_SLOT = 7
 
 // SVG viewBox — wider panels since plots stack vertically in a flex-1 right column
 const SVG_W = 520
-const SVG_H = 165
-const MT = 20   // margin top (pop-mean label)
-const MB = 38   // margin bottom (axis)
+const SVG_H = 130
+const MT = 18   // margin top (pop-mean label)
+const MB = 34   // margin bottom (axis)
 const ML = 8
 const MR = 8
 const DAH = SVG_H - MT - MB   // dot area height = 107
@@ -303,7 +303,7 @@ export function SamplingWords() {
 
               <div className="flex items-center gap-1.5">
                 <span className="text-xs" style={{ color: 'var(--color-muted)' }}>Draw</span>
-                {[10, 100, 1000].map(n => (
+                {[10, 100].map(n => (
                   <button
                     key={n}
                     onClick={() => handleDrawMany(n)}

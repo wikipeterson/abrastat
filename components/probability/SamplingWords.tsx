@@ -8,19 +8,19 @@ import { GETTYSBURG, POP_MEAN, POP_SIZE, type GbWord } from '@/lib/gettysburg'
 const SAMPLE_SIZES = [5, 20, 50]
 const X_MIN = 1.0
 const X_MAX = 9.0
-const BIN_WIDTH = 0.2
+const BIN_WIDTH = 0.15
 const DOT_R = 3
 const DOT_SLOT = 7
 
-// SVG viewBox for each panel (side-by-side layout, ~340px wide when rendered)
-const SVG_W = 340
-const SVG_H = 160
+// SVG viewBox — wider panels since plots stack vertically in a flex-1 right column
+const SVG_W = 520
+const SVG_H = 165
 const MT = 20   // margin top (pop-mean label)
 const MB = 38   // margin bottom (axis)
-const ML = 6
-const MR = 6
-const DAH = SVG_H - MT - MB   // dot area height = 102
-const PW  = SVG_W - ML - MR   // plot width = 328
+const ML = 8
+const MR = 8
+const DAH = SVG_H - MT - MB   // dot area height = 107
+const PW  = SVG_W - ML - MR   // plot width = 504
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -100,11 +100,6 @@ function DotPlot({
             {means.length.toLocaleString()} samples
           </span>
         )}
-      </div>
-
-      {/* subtitle */}
-      <div className="px-3 pt-1.5 pb-0">
-        <p className="text-xs" style={{ color: 'var(--color-muted)' }}>Each dot = one sample mean.</p>
       </div>
 
       {/* dot plot or empty state */}
@@ -259,159 +254,164 @@ export function SamplingWords() {
 
   return (
     <div className="space-y-3">
-      {/* Header */}
-      <div
-        className="rounded-2xl border overflow-hidden shadow-sm"
-        style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
-      >
-        <div className="px-5 py-3 border-b flex flex-wrap items-baseline gap-x-4 gap-y-1" style={{ borderColor: 'var(--color-border)' }}>
-          <h1
-            className="text-xl font-semibold"
-            style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'var(--color-text)' }}
-          >
-            Sampling Words
-          </h1>
-          <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-            How does sample size affect the precision of a sample mean?
-          </p>
-        </div>
-        <div className="px-5 py-2.5" style={{ background: 'var(--color-bg)' }}>
-          <p className="text-sm" style={{ color: 'var(--color-text)' }}>
-            The Gettysburg Address has{' '}
-            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{POP_SIZE}</span>{' '}
-            words. Treat the words as a population and repeatedly take random samples. Each dot
-            represents the average word length in one random sample.
-          </p>
-        </div>
-      </div>
 
-      {/* Controls */}
-      <div
-        className="rounded-2xl border overflow-hidden shadow-sm"
-        style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
-      >
-        <div className="px-5 py-3 flex flex-wrap items-center gap-3">
-          <button
-            onClick={handleDrawOne}
-            className="px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: 'var(--color-accent)', color: 'white', cursor: 'pointer' }}
-          >
-            Draw 1 sample
-          </button>
+      {/* Two-column layout: left = header + controls, right = stacked dot plots */}
+      <div className="grid gap-3 items-start" style={{ gridTemplateColumns: '236px 1fr' }}>
 
-          <div className="flex items-center gap-1.5">
-            {[10, 100, 1000].map(n => (
-              <button
-                key={n}
-                onClick={() => handleDrawMany(n)}
-                className="px-3 py-2 rounded-lg text-sm font-semibold"
-                style={{
-                  background: 'var(--color-bg)',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-text)',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-mono)',
-                }}
+        {/* ── Left column ── */}
+        <div className="flex flex-col gap-3">
+
+          {/* Header card */}
+          <div
+            className="rounded-2xl border overflow-hidden shadow-sm"
+            style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+          >
+            <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
+              <h1
+                className="text-lg font-semibold"
+                style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'var(--color-text)' }}
               >
-                {n.toLocaleString()}
-              </button>
-            ))}
+                Sampling Words
+              </h1>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>
+                How does sample size affect the precision of a sample mean?
+              </p>
+            </div>
+            <div className="px-4 py-3" style={{ background: 'var(--color-bg)' }}>
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text)' }}>
+                The Gettysburg Address has{' '}
+                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{POP_SIZE}</span>{' '}
+                words. Treat the words as a population and repeatedly take random samples. Each dot
+                represents the average word length in one random sample.
+              </p>
+            </div>
           </div>
 
-          <button
-            onClick={handleReset}
-            className="px-3 py-2 rounded-lg text-sm font-medium"
-            style={{
-              color: 'var(--color-danger)',
-              border: '1px solid var(--color-danger-light)',
-              background: 'transparent',
-              cursor: 'pointer',
-            }}
+          {/* Controls card */}
+          <div
+            className="rounded-2xl border overflow-hidden shadow-sm"
+            style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
           >
-            Reset
-          </button>
+            <div className="px-4 py-3 flex flex-col gap-2.5">
+              <button
+                onClick={handleDrawOne}
+                className="w-full px-4 py-2 rounded-lg text-sm font-semibold text-left"
+                style={{ background: 'var(--color-accent)', color: 'white', cursor: 'pointer' }}
+              >
+                Draw 1 sample
+              </button>
 
-          {totalLabel && (
-            <span className="text-xs" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-muted)' }}>
-              {totalLabel}
-            </span>
-          )}
-        </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs" style={{ color: 'var(--color-muted)' }}>Draw</span>
+                {[10, 100, 1000].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => handleDrawMany(n)}
+                    className="flex-1 px-2 py-2 rounded-lg text-sm font-semibold"
+                    style={{
+                      background: 'var(--color-bg)',
+                      border: '1px solid var(--color-border)',
+                      color: 'var(--color-text)',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                  >
+                    {n.toLocaleString()}
+                  </button>
+                ))}
+              </div>
 
-        {/* Sample detail (appears inline when Draw 1 is clicked) */}
-        {lastSample && (
-          <div className="border-t px-5 py-3 flex flex-wrap items-start gap-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}>
-            <div>
-              <p className="text-xs font-semibold mb-1.5" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                Sample of {SAMPLE_SIZES[0]} words (n = {SAMPLE_SIZES[0]})
-              </p>
-              <table className="text-xs" style={{ fontFamily: 'var(--font-mono)' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <th className="pr-4 pb-1 text-left font-semibold" style={{ color: 'var(--color-muted)' }}>ID</th>
-                    <th className="pr-4 pb-1 text-left font-semibold" style={{ color: 'var(--color-muted)' }}>Word</th>
-                    <th className="pb-1 text-right font-semibold" style={{ color: 'var(--color-muted)' }}>Letters</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lastSample.words.map(w => (
-                    <tr key={w.id}>
-                      <td className="pr-4 py-0.5" style={{ color: 'var(--color-muted)' }}>{w.id}</td>
-                      <td className="pr-4 py-0.5" style={{ color: 'var(--color-text)' }}>{w.word}</td>
-                      <td className="py-0.5 text-right font-bold" style={{ color: 'var(--color-accent-strong)' }}>{w.letters}</td>
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={handleReset}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                  style={{
+                    color: 'var(--color-danger)',
+                    border: '1px solid var(--color-danger-light)',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Reset
+                </button>
+                {totalLabel && (
+                  <span className="text-xs" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-muted)' }}>
+                    {totalLabel}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Sample detail */}
+            {lastSample && (
+              <div className="border-t px-4 py-3" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}>
+                <p className="text-xs font-semibold mb-1.5" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  n = {SAMPLE_SIZES[0]} words
+                </p>
+                <table className="w-full text-xs" style={{ fontFamily: 'var(--font-mono)' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <th className="pb-1 text-left font-semibold" style={{ color: 'var(--color-muted)' }}>ID</th>
+                      <th className="pb-1 text-left font-semibold" style={{ color: 'var(--color-muted)' }}>Word</th>
+                      <th className="pb-1 text-right font-semibold" style={{ color: 'var(--color-muted)' }}>Len</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex flex-col justify-end">
-              <p className="text-sm" style={{ color: 'var(--color-text)' }}>
-                Sample mean ={' '}
-                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-gold-text)', fontSize: 16 }}>
-                  {lastSample.mean.toFixed(2)}
-                </span>{' '}
-                letters
-              </p>
-              <p className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
-                Dot added to the n = {SAMPLE_SIZES[0]} panel ↓
-              </p>
-            </div>
+                  </thead>
+                  <tbody>
+                    {lastSample.words.map(w => (
+                      <tr key={w.id}>
+                        <td className="py-0.5" style={{ color: 'var(--color-muted)' }}>{w.id}</td>
+                        <td className="py-0.5 pr-1" style={{ color: 'var(--color-text)' }}>{w.word}</td>
+                        <td className="py-0.5 text-right font-bold" style={{ color: 'var(--color-accent-strong)' }}>{w.letters}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="text-xs mt-2" style={{ color: 'var(--color-text)' }}>
+                  Mean ={' '}
+                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-gold-text)', fontSize: 15 }}>
+                    {lastSample.mean.toFixed(2)}
+                  </span>{' '}
+                  letters
+                </p>
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Three dot plots — side by side */}
-      <div className="grid grid-cols-3 gap-3">
-        {SAMPLE_SIZES.map(size => (
-          <DotPlot
-            key={size}
-            size={size}
-            means={results[size] ?? []}
-            highlightMean={size === SAMPLE_SIZES[0] ? highlightMean : null}
-            highlightKey={highlightKey}
-          />
-        ))}
-      </div>
+          {/* Summary (appears once there are sims, lives in left column) */}
+          {hasSims && (
+            <div
+              className="rounded-2xl border overflow-hidden shadow-sm"
+              style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+            >
+              <div className="px-4 py-3" style={{ background: 'var(--color-bg)' }}>
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text)' }}>
+                  All three distributions center near the population mean.
+                  Larger samples produce means that cluster more tightly — this is
+                  <em style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}> precision</em>:
+                  repeated sample means are closer together when n is large.
+                </p>
+              </div>
+            </div>
+          )}
 
-      {/* Summary */}
-      {hasSims && (
-        <div
-          className="rounded-2xl border overflow-hidden shadow-sm"
-          style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
-        >
-          <div className="px-5 py-3.5" style={{ background: 'var(--color-bg)' }}>
-            <p className="text-sm" style={{ color: 'var(--color-text)' }}>
-              All three distributions are centered near the population mean.
-              The larger samples produce means that are closer together — this is what
-              <em style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}> precision </em>
-              means: repeated sample means are closer together.
-              This is why larger random samples give more precise estimates of a population mean.
-            </p>
-          </div>
         </div>
-      )}
 
-      {/* Population view */}
+        {/* ── Right column: three dot plots stacked vertically ── */}
+        <div className="flex flex-col gap-3">
+          {SAMPLE_SIZES.map(size => (
+            <DotPlot
+              key={size}
+              size={size}
+              means={results[size] ?? []}
+              highlightMean={size === SAMPLE_SIZES[0] ? highlightMean : null}
+              highlightKey={highlightKey}
+            />
+          ))}
+        </div>
+
+      </div>
+
+      {/* Population view (full width, below grid) */}
       <div
         className="rounded-2xl border overflow-hidden shadow-sm"
         style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}

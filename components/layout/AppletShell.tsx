@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ReactNode, useState } from 'react'
 import { Header } from '@/components/layout/Header'
 import { useAuth } from '@/components/auth/AuthProvider'
@@ -41,13 +42,25 @@ export function AppletShell({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { user } = useAuth()
+  const router = useRouter()
   const libraryLinks = canAccessPuzzleWeek(user)
     ? [...BASE_LIBRARY_LINKS, { href: LOGIC_PUZZLES_URL, label: 'Logic Puzzles' }]
     : BASE_LIBRARY_LINKS
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
-      <Header centerTitle={title} onToggleSidebar={() => setSidebarOpen(v => !v)} />
+      <Header
+        centerTitle={title}
+        onToggleSidebar={() => setSidebarOpen(v => !v)}
+        modeTabs={[
+          { id: 'library', label: 'Library' },
+          { id: 'lab', label: 'Lab' },
+        ]}
+        activeModeId="library"
+        onModeChange={id => router.push(id === 'lab' ? '/workspace?mode=lab' : '/workspace?mode=library&section=applets')}
+        showSave={false}
+        showHomeLink={false}
+      />
 
       <div className="flex flex-1 min-h-0">
         {sidebarOpen && (

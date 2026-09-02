@@ -8,18 +8,20 @@ import { GETTYSBURG, POP_MEAN, POP_SIZE, type GbWord } from '@/lib/gettysburg'
 const SAMPLE_SIZES = [5, 20, 50]
 const X_MIN = 1.0
 const X_MAX = 9.0
-const BIN_WIDTH = 0.15
+const BIN_WIDTH = 0.15       // dot plot bins
+const HIST_BIN_WIDTH = 0.25  // histogram bins (wider = readable bars)
+const HIST_THRESHOLD = 50    // switch to histogram above this many samples
 const DOT_R = 3
-const DOT_SLOT = 7
+const DOT_SLOT = 6
 
 // SVG viewBox — wider panels since plots stack vertically in a flex-1 right column
 const SVG_W = 520
-const SVG_H = 130
-const MT = 18   // margin top (pop-mean label)
-const MB = 34   // margin bottom (axis)
+const SVG_H = 100
+const MT = 14   // margin top (pop-mean label)
+const MB = 30   // margin bottom (axis)
 const ML = 8
 const MR = 8
-const DAH = SVG_H - MT - MB   // dot area height = 107
+const DAH = SVG_H - MT - MB   // dot/bar area height = 56
 const PW  = SVG_W - ML - MR   // plot width = 504
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -30,6 +32,10 @@ function xScale(v: number): number {
 
 function binOf(v: number): number {
   return Math.round(v / BIN_WIDTH) * BIN_WIDTH
+}
+
+function histBinOf(v: number): number {
+  return Math.round(v / HIST_BIN_WIDTH) * HIST_BIN_WIDTH
 }
 
 function drawSample(n: number): GbWord[] {
@@ -58,29 +64,136 @@ function DotPlot({
   highlightMean: number | null
   highlightKey: number
 }) {
-  const bins = new Map<number, number>()
-  for (const m of means) {
-    const b = binOf(m)
-    bins.set(b, (bins.get(b) ?? 0) + 1)
-  }
-
-  const hlBin = highlightMean !== null ? binOf(highlightMean) : null
-
-  type Dot = { cx: number; cy: number; hl: boolean }
-  const circles: Dot[] = []
-  for (const [bv, count] of bins.entries()) {
-    const cx = xScale(bv)
-    const isHlBin = hlBin !== null && Math.abs(bv - hlBin) < 0.001
-    for (let i = 0; i < count; i++) {
-      const cy = MT + DAH - DOT_R - i * DOT_SLOT
-      if (cy < MT) break
-      circles.push({ cx, cy, hl: isHlBin && i === count - 1 })
-    }
-  }
-
+  const useHistogram = means.length > HIST_THRESHOLD
   const popX = xScale(POP_MEAN)
   const ticks = [2, 3, 4, 5, 6, 7, 8]
   const isEmpty = means.length === 0
+
+  // ── dot plot data ──
+  const dotBins = new Map<number, number>()
+  if (!useHistogram) {
+    for (const m of means) {
+      const b = binOf(m)
+      dotBins.set(b, (dotBins.get(b) ?? 0) + 1)
+    }
+  }
+  const hlDotBin = highlightMean !== null ? binOf(highlightMean) : null
+  type Dot = { cx: number; cy: number; hl: boolean }
+  const circles: Dot[] = []
+  if (!useHistogram) {
+    for (const [bv, count] of dotBins.entries()) {
+      const cx = xScale(bv)
+      const isHlBin = hlDotBin !== null && Math.abs(bv - hlDotBin) < 0.001
+      for (let i = 0; i < count; i++) {
+        const cy = MT + DAH - DOT_R - i * DOT_SLOT
+        if (cy < MT) break
+        circles.push({ cx, cy, hl: isHlBin && i === count - 1 })
+      }
+    }
+  }
+
+  // ── histogram data ──
+  const histBins = new Map<number, number>()
+  if (useHistogram) {
+    for (const m of means) {
+      const b = histBinOf(m)
+      histBins.set(b, (histBins.get(b) ?? 0) + 1)
+    }
+  }
+  const maxCount = useHistogram ? Math.max(...histBins.values(), 1) : 1
+  const hlHistBin = highlightMean !== null ? histBinOf(highlightMean) : null
+  const barW = (HIST_BIN_WIDTH / (X_MAX - X_MIN)) * PW
+
+  const svgContent = isEmpty ? null : (
+    <svg
+      viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+      style={{ width: '100%' }}
+      role="img"
+      aria-label={`${useHistogram ? 'Histogram' : 'Dot plot'} of sample means for n=${size}`}
+    >
+      <defs>
+        <clipPath id={`sw-clip-${size}`}>
+          <rect x={ML} y={MT} width={PW} height={DAH} />
+        </clipPath>
+      </defs>
+
+      {useHistogram ? (
+        /* histogram bars */
+        <g clipPath={`url(#sw-clip-${size})`}>
+          {Array.from(histBins.entries()).map(([bv, count]) => {
+            const cx = xScale(bv)
+            const barH = (count / maxCount) * DAH
+            const isHl = hlHistBin !== null && Math.abs(bv - hlHistBin) < 0.001
+            return (
+              <rect
+                key={bv}
+                x={cx - barW / 2 + 0.5}
+                y={MT + DAH - barH}
+                width={Math.max(barW - 1, 1)}
+                height={barH}
+                fill={isHl ? 'var(--color-gold)' : 'var(--color-accent)'}
+                opacity={isHl ? 1 : 0.72}
+              />
+            )
+          })}
+        </g>
+      ) : (
+        /* dot plot */
+        <>
+          <g clipPath={`url(#sw-clip-${size})`}>
+            {circles.filter(c => !c.hl).map((c, i) => (
+              <circle key={i} cx={c.cx} cy={c.cy} r={DOT_R} fill="var(--color-accent)" opacity={0.72} />
+            ))}
+          </g>
+          {circles.filter(c => c.hl).map(c => (
+            <circle key={`hl-${highlightKey}`} cx={c.cx} cy={c.cy} r={DOT_R} fill="var(--color-gold)" opacity={1}>
+              <animate attributeName="r" values="0;5;3" dur="0.35s" fill="freeze" />
+              <animate attributeName="opacity" values="0;1;1" dur="0.35s" fill="freeze" />
+            </circle>
+          ))}
+        </>
+      )}
+
+      {/* population mean reference line */}
+      <line x1={popX} y1={MT - 2} x2={popX} y2={MT + DAH} stroke="var(--color-gold)" strokeWidth={1.5} strokeDasharray="4,2" />
+      <text
+        x={popX} y={MT - 4}
+        textAnchor="middle"
+        style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--color-gold-text)', fontWeight: 600 }}
+      >
+        {POP_MEAN}
+      </text>
+
+      {/* baseline */}
+      <line x1={ML} y1={MT + DAH} x2={SVG_W - MR} y2={MT + DAH} stroke="var(--color-border)" strokeWidth={1} />
+
+      {/* ticks + labels */}
+      {ticks.map(t => {
+        const tx = xScale(t)
+        return (
+          <g key={t}>
+            <line x1={tx} y1={MT + DAH} x2={tx} y2={MT + DAH + 4} stroke="var(--color-border)" strokeWidth={1} />
+            <text
+              x={tx} y={MT + DAH + 13}
+              textAnchor="middle"
+              style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--color-muted)' }}
+            >
+              {t}
+            </text>
+          </g>
+        )
+      })}
+
+      {/* axis label */}
+      <text
+        x={SVG_W / 2} y={SVG_H - 3}
+        textAnchor="middle"
+        style={{ fontFamily: 'var(--font-sans)', fontSize: 8, fill: 'var(--color-muted)' }}
+      >
+        avg word length (letters)
+      </text>
+    </svg>
+  )
 
   return (
     <div
@@ -88,7 +201,7 @@ function DotPlot({
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
       {/* panel header */}
-      <div className="px-3 py-2 border-b flex items-baseline justify-between" style={{ borderColor: 'var(--color-border)' }}>
+      <div className="px-3 py-1.5 border-b flex items-baseline justify-between" style={{ borderColor: 'var(--color-border)' }}>
         <span
           className="font-semibold text-sm"
           style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'var(--color-text)' }}
@@ -102,9 +215,8 @@ function DotPlot({
         )}
       </div>
 
-      {/* dot plot or empty state */}
       {isEmpty ? (
-        <div className="flex items-center justify-center py-6 px-3 flex-1">
+        <div className="flex items-center justify-center py-4 px-3 flex-1">
           <p
             className="text-xs text-center"
             style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'var(--color-muted)' }}
@@ -112,74 +224,7 @@ function DotPlot({
             Run samples to see where the means land.
           </p>
         </div>
-      ) : (
-        <svg
-          viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-          style={{ width: '100%' }}
-          role="img"
-          aria-label={`Dot plot of sample means for n=${size}`}
-        >
-          <defs>
-            <clipPath id={`sw-clip-${size}`}>
-              <rect x={ML} y={MT} width={PW} height={DAH} />
-            </clipPath>
-          </defs>
-
-          {/* regular dots */}
-          <g clipPath={`url(#sw-clip-${size})`}>
-            {circles.filter(c => !c.hl).map((c, i) => (
-              <circle key={i} cx={c.cx} cy={c.cy} r={DOT_R} fill="var(--color-accent)" opacity={0.72} />
-            ))}
-          </g>
-
-          {/* highlight dot */}
-          {circles.filter(c => c.hl).map(c => (
-            <circle key={`hl-${highlightKey}`} cx={c.cx} cy={c.cy} r={DOT_R} fill="var(--color-gold)" opacity={1}>
-              <animate attributeName="r" values="0;5;3" dur="0.35s" fill="freeze" />
-              <animate attributeName="opacity" values="0;1;1" dur="0.35s" fill="freeze" />
-            </circle>
-          ))}
-
-          {/* population mean reference line */}
-          <line x1={popX} y1={MT - 2} x2={popX} y2={MT + DAH} stroke="var(--color-gold)" strokeWidth={1.5} strokeDasharray="4,2" />
-          <text
-            x={popX} y={MT - 6}
-            textAnchor="middle"
-            style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--color-gold-text)', fontWeight: 600 }}
-          >
-            {POP_MEAN}
-          </text>
-
-          {/* baseline */}
-          <line x1={ML} y1={MT + DAH} x2={SVG_W - MR} y2={MT + DAH} stroke="var(--color-border)" strokeWidth={1} />
-
-          {/* ticks + labels */}
-          {ticks.map(t => {
-            const tx = xScale(t)
-            return (
-              <g key={t}>
-                <line x1={tx} y1={MT + DAH} x2={tx} y2={MT + DAH + 4} stroke="var(--color-border)" strokeWidth={1} />
-                <text
-                  x={tx} y={MT + DAH + 14}
-                  textAnchor="middle"
-                  style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fill: 'var(--color-muted)' }}
-                >
-                  {t}
-                </text>
-              </g>
-            )
-          })}
-
-          {/* axis label */}
-          <text
-            x={SVG_W / 2} y={SVG_H - 4}
-            textAnchor="middle"
-            style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fill: 'var(--color-muted)' }}
-          >
-            avg word length (letters)
-          </text>
-        </svg>
-      )}
+      ) : svgContent}
     </div>
   )
 }

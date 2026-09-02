@@ -303,7 +303,7 @@ export function SamplingWords() {
 
               <div className="flex items-center gap-1.5">
                 <span className="text-xs" style={{ color: 'var(--color-muted)' }}>Draw</span>
-                {[10, 100].map(n => (
+                {[10].map(n => (
                   <button
                     key={n}
                     onClick={() => handleDrawMany(n)}

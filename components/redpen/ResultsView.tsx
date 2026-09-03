@@ -10,6 +10,8 @@ import { RedPenError, RedPenLoading } from './RedPenStatus'
 
 interface ResultsViewProps {
   administrationId: string
+  onDone: () => void
+  onPrintForStudents: () => void
 }
 
 interface Loaded {
@@ -20,7 +22,7 @@ interface Loaded {
   results: RedPenResult[]
 }
 
-export function ResultsView({ administrationId }: ResultsViewProps) {
+export function ResultsView({ administrationId, onDone, onPrintForStudents }: ResultsViewProps) {
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -59,8 +61,13 @@ export function ResultsView({ administrationId }: ResultsViewProps) {
 
   if (results.length === 0) {
     return (
-      <div className="max-w-3xl mx-auto py-10 px-4 text-sm text-[var(--color-muted)] bg-[var(--color-panel)] rounded-lg text-center p-6">
-        No graded sheets yet for {assessment.title} · {section?.label ?? 'this class'}.
+      <div className="max-w-3xl mx-auto py-10 px-4 space-y-5">
+        <button onClick={onDone} className="text-sm font-medium text-[var(--color-accent-strong)] hover:underline">
+          ← Back to assessments
+        </button>
+        <div className="text-sm text-[var(--color-muted)] bg-[var(--color-panel)] rounded-lg text-center p-6">
+          No graded sheets yet for {assessment.title} · {section?.label ?? 'this section'}.
+        </div>
       </div>
     )
   }
@@ -81,15 +88,40 @@ export function ResultsView({ administrationId }: ResultsViewProps) {
 
   const lowItems = itemStats.filter(i => i.pct < 50).length
 
+  const flaggedCount = results.filter(r => r.flagged).length
+
   return (
     <div className="max-w-5xl mx-auto py-6 px-4 space-y-5">
-      <div>
-        <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)]">{assessment.title}</h2>
-        <p className="text-sm text-[var(--color-muted)] mt-1">
-          {section?.label ?? 'Unknown class'} · <span className="font-mono">{results.length}</span> sheets,{' '}
-          <span className="font-mono">{assessment.questionCount}</span> questions. Mean{' '}
-          <span className="font-mono">{mean.toFixed(1)}</span> of <span className="font-mono">{maxScore}</span>.
-        </p>
+      <button onClick={onDone} className="text-sm font-medium text-[var(--color-accent-strong)] hover:underline">
+        ← Back to assessments
+      </button>
+
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)]">{assessment.title}</h2>
+          <p className="text-sm text-[var(--color-muted)] mt-1">
+            {section?.label ?? 'Unknown section'} · <span className="font-mono">{results.length}</span> sheets,{' '}
+            <span className="font-mono">{assessment.questionCount}</span> questions. Mean{' '}
+            <span className="font-mono">{mean.toFixed(1)}</span> of <span className="font-mono">{maxScore}</span>.
+            {flaggedCount > 0 && (
+              <> · <span className="text-[var(--color-gold-text)]">{flaggedCount} need{flaggedCount === 1 ? 's' : ''} a second look</span></>
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => exportResultsCsv(assessment.title, section?.label ?? '', students, results)}
+            className="px-4 py-2.5 rounded-lg border border-[var(--color-border)] text-[var(--color-muted)] text-sm font-medium hover:border-[var(--color-accent)] hover:text-[var(--color-accent-strong)] transition-colors whitespace-nowrap"
+          >
+            Export CSV
+          </button>
+          <button
+            onClick={onPrintForStudents}
+            className="px-5 py-2.5 rounded-lg border border-[var(--color-accent)] text-[var(--color-accent-strong)] text-sm font-semibold hover:bg-[var(--color-accent-light)] transition-colors whitespace-nowrap"
+          >
+            Print for students →
+          </button>
+        </div>
       </div>
 
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-6">
@@ -131,7 +163,10 @@ export function ResultsView({ administrationId }: ResultsViewProps) {
             const missed = r.responses.filter(resp => !resp.correct).map(resp => resp.n)
             return (
               <div key={r.studentId} className="grid grid-cols-[1fr_90px_90px_1fr] gap-4 items-center px-6 py-3 border-b border-[var(--color-panel)] last:border-b-0">
-                <div className="text-sm font-medium text-[var(--color-text)]">{student?.name ?? r.studentId}</div>
+                <div className="flex items-center gap-2">
+                  {r.flagged && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-gold)] flex-shrink-0" title="Needs a second look" />}
+                  <div className="text-sm font-medium text-[var(--color-text)]">{student?.name ?? r.studentId}</div>
+                </div>
                 <div className="font-mono text-sm">{r.score} / {r.maxScore}</div>
                 <div className={`font-mono text-sm ${pct < 70 ? 'text-[var(--color-danger)]' : ''}`}>{pct}%</div>
                 <div className="font-mono text-xs text-[var(--color-muted)]">{missed.length === 0 ? '—' : missed.join(', ')}</div>
@@ -141,4 +176,32 @@ export function ResultsView({ administrationId }: ResultsViewProps) {
       </div>
     </div>
   )
+}
+
+function toCsvValue(value: string | number): string {
+  const text = String(value)
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+}
+
+function exportResultsCsv(title: string, sectionLabel: string, students: RedPenStudent[], results: RedPenResult[]) {
+  const rows = [
+    ['Student', 'Score', 'Max score', 'Percent', 'Missed'],
+    ...results
+      .slice()
+      .sort((a, b) => (students.find(s => s.id === a.studentId)?.name ?? '').localeCompare(students.find(s => s.id === b.studentId)?.name ?? ''))
+      .map(r => {
+        const student = students.find(s => s.id === r.studentId)
+        const pct = r.maxScore > 0 ? Math.round((r.score / r.maxScore) * 100) : 0
+        const missed = r.responses.filter(resp => !resp.correct).map(resp => resp.n)
+        return [student?.name ?? r.studentId, r.score, r.maxScore, `${pct}%`, missed.join('; ')]
+      }),
+  ]
+  const csv = rows.map(row => row.map(toCsvValue).join(',')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${(title || 'results').replace(/[\\/:*?"<>|]+/g, '').trim()}${sectionLabel ? ` - ${sectionLabel}` : ''}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }

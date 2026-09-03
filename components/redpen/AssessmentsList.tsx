@@ -1,12 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { useAuth } from '@/components/auth/AuthProvider'
 import {
-  createAdministration, listAdministrations, listAssessments, listSections, listStudents,
+  createAdministration, deleteAssessment, listAdministrations, listAssessments, listResults,
+  listSections, listStudents,
 } from '@/lib/redpen/storage'
-import { AdministrationStatus, RedPenAdministration, RedPenAssessment, RedPenSection, RedPenStudent } from '@/lib/redpen/types'
+import {
+  AdministrationStatus, RedPenAdministration, RedPenAssessment, RedPenResult, RedPenSection, RedPenStudent,
+} from '@/lib/redpen/types'
 import { RedPenError, RedPenLoading } from './RedPenStatus'
 
 export type AdministrationScreen = 'sheets' | 'scan' | 'results'
@@ -48,17 +52,21 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
   const [administrations, setAdministrations] = useState<RedPenAdministration[]>([])
   const [sections, setSections] = useState<RedPenSection[]>([])
   const [students, setStudents] = useState<RedPenStudent[]>([])
-  const [givingToClassFor, setGivingToClassFor] = useState<string | null>(null)
+  const [results, setResults] = useState<RedPenResult[]>([])
+  const [givingToSectionFor, setGivingToSectionFor] = useState<string | null>(null)
+  const [deletingAssessment, setDeletingAssessment] = useState<RedPenAssessment | null>(null)
+  const [deletingAssessmentBusy, setDeletingAssessmentBusy] = useState(false)
 
   async function refresh(uid: string) {
     try {
-      const [a, admins, sec, stu] = await Promise.all([
-        listAssessments(uid), listAdministrations(uid), listSections(uid), listStudents(uid),
+      const [a, admins, sec, stu, res] = await Promise.all([
+        listAssessments(uid), listAdministrations(uid), listSections(uid), listStudents(uid), listResults(uid),
       ])
       setAssessments(a)
       setAdministrations(admins)
       setSections(sec)
       setStudents(stu)
+      setResults(res)
       setError(null)
     } catch {
       setError("Couldn't load your assessments. Try refreshing the page.")
@@ -77,11 +85,23 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
   if (loading) return <RedPenLoading />
   if (error) return <RedPenError message={error} />
 
-  async function handleGiveToClass(assessmentId: string, sectionId: string) {
+  async function handleGiveToSection(assessmentId: string, sectionId: string) {
     if (!user) return
     await createAdministration(user.uid, assessmentId, sectionId)
-    setGivingToClassFor(null)
+    setGivingToSectionFor(null)
     await refresh(user.uid)
+  }
+
+  async function handleConfirmDeleteAssessment() {
+    if (!user || !deletingAssessment) return
+    setDeletingAssessmentBusy(true)
+    try {
+      await deleteAssessment(user.uid, deletingAssessment.id)
+      setDeletingAssessment(null)
+      await refresh(user.uid)
+    } finally {
+      setDeletingAssessmentBusy(false)
+    }
   }
 
   const studentCountBySection = (sectionId: string) => students.filter(s => s.sectionId === sectionId).length
@@ -128,18 +148,25 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
                     Edit key
                   </button>
                   <button
-                    onClick={() => setGivingToClassFor(a.id)}
+                    onClick={() => setGivingToSectionFor(a.id)}
                     disabled={availableSections.length === 0}
                     className="font-mono text-[11px] uppercase tracking-wide px-3 py-1.5 rounded border border-dashed border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent-strong)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    + Give to another class
+                    + Give to a section
+                  </button>
+                  <button
+                    onClick={() => setDeletingAssessment(a)}
+                    title="Delete assessment"
+                    className="p-1.5 rounded hover:bg-black/5 text-[var(--color-muted)] hover:text-[var(--color-danger)] transition-colors"
+                  >
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>
 
               {admins.length === 0 ? (
                 <div className="text-sm text-[var(--color-muted)]">
-                  Not given to a class yet — use &quot;Give to another class&quot; above once your roster is ready.
+                  Not given to a section yet — use &quot;Give to a section&quot; above once your roster is ready.
                 </div>
               ) : (
                 <div className="flex flex-col gap-0.5">
@@ -147,10 +174,15 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
                     const section = sections.find(s => s.id === admin.sectionId)
                     const current = CURRENT_SCREEN[admin.status]
                     const links: { screen: AdministrationScreen; label: string }[] = [
-                      { screen: 'sheets', label: 'Sheets' },
+                      { screen: 'sheets', label: 'Answer Sheets' },
                       { screen: 'scan', label: 'Scan' },
                       { screen: 'results', label: 'Results' },
                     ]
+                    const rosterCount = section ? studentCountBySection(section.id) : 0
+                    const resultsCount = results.filter(r => r.administrationId === admin.id).length
+                    const statusLabel = admin.status === 'graded' && resultsCount < rosterCount
+                      ? `graded ${resultsCount}/${rosterCount}`
+                      : STATUS_LABEL[admin.status]
                     return (
                       <div
                         key={admin.id}
@@ -158,7 +190,7 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
                       >
                         <div className="text-sm font-medium text-[var(--color-text)]">{section?.label ?? '—'}</div>
                         <div className={`font-mono text-[10px] uppercase tracking-wide px-2 py-1 rounded w-fit ${STATUS_STYLE[admin.status]}`}>
-                          {STATUS_LABEL[admin.status]}
+                          {statusLabel}
                         </div>
                         <div className="font-mono text-xs text-[var(--color-muted)] text-right">
                           {section ? `${studentCountBySection(section.id)} students` : ''}
@@ -188,25 +220,50 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
         })}
       </div>
 
-      <Modal open={givingToClassFor !== null} onClose={() => setGivingToClassFor(null)} title="Give to a class">
+      <Modal open={givingToSectionFor !== null} onClose={() => setGivingToSectionFor(null)} title="Give to a section">
         <div className="space-y-2">
           {sections.length === 0 && (
             <div className="text-sm text-[var(--color-muted)]">
-              No sections yet — add one under Manage Classes first.
+              No sections yet — add one under Manage Sections first.
             </div>
           )}
           {sections
-            .filter(s => givingToClassFor && !administrations.some(admin => admin.assessmentId === givingToClassFor && admin.sectionId === s.id))
+            .filter(s => givingToSectionFor && !administrations.some(admin => admin.assessmentId === givingToSectionFor && admin.sectionId === s.id))
             .map(s => (
               <button
                 key={s.id}
-                onClick={() => givingToClassFor && handleGiveToClass(givingToClassFor, s.id)}
+                onClick={() => givingToSectionFor && handleGiveToSection(givingToSectionFor, s.id)}
                 className="w-full text-left px-4 py-3 rounded-lg border border-[var(--color-border)] hover:border-[var(--color-accent)] transition-colors flex items-center justify-between"
               >
                 <span className="text-sm font-medium text-[var(--color-text)]">{s.label}</span>
                 <span className="font-mono text-xs text-[var(--color-muted)]">{studentCountBySection(s.id)} students</span>
               </button>
             ))}
+        </div>
+      </Modal>
+
+      <Modal open={deletingAssessment !== null} onClose={() => setDeletingAssessment(null)} title="Delete assessment?">
+        <div className="space-y-4">
+          <p className="text-sm text-[var(--color-muted)]">
+            This removes <span className="font-medium text-[var(--color-text)]">{deletingAssessment?.title}</span> and
+            every section it was given to — including their printed-sheet status, scans, and results. Your class
+            rosters themselves aren&apos;t affected. This can&apos;t be undone.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setDeletingAssessment(null)}
+              className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmDeleteAssessment}
+              disabled={deletingAssessmentBusy}
+              className="px-4 py-2 rounded-lg text-sm bg-[var(--color-danger)] text-white font-medium hover:brightness-105 transition-all disabled:opacity-60"
+            >
+              {deletingAssessmentBusy ? 'Deleting…' : 'Delete assessment'}
+            </button>
+          </div>
         </div>
       </Modal>
     </div>

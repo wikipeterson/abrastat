@@ -3,32 +3,34 @@
 import { useEffect, useState } from 'react'
 import { AboutRedPen } from './AboutRedPen'
 import { AssessmentsList } from './AssessmentsList'
-import { ManageClasses } from './ManageClasses'
+import { ManageSections } from './ManageSections'
 import { NewAssessmentChoice } from './NewAssessmentChoice'
 import { ImportAssessment } from './ImportAssessment'
 import { AssessmentBuilder, BuilderDraft } from './AssessmentBuilder'
 import { SheetPrintView } from './SheetPrintView'
 import { ScanAndGrade } from './ScanAndGrade'
 import { ResultsView } from './ResultsView'
+import { PrintForStudents } from './PrintForStudents'
 import { useAuth } from '@/components/auth/AuthProvider'
 
-type TopTab = 'about' | 'assessments' | 'manageClasses'
+type TopTab = 'about' | 'assessments' | 'manageSections'
 
 type View =
   | { screen: 'about' }
   | { screen: 'assessments' }
-  | { screen: 'manageClasses' }
+  | { screen: 'manageSections' }
   | { screen: 'newChoice' }
   | { screen: 'import' }
   | { screen: 'build'; draft: BuilderDraft | null }
   | { screen: 'sheets'; administrationId: string }
   | { screen: 'scan'; administrationId: string }
   | { screen: 'results'; administrationId: string }
+  | { screen: 'printForStudents'; administrationId: string }
 
 const TOP_TABS: { id: TopTab; label: string }[] = [
   { id: 'about', label: 'About RedPen' },
   { id: 'assessments', label: 'Assessments' },
-  { id: 'manageClasses', label: 'Manage Classes' },
+  { id: 'manageSections', label: 'Manage Sections' },
 ]
 
 interface RedPenHubProps {
@@ -47,7 +49,7 @@ export function RedPenHub({ onChromeChange }: RedPenHubProps) {
 
   useEffect(() => {
     if (!onChromeChange) return
-    if (view.screen === 'about' || view.screen === 'assessments' || view.screen === 'manageClasses') {
+    if (view.screen === 'about' || view.screen === 'assessments' || view.screen === 'manageSections') {
       onChromeChange(null)
       return
     }
@@ -55,15 +57,16 @@ export function RedPenHub({ onChromeChange }: RedPenHubProps) {
       newChoice: 'New assessment',
       import: 'Import an assessment',
       build: 'Build the assessment',
-      sheets: 'Print sheets',
+      sheets: 'Print answer sheets',
       scan: 'Scan and grade',
       results: 'Results',
+      printForStudents: 'Print for students',
     }
     onChromeChange({ title: titles[view.screen], onBack: () => setView({ screen: 'assessments' }) })
     return () => onChromeChange(null)
   }, [onChromeChange, view])
 
-  if (view.screen === 'about' || view.screen === 'assessments' || view.screen === 'manageClasses') {
+  if (view.screen === 'about' || view.screen === 'assessments' || view.screen === 'manageSections') {
     return (
       <div className="max-w-5xl mx-auto py-6 px-4 space-y-6">
         <div className="flex gap-1 border-b border-[var(--color-border)]">
@@ -91,7 +94,7 @@ export function RedPenHub({ onChromeChange }: RedPenHubProps) {
             onEditAssessment={assessmentId => setView({ screen: 'build', draft: { assessmentId } })}
           />
         )}
-        {view.screen === 'manageClasses' && !needsSignIn && <ManageClasses />}
+        {view.screen === 'manageSections' && !needsSignIn && <ManageSections />}
       </div>
     )
   }
@@ -137,12 +140,28 @@ export function RedPenHub({ onChromeChange }: RedPenHubProps) {
     return (
       <ScanAndGrade
         administrationId={view.administrationId}
+        onDone={() => setView({ screen: 'assessments' })}
         onGraded={() => setView({ screen: 'results', administrationId: view.administrationId })}
       />
     )
   }
 
-  return <ResultsView administrationId={view.administrationId} />
+  if (view.screen === 'results') {
+    return (
+      <ResultsView
+        administrationId={view.administrationId}
+        onDone={() => setView({ screen: 'assessments' })}
+        onPrintForStudents={() => setView({ screen: 'printForStudents', administrationId: view.administrationId })}
+      />
+    )
+  }
+
+  return (
+    <PrintForStudents
+      administrationId={view.administrationId}
+      onDone={() => setView({ screen: 'results', administrationId: view.administrationId })}
+    />
+  )
 }
 
 function SignInNotice() {

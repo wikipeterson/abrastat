@@ -11,6 +11,7 @@ import { RedPenError, RedPenLoading } from './RedPenStatus'
 
 interface ScanAndGradeProps {
   administrationId: string
+  onDone: () => void
   onGraded: () => void
 }
 
@@ -27,12 +28,13 @@ type State =
   | { phase: 'error'; message: string }
   | { phase: 'done'; outcome: ScanOutcome }
 
-export function ScanAndGrade({ administrationId, onGraded }: ScanAndGradeProps) {
+export function ScanAndGrade({ administrationId, onDone, onGraded }: ScanAndGradeProps) {
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [state, setState] = useState<State>({ phase: 'idle' })
+  const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   // Captured straight from pdf.js, before any of the reader's own processing — ground truth
   // for "what did the browser actually render from this PDF," independent of whatever tool
@@ -94,18 +96,36 @@ export function ScanAndGrade({ administrationId, onGraded }: ScanAndGradeProps) 
 
   const identifiedIds = new Set(state.phase === 'done' ? state.outcome.results.map(r => r.studentId) : [])
   const missingStudents = students.filter(s => !identifiedIds.has(s.id))
+  const wrongAdminPages = state.phase === 'done' ? state.outcome.log.filter(l => l.tag === 'WRONG_ADMIN').length : 0
 
   return (
     <div className="max-w-5xl mx-auto py-6 px-4 space-y-5">
+      <button onClick={onDone} className="text-sm font-medium text-[var(--color-accent-strong)] hover:underline">
+        ← Back to assessments
+      </button>
+
       <div>
         <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)]">Scan and grade</h2>
         <p className="text-sm text-[var(--color-muted)] mt-1">
-          {assessment.title} · {section?.label ?? 'Unknown class'} · drop the multi-page PDF straight off
+          {assessment.title} · {section?.label ?? 'Unknown section'} · drop the multi-page PDF straight off
           the printer. Every sheet is decided automatically; the log tells you what it decided and why.
         </p>
       </div>
 
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-8">
+      <div
+        onDragOver={e => { if (state.phase === 'idle') { e.preventDefault(); setIsDragging(true) } }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={e => {
+          e.preventDefault()
+          setIsDragging(false)
+          if (state.phase !== 'idle') return
+          const f = e.dataTransfer.files?.[0]
+          if (f) handleFile(f)
+        }}
+        className={`bg-[var(--color-surface)] border rounded-lg p-8 transition-colors ${
+          isDragging ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]' : 'border-[var(--color-border)]'
+        }`}
+      >
         <input
           ref={fileInputRef}
           type="file"
@@ -115,7 +135,9 @@ export function ScanAndGrade({ administrationId, onGraded }: ScanAndGradeProps) 
         />
         {state.phase === 'idle' && (
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="text-sm text-[var(--color-muted)]">Upload the scanned PDF for this class.</div>
+            <div className="text-sm text-[var(--color-muted)]">
+              {isDragging ? 'Drop it here' : 'Drag the scanned PDF here, or'}
+            </div>
             <button
               onClick={() => fileInputRef.current?.click()}
               className="px-5 py-2.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-semibold hover:brightness-105 transition-all"
@@ -152,6 +174,13 @@ export function ScanAndGrade({ administrationId, onGraded }: ScanAndGradeProps) 
             </div>
             {missingStudents.length > 0 && (
               <div className="text-sm text-[var(--color-danger)] bg-[var(--color-danger-light)] rounded-lg p-3.5">
+                {wrongAdminPages > 0 && (
+                  <div className="font-semibold mb-1.5">
+                    {wrongAdminPages} page{wrongAdminPages === 1 ? '' : 's'} in this PDF {wrongAdminPages === 1 ? 'is' : 'are'} from a
+                    different assessment or section — double check you uploaded the right scan for{' '}
+                    {assessment.title} · {section?.label ?? 'this section'}.
+                  </div>
+                )}
                 No sheet was matched for: {missingStudents.map(s => s.name).join(', ')}.
                 <div className="mt-2">
                   <button onClick={() => downloadRenderedPages(renderedPagesRef.current)} className="font-medium hover:underline">

@@ -58,7 +58,7 @@ export interface RedPenResponse {
   correct: boolean
 }
 
-export type DecisionTag = 'FAINT' | 'DOUBLE' | 'ERASURE' | 'NO_MARK' | 'NO_QR' | 'NO_FIDUCIALS'
+export type DecisionTag = 'FAINT' | 'DOUBLE' | 'ERASURE' | 'NO_MARK' | 'NO_QR' | 'NO_FIDUCIALS' | 'WRONG_ADMIN'
 
 export interface DecisionLogEntry {
   administrationId: string

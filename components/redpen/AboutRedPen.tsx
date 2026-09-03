@@ -21,9 +21,9 @@ export function AboutRedPen({ onGetStarted }: AboutRedPenProps) {
         </div>
         <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)] mb-3">About RedPen</h2>
         <p className="text-[var(--color-muted)] leading-relaxed">
-          RedPen scans and grades bubble-sheet assessments. Print sheets for your class, hand them out with
-          your quiz, scan the completed stack on any printer with a document feeder, and get scores back —
-          no separate scanner or app needed.
+          RedPen scans and grades bubble-sheet assessments. Print sheets for your section, hand them out with
+          your assessment, scan the completed stack on your school&apos;s copier or any printer with a document
+          feeder, and get scores and summaries back.
         </p>
       </div>
 

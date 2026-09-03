@@ -31,11 +31,17 @@ type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 const SIDEBAR_WIDTH_CLASS = 'md:w-48'
 const LOGIC_PUZZLES_URL = 'https://puzzleweek.abrastat.com/puzzleweek/bonus'
 
-const BASE_LIBRARY_ITEMS: { id: Exclude<LibrarySection, 'logic-puzzles'>; label: string; soon?: boolean }[] = [
+type LibraryItem = { id: LibrarySection; label: string; soon?: boolean }
+
+const PRIMARY_LIBRARY_ITEMS: LibraryItem[] = [
   { id: 'all', label: 'Public Datasets' },
   { id: 'mine', label: 'My Datasets' },
   { id: 'games', label: 'Games' },
   { id: 'applets', label: 'Applets' },
+]
+// Below the "For teachers" divider in the sidebar — tools a teacher administers, not something
+// a student browses/plays directly (that's the primary group above).
+const TEACHER_LIBRARY_ITEMS: LibraryItem[] = [
   { id: 'polls', label: 'Polls', soon: true },
   { id: 'redpen', label: 'RedPen' },
 ]
@@ -284,9 +290,33 @@ function LibrarySidebar({
   open: boolean
   onClose: () => void
   section: LibrarySection
-  items: { id: LibrarySection; label: string; soon?: boolean }[]
+  items: { primary: LibraryItem[]; teacher: LibraryItem[] }
   onSectionChange: (section: LibrarySection) => void
 }) {
+  function renderItem(item: LibraryItem) {
+    return (
+      <button
+        key={item.id}
+        onClick={() => {
+          if (item.soon) return
+          onSectionChange(item.id)
+          onClose()
+        }}
+        className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+          section === item.id
+            ? 'bg-[var(--color-accent)] text-white'
+            : item.soon
+              ? 'text-[var(--color-border)] cursor-default'
+              : 'text-[var(--color-text)] hover:bg-[var(--color-bg)]'
+        }`}
+      >
+        <span>{item.label}</span>
+        {item.soon && (
+          <span className="ml-2 text-[10px] uppercase tracking-wide">Soon</span>
+        )}
+      </button>
+    )
+  }
   return (
     <>
       {open && (
@@ -305,28 +335,16 @@ function LibrarySidebar({
         </div>
 
         <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
-          {items.map(item => (
-            <button
-              key={item.id}
-              onClick={() => {
-                if (item.soon) return
-                onSectionChange(item.id)
-                onClose()
-              }}
-              className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                section === item.id
-                  ? 'bg-[var(--color-accent)] text-white'
-                  : item.soon
-                    ? 'text-[var(--color-border)] cursor-default'
-                    : 'text-[var(--color-text)] hover:bg-[var(--color-bg)]'
-              }`}
-            >
-              <span>{item.label}</span>
-              {item.soon && (
-                <span className="ml-2 text-[10px] uppercase tracking-wide">Soon</span>
-              )}
-            </button>
-          ))}
+          {items.primary.map(renderItem)}
+          {items.teacher.length > 0 && (
+            <>
+              <div className="my-2 border-t border-[var(--color-border)]" />
+              <div className="px-3 pb-1 text-[10px] font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">
+                For teachers
+              </div>
+              {items.teacher.map(renderItem)}
+            </>
+          )}
         </div>
       </aside>
     </>
@@ -724,9 +742,12 @@ function WorkspaceContent() {
     return snaps.full
   })
   const showPuzzleWeek = canAccessPuzzleWeek(user)
-  const libraryItems: { id: LibrarySection; label: string; soon?: boolean }[] = showPuzzleWeek
-    ? [...BASE_LIBRARY_ITEMS, { id: 'logic-puzzles', label: 'Logic Puzzles' }]
-    : BASE_LIBRARY_ITEMS
+  const libraryItems = {
+    primary: showPuzzleWeek
+      ? [...PRIMARY_LIBRARY_ITEMS, { id: 'logic-puzzles' as const, label: 'Logic Puzzles' }]
+      : PRIMARY_LIBRARY_ITEMS,
+    teacher: TEACHER_LIBRARY_ITEMS,
+  }
 
   useEffect(() => {
     if (librarySection === 'logic-puzzles' && !showPuzzleWeek) {

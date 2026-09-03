@@ -1,24 +1,61 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import {
   getAdministration, getAssessment, listResults, listSections, listStudents,
 } from '@/lib/redpen/storage'
+import { RedPenAdministration, RedPenAssessment, RedPenResult, RedPenSection, RedPenStudent } from '@/lib/redpen/types'
+import { useAuth } from '@/components/auth/AuthProvider'
+import { RedPenError, RedPenLoading } from './RedPenStatus'
 
 interface ResultsViewProps {
   administrationId: string
 }
 
-export function ResultsView({ administrationId }: ResultsViewProps) {
-  const admin = useMemo(() => getAdministration(administrationId), [administrationId])
-  const assessment = useMemo(() => admin ? getAssessment(admin.assessmentId) : null, [admin])
-  const section = useMemo(() => admin ? listSections().find(s => s.id === admin.sectionId) ?? null : null, [admin])
-  const students = useMemo(() => admin ? listStudents(admin.sectionId) : [], [admin])
-  const results = useMemo(() => listResults(administrationId), [administrationId])
+interface Loaded {
+  admin: RedPenAdministration
+  assessment: RedPenAssessment
+  section: RedPenSection | null
+  students: RedPenStudent[]
+  results: RedPenResult[]
+}
 
-  if (!admin || !assessment) {
-    return <div className="max-w-3xl mx-auto py-10 px-4 text-sm text-[var(--color-muted)]">Couldn&apos;t find that administration.</div>
-  }
+export function ResultsView({ administrationId }: ResultsViewProps) {
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState<Loaded | null>(null)
+
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    async function run() {
+      try {
+        const admin = await getAdministration(administrationId)
+        if (!admin) { if (!cancelled) setError("Couldn't find that administration."); return }
+        const [assessment, sections, students, results] = await Promise.all([
+          getAssessment(admin.assessmentId), listSections(user!.uid), listStudents(user!.uid, admin.sectionId),
+          listResults(user!.uid, administrationId),
+        ])
+        if (!assessment) { if (!cancelled) setError("Couldn't find that assessment."); return }
+        if (!cancelled) {
+          setLoaded({ admin, assessment, section: sections.find(s => s.id === admin.sectionId) ?? null, students, results })
+        }
+      } catch {
+        if (!cancelled) setError("Couldn't load results. Try refreshing the page.")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [administrationId, user])
+
+  if (!user) return <RedPenError message="Sign in to see results." />
+  if (loading) return <RedPenLoading />
+  if (error) return <RedPenError message={error} />
+  if (!loaded) return null
+  const { assessment, section, students, results } = loaded
 
   if (results.length === 0) {
     return (

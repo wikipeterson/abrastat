@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   bubbleCenterIn, BUBBLE_DIAMETER_IN, BUBBLE_OUTLINE_GREY, CONTENT_ORIGIN_IN, CONTENT_WIDTH_IN,
@@ -10,7 +10,9 @@ import {
 import { bubbleRows, splitIntoColumns } from '@/lib/redpen/layout'
 import { getAdministration, listSections, listStudents, saveAdministration } from '@/lib/redpen/storage'
 import { getAssessment } from '@/lib/redpen/storage'
-import { RedPenAssessment, RedPenStudent } from '@/lib/redpen/types'
+import { RedPenAdministration, RedPenAssessment, RedPenSection, RedPenStudent } from '@/lib/redpen/types'
+import { useAuth } from '@/components/auth/AuthProvider'
+import { RedPenError, RedPenLoading } from './RedPenStatus'
 
 // Sheet pages are the one deliberate exception to the app's --color-* token system: fiducials
 // and bubble outlines must be literal black/grey for scan contrast (spec §02), not whatever
@@ -208,20 +210,56 @@ function StudentSheet({
   )
 }
 
-export function SheetPrintView({ administrationId, onDone }: SheetPrintViewProps) {
-  const admin = useMemo(() => getAdministration(administrationId), [administrationId])
-  const assessment = useMemo(() => admin ? getAssessment(admin.assessmentId) : null, [admin])
-  const section = useMemo(() => admin ? listSections().find(s => s.id === admin.sectionId) ?? null : null, [admin])
-  const students = useMemo(() => admin ? listStudents(admin.sectionId) : [], [admin])
+interface Loaded {
+  admin: RedPenAdministration
+  assessment: RedPenAssessment
+  section: RedPenSection | null
+  students: RedPenStudent[]
+}
 
-  function handlePrint() {
-    if (admin && admin.status !== 'printed') saveAdministration({ ...admin, status: 'printed' })
+export function SheetPrintView({ administrationId, onDone }: SheetPrintViewProps) {
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState<Loaded | null>(null)
+
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    async function run() {
+      try {
+        const admin = await getAdministration(administrationId)
+        if (!admin) { if (!cancelled) setError("Couldn't find that administration."); return }
+        const [assessment, sections, students] = await Promise.all([
+          getAssessment(admin.assessmentId), listSections(user!.uid), listStudents(user!.uid, admin.sectionId),
+        ])
+        if (!assessment) { if (!cancelled) setError("Couldn't find that assessment."); return }
+        if (!cancelled) setLoaded({ admin, assessment, section: sections.find(s => s.id === admin.sectionId) ?? null, students })
+      } catch {
+        if (!cancelled) setError("Couldn't load this sheet. Try refreshing the page.")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [administrationId, user])
+
+  async function handlePrint() {
+    if (!loaded || !user) return
+    if (loaded.admin.status !== 'printed') {
+      const admin = { ...loaded.admin, status: 'printed' as const }
+      await saveAdministration(user.uid, admin)
+      setLoaded({ ...loaded, admin })
+    }
     window.print()
   }
 
-  if (!admin || !assessment) {
-    return <div className="max-w-3xl mx-auto py-10 px-4 text-sm text-[var(--color-muted)]">Couldn&apos;t find that administration.</div>
-  }
+  if (!user) return <RedPenError message="Sign in to print sheets." />
+  if (loading) return <RedPenLoading />
+  if (error) return <RedPenError message={error} />
+  if (!loaded) return null
+  const { admin, assessment, section, students } = loaded
 
   return (
     <div className="max-w-5xl mx-auto py-6 px-4 space-y-5">

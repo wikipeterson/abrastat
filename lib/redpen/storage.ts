@@ -1,117 +1,97 @@
-// Phase-1 persistence: plain localStorage, one key per collection. Read/write both swallow
-// errors the same way app/workspace/page.tsx's public-dataset cache does (private browsing,
-// quota, corrupted JSON should degrade to "empty" rather than crash the app). This is the
-// intended swap point for Firestore later (spec §07: "Firebase last") — callers only ever
-// import the functions below, never the storage keys.
+// Firestore persistence — flat top-level collections, each document scoped by an `ownerId`
+// field (the signed-in teacher's uid), matching lib/firestore.ts's existing `datasets`
+// convention (see fetchMyDatasets) rather than the original design spec's nested-subcollection
+// sketch. Security is enforced by Firestore rules matching `ownerId == request.auth.uid` (see
+// the RedPen Firestore migration plan for the exact rule text) — this file only ever queries
+// with an explicit `where('ownerId', '==', userId)`, since an unfiltered query against a
+// per-document ownerId rule is rejected outright rather than silently filtered.
+//
+// Every list/query stays a single equality filter on `ownerId`; anything more specific
+// (by section, by administration, ...) is filtered client-side after the fetch rather than
+// adding a composite index — fine at one teacher's data scale, and it means nobody ever has to
+// go click an "create this index" link in the Firebase console to make RedPen work.
 
-import { shortId } from './id'
 import {
-  DecisionLogEntry, RedPenAdministration, RedPenAssessment, RedPenResult, RedPenSection, RedPenStudent,
-} from './types'
+  collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where,
+} from 'firebase/firestore'
+import { db } from '../firebase'
+import { shortId } from './id'
+import { RedPenAdministration, RedPenAssessment, RedPenResult, RedPenSection, RedPenStudent } from './types'
 
-const KEYS = {
-  assessments: 'abrastat.redpen.assessments',
-  sections: 'abrastat.redpen.sections',
-  students: 'abrastat.redpen.students',
-  administrations: 'abrastat.redpen.administrations',
-  results: 'abrastat.redpen.results',
-  decisionLog: 'abrastat.redpen.decisionLog',
+const COLLECTIONS = {
+  assessments: 'redpenAssessments',
+  sections: 'redpenSections',
+  students: 'redpenStudents',
+  administrations: 'redpenAdministrations',
+  results: 'redpenResults',
 } as const
 
-function readList<T>(key: string): T[] {
-  if (typeof window === 'undefined') return []
-  try {
-    const raw = window.localStorage.getItem(key)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? (parsed as T[]) : []
-  } catch {
-    return []
-  }
-}
-
-function writeList<T>(key: string, items: T[]) {
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.setItem(key, JSON.stringify(items))
-  } catch {
-    // Ignore write failures (quota, private browsing) — same tolerance as the dataset cache.
-  }
+async function listOwned<T>(collectionName: string, userId: string): Promise<T[]> {
+  const snap = await getDocs(query(collection(db, collectionName), where('ownerId', '==', userId)))
+  return snap.docs.map(d => d.data() as T)
 }
 
 // ── Assessments ──────────────────────────────────────────────────────────
 
-export function listAssessments(): RedPenAssessment[] {
-  return readList<RedPenAssessment>(KEYS.assessments)
+export async function listAssessments(userId: string): Promise<RedPenAssessment[]> {
+  return listOwned<RedPenAssessment>(COLLECTIONS.assessments, userId)
 }
 
-export function getAssessment(id: string): RedPenAssessment | null {
-  return listAssessments().find(a => a.id === id) ?? null
+export async function getAssessment(id: string): Promise<RedPenAssessment | null> {
+  const snap = await getDoc(doc(db, COLLECTIONS.assessments, id))
+  return snap.exists() ? (snap.data() as RedPenAssessment) : null
 }
 
-export function saveAssessment(assessment: RedPenAssessment) {
-  const all = listAssessments()
-  const idx = all.findIndex(a => a.id === assessment.id)
-  if (idx === -1) all.push(assessment)
-  else all[idx] = assessment
-  writeList(KEYS.assessments, all)
+export async function saveAssessment(userId: string, assessment: RedPenAssessment): Promise<void> {
+  await setDoc(doc(db, COLLECTIONS.assessments, assessment.id), { ...assessment, ownerId: userId })
 }
 
-export function deleteAssessment(id: string) {
-  writeList(KEYS.assessments, listAssessments().filter(a => a.id !== id))
+export async function deleteAssessment(id: string): Promise<void> {
+  await deleteDoc(doc(db, COLLECTIONS.assessments, id))
 }
 
 // ── Sections & students (the roster) ────────────────────────────────────
 
-export function listSections(): RedPenSection[] {
-  return readList<RedPenSection>(KEYS.sections)
+export async function listSections(userId: string): Promise<RedPenSection[]> {
+  return listOwned<RedPenSection>(COLLECTIONS.sections, userId)
 }
 
-export function saveSection(section: RedPenSection) {
-  const all = listSections()
-  const idx = all.findIndex(s => s.id === section.id)
-  if (idx === -1) all.push(section)
-  else all[idx] = section
-  writeList(KEYS.sections, all)
+export async function saveSection(userId: string, section: RedPenSection): Promise<void> {
+  await setDoc(doc(db, COLLECTIONS.sections, section.id), { ...section, ownerId: userId })
 }
 
-export function listStudents(sectionId?: string): RedPenStudent[] {
-  const all = readList<RedPenStudent>(KEYS.students)
+export async function listStudents(userId: string, sectionId?: string): Promise<RedPenStudent[]> {
+  const all = await listOwned<RedPenStudent>(COLLECTIONS.students, userId)
   return sectionId ? all.filter(s => s.sectionId === sectionId) : all
 }
 
-export function saveStudent(student: RedPenStudent) {
-  const all = readList<RedPenStudent>(KEYS.students)
-  const idx = all.findIndex(s => s.id === student.id)
-  if (idx === -1) all.push(student)
-  else all[idx] = student
-  writeList(KEYS.students, all)
+export async function saveStudent(userId: string, student: RedPenStudent): Promise<void> {
+  await setDoc(doc(db, COLLECTIONS.students, student.id), { ...student, ownerId: userId })
 }
 
-export function deleteStudent(id: string) {
-  writeList(KEYS.students, readList<RedPenStudent>(KEYS.students).filter(s => s.id !== id))
+export async function deleteStudent(id: string): Promise<void> {
+  await deleteDoc(doc(db, COLLECTIONS.students, id))
 }
 
 // ── Administrations (an assessment given to a class) ────────────────────
 
-export function listAdministrations(assessmentId?: string): RedPenAdministration[] {
-  const all = readList<RedPenAdministration>(KEYS.administrations)
+export async function listAdministrations(userId: string, assessmentId?: string): Promise<RedPenAdministration[]> {
+  const all = await listOwned<RedPenAdministration>(COLLECTIONS.administrations, userId)
   return assessmentId ? all.filter(a => a.assessmentId === assessmentId) : all
 }
 
-export function getAdministration(id: string): RedPenAdministration | null {
-  return readList<RedPenAdministration>(KEYS.administrations).find(a => a.id === id) ?? null
+export async function getAdministration(id: string): Promise<RedPenAdministration | null> {
+  const snap = await getDoc(doc(db, COLLECTIONS.administrations, id))
+  return snap.exists() ? (snap.data() as RedPenAdministration) : null
 }
 
-export function saveAdministration(admin: RedPenAdministration) {
-  const all = readList<RedPenAdministration>(KEYS.administrations)
-  const idx = all.findIndex(a => a.id === admin.id)
-  if (idx === -1) all.push(admin)
-  else all[idx] = admin
-  writeList(KEYS.administrations, all)
+export async function saveAdministration(userId: string, admin: RedPenAdministration): Promise<void> {
+  await setDoc(doc(db, COLLECTIONS.administrations, admin.id), { ...admin, ownerId: userId })
 }
 
-export function createAdministration(assessmentId: string, sectionId: string): RedPenAdministration {
+export async function createAdministration(
+  userId: string, assessmentId: string, sectionId: string,
+): Promise<RedPenAdministration> {
   const admin: RedPenAdministration = {
     id: shortId(), // short — this id is encoded in every printed sheet's QR code, see id.ts
     assessmentId,
@@ -119,51 +99,29 @@ export function createAdministration(assessmentId: string, sectionId: string): R
     date: new Date().toISOString().slice(0, 10),
     status: 'sheets-ready',
   }
-  saveAdministration(admin)
+  await saveAdministration(userId, admin)
   return admin
 }
 
-// ── Results & the scan decision log (administrations/{id}/results/{studentId} per spec §05b) ──
+// ── Results (administration x student, upserted whole on every (re)scan) ────────────────────
 
-function resultKey(administrationId: string, studentId: string): string {
-  return `${administrationId}:${studentId}`
+function resultDocId(administrationId: string, studentId: string): string {
+  return `${administrationId}_${studentId}`
 }
 
-export function listResults(administrationId: string): RedPenResult[] {
-  return readList<RedPenResult>(KEYS.results).filter(r => r.administrationId === administrationId)
+export async function listResults(userId: string, administrationId: string): Promise<RedPenResult[]> {
+  const all = await listOwned<RedPenResult>(COLLECTIONS.results, userId)
+  return all.filter(r => r.administrationId === administrationId)
 }
 
-export function getResult(administrationId: string, studentId: string): RedPenResult | null {
-  return readList<RedPenResult>(KEYS.results)
-    .find(r => resultKey(r.administrationId, r.studentId) === resultKey(administrationId, studentId)) ?? null
+export async function getResult(userId: string, administrationId: string, studentId: string): Promise<RedPenResult | null> {
+  const snap = await getDoc(doc(db, COLLECTIONS.results, resultDocId(administrationId, studentId)))
+  return snap.exists() ? (snap.data() as RedPenResult) : null
 }
 
-export function saveResult(result: RedPenResult) {
-  const all = readList<RedPenResult>(KEYS.results)
-  const key = resultKey(result.administrationId, result.studentId)
-  const idx = all.findIndex(r => resultKey(r.administrationId, r.studentId) === key)
-  if (idx === -1) all.push(result)
-  else all[idx] = result
-  writeList(KEYS.results, all)
-}
-
-/**
- * Merges a scan run's log entries into an administration's log. A rescan is often partial —
- * a student who was absent the first time, or one sheet you're redoing after fixing something
- * — so this only replaces entries belonging to students this run actually produced results
- * for (plus any sheet-level entries with no student, which every run supersedes since those
- * can't be meaningfully matched across separate uploads). Everyone else's prior entries are
- * left alone; scanning three sheets never wipes the other twenty-eight students' log history.
- */
-export function saveDecisionLog(administrationId: string, entries: DecisionLogEntry[]) {
-  const studentIdsInRun = new Set(entries.map(e => e.studentId).filter((id): id is string => !!id))
-  const kept = readList<DecisionLogEntry>(KEYS.decisionLog).filter(e => {
-    if (e.administrationId !== administrationId) return true
-    return !!e.studentId && !studentIdsInRun.has(e.studentId)
-  })
-  writeList(KEYS.decisionLog, [...kept, ...entries])
-}
-
-export function getDecisionLog(administrationId: string): DecisionLogEntry[] {
-  return readList<DecisionLogEntry>(KEYS.decisionLog).filter(e => e.administrationId === administrationId)
+/** Whole-document upsert, keyed by administration+student — a rescan of one student (e.g. a
+ *  makeup for someone absent the first time) only ever touches that student's own document,
+ *  never anyone else's. */
+export async function saveResult(userId: string, result: RedPenResult): Promise<void> {
+  await setDoc(doc(db, COLLECTIONS.results, resultDocId(result.administrationId, result.studentId)), { ...result, ownerId: userId })
 }

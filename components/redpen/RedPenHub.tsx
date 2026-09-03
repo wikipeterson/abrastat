@@ -10,6 +10,7 @@ import { AssessmentBuilder, BuilderDraft } from './AssessmentBuilder'
 import { SheetPrintView } from './SheetPrintView'
 import { ScanAndGrade } from './ScanAndGrade'
 import { ResultsView } from './ResultsView'
+import { useAuth } from '@/components/auth/AuthProvider'
 
 type TopTab = 'about' | 'assessments' | 'manageClasses'
 
@@ -36,6 +37,13 @@ interface RedPenHubProps {
 
 export function RedPenHub({ onChromeChange }: RedPenHubProps) {
   const [view, setView] = useState<View>({ screen: 'about' })
+  const { user, isGuest } = useAuth()
+  // RedPen's data lives in Firestore under the signed-in teacher's uid (lib/redpen/storage.ts)
+  // — a guest/anonymous session has a uid too, but it's not durable (cleared cookies or a
+  // different browser loses it entirely), so treat it the same as signed-out here rather than
+  // let someone build a roster that's gone tomorrow. "About RedPen" stays visible either way —
+  // it's static and describes what signing in gets you.
+  const needsSignIn = !user || isGuest
 
   useEffect(() => {
     if (!onChromeChange) return
@@ -75,17 +83,20 @@ export function RedPenHub({ onChromeChange }: RedPenHubProps) {
         </div>
 
         {view.screen === 'about' && <AboutRedPen onGetStarted={() => setView({ screen: 'newChoice' })} />}
-        {view.screen === 'assessments' && (
+        {view.screen !== 'about' && needsSignIn && <SignInNotice />}
+        {view.screen === 'assessments' && !needsSignIn && (
           <AssessmentsList
             onNewAssessment={() => setView({ screen: 'newChoice' })}
             onOpenAdministration={(administrationId, screen) => setView({ screen, administrationId })}
             onEditAssessment={assessmentId => setView({ screen: 'build', draft: { assessmentId } })}
           />
         )}
-        {view.screen === 'manageClasses' && <ManageClasses />}
+        {view.screen === 'manageClasses' && !needsSignIn && <ManageClasses />}
       </div>
     )
   }
+
+  if (needsSignIn) return <SignInNotice />
 
   if (view.screen === 'newChoice') {
     return (
@@ -132,4 +143,16 @@ export function RedPenHub({ onChromeChange }: RedPenHubProps) {
   }
 
   return <ResultsView administrationId={view.administrationId} />
+}
+
+function SignInNotice() {
+  return (
+    <div className="max-w-xl mx-auto py-16 text-center space-y-2">
+      <div className="font-serif italic text-xl font-semibold text-[var(--color-text)]">Sign in to use RedPen</div>
+      <div className="text-sm text-[var(--color-muted)]">
+        Your assessments, roster, and results are saved to your account — a guest session doesn&apos;t persist
+        anywhere, so sign in with Google from the account menu to get started.
+      </div>
+    </div>
+  )
 }

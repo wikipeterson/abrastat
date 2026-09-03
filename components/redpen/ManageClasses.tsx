@@ -1,47 +1,76 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { Modal } from '@/components/ui/Modal'
+import { useAuth } from '@/components/auth/AuthProvider'
 import { shortId } from '@/lib/redpen/id'
 import { listSections, listStudents, saveSection, saveStudent, deleteStudent } from '@/lib/redpen/storage'
 import { RedPenSection, RedPenStudent } from '@/lib/redpen/types'
+import { RedPenError, RedPenLoading } from './RedPenStatus'
 
 export function ManageClasses() {
-  const [sections, setSections] = useState<RedPenSection[]>(() => listSections())
-  const [students, setStudents] = useState<RedPenStudent[]>(() => listStudents())
-  const [activeSectionId, setActiveSectionId] = useState<string | null>(() => listSections()[0]?.id ?? null)
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [sections, setSections] = useState<RedPenSection[]>([])
+  const [students, setStudents] = useState<RedPenStudent[]>([])
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
   const [addingSection, setAddingSection] = useState(false)
   const [newSectionLabel, setNewSectionLabel] = useState('')
   const [addingStudent, setAddingStudent] = useState(false)
   const [newStudentName, setNewStudentName] = useState('')
 
-  function refresh() {
-    const sec = listSections()
-    setSections(sec)
-    setStudents(listStudents())
-    setActiveSectionId(prev => prev ?? sec[0]?.id ?? null)
+  async function refresh(uid: string) {
+    try {
+      const [sec, stu] = await Promise.all([listSections(uid), listStudents(uid)])
+      setSections(sec)
+      setStudents(stu)
+      setActiveSectionId(prev => prev ?? sec[0]?.id ?? null)
+      setError(null)
+    } catch {
+      setError("Couldn't load your classes. Try refreshing the page.")
+    } finally {
+      setLoading(false)
+    }
   }
 
-  function handleAddSection() {
+  useEffect(() => {
+    if (!user) return
+    refresh(user.uid)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid])
+
+  if (!user) return <RedPenError message="Sign in to manage your classes." />
+  if (loading) return <RedPenLoading />
+  if (error) return <RedPenError message={error} />
+
+  async function handleAddSection() {
     const label = newSectionLabel.trim()
-    if (!label) return
+    if (!label || !user) return
     const section: RedPenSection = { id: uuid(), label }
-    saveSection(section)
+    await saveSection(user.uid, section)
     setNewSectionLabel('')
     setAddingSection(false)
-    refresh()
+    await refresh(user.uid)
     setActiveSectionId(section.id)
   }
 
-  function handleAddStudent() {
-    if (!activeSectionId) return
+  async function handleAddStudent() {
+    if (!activeSectionId || !user) return
     const name = newStudentName.trim()
     if (!name) return
-    saveStudent({ id: shortId(), sectionId: activeSectionId, name }) // short — encoded in every printed sheet's QR
+    // short — encoded in every printed sheet's QR
+    await saveStudent(user.uid, { id: shortId(), sectionId: activeSectionId, name })
     setNewStudentName('')
     setAddingStudent(false)
-    refresh()
+    await refresh(user.uid)
+  }
+
+  async function handleDeleteStudent(id: string) {
+    if (!user) return
+    await deleteStudent(id)
+    await refresh(user.uid)
   }
 
   const rosterForSection = students.filter(s => s.sectionId === activeSectionId)
@@ -103,7 +132,7 @@ export function ManageClasses() {
               <div className="flex items-center justify-between">
                 <span className="font-mono text-xs text-[var(--color-muted)]">auto per test</span>
                 <button
-                  onClick={() => { deleteStudent(st.id); refresh() }}
+                  onClick={() => handleDeleteStudent(st.id)}
                   className="text-xs text-[var(--color-danger)] hover:underline"
                 >
                   Remove

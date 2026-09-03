@@ -1,15 +1,24 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { scanPdf, ScanOutcome } from '@/lib/redpen/scanPipeline'
 import {
-  getAdministration, getAssessment, listSections, listStudents, saveAdministration,
-  saveDecisionLog, saveResult,
+  getAdministration, getAssessment, listSections, listStudents, saveAdministration, saveResult,
 } from '@/lib/redpen/storage'
+import { RedPenAdministration, RedPenAssessment, RedPenSection, RedPenStudent } from '@/lib/redpen/types'
+import { useAuth } from '@/components/auth/AuthProvider'
+import { RedPenError, RedPenLoading } from './RedPenStatus'
 
 interface ScanAndGradeProps {
   administrationId: string
   onGraded: () => void
+}
+
+interface Loaded {
+  admin: RedPenAdministration
+  assessment: RedPenAssessment
+  section: RedPenSection | null
+  students: RedPenStudent[]
 }
 
 type State =
@@ -19,11 +28,10 @@ type State =
   | { phase: 'done'; outcome: ScanOutcome }
 
 export function ScanAndGrade({ administrationId, onGraded }: ScanAndGradeProps) {
-  const admin = getAdministration(administrationId)
-  const assessment = admin ? getAssessment(admin.assessmentId) : null
-  const section = admin ? listSections().find(s => s.id === admin.sectionId) ?? null : null
-  const students = admin ? listStudents(admin.sectionId) : []
-
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [state, setState] = useState<State>({ phase: 'idle' })
   const fileInputRef = useRef<HTMLInputElement>(null)
   // Captured straight from pdf.js, before any of the reader's own processing — ground truth
@@ -31,30 +39,58 @@ export function ScanAndGrade({ administrationId, onGraded }: ScanAndGradeProps) 
   // (Preview, sips, the scanner's own viewer) a screenshot came from.
   const renderedPagesRef = useRef<Map<number, ImageData>>(new Map())
 
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    async function run() {
+      try {
+        const admin = await getAdministration(administrationId)
+        if (!admin) { if (!cancelled) setLoadError("Couldn't find that administration."); return }
+        const [assessment, sections, students] = await Promise.all([
+          getAssessment(admin.assessmentId), listSections(user!.uid), listStudents(user!.uid, admin.sectionId),
+        ])
+        if (!assessment) { if (!cancelled) setLoadError("Couldn't find that assessment."); return }
+        if (!cancelled) setLoaded({ admin, assessment, section: sections.find(s => s.id === admin.sectionId) ?? null, students })
+      } catch {
+        if (!cancelled) setLoadError("Couldn't load this administration. Try refreshing the page.")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [administrationId, user])
+
   async function handleFile(file: File) {
+    if (!loaded || !user) return
     setState({ phase: 'scanning', page: 0, totalPages: 0 })
     renderedPagesRef.current = new Map()
     try {
       const outcome = await scanPdf(
-        file, administrationId,
+        user.uid, file, administrationId,
         p => setState({ phase: 'scanning', page: p.page, totalPages: p.totalPages }),
         (page, imageData) => renderedPagesRef.current.set(page, imageData),
       )
-      outcome.results.forEach(saveResult)
-      saveDecisionLog(administrationId, outcome.log)
+      await Promise.all(outcome.results.map(r => saveResult(user.uid, r)))
       // Only advance to "graded" once something was actually graded — otherwise a failed scan
       // (e.g. every sheet unreadable) would lock the Assessments list into routing to an empty
       // Results screen instead of letting the teacher retry from here.
-      if (admin && outcome.results.length > 0) saveAdministration({ ...admin, status: 'graded' })
+      if (outcome.results.length > 0 && loaded.admin.status !== 'graded') {
+        const admin = { ...loaded.admin, status: 'graded' as const }
+        await saveAdministration(user.uid, admin)
+        setLoaded({ ...loaded, admin })
+      }
       setState({ phase: 'done', outcome })
     } catch (e) {
       setState({ phase: 'error', message: e instanceof Error ? e.message : String(e) })
     }
   }
 
-  if (!admin || !assessment) {
-    return <div className="max-w-3xl mx-auto py-10 px-4 text-sm text-[var(--color-muted)]">Couldn&apos;t find that administration.</div>
-  }
+  if (!user) return <RedPenError message="Sign in to scan and grade." />
+  if (loading) return <RedPenLoading />
+  if (loadError) return <RedPenError message={loadError} />
+  if (!loaded) return null
+  const { assessment, section, students } = loaded
 
   const identifiedIds = new Set(state.phase === 'done' ? state.outcome.results.map(r => r.studentId) : [])
   const missingStudents = students.filter(s => !identifiedIds.has(s.id))

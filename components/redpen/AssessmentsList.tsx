@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
+import { useAuth } from '@/components/auth/AuthProvider'
 import {
   createAdministration, listAdministrations, listAssessments, listSections, listStudents,
 } from '@/lib/redpen/storage'
-import { AdministrationStatus, RedPenAdministration, RedPenAssessment, RedPenSection } from '@/lib/redpen/types'
+import { AdministrationStatus, RedPenAdministration, RedPenAssessment, RedPenSection, RedPenStudent } from '@/lib/redpen/types'
+import { RedPenError, RedPenLoading } from './RedPenStatus'
 
 export type AdministrationScreen = 'sheets' | 'scan' | 'results'
 
@@ -39,24 +41,50 @@ function formatDate(iso: string): string {
 }
 
 export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditAssessment }: AssessmentsListProps) {
-  const [assessments, setAssessments] = useState<RedPenAssessment[]>(() => listAssessments())
-  const [administrations, setAdministrations] = useState<RedPenAdministration[]>(() => listAdministrations())
-  const [sections, setSections] = useState<RedPenSection[]>(() => listSections())
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [assessments, setAssessments] = useState<RedPenAssessment[]>([])
+  const [administrations, setAdministrations] = useState<RedPenAdministration[]>([])
+  const [sections, setSections] = useState<RedPenSection[]>([])
+  const [students, setStudents] = useState<RedPenStudent[]>([])
   const [givingToClassFor, setGivingToClassFor] = useState<string | null>(null)
 
-  function refresh() {
-    setAssessments(listAssessments())
-    setAdministrations(listAdministrations())
-    setSections(listSections())
+  async function refresh(uid: string) {
+    try {
+      const [a, admins, sec, stu] = await Promise.all([
+        listAssessments(uid), listAdministrations(uid), listSections(uid), listStudents(uid),
+      ])
+      setAssessments(a)
+      setAdministrations(admins)
+      setSections(sec)
+      setStudents(stu)
+      setError(null)
+    } catch {
+      setError("Couldn't load your assessments. Try refreshing the page.")
+    } finally {
+      setLoading(false)
+    }
   }
 
-  function handleGiveToClass(assessmentId: string, sectionId: string) {
-    createAdministration(assessmentId, sectionId)
+  useEffect(() => {
+    if (!user) return
+    refresh(user.uid)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid])
+
+  if (!user) return <RedPenError message="Sign in to see your assessments." />
+  if (loading) return <RedPenLoading />
+  if (error) return <RedPenError message={error} />
+
+  async function handleGiveToClass(assessmentId: string, sectionId: string) {
+    if (!user) return
+    await createAdministration(user.uid, assessmentId, sectionId)
     setGivingToClassFor(null)
-    refresh()
+    await refresh(user.uid)
   }
 
-  const studentCountBySection = (sectionId: string) => listStudents(sectionId).length
+  const studentCountBySection = (sectionId: string) => students.filter(s => s.sectionId === sectionId).length
 
   return (
     <div className="space-y-6">

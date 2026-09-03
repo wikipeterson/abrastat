@@ -1,7 +1,7 @@
-// RedPen data model. Shapes mirror the intended Firestore layout (assessments/{id},
-// sections/{sectionId}/students/{studentId}, administrations/{id}) so that swapping the
-// storage layer (lib/redpen/storage.ts) for Firestore later is a storage-only change —
-// nothing here should need to change for that migration.
+// RedPen data model. Backed by Firestore (lib/redpen/storage.ts) — flat top-level collections
+// scoped by an `ownerId` field, matching lib/firestore.ts's existing `datasets` convention
+// rather than the original design spec's nested subcollection sketch. These interfaces are the
+// app-facing shape; `ownerId` is a storage.ts-only concern, not part of any type here.
 
 export type AnswerValue = string | string[]
 
@@ -58,16 +58,6 @@ export interface RedPenResponse {
   correct: boolean
 }
 
-export interface RedPenResult {
-  studentId: string
-  administrationId: string
-  score: number
-  maxScore: number
-  responses: RedPenResponse[]
-  /** True if any question on this sheet needed a judgment call (see DecisionLogEntry). */
-  flagged: boolean
-}
-
 export type DecisionTag = 'FAINT' | 'DOUBLE' | 'ERASURE' | 'NO_MARK' | 'NO_QR' | 'NO_FIDUCIALS'
 
 export interface DecisionLogEntry {
@@ -78,4 +68,18 @@ export interface DecisionLogEntry {
   studentId?: string
   tag: DecisionTag
   detail: string
+}
+
+export interface RedPenResult {
+  studentId: string
+  administrationId: string
+  score: number
+  maxScore: number
+  responses: RedPenResponse[]
+  /** True if any question on this sheet needed a judgment call — mirrors logEntries.length > 0. */
+  flagged: boolean
+  /** This student's own decision-log entries from the scan that produced this result. Sheet-
+   *  level failures (NO_QR/NO_FIDUCIALS) have no student to attach to and aren't persisted here
+   *  or anywhere — they're shown once, in-memory, right after the scan that produced them. */
+  logEntries: DecisionLogEntry[]
 }

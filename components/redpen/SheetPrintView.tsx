@@ -267,7 +267,7 @@ export function SheetPrintView({ administrationId, onDone }: SheetPrintViewProps
         <div>
           <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)]">Print sheets</h2>
           <p className="text-sm text-[var(--color-muted)] mt-1">
-            {assessment.title} · {section?.label ?? 'Unknown class'} · <span className="font-mono">{students.length}</span> students
+            {assessment.title} · {section?.label ?? 'Unknown section'} · <span className="font-mono">{students.length}</span> students
           </p>
         </div>
         <button
@@ -291,7 +291,7 @@ export function SheetPrintView({ administrationId, onDone }: SheetPrintViewProps
 
       {students.length === 0 ? (
         <div className="text-sm text-[var(--color-muted)] bg-[var(--color-panel)] rounded-lg p-6 text-center">
-          {section?.label ?? 'This class'} has no students yet — add some under Manage Classes first.
+          {section?.label ?? 'This section'} has no students yet — add some under Manage Sections first.
         </div>
       ) : (
         <div className="border border-[var(--color-border)] rounded-lg overflow-auto bg-[#ddd] p-6 flex justify-center">

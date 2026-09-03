@@ -60,7 +60,7 @@ export function ResultsView({ administrationId }: ResultsViewProps) {
   if (results.length === 0) {
     return (
       <div className="max-w-3xl mx-auto py-10 px-4 text-sm text-[var(--color-muted)] bg-[var(--color-panel)] rounded-lg text-center p-6">
-        No graded sheets yet for {assessment.title} · {section?.label ?? 'this class'}.
+        No graded sheets yet for {assessment.title} · {section?.label ?? 'this section'}.
       </div>
     )
   }
@@ -86,7 +86,7 @@ export function ResultsView({ administrationId }: ResultsViewProps) {
       <div>
         <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)]">{assessment.title}</h2>
         <p className="text-sm text-[var(--color-muted)] mt-1">
-          {section?.label ?? 'Unknown class'} · <span className="font-mono">{results.length}</span> sheets,{' '}
+          {section?.label ?? 'Unknown section'} · <span className="font-mono">{results.length}</span> sheets,{' '}
           <span className="font-mono">{assessment.questionCount}</span> questions. Mean{' '}
           <span className="font-mono">{mean.toFixed(1)}</span> of <span className="font-mono">{maxScore}</span>.
         </p>

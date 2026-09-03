@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { AboutRedPen } from './AboutRedPen'
 import { AssessmentsList } from './AssessmentsList'
-import { ManageClasses } from './ManageClasses'
+import { ManageSections } from './ManageSections'
 import { NewAssessmentChoice } from './NewAssessmentChoice'
 import { ImportAssessment } from './ImportAssessment'
 import { AssessmentBuilder, BuilderDraft } from './AssessmentBuilder'
@@ -12,12 +12,12 @@ import { ScanAndGrade } from './ScanAndGrade'
 import { ResultsView } from './ResultsView'
 import { useAuth } from '@/components/auth/AuthProvider'
 
-type TopTab = 'about' | 'assessments' | 'manageClasses'
+type TopTab = 'about' | 'assessments' | 'manageSections'
 
 type View =
   | { screen: 'about' }
   | { screen: 'assessments' }
-  | { screen: 'manageClasses' }
+  | { screen: 'manageSections' }
   | { screen: 'newChoice' }
   | { screen: 'import' }
   | { screen: 'build'; draft: BuilderDraft | null }
@@ -28,7 +28,7 @@ type View =
 const TOP_TABS: { id: TopTab; label: string }[] = [
   { id: 'about', label: 'About RedPen' },
   { id: 'assessments', label: 'Assessments' },
-  { id: 'manageClasses', label: 'Manage Classes' },
+  { id: 'manageSections', label: 'Manage Sections' },
 ]
 
 interface RedPenHubProps {
@@ -47,7 +47,7 @@ export function RedPenHub({ onChromeChange }: RedPenHubProps) {
 
   useEffect(() => {
     if (!onChromeChange) return
-    if (view.screen === 'about' || view.screen === 'assessments' || view.screen === 'manageClasses') {
+    if (view.screen === 'about' || view.screen === 'assessments' || view.screen === 'manageSections') {
       onChromeChange(null)
       return
     }
@@ -63,7 +63,7 @@ export function RedPenHub({ onChromeChange }: RedPenHubProps) {
     return () => onChromeChange(null)
   }, [onChromeChange, view])
 
-  if (view.screen === 'about' || view.screen === 'assessments' || view.screen === 'manageClasses') {
+  if (view.screen === 'about' || view.screen === 'assessments' || view.screen === 'manageSections') {
     return (
       <div className="max-w-5xl mx-auto py-6 px-4 space-y-6">
         <div className="flex gap-1 border-b border-[var(--color-border)]">
@@ -91,7 +91,7 @@ export function RedPenHub({ onChromeChange }: RedPenHubProps) {
             onEditAssessment={assessmentId => setView({ screen: 'build', draft: { assessmentId } })}
           />
         )}
-        {view.screen === 'manageClasses' && !needsSignIn && <ManageClasses />}
+        {view.screen === 'manageSections' && !needsSignIn && <ManageSections />}
       </div>
     )
   }

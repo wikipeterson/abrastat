@@ -100,7 +100,7 @@ export function ScanAndGrade({ administrationId, onGraded }: ScanAndGradeProps) 
       <div>
         <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)]">Scan and grade</h2>
         <p className="text-sm text-[var(--color-muted)] mt-1">
-          {assessment.title} · {section?.label ?? 'Unknown class'} · drop the multi-page PDF straight off
+          {assessment.title} · {section?.label ?? 'Unknown section'} · drop the multi-page PDF straight off
           the printer. Every sheet is decided automatically; the log tells you what it decided and why.
         </p>
       </div>
@@ -115,7 +115,7 @@ export function ScanAndGrade({ administrationId, onGraded }: ScanAndGradeProps) 
         />
         {state.phase === 'idle' && (
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="text-sm text-[var(--color-muted)]">Upload the scanned PDF for this class.</div>
+            <div className="text-sm text-[var(--color-muted)]">Upload the scanned PDF for this section.</div>
             <button
               onClick={() => fileInputRef.current?.click()}
               className="px-5 py-2.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-semibold hover:brightness-105 transition-all"

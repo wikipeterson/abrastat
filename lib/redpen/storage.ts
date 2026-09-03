@@ -60,6 +60,28 @@ export async function saveSection(userId: string, section: RedPenSection): Promi
   await setDoc(doc(db, COLLECTIONS.sections, section.id), { ...section, ownerId: userId })
 }
 
+/** Firestore has no cascading delete, and a section's students/administrations/results have no
+ *  meaning without it — so this cleans up everything that hangs off the section, not just the
+ *  section doc itself. Results first (they reference an administration that's about to go). */
+export async function deleteSection(userId: string, sectionId: string): Promise<void> {
+  const [students, allAdministrations] = await Promise.all([
+    listStudents(userId, sectionId),
+    listAdministrations(userId),
+  ])
+  const administrations = allAdministrations.filter(a => a.sectionId === sectionId)
+
+  for (const admin of administrations) {
+    const results = await listResults(userId, admin.id)
+    await Promise.all(results.map(r => deleteDoc(doc(db, COLLECTIONS.results, resultDocId(r.administrationId, r.studentId)))))
+  }
+
+  await Promise.all([
+    ...administrations.map(a => deleteDoc(doc(db, COLLECTIONS.administrations, a.id))),
+    ...students.map(s => deleteDoc(doc(db, COLLECTIONS.students, s.id))),
+  ])
+  await deleteDoc(doc(db, COLLECTIONS.sections, sectionId))
+}
+
 export async function listStudents(userId: string, sectionId?: string): Promise<RedPenStudent[]> {
   const all = await listOwned<RedPenStudent>(COLLECTIONS.students, userId)
   return sectionId ? all.filter(s => s.sectionId === sectionId) : all

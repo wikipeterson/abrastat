@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { v4 as uuid } from 'uuid'
+import { Trash2 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { shortId } from '@/lib/redpen/id'
-import { listSections, listStudents, saveSection, saveStudent, deleteStudent } from '@/lib/redpen/storage'
+import { deleteSection, listSections, listStudents, saveSection, saveStudent, deleteStudent } from '@/lib/redpen/storage'
 import { RedPenSection, RedPenStudent } from '@/lib/redpen/types'
 import { RedPenError, RedPenLoading } from './RedPenStatus'
 
-export function ManageClasses() {
+export function ManageSections() {
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -20,6 +21,8 @@ export function ManageClasses() {
   const [newSectionLabel, setNewSectionLabel] = useState('')
   const [addingStudent, setAddingStudent] = useState(false)
   const [newStudentName, setNewStudentName] = useState('')
+  const [deletingSection, setDeletingSection] = useState<RedPenSection | null>(null)
+  const [deletingSectionBusy, setDeletingSectionBusy] = useState(false)
 
   async function refresh(uid: string) {
     try {
@@ -29,7 +32,7 @@ export function ManageClasses() {
       setActiveSectionId(prev => prev ?? sec[0]?.id ?? null)
       setError(null)
     } catch {
-      setError("Couldn't load your classes. Try refreshing the page.")
+      setError("Couldn't load your sections. Try refreshing the page.")
     } finally {
       setLoading(false)
     }
@@ -41,7 +44,7 @@ export function ManageClasses() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid])
 
-  if (!user) return <RedPenError message="Sign in to manage your classes." />
+  if (!user) return <RedPenError message="Sign in to manage your sections." />
   if (loading) return <RedPenLoading />
   if (error) return <RedPenError message={error} />
 
@@ -73,6 +76,19 @@ export function ManageClasses() {
     await refresh(user.uid)
   }
 
+  async function handleConfirmDeleteSection() {
+    if (!user || !deletingSection) return
+    setDeletingSectionBusy(true)
+    try {
+      await deleteSection(user.uid, deletingSection.id)
+      if (activeSectionId === deletingSection.id) setActiveSectionId(null)
+      setDeletingSection(null)
+      await refresh(user.uid)
+    } finally {
+      setDeletingSectionBusy(false)
+    }
+  }
+
   const rosterForSection = students.filter(s => s.sectionId === activeSectionId)
 
   return (
@@ -90,17 +106,25 @@ export function ManageClasses() {
           const count = students.filter(s => s.sectionId === sec.id).length
           const active = sec.id === activeSectionId
           return (
-            <button
+            <div
               key={sec.id}
-              onClick={() => setActiveSectionId(sec.id)}
-              className={`font-mono text-xs px-4 py-2 rounded-md border transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-1 pl-4 pr-1.5 py-1 rounded-md border whitespace-nowrap ${
                 active
                   ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent-strong)]'
                   : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)]'
               }`}
             >
-              {sec.label} · <span className="tabular-nums">{count}</span>
-            </button>
+              <button onClick={() => setActiveSectionId(sec.id)} className="font-mono text-xs py-1">
+                {sec.label} · <span className="tabular-nums">{count}</span>
+              </button>
+              <button
+                onClick={() => setDeletingSection(sec)}
+                title="Delete section"
+                className="p-1.5 rounded hover:bg-black/5 text-[var(--color-muted)] hover:text-[var(--color-danger)] transition-colors"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
           )
         })}
         <button
@@ -186,6 +210,31 @@ export function ManageClasses() {
           >
             Add student
           </button>
+        </div>
+      </Modal>
+
+      <Modal open={deletingSection !== null} onClose={() => setDeletingSection(null)} title="Delete section?">
+        <div className="space-y-4">
+          <p className="text-sm text-[var(--color-muted)]">
+            This removes <span className="font-medium text-[var(--color-text)]">{deletingSection?.label}</span>{' '}
+            and its whole roster — plus any sheets, scans, and results already recorded for this section. Assessments
+            themselves (and any other sections they were given to) aren&apos;t affected. This can&apos;t be undone.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setDeletingSection(null)}
+              className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmDeleteSection}
+              disabled={deletingSectionBusy}
+              className="px-4 py-2 rounded-lg text-sm bg-[var(--color-danger)] text-white font-medium hover:brightness-105 transition-all disabled:opacity-60"
+            >
+              {deletingSectionBusy ? 'Deleting…' : 'Delete section'}
+            </button>
+          </div>
         </div>
       </Modal>
     </div>

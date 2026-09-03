@@ -48,7 +48,7 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
   const [administrations, setAdministrations] = useState<RedPenAdministration[]>([])
   const [sections, setSections] = useState<RedPenSection[]>([])
   const [students, setStudents] = useState<RedPenStudent[]>([])
-  const [givingToClassFor, setGivingToClassFor] = useState<string | null>(null)
+  const [givingToSectionFor, setGivingToSectionFor] = useState<string | null>(null)
 
   async function refresh(uid: string) {
     try {
@@ -77,10 +77,10 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
   if (loading) return <RedPenLoading />
   if (error) return <RedPenError message={error} />
 
-  async function handleGiveToClass(assessmentId: string, sectionId: string) {
+  async function handleGiveToSection(assessmentId: string, sectionId: string) {
     if (!user) return
     await createAdministration(user.uid, assessmentId, sectionId)
-    setGivingToClassFor(null)
+    setGivingToSectionFor(null)
     await refresh(user.uid)
   }
 
@@ -128,18 +128,18 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
                     Edit key
                   </button>
                   <button
-                    onClick={() => setGivingToClassFor(a.id)}
+                    onClick={() => setGivingToSectionFor(a.id)}
                     disabled={availableSections.length === 0}
                     className="font-mono text-[11px] uppercase tracking-wide px-3 py-1.5 rounded border border-dashed border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent-strong)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    + Give to another class
+                    + Give to a section
                   </button>
                 </div>
               </div>
 
               {admins.length === 0 ? (
                 <div className="text-sm text-[var(--color-muted)]">
-                  Not given to a class yet — use &quot;Give to another class&quot; above once your roster is ready.
+                  Not given to a section yet — use &quot;Give to a section&quot; above once your roster is ready.
                 </div>
               ) : (
                 <div className="flex flex-col gap-0.5">
@@ -188,19 +188,19 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
         })}
       </div>
 
-      <Modal open={givingToClassFor !== null} onClose={() => setGivingToClassFor(null)} title="Give to a class">
+      <Modal open={givingToSectionFor !== null} onClose={() => setGivingToSectionFor(null)} title="Give to a section">
         <div className="space-y-2">
           {sections.length === 0 && (
             <div className="text-sm text-[var(--color-muted)]">
-              No sections yet — add one under Manage Classes first.
+              No sections yet — add one under Manage Sections first.
             </div>
           )}
           {sections
-            .filter(s => givingToClassFor && !administrations.some(admin => admin.assessmentId === givingToClassFor && admin.sectionId === s.id))
+            .filter(s => givingToSectionFor && !administrations.some(admin => admin.assessmentId === givingToSectionFor && admin.sectionId === s.id))
             .map(s => (
               <button
                 key={s.id}
-                onClick={() => givingToClassFor && handleGiveToClass(givingToClassFor, s.id)}
+                onClick={() => givingToSectionFor && handleGiveToSection(givingToSectionFor, s.id)}
                 className="w-full text-left px-4 py-3 rounded-lg border border-[var(--color-border)] hover:border-[var(--color-accent)] transition-colors flex items-center justify-between"
               >
                 <span className="text-sm font-medium text-[var(--color-text)]">{s.label}</span>

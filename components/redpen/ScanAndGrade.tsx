@@ -96,6 +96,7 @@ export function ScanAndGrade({ administrationId, onDone, onGraded }: ScanAndGrad
 
   const identifiedIds = new Set(state.phase === 'done' ? state.outcome.results.map(r => r.studentId) : [])
   const missingStudents = students.filter(s => !identifiedIds.has(s.id))
+  const wrongAdminPages = state.phase === 'done' ? state.outcome.log.filter(l => l.tag === 'WRONG_ADMIN').length : 0
 
   return (
     <div className="max-w-5xl mx-auto py-6 px-4 space-y-5">
@@ -173,6 +174,13 @@ export function ScanAndGrade({ administrationId, onDone, onGraded }: ScanAndGrad
             </div>
             {missingStudents.length > 0 && (
               <div className="text-sm text-[var(--color-danger)] bg-[var(--color-danger-light)] rounded-lg p-3.5">
+                {wrongAdminPages > 0 && (
+                  <div className="font-semibold mb-1.5">
+                    {wrongAdminPages} page{wrongAdminPages === 1 ? '' : 's'} in this PDF {wrongAdminPages === 1 ? 'is' : 'are'} from a
+                    different assessment or section — double check you uploaded the right scan for{' '}
+                    {assessment.title} · {section?.label ?? 'this section'}.
+                  </div>
+                )}
                 No sheet was matched for: {missingStudents.map(s => s.name).join(', ')}.
                 <div className="mt-2">
                   <button onClick={() => downloadRenderedPages(renderedPagesRef.current)} className="font-medium hover:underline">

@@ -86,7 +86,9 @@ export async function scanPdf(
       continue
     }
     if (decoded.administrationId !== administrationId) {
-      log.push({ administrationId, page: pageNum, tag: 'NO_QR', detail: `This sheet's code belongs to a different administration (${decoded.administrationId}) — skipped.` })
+      // Not a read failure — the QR decoded fine, it's just for a different assessment/section
+      // scan than the one open right now (an old printed sheet, or the wrong PDF uploaded).
+      log.push({ administrationId, page: pageNum, tag: 'WRONG_ADMIN', detail: "This sheet is from a different assessment or section — it wasn't scored here." })
       unmatchedPages.push(pageNum)
       continue
     }

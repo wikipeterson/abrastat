@@ -308,3 +308,23 @@ body {
 .animate-tile-pop {
   animation: tile-pop 0.18s ease-out both;
 }
+
+/* RedPen: print-exact bubble sheets (components/redpen/SheetPrintView.tsx). The app shell
+   hides itself via Tailwind's print:hidden (app/workspace/page.tsx), and SheetPrintView
+   portals #redpen-print-root directly onto <body> so it's never nested inside anything the
+   app might hide or size around — that's what keeps the print job to exactly one page per
+   student instead of picking up blank pages from the (invisible but still laid-out) rest of
+   the app. Browsers also drop background-colors when printing unless the user has manually
+   checked "background graphics" — the fiducial corner marks are pure background-color divs,
+   so force it here rather than depend on that setting. */
+@media print {
+  #redpen-print-root,
+  #redpen-print-root * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @page {
+    size: letter;
+    margin: 0;
+  }
+}

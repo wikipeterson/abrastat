@@ -12,6 +12,7 @@ import { ShareDatasetModal } from '@/components/library/ShareDatasetModal'
 import { DatasetCard } from '@/components/library/DatasetCard'
 import { DatasetListSkeleton } from '@/components/ui/Skeleton'
 import { GameHub } from '@/components/games/GameHub'
+import { RedPenHub } from '@/components/redpen/RedPenHub'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { fetchMyDatasets, fetchPublicDatasets, deleteDataset, loadDataset } from '@/lib/firestore'
 import { SAMPLE_DATASETS, getSampleDatasetById, getSampleDatasetId } from '@/lib/sampleData'
@@ -24,7 +25,7 @@ import { DataDock, DockState, computeSnaps } from '@/components/grid/DataDock'
 import { BuildStamp } from '@/components/dev/BuildStamp'
 
 type WorkspaceMode = 'library' | 'lab'
-type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls' | 'logic-puzzles'
+type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls' | 'redpen' | 'logic-puzzles'
 type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 
 const SIDEBAR_WIDTH_CLASS = 'md:w-48'
@@ -36,6 +37,7 @@ const BASE_LIBRARY_ITEMS: { id: Exclude<LibrarySection, 'logic-puzzles'>; label:
   { id: 'games', label: 'Games' },
   { id: 'applets', label: 'Applets' },
   { id: 'polls', label: 'Polls', soon: true },
+  { id: 'redpen', label: 'RedPen' },
 ]
 
 const PUBLIC_DATASET_CACHE_KEY = 'abrastat.publicDatasets.v1'
@@ -685,7 +687,7 @@ function WorkspaceContent() {
   const initialMode = searchParams.get('mode') === 'library' ? 'library' : 'lab'
   const initialLibrarySection = (() => {
     const section = searchParams.get('section')
-    return section === 'all' || section === 'mine' || section === 'games' || section === 'applets' || section === 'polls'
+    return section === 'all' || section === 'mine' || section === 'games' || section === 'applets' || section === 'polls' || section === 'redpen'
       ? section
       : 'all'
   })()
@@ -700,6 +702,7 @@ function WorkspaceContent() {
   const [mode, setMode] = useState<WorkspaceMode>(initialMode)
   const [librarySection, setLibrarySection] = useState<LibrarySection>(initialLibrarySection)
   const [gameChrome, setGameChrome] = useState<{ title: string; onBack: () => void } | null>(null)
+  const [redpenChrome, setRedpenChrome] = useState<{ title: string; onBack: () => void } | null>(null)
   const { isDirty, clearGrid, activeDatasetId, activeDatasetName, exploreCards, setGrid, setActiveDatasetId, setActiveDatasetName } = useStore()
   const hasOnlyDataGrid = exploreCards.every(card => card.config.type === 'data-grid')
   const { user, isGuest } = useAuth()
@@ -931,6 +934,9 @@ function WorkspaceContent() {
     if (librarySection === 'applets') {
       return <AppletsBrowser />
     }
+    if (librarySection === 'redpen') {
+      return <RedPenHub onChromeChange={setRedpenChrome} />
+    }
     return <PollsPlaceholder />
   }
 
@@ -947,20 +953,36 @@ function WorkspaceContent() {
     )
     : undefined
 
+  // print:hidden so RedPen's SheetPrintView (portaled onto <body>, see components/redpen/SheetPrintView.tsx)
+  // is the only thing visible when printing — the app shell would otherwise still occupy
+  // page-flow height while printing and produce blank pages around the real content.
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen print:hidden">
       <Header
         onNew={mode === 'lab' ? handleNewDataset : undefined}
         onSave={mode === 'lab' ? handleSaveClick : undefined}
         onShare={mode === 'lab' ? handleShareClick : undefined}
         onToggleSidebar={() => setSidebarOpen(v => !v)}
         datasetName={mode === 'lab' ? activeDatasetName : undefined}
-        centerTitle={mode === 'library' && librarySection === 'games' ? gameChrome?.title ?? null : null}
+        centerTitle={
+          mode === 'library' && librarySection === 'games' ? gameChrome?.title ?? null
+          : mode === 'library' && librarySection === 'redpen' ? redpenChrome?.title ?? null
+          : null
+        }
         leadingNav={
           mode === 'library' && librarySection === 'games' && gameChrome
             ? (
               <button
                 onClick={gameChrome.onBack}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors"
+              >
+                Back
+              </button>
+            )
+            : mode === 'library' && librarySection === 'redpen' && redpenChrome
+            ? (
+              <button
+                onClick={redpenChrome.onBack}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors"
               >
                 Back

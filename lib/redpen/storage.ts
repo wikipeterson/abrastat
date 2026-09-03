@@ -46,7 +46,17 @@ export async function saveAssessment(userId: string, assessment: RedPenAssessmen
   await setDoc(doc(db, COLLECTIONS.assessments, assessment.id), { ...assessment, ownerId: userId })
 }
 
-export async function deleteAssessment(id: string): Promise<void> {
+/** Same cascade reasoning as deleteSection below: an administration (and its results) has no
+ *  meaning once the assessment it's grading is gone, so this cleans those up too — across every
+ *  section the assessment was given to, not just one. */
+export async function deleteAssessment(userId: string, id: string): Promise<void> {
+  const administrations = await listAdministrations(userId, id)
+
+  for (const admin of administrations) {
+    const results = await listResults(userId, admin.id)
+    await Promise.all(results.map(r => deleteDoc(doc(db, COLLECTIONS.results, resultDocId(r.administrationId, r.studentId)))))
+  }
+  await Promise.all(administrations.map(a => deleteDoc(doc(db, COLLECTIONS.administrations, a.id))))
   await deleteDoc(doc(db, COLLECTIONS.assessments, id))
 }
 
@@ -131,9 +141,9 @@ function resultDocId(administrationId: string, studentId: string): string {
   return `${administrationId}_${studentId}`
 }
 
-export async function listResults(userId: string, administrationId: string): Promise<RedPenResult[]> {
+export async function listResults(userId: string, administrationId?: string): Promise<RedPenResult[]> {
   const all = await listOwned<RedPenResult>(COLLECTIONS.results, userId)
-  return all.filter(r => r.administrationId === administrationId)
+  return administrationId ? all.filter(r => r.administrationId === administrationId) : all
 }
 
 export async function getResult(userId: string, administrationId: string, studentId: string): Promise<RedPenResult | null> {

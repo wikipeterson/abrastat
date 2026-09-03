@@ -255,7 +255,7 @@ export function SheetPrintView({ administrationId, onDone }: SheetPrintViewProps
     window.print()
   }
 
-  if (!user) return <RedPenError message="Sign in to print sheets." />
+  if (!user) return <RedPenError message="Sign in to print answer sheets." />
   if (loading) return <RedPenLoading />
   if (error) return <RedPenError message={error} />
   if (!loaded) return null
@@ -263,9 +263,13 @@ export function SheetPrintView({ administrationId, onDone }: SheetPrintViewProps
 
   return (
     <div className="max-w-5xl mx-auto py-6 px-4 space-y-5">
+      <button onClick={onDone} className="text-sm font-medium text-[var(--color-accent-strong)] hover:underline">
+        ← Back to assessments
+      </button>
+
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)]">Print sheets</h2>
+          <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)]">Print answer sheets</h2>
           <p className="text-sm text-[var(--color-muted)] mt-1">
             {assessment.title} · {section?.label ?? 'Unknown section'} · <span className="font-mono">{students.length}</span> students
           </p>
@@ -323,10 +327,6 @@ export function SheetPrintView({ administrationId, onDone }: SheetPrintViewProps
         </div>,
         document.body,
       )}
-
-      <button onClick={onDone} className="text-sm font-medium text-[var(--color-accent-strong)] hover:underline">
-        ← Back to assessments
-      </button>
     </div>
   )
 }

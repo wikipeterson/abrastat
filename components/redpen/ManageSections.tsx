@@ -21,6 +21,10 @@ export function ManageSections() {
   const [newSectionLabel, setNewSectionLabel] = useState('')
   const [addingStudent, setAddingStudent] = useState(false)
   const [newStudentName, setNewStudentName] = useState('')
+  const [pastingRoster, setPastingRoster] = useState(false)
+  const [rosterPaste, setRosterPaste] = useState('')
+  const [renamingStudent, setRenamingStudent] = useState<RedPenStudent | null>(null)
+  const [renameValue, setRenameValue] = useState('')
   const [deletingSection, setDeletingSection] = useState<RedPenSection | null>(null)
   const [deletingSectionBusy, setDeletingSectionBusy] = useState(false)
 
@@ -73,6 +77,30 @@ export function ManageSections() {
   async function handleDeleteStudent(id: string) {
     if (!user) return
     await deleteStudent(id)
+    await refresh(user.uid)
+  }
+
+  /** One name per line, blank lines ignored — the fast path for a real ~30-student roster
+   *  instead of the one-at-a-time modal. */
+  async function handlePasteRoster() {
+    if (!activeSectionId || !user) return
+    const names = rosterPaste.split('\n').map(n => n.trim()).filter(Boolean)
+    if (names.length === 0) return
+    // short — encoded in every printed sheet's QR, see id.ts
+    await Promise.all(names.map(name => saveStudent(user.uid, { id: shortId(), sectionId: activeSectionId, name })))
+    setRosterPaste('')
+    setPastingRoster(false)
+    await refresh(user.uid)
+  }
+
+  /** Keeps the student's existing id — unlike delete-and-re-add, this doesn't orphan an
+   *  already-printed sheet (the id is what's encoded in that student's QR code). */
+  async function handleRenameStudent() {
+    if (!user || !renamingStudent) return
+    const name = renameValue.trim()
+    if (!name) return
+    await saveStudent(user.uid, { ...renamingStudent, name })
+    setRenamingStudent(null)
     await refresh(user.uid)
   }
 
@@ -155,21 +183,35 @@ export function ManageSections() {
               <div className="text-sm font-medium text-[var(--color-text)]">{st.name}</div>
               <div className="flex items-center justify-between">
                 <span className="font-mono text-xs text-[var(--color-muted)]">auto per test</span>
-                <button
-                  onClick={() => handleDeleteStudent(st.id)}
-                  className="text-xs text-[var(--color-danger)] hover:underline"
-                >
-                  Remove
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => { setRenamingStudent(st); setRenameValue(st.name) }}
+                    className="text-xs text-[var(--color-muted)] hover:underline"
+                  >
+                    Rename
+                  </button>
+                  <button
+                    onClick={() => handleDeleteStudent(st.id)}
+                    className="text-xs text-[var(--color-danger)] hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             </div>
           ))}
-          <div className="px-6 py-3">
+          <div className="px-6 py-3 flex items-center gap-4">
             <button
               onClick={() => setAddingStudent(true)}
               className="text-sm font-medium text-[var(--color-gold-text)] hover:underline"
             >
               + Add student
+            </button>
+            <button
+              onClick={() => setPastingRoster(true)}
+              className="text-sm font-medium text-[var(--color-muted)] hover:underline"
+            >
+              + Paste a list
             </button>
           </div>
         </div>
@@ -209,6 +251,43 @@ export function ManageSections() {
             className="px-4 py-2 rounded-lg bg-[var(--color-accent)] text-white text-sm font-semibold hover:brightness-105 transition-all"
           >
             Add student
+          </button>
+        </div>
+      </Modal>
+
+      <Modal open={pastingRoster} onClose={() => setPastingRoster(false)} title="Paste a list">
+        <div className="space-y-4">
+          <p className="text-sm text-[var(--color-muted)]">One name per line.</p>
+          <textarea
+            autoFocus
+            value={rosterPaste}
+            onChange={e => setRosterPaste(e.target.value)}
+            placeholder={'Avery Nakamura\nBenji Ortiz\nCora Lindqvist'}
+            className="w-full min-h-[180px] px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] text-sm resize-y"
+          />
+          <button
+            onClick={handlePasteRoster}
+            className="px-4 py-2 rounded-lg bg-[var(--color-accent)] text-white text-sm font-semibold hover:brightness-105 transition-all"
+          >
+            Add {rosterPaste.split('\n').map(n => n.trim()).filter(Boolean).length} student{rosterPaste.split('\n').map(n => n.trim()).filter(Boolean).length === 1 ? '' : 's'}
+          </button>
+        </div>
+      </Modal>
+
+      <Modal open={renamingStudent !== null} onClose={() => setRenamingStudent(null)} title="Rename student">
+        <div className="space-y-4">
+          <input
+            autoFocus
+            value={renameValue}
+            onChange={e => setRenameValue(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleRenameStudent()}
+            className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] text-sm"
+          />
+          <button
+            onClick={handleRenameStudent}
+            className="px-4 py-2 rounded-lg bg-[var(--color-accent)] text-white text-sm font-semibold hover:brightness-105 transition-all"
+          >
+            Save
           </button>
         </div>
       </Modal>

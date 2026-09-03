@@ -1,10 +1,12 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { v4 as uuid } from 'uuid'
+import { useAuth } from '@/components/auth/AuthProvider'
 import { getAssessment, saveAssessment } from '@/lib/redpen/storage'
 import { AnswerEntry, RedPenAssessment, UnscorableEntry } from '@/lib/redpen/types'
 import { ParsedMarksheet } from '@/lib/redpen/schema'
+import { RedPenError, RedPenLoading } from './RedPenStatus'
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -19,7 +21,7 @@ interface AssessmentBuilderProps {
   onSaved: () => void
 }
 
-function draftToInitial(draft: BuilderDraft | null): {
+interface Initial {
   id: string | null
   title: string
   questionCount: number
@@ -27,19 +29,10 @@ function draftToInitial(draft: BuilderDraft | null): {
   key: Record<number, AnswerEntry>
   unscorable: UnscorableEntry[]
   createdAt: string | null
-} {
-  if (draft && 'assessmentId' in draft) {
-    const existing = getAssessment(draft.assessmentId)
-    if (existing) {
-      const key: Record<number, AnswerEntry> = {}
-      existing.answerKey.forEach(entry => { key[entry.n] = entry })
-      return {
-        id: existing.id, title: existing.title, questionCount: existing.questionCount,
-        choiceCount: existing.choiceCount, key, unscorable: existing.unscorable, createdAt: existing.createdAt,
-      }
-    }
-  }
-  if (draft && 'parsed' in draft) {
+}
+
+function draftToInitial(draft: { parsed: ParsedMarksheet } | null): Initial {
+  if (draft) {
     const { parsed } = draft
     const key: Record<number, AnswerEntry> = {}
     parsed.questions.forEach(entry => { key[entry.n] = entry })
@@ -52,6 +45,46 @@ function draftToInitial(draft: BuilderDraft | null): {
   return { id: null, title: '', questionCount: 25, choiceCount: 5, key: {}, unscorable: [], createdAt: null }
 }
 
+function assessmentToInitial(existing: RedPenAssessment): Initial {
+  const key: Record<number, AnswerEntry> = {}
+  existing.answerKey.forEach(entry => { key[entry.n] = entry })
+  return {
+    id: existing.id, title: existing.title, questionCount: existing.questionCount,
+    choiceCount: existing.choiceCount, key, unscorable: existing.unscorable, createdAt: existing.createdAt,
+  }
+}
+
+/** Loads the "editing an existing assessment" case, which is the only one needing an async
+ *  fetch — the blank and imported-draft cases have everything in memory already. Renders the
+ *  form only once `initial` data actually exists, so the form's own useState initializers never
+ *  see stale/blank data get replaced out from under them after the fetch resolves. */
+export function AssessmentBuilder({ draft, onSaved }: AssessmentBuilderProps) {
+  const isEditingExisting = !!draft && 'assessmentId' in draft
+  const [loading, setLoading] = useState(isEditingExisting)
+  const [error, setError] = useState<string | null>(null)
+  const [fetched, setFetched] = useState<Initial | null>(null)
+
+  useEffect(() => {
+    if (!draft || !('assessmentId' in draft)) return
+    let cancelled = false
+    getAssessment(draft.assessmentId)
+      .then(existing => {
+        if (cancelled) return
+        if (!existing) { setError("Couldn't find that assessment."); return }
+        setFetched(assessmentToInitial(existing))
+      })
+      .catch(() => { if (!cancelled) setError("Couldn't load that assessment. Try again.") })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [draft])
+
+  if (loading) return <RedPenLoading />
+  if (error) return <RedPenError message={error} />
+
+  const initial = isEditingExisting ? fetched! : draftToInitial(draft && 'parsed' in draft ? draft : null)
+  return <AssessmentBuilderForm initial={initial} onSaved={onSaved} />
+}
+
 /** A question whose imported answer isn't a single MC letter (array, or grid-in) isn't editable
  *  in this phase's click-to-set bubble grid — spec §06 defers grid-in UI to phase two. Its
  *  imported entry is preserved as-is and shown as a locked badge instead of bubbles. */
@@ -59,13 +92,14 @@ function isSimpleMc(entry: AnswerEntry | undefined): entry is AnswerEntry & { an
   return !!entry && entry.type !== 'gridin' && typeof entry.answer === 'string'
 }
 
-export function AssessmentBuilder({ draft, onSaved }: AssessmentBuilderProps) {
-  const initial = useMemo(() => draftToInitial(draft), [draft])
+function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved: () => void }) {
+  const { user } = useAuth()
   const [title, setTitle] = useState(initial.title)
   const [questionCount, setQuestionCount] = useState(initial.questionCount)
   const [choiceCount, setChoiceCount] = useState(initial.choiceCount)
   const [key, setKey] = useState<Record<number, AnswerEntry>>(initial.key)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const letters = LETTERS.slice(0, choiceCount)
   // Locked/imported non-MC entries (array answers, grid-ins) always count as "answered" —
@@ -86,7 +120,8 @@ export function AssessmentBuilder({ draft, onSaved }: AssessmentBuilderProps) {
     })
   }
 
-  function handleSave() {
+  async function handleSave() {
+    if (!user) return
     const assessment: RedPenAssessment = {
       id: initial.id ?? uuid(),
       title: title.trim() || 'Untitled assessment',
@@ -96,9 +131,13 @@ export function AssessmentBuilder({ draft, onSaved }: AssessmentBuilderProps) {
       unscorable: initial.unscorable,
       createdAt: initial.createdAt ?? new Date().toISOString(),
     }
-    saveAssessment(assessment)
-    setSaved(true)
-    setTimeout(onSaved, 500)
+    try {
+      await saveAssessment(user.uid, assessment)
+      setSaved(true)
+      setTimeout(onSaved, 500)
+    } catch {
+      setSaveError("Couldn't save — try again.")
+    }
   }
 
   const half = Math.ceil(questionCount / 2)
@@ -153,12 +192,15 @@ export function AssessmentBuilder({ draft, onSaved }: AssessmentBuilderProps) {
             className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] text-sm font-medium"
           />
         </div>
-        <button
-          onClick={handleSave}
-          className="px-5 py-2.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-semibold hover:brightness-105 transition-all whitespace-nowrap"
-        >
-          {saved ? 'Saved ✓' : 'Save assessment'}
-        </button>
+        <div className="flex flex-col items-end gap-1.5">
+          <button
+            onClick={handleSave}
+            className="px-5 py-2.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-semibold hover:brightness-105 transition-all whitespace-nowrap"
+          >
+            {saved ? 'Saved ✓' : 'Save assessment'}
+          </button>
+          {saveError && <div className="text-xs text-[var(--color-danger)]">{saveError}</div>}
+        </div>
       </div>
 
       <div className="flex gap-4 flex-wrap">

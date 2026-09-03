@@ -33,6 +33,7 @@ export interface ScanOutcome {
 }
 
 export async function scanPdf(
+  userId: string,
   file: File,
   administrationId: string,
   onProgress?: (p: ScanProgress) => void,
@@ -41,11 +42,11 @@ export async function scanPdf(
    *  which is closer to ground truth than eyeballing the PDF in an unrelated renderer. */
   onPageImage?: (page: number, imageData: ImageData) => void,
 ): Promise<ScanOutcome> {
-  const admin = getAdministration(administrationId)
+  const admin = await getAdministration(administrationId)
   if (!admin) throw new Error('Administration not found.')
-  const assessment = getAssessment(admin.assessmentId)
+  const assessment = await getAssessment(admin.assessmentId)
   if (!assessment) throw new Error('Assessment not found.')
-  const students = listStudents(admin.sectionId)
+  const students = await listStudents(userId, admin.sectionId)
 
   const { colA, colB } = splitIntoColumns(bubbleRows(assessment))
   const columns = [colA, colB] as const
@@ -97,7 +98,10 @@ export async function scanPdf(
     }
 
     const given = new Map<number, AnswerValue | null>()
-    let sheetFlagged = false
+    // This sheet's own entries, kept separately from the shared `log` (which the UI shows in
+    // full right after the scan) so they can be attached to just this student's RedPenResult —
+    // that's what makes a later rescan of one student only ever touch that student's own record.
+    const sheetLog: DecisionLogEntry[] = []
 
     columns.forEach((rows, col) => {
       rows.forEach((row, rowIndex) => {
@@ -114,17 +118,21 @@ export async function scanPdf(
         const decision = expectMultiple ? decideMultiple(fills) : decideSingle(fills)
         given.set(row.n, decision.given)
         if (decision.log) {
-          sheetFlagged = true
-          log.push({
+          const entry: DecisionLogEntry = {
             administrationId, page: pageNum, n: row.n, studentId: student.id,
             tag: decision.log.tag, detail: decision.log.detail,
-          })
+          }
+          sheetLog.push(entry)
+          log.push(entry)
         }
       })
     })
 
     const { score, maxScore, responses } = scoreAssessment(assessment, given)
-    results.push({ studentId: student.id, administrationId, score, maxScore, responses, flagged: sheetFlagged })
+    results.push({
+      studentId: student.id, administrationId, score, maxScore, responses,
+      flagged: sheetLog.length > 0, logEntries: sheetLog,
+    })
   }
 
   return { results, log, unmatchedPages, totalPages: pages.length }

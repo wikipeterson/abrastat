@@ -1,0 +1,224 @@
+'use client'
+
+import { useMemo, useState } from 'react'
+import { v4 as uuid } from 'uuid'
+import { getAssessment, saveAssessment } from '@/lib/redpen/storage'
+import { AnswerEntry, RedPenAssessment, UnscorableEntry } from '@/lib/redpen/types'
+import { ParsedMarksheet } from '@/lib/redpen/schema'
+
+const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
+
+/**
+ * Where the builder's initial content comes from: editing an existing saved assessment,
+ * prefilled from a successful import, or (draft === null in RedPenHub) a blank manual build.
+ */
+export type BuilderDraft = { assessmentId: string } | { parsed: ParsedMarksheet }
+
+interface AssessmentBuilderProps {
+  draft: BuilderDraft | null
+  onSaved: () => void
+}
+
+function draftToInitial(draft: BuilderDraft | null): {
+  id: string | null
+  title: string
+  questionCount: number
+  choiceCount: number
+  key: Record<number, AnswerEntry>
+  unscorable: UnscorableEntry[]
+  createdAt: string | null
+} {
+  if (draft && 'assessmentId' in draft) {
+    const existing = getAssessment(draft.assessmentId)
+    if (existing) {
+      const key: Record<number, AnswerEntry> = {}
+      existing.answerKey.forEach(entry => { key[entry.n] = entry })
+      return {
+        id: existing.id, title: existing.title, questionCount: existing.questionCount,
+        choiceCount: existing.choiceCount, key, unscorable: existing.unscorable, createdAt: existing.createdAt,
+      }
+    }
+  }
+  if (draft && 'parsed' in draft) {
+    const { parsed } = draft
+    const key: Record<number, AnswerEntry> = {}
+    parsed.questions.forEach(entry => { key[entry.n] = entry })
+    const maxN = Math.max(1, ...parsed.questions.map(q => q.n))
+    return {
+      id: null, title: parsed.title, questionCount: maxN, choiceCount: parsed.choiceCount,
+      key, unscorable: parsed.unscorable, createdAt: null,
+    }
+  }
+  return { id: null, title: '', questionCount: 25, choiceCount: 5, key: {}, unscorable: [], createdAt: null }
+}
+
+/** A question whose imported answer isn't a single MC letter (array, or grid-in) isn't editable
+ *  in this phase's click-to-set bubble grid — spec §06 defers grid-in UI to phase two. Its
+ *  imported entry is preserved as-is and shown as a locked badge instead of bubbles. */
+function isSimpleMc(entry: AnswerEntry | undefined): entry is AnswerEntry & { answer: string } {
+  return !!entry && entry.type !== 'gridin' && typeof entry.answer === 'string'
+}
+
+export function AssessmentBuilder({ draft, onSaved }: AssessmentBuilderProps) {
+  const initial = useMemo(() => draftToInitial(draft), [draft])
+  const [title, setTitle] = useState(initial.title)
+  const [questionCount, setQuestionCount] = useState(initial.questionCount)
+  const [choiceCount, setChoiceCount] = useState(initial.choiceCount)
+  const [key, setKey] = useState<Record<number, AnswerEntry>>(initial.key)
+  const [saved, setSaved] = useState(false)
+
+  const letters = LETTERS.slice(0, choiceCount)
+  // Locked/imported non-MC entries (array answers, grid-ins) always count as "answered" —
+  // they came from a validated import, not from clicking a bubble.
+  const totalAnswered = Array.from({ length: questionCount }, (_, i) => i + 1)
+    .filter(n => key[n] !== undefined).length
+  const keyPct = questionCount > 0 ? Math.round((totalAnswered / questionCount) * 100) : 0
+
+  function pick(n: number, letter: string) {
+    setKey(prev => {
+      const current = prev[n]
+      if (isSimpleMc(current) && current.answer === letter) {
+        const next = { ...prev }
+        delete next[n]
+        return next
+      }
+      return { ...prev, [n]: { n, answer: letter, points: current?.points ?? 1, type: 'mc' } }
+    })
+  }
+
+  function handleSave() {
+    const assessment: RedPenAssessment = {
+      id: initial.id ?? uuid(),
+      title: title.trim() || 'Untitled assessment',
+      questionCount,
+      choiceCount,
+      answerKey: Object.values(key).filter(e => e.n <= questionCount).sort((a, b) => a.n - b.n),
+      unscorable: initial.unscorable,
+      createdAt: initial.createdAt ?? new Date().toISOString(),
+    }
+    saveAssessment(assessment)
+    setSaved(true)
+    setTimeout(onSaved, 500)
+  }
+
+  const half = Math.ceil(questionCount / 2)
+  const colA = Array.from({ length: half }, (_, i) => i + 1)
+  const colB = Array.from({ length: questionCount - half }, (_, i) => i + half + 1)
+
+  function renderRow(n: number) {
+    const entry = key[n]
+    return (
+      <div key={n} className={`flex items-center gap-3.5 px-2 py-1 rounded ${n % 5 === 0 ? 'bg-[var(--color-panel)]' : ''}`}>
+        <div className="font-mono text-xs text-[var(--color-muted)] w-5 text-right">{String(n).padStart(2, '0')}</div>
+        {isSimpleMc(entry) || entry === undefined ? (
+          <div className="flex gap-1.5">
+            {letters.map(letter => {
+              const on = isSimpleMc(entry) && entry.answer === letter
+              return (
+                <button
+                  key={letter}
+                  onClick={() => pick(n, letter)}
+                  className={`w-7 h-7 rounded-full border font-mono text-xs flex items-center justify-center transition-colors ${
+                    on
+                      ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-white'
+                      : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-accent)]'
+                  }`}
+                >
+                  {letter}
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="font-mono text-xs px-2.5 py-1 rounded bg-[var(--color-gold-light)] text-[var(--color-gold-text)]">
+            {entry.type === 'gridin' ? `grid-in · ${entry.answer}` : Array.isArray(entry.answer) ? entry.answer.join(', ') : String(entry.answer)}
+            {' '}(imported, locked)
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-5xl mx-auto py-6 px-4 space-y-6">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div className="flex-1 min-w-[240px]">
+          <label className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-muted)] block mb-1.5">
+            Title
+          </label>
+          <input
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="e.g. Test 1 — Derivatives"
+            className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] text-sm font-medium"
+          />
+        </div>
+        <button
+          onClick={handleSave}
+          className="px-5 py-2.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-semibold hover:brightness-105 transition-all whitespace-nowrap"
+        >
+          {saved ? 'Saved ✓' : 'Save assessment'}
+        </button>
+      </div>
+
+      <div className="flex gap-4 flex-wrap">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4.5 min-w-[200px]">
+          <div className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-muted)] mb-2.5">Questions</div>
+          <div className="flex items-center gap-3.5">
+            <button
+              onClick={() => setQuestionCount(q => Math.max(5, q - 5))}
+              className="w-8 h-8 rounded border border-[var(--color-border)] text-lg text-[var(--color-text)]"
+            >
+              −
+            </button>
+            <div className="font-mono text-2xl w-11 text-center tabular-nums">{questionCount}</div>
+            <button
+              onClick={() => setQuestionCount(q => Math.min(100, q + 5))}
+              className="w-8 h-8 rounded border border-[var(--color-border)] text-lg text-[var(--color-text)]"
+            >
+              +
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4.5">
+          <div className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-muted)] mb-2.5">
+            Choices per question
+          </div>
+          <div className="flex gap-1.5">
+            {[4, 5, 6].map(c => (
+              <button
+                key={c}
+                onClick={() => setChoiceCount(c)}
+                className={`font-mono text-xs px-3.5 py-2 rounded border transition-colors ${
+                  c === choiceCount
+                    ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-white'
+                    : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-muted)]'
+                }`}
+              >
+                A–{LETTERS[c - 1]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4.5 flex-1 flex flex-col justify-center min-w-[220px]">
+          <div className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-muted)] mb-2">Key progress</div>
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-2 rounded-full bg-[var(--color-panel)] overflow-hidden">
+              <div className="h-full rounded-full bg-[var(--color-gold)]" style={{ width: `${keyPct}%` }} />
+            </div>
+            <div className="font-mono text-sm tabular-nums whitespace-nowrap">{totalAnswered} / {questionCount}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-14 gap-y-0.5">
+          <div className="flex flex-col gap-0.5">{colA.map(renderRow)}</div>
+          <div className="flex flex-col gap-0.5">{colB.map(renderRow)}</div>
+        </div>
+      </div>
+    </div>
+  )
+}

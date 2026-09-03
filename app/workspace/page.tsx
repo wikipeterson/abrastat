@@ -12,6 +12,7 @@ import { ShareDatasetModal } from '@/components/library/ShareDatasetModal'
 import { DatasetCard } from '@/components/library/DatasetCard'
 import { DatasetListSkeleton } from '@/components/ui/Skeleton'
 import { GameHub } from '@/components/games/GameHub'
+import { RedPenHub } from '@/components/redpen/RedPenHub'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { fetchMyDatasets, fetchPublicDatasets, deleteDataset, loadDataset } from '@/lib/firestore'
 import { SAMPLE_DATASETS, getSampleDatasetById, getSampleDatasetId } from '@/lib/sampleData'
@@ -24,18 +25,25 @@ import { DataDock, DockState, computeSnaps } from '@/components/grid/DataDock'
 import { BuildStamp } from '@/components/dev/BuildStamp'
 
 type WorkspaceMode = 'library' | 'lab'
-type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls' | 'logic-puzzles'
+type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls' | 'redpen' | 'logic-puzzles'
 type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 
 const SIDEBAR_WIDTH_CLASS = 'md:w-48'
 const LOGIC_PUZZLES_URL = 'https://puzzleweek.abrastat.com/puzzleweek/bonus'
 
-const BASE_LIBRARY_ITEMS: { id: Exclude<LibrarySection, 'logic-puzzles'>; label: string; soon?: boolean }[] = [
+type LibraryItem = { id: LibrarySection; label: string; soon?: boolean }
+
+const PRIMARY_LIBRARY_ITEMS: LibraryItem[] = [
   { id: 'all', label: 'Public Datasets' },
   { id: 'mine', label: 'My Datasets' },
   { id: 'games', label: 'Games' },
   { id: 'applets', label: 'Applets' },
+]
+// Below the "For teachers" divider in the sidebar — tools a teacher administers, not something
+// a student browses/plays directly (that's the primary group above).
+const TEACHER_LIBRARY_ITEMS: LibraryItem[] = [
   { id: 'polls', label: 'Polls', soon: true },
+  { id: 'redpen', label: 'RedPen' },
 ]
 
 const PUBLIC_DATASET_CACHE_KEY = 'abrastat.publicDatasets.v1'
@@ -282,9 +290,33 @@ function LibrarySidebar({
   open: boolean
   onClose: () => void
   section: LibrarySection
-  items: { id: LibrarySection; label: string; soon?: boolean }[]
+  items: { primary: LibraryItem[]; teacher: LibraryItem[] }
   onSectionChange: (section: LibrarySection) => void
 }) {
+  function renderItem(item: LibraryItem) {
+    return (
+      <button
+        key={item.id}
+        onClick={() => {
+          if (item.soon) return
+          onSectionChange(item.id)
+          onClose()
+        }}
+        className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+          section === item.id
+            ? 'bg-[var(--color-accent)] text-white'
+            : item.soon
+              ? 'text-[var(--color-border)] cursor-default'
+              : 'text-[var(--color-text)] hover:bg-[var(--color-bg)]'
+        }`}
+      >
+        <span>{item.label}</span>
+        {item.soon && (
+          <span className="ml-2 text-[10px] uppercase tracking-wide">Soon</span>
+        )}
+      </button>
+    )
+  }
   return (
     <>
       {open && (
@@ -303,28 +335,16 @@ function LibrarySidebar({
         </div>
 
         <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
-          {items.map(item => (
-            <button
-              key={item.id}
-              onClick={() => {
-                if (item.soon) return
-                onSectionChange(item.id)
-                onClose()
-              }}
-              className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                section === item.id
-                  ? 'bg-[var(--color-accent)] text-white'
-                  : item.soon
-                    ? 'text-[var(--color-border)] cursor-default'
-                    : 'text-[var(--color-text)] hover:bg-[var(--color-bg)]'
-              }`}
-            >
-              <span>{item.label}</span>
-              {item.soon && (
-                <span className="ml-2 text-[10px] uppercase tracking-wide">Soon</span>
-              )}
-            </button>
-          ))}
+          {items.primary.map(renderItem)}
+          {items.teacher.length > 0 && (
+            <>
+              <div className="my-2 border-t border-[var(--color-border)]" />
+              <div className="px-3 pb-1 text-[10px] font-mono font-semibold text-[var(--color-muted)] uppercase tracking-wide">
+                For teachers
+              </div>
+              {items.teacher.map(renderItem)}
+            </>
+          )}
         </div>
       </aside>
     </>
@@ -685,7 +705,7 @@ function WorkspaceContent() {
   const initialMode = searchParams.get('mode') === 'library' ? 'library' : 'lab'
   const initialLibrarySection = (() => {
     const section = searchParams.get('section')
-    return section === 'all' || section === 'mine' || section === 'games' || section === 'applets' || section === 'polls'
+    return section === 'all' || section === 'mine' || section === 'games' || section === 'applets' || section === 'polls' || section === 'redpen'
       ? section
       : 'all'
   })()
@@ -700,6 +720,7 @@ function WorkspaceContent() {
   const [mode, setMode] = useState<WorkspaceMode>(initialMode)
   const [librarySection, setLibrarySection] = useState<LibrarySection>(initialLibrarySection)
   const [gameChrome, setGameChrome] = useState<{ title: string; onBack: () => void } | null>(null)
+  const [redpenChrome, setRedpenChrome] = useState<{ title: string; onBack: () => void } | null>(null)
   const { isDirty, clearGrid, activeDatasetId, activeDatasetName, exploreCards, setGrid, setActiveDatasetId, setActiveDatasetName } = useStore()
   const hasOnlyDataGrid = exploreCards.every(card => card.config.type === 'data-grid')
   const { user, isGuest } = useAuth()
@@ -721,9 +742,12 @@ function WorkspaceContent() {
     return snaps.full
   })
   const showPuzzleWeek = canAccessPuzzleWeek(user)
-  const libraryItems: { id: LibrarySection; label: string; soon?: boolean }[] = showPuzzleWeek
-    ? [...BASE_LIBRARY_ITEMS, { id: 'logic-puzzles', label: 'Logic Puzzles' }]
-    : BASE_LIBRARY_ITEMS
+  const libraryItems = {
+    primary: showPuzzleWeek
+      ? [...PRIMARY_LIBRARY_ITEMS, { id: 'logic-puzzles' as const, label: 'Logic Puzzles' }]
+      : PRIMARY_LIBRARY_ITEMS,
+    teacher: TEACHER_LIBRARY_ITEMS,
+  }
 
   useEffect(() => {
     if (librarySection === 'logic-puzzles' && !showPuzzleWeek) {
@@ -931,6 +955,9 @@ function WorkspaceContent() {
     if (librarySection === 'applets') {
       return <AppletsBrowser />
     }
+    if (librarySection === 'redpen') {
+      return <RedPenHub onChromeChange={setRedpenChrome} />
+    }
     return <PollsPlaceholder />
   }
 
@@ -947,20 +974,36 @@ function WorkspaceContent() {
     )
     : undefined
 
+  // print:hidden so RedPen's SheetPrintView (portaled onto <body>, see components/redpen/SheetPrintView.tsx)
+  // is the only thing visible when printing — the app shell would otherwise still occupy
+  // page-flow height while printing and produce blank pages around the real content.
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen print:hidden">
       <Header
         onNew={mode === 'lab' ? handleNewDataset : undefined}
         onSave={mode === 'lab' ? handleSaveClick : undefined}
         onShare={mode === 'lab' ? handleShareClick : undefined}
         onToggleSidebar={() => setSidebarOpen(v => !v)}
         datasetName={mode === 'lab' ? activeDatasetName : undefined}
-        centerTitle={mode === 'library' && librarySection === 'games' ? gameChrome?.title ?? null : null}
+        centerTitle={
+          mode === 'library' && librarySection === 'games' ? gameChrome?.title ?? null
+          : mode === 'library' && librarySection === 'redpen' ? redpenChrome?.title ?? null
+          : null
+        }
         leadingNav={
           mode === 'library' && librarySection === 'games' && gameChrome
             ? (
               <button
                 onClick={gameChrome.onBack}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors"
+              >
+                Back
+              </button>
+            )
+            : mode === 'library' && librarySection === 'redpen' && redpenChrome
+            ? (
+              <button
+                onClick={redpenChrome.onBack}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors"
               >
                 Back

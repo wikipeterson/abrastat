@@ -105,7 +105,7 @@ export function ScanAndGrade({ administrationId, onDone, onGraded }: ScanAndGrad
       </button>
 
       <div>
-        <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)]">Scan and grade</h2>
+        <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)]">Scan to grade</h2>
         <p className="text-sm text-[var(--color-muted)] mt-1">
           {assessment.title} · {section?.label ?? 'Unknown section'} · drop the multi-page PDF straight off
           the printer. Every sheet is decided automatically; the log tells you what it decided and why.

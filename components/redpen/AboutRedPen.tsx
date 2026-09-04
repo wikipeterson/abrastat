@@ -2,9 +2,9 @@
 
 const STEPS = [
   { n: '1', label: 'Write your quiz', detail: 'Question doc — Claude works out the answer key for you.' },
-  { n: '2', label: 'Build the assessment', detail: "Import Claude's answer key, or set it up by hand." },
+  { n: '2', label: 'Set the answer key', detail: "Import Claude's answer key, or set it up by hand." },
   { n: '3', label: 'Print sheets', detail: 'One bubble sheet per student, pre-printed with name and ID.' },
-  { n: '4', label: 'Scan & grade', detail: 'Run the completed stack through the printer, upload the PDF.' },
+  { n: '4', label: 'Scan to grade', detail: 'Run the completed stack through the printer, upload the PDF.' },
   { n: '5', label: 'Results', detail: 'Scores, flagged sheets, and a per-question breakdown.' },
 ]
 
@@ -22,7 +22,7 @@ export function AboutRedPen({ onGetStarted }: AboutRedPenProps) {
         <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)] mb-3">About RedPen</h2>
         <p className="text-[var(--color-muted)] leading-relaxed">
           RedPen scans and grades bubble-sheet assessments. Print sheets for your section, hand them out with
-          your assessment, scan the completed stack on your school&apos;s copier or any printer with a document
+          your assessment, scan the completed stack on your school&apos;s copier or any scanner with a document
           feeder, and get scores and summaries back.
         </p>
       </div>

@@ -112,7 +112,7 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
         <div>
           <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)]">Assessments</h2>
           <p className="text-sm text-[var(--color-muted)] mt-1">
-            Scan and grade bubble sheets. {assessments.length} assessment{assessments.length === 1 ? '' : 's'} on file.
+            Scan to grade bubble sheets. {assessments.length} assessment{assessments.length === 1 ? '' : 's'} on file.
           </p>
         </div>
         <button

@@ -56,9 +56,9 @@ export function RedPenHub({ onChromeChange }: RedPenHubProps) {
     const titles: Record<Exclude<View['screen'], TopTab>, string> = {
       newChoice: 'New assessment',
       import: 'Import an assessment',
-      build: 'Build the assessment',
+      build: 'Set the answer key',
       sheets: 'Print answer sheets',
-      scan: 'Scan and grade',
+      scan: 'Scan to grade',
       results: 'Results',
       printForStudents: 'Print for students',
     }

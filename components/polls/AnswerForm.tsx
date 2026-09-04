@@ -58,14 +58,31 @@ export function AnswerForm({ poll, onDone }: AnswerFormProps) {
       />
     )
   }
+  // Class polls never offer a results shortcut here, even once closed or already answered — a
+  // respondent has to have actually submitted an answer to see results at all, and class results
+  // are only ever reachable by the poll's creator (via "Your polls"), per the nav-reorg handoff.
+  const canSeeResults = poll.mode === 'public'
+
   if (poll.status === 'closed') {
-    return <InfoBox tone="muted" text="This poll has closed and is no longer accepting responses." action={{ label: 'See results →', onClick: onDone }} />
+    return (
+      <InfoBox
+        tone="muted"
+        text="This poll has closed and is no longer accepting responses."
+        action={canSeeResults ? { label: 'See results →', onClick: onDone } : undefined}
+      />
+    )
   }
   if (poll.status !== 'published') {
     return <InfoBox tone="gold" text="This poll is still pending review and isn't open yet." />
   }
   if (alreadyAnswered) {
-    return <InfoBox tone="accent" text="You've already answered this poll." action={{ label: 'See results →', onClick: onDone }} />
+    return (
+      <InfoBox
+        tone="accent"
+        text="You've already answered this poll."
+        action={canSeeResults ? { label: 'See results →', onClick: onDone } : undefined}
+      />
+    )
   }
 
   const canSubmit = poll.questions.every(q => isValidAnswer(q, answers[q.id]))

@@ -30,9 +30,9 @@ export function LandingPage() {
 
   return (
     <main className="min-h-screen" style={{ background: 'var(--color-bg)' }}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 space-y-3">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 space-y-3">
         {/* Nav */}
-        <nav className="flex items-center justify-center py-4">
+        <nav className="flex items-center justify-center py-1">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="AbraStat" className="h-20 sm:h-24 w-auto" />
         </nav>
@@ -48,9 +48,10 @@ export function LandingPage() {
               <span className="font-serif italic font-medium text-[var(--color-accent-strong)]">your class needs.</span>
             </h1>
             <p className="text-sm leading-relaxed text-[var(--color-muted)] max-w-sm mt-4 mb-6">
-              A real spreadsheet. Ten chart types. Coin flippers, dice, spinners and a Galton board
-              for live demos. Games for guessing correlations and residuals. Save &amp; share datasets
-              so the whole class can riff on the same numbers.
+              AbraStat is an interactive platform built for teaching and learning statistics. Enter
+              or upload your own data, or explore datasets from the AbraStat library. Create
+              beautiful graphs, calculate statistical summaries, and run animated simulations using
+              coins, dice, spinners, and more to bring the powerful tools of statistics to life.
             </p>
 
             {authIntent ? (

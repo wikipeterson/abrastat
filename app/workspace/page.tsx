@@ -27,7 +27,7 @@ import { DataDock, DockState, computeSnaps } from '@/components/grid/DataDock'
 import { BuildStamp } from '@/components/dev/BuildStamp'
 
 type WorkspaceMode = 'library' | 'lab'
-type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls' | 'redpen' | 'logic-puzzles'
+type LibrarySection = 'all' | 'mine' | 'games' | 'applets' | 'polls' | 'createPoll' | 'redpen' | 'logic-puzzles'
 type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 
 const SIDEBAR_WIDTH_CLASS = 'md:w-48'
@@ -41,13 +41,17 @@ type LibraryItem = { id: LibrarySection; label: string; soon?: boolean; teacherB
 const PRIMARY_LIBRARY_ITEMS: LibraryItem[] = [
   { id: 'all', label: 'Public Datasets' },
   { id: 'mine', label: 'My Datasets' },
+  { id: 'polls', label: 'Polls' },
   { id: 'games', label: 'Games' },
   { id: 'applets', label: 'Applets' },
 ]
 // Below the "For teachers" divider in the sidebar — tools a teacher administers, not something
-// a student browses/plays directly (that's the primary group above).
+// a student browses/plays directly (that's the primary group above). Polls itself (answering,
+// browsing, managing what you've made) moved up to the primary group — only *creating* a poll
+// stays teacher-gated. The moderation queue isn't a nav item at all: it's admin-only, reached
+// via a role-checked link inside the Polls page itself (see PollsBrowse.tsx).
 const TEACHER_LIBRARY_ITEMS: LibraryItem[] = [
-  { id: 'polls', label: 'Polls' },
+  { id: 'createPoll', label: 'Create Poll', teacherBadge: true },
   { id: 'redpen', label: 'RedPen', teacherBadge: true },
 ]
 
@@ -702,7 +706,8 @@ function WorkspaceContent() {
   const initialMode = searchParams.get('mode') === 'library' ? 'library' : 'lab'
   const initialLibrarySection = (() => {
     const section = searchParams.get('section')
-    return section === 'all' || section === 'mine' || section === 'games' || section === 'applets' || section === 'polls' || section === 'redpen'
+    return section === 'all' || section === 'mine' || section === 'games' || section === 'applets'
+      || section === 'polls' || section === 'createPoll' || section === 'redpen'
       ? section
       : 'all'
   })()
@@ -971,7 +976,13 @@ function WorkspaceContent() {
     if (librarySection === 'redpen') {
       return <RedPenHub onChromeChange={setRedpenChrome} />
     }
-    return <PollsHub onChromeChange={setPollsChrome} onSendToLab={handleOpenDataset} />
+    // key forces a fresh PollsHub per entry point (Polls vs. the Teacher-only Create Poll) —
+    // otherwise switching between them would just update props on the same mounted instance and
+    // leave whatever internal screen was showing (results, edit, ...) stuck in place.
+    if (librarySection === 'createPoll') {
+      return <PollsHub key="createPoll" initialView="create" onChromeChange={setPollsChrome} onSendToLab={handleOpenDataset} />
+    }
+    return <PollsHub key="polls" initialView="browse" onChromeChange={setPollsChrome} onSendToLab={handleOpenDataset} />
   }
 
   const libraryHeaderActions = mode === 'library' && (librarySection === 'all' || librarySection === 'mine')
@@ -1001,7 +1012,7 @@ function WorkspaceContent() {
         centerTitle={
           mode === 'library' && librarySection === 'games' ? gameChrome?.title ?? null
           : mode === 'library' && librarySection === 'redpen' ? redpenChrome?.title ?? null
-          : mode === 'library' && librarySection === 'polls' ? pollsChrome?.title ?? null
+          : mode === 'library' && (librarySection === 'polls' || librarySection === 'createPoll') ? pollsChrome?.title ?? null
           : null
         }
         leadingNav={
@@ -1023,7 +1034,7 @@ function WorkspaceContent() {
                 Back
               </button>
             )
-            : mode === 'library' && librarySection === 'polls' && pollsChrome
+            : mode === 'library' && (librarySection === 'polls' || librarySection === 'createPoll') && pollsChrome
             ? (
               <button
                 onClick={pollsChrome.onBack}

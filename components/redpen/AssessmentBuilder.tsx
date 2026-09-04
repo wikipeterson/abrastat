@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { MAX_QUESTIONS_PER_SHEET } from '@/lib/redpen/geometry'
 import { getAssessment, saveAssessment } from '@/lib/redpen/storage'
 import { AnswerEntry, RedPenAssessment, UnscorableEntry } from '@/lib/redpen/types'
 import { ParsedMarksheet } from '@/lib/redpen/schema'
 import { RedPenError, RedPenLoading } from './RedPenStatus'
 
-const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
+const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 
 /**
  * Where the builder's initial content comes from: editing an existing saved assessment,
@@ -95,7 +96,14 @@ function isSimpleMc(entry: AnswerEntry | undefined): entry is AnswerEntry & { an
 function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved: () => void }) {
   const { user } = useAuth()
   const [title, setTitle] = useState(initial.title)
-  const [questionCount, setQuestionCount] = useState(initial.questionCount)
+  // Clamped even on load, not just going forward — a sheet already saved above today's max
+  // (from before this limit existed) would otherwise stay silently broken to print.
+  const initialQuestionCount = Math.min(initial.questionCount, MAX_QUESTIONS_PER_SHEET)
+  const [questionCount, setQuestionCount] = useState(initialQuestionCount)
+  // The stepper only moves in 5s, which can't ever land on e.g. 23 — this is the typed field
+  // alongside it, kept as its own string state so the box can go through an empty/partial state
+  // ("2" while typing "23") without that briefly collapsing the bubble grid to a clamped count.
+  const [questionCountInput, setQuestionCountInput] = useState(String(initialQuestionCount))
   const [choiceCount, setChoiceCount] = useState(initial.choiceCount)
   const [key, setKey] = useState<Record<number, AnswerEntry>>(initial.key)
   const [saved, setSaved] = useState(false)
@@ -107,6 +115,14 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
   const totalAnswered = Array.from({ length: questionCount }, (_, i) => i + 1)
     .filter(n => key[n] !== undefined).length
   const keyPct = questionCount > 0 ? Math.round((totalAnswered / questionCount) * 100) : 0
+
+  /** Sets both the real count and the field's text together — used by the +/- buttons so the
+   *  typed field never drifts out of sync with what they set. */
+  function setQuestionCountClamped(n: number) {
+    const clamped = Math.max(5, Math.min(MAX_QUESTIONS_PER_SHEET, n))
+    setQuestionCount(clamped)
+    setQuestionCountInput(String(clamped))
+  }
 
   function pick(n: number, letter: string) {
     setKey(prev => {
@@ -208,14 +224,28 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
           <div className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-muted)] mb-2.5">Questions</div>
           <div className="flex items-center gap-3.5">
             <button
-              onClick={() => setQuestionCount(q => Math.max(5, q - 5))}
+              onClick={() => setQuestionCountClamped(questionCount - 5)}
               className="w-8 h-8 rounded border border-[var(--color-border)] text-lg text-[var(--color-text)]"
             >
               −
             </button>
-            <div className="font-mono text-2xl w-11 text-center tabular-nums">{questionCount}</div>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={questionCountInput}
+              onChange={e => {
+                const digits = e.target.value.replace(/\D/g, '').slice(0, 2)
+                setQuestionCountInput(digits)
+                // Live-update the real count as digits come in — but only clamp the max here;
+                // clamping the min too would snap "1" (of someone typing "15") straight to 5.
+                if (digits !== '') setQuestionCount(Math.min(MAX_QUESTIONS_PER_SHEET, parseInt(digits, 10)))
+              }}
+              onBlur={() => setQuestionCountClamped(questionCountInput === '' ? questionCount : parseInt(questionCountInput, 10))}
+              onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
+              className="font-mono text-2xl w-14 text-center tabular-nums bg-transparent border border-transparent rounded hover:border-[var(--color-border)] focus:border-[var(--color-accent)] focus:outline-none"
+            />
             <button
-              onClick={() => setQuestionCount(q => Math.min(100, q + 5))}
+              onClick={() => setQuestionCountClamped(questionCount + 5)}
               className="w-8 h-8 rounded border border-[var(--color-border)] text-lg text-[var(--color-text)]"
             >
               +
@@ -228,7 +258,7 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
             Choices per question
           </div>
           <div className="flex gap-1.5">
-            {[4, 5, 6].map(c => (
+            {[4, 5, 6, 7, 8].map(c => (
               <button
                 key={c}
                 onClick={() => setChoiceCount(c)}

@@ -97,6 +97,23 @@ export function rowCenterYIn(row: number): number {
   return CONTENT_ORIGIN_IN + BUBBLE_GRID_TOP_IN + row * BUBBLE_PITCH_IN + BUBBLE_PITCH_IN / 2
 }
 
+/** How many rows fit in one printed column before the bubble grid runs into the footer note /
+ *  bottom edge — computed from the real layout constants above, not a guessed number, so it
+ *  can't silently drift out of sync if this file's geometry ever changes. */
+function maxRowsPerColumn(): number {
+  const footerTopIn = PAGE_HEIGHT_IN - CONTENT_ORIGIN_IN - 0.15
+  let row = 0
+  while (rowCenterYIn(row) + BUBBLE_DIAMETER_IN / 2 < footerTopIn) row++
+  return row
+}
+
+/** The largest question count the builder should ever allow — past this, bubble rows run off
+ *  the physical page (and, since the scan reader computes positions from this same geometry,
+ *  those questions would read back as blank for every student with no visible error). Two
+ *  columns per sheet, rounded down to a clean step-of-5 with a small safety margin rather than
+ *  the exact computed limit, so ordinary print-driver rounding can't tip it over. */
+export const MAX_QUESTIONS_PER_SHEET = Math.floor((maxRowsPerColumn() * 2) / 5) * 5
+
 /** Canonical page-inch position of the question-number label's center for a row. */
 export function rowLabelCenterIn(col: 0 | 1, row: number): { x: number; y: number } {
   return { x: columnLeftIn(col) + NUMBER_COL_WIDTH_IN / 2, y: rowCenterYIn(row) }

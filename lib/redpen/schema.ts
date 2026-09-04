@@ -23,7 +23,7 @@ export type ParseResult =
   | { ok: true; data: ParsedMarksheet; warnings: string[] }
   | { ok: false; errors: string[] }
 
-const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
+const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 const DEFAULT_CHOICE_COUNT = 4
 
 function letterIndex(letter: string): number {

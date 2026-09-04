@@ -9,12 +9,12 @@ import { canAccessPuzzleWeek } from '@/lib/featureFlags'
 
 const SIDEBAR_WIDTH_CLASS = 'md:w-48'
 
-const BASE_LIBRARY_LINKS = [
+const BASE_LIBRARY_LINKS: { href: string; label: string; soon?: boolean }[] = [
   { href: '/workspace?mode=library&section=all', label: 'Public Datasets' },
   { href: '/workspace?mode=library&section=mine', label: 'My Datasets' },
   { href: '/workspace?mode=library&section=games', label: 'Games' },
   { href: '/workspace?mode=library&section=applets', label: 'Applets' },
-  { href: '/workspace?mode=library&section=polls', label: 'Polls', soon: true },
+  { href: '/workspace?mode=library&section=polls', label: 'Polls' },
 ]
 
 const LOGIC_PUZZLES_URL = 'https://puzzleweek.abrastat.com/puzzleweek/bonus'

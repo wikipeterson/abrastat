@@ -8,7 +8,7 @@
 
 import { RedPenAssessment } from './types'
 
-const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
+const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 
 export interface BubbleRow {
   n: number

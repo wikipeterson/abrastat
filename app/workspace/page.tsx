@@ -11,6 +11,7 @@ import { SaveDatasetModal } from '@/components/library/SaveDatasetModal'
 import { ShareDatasetModal } from '@/components/library/ShareDatasetModal'
 import { DatasetCard } from '@/components/library/DatasetCard'
 import { DatasetListSkeleton } from '@/components/ui/Skeleton'
+import { Toast, useToast } from '@/components/ui/Toast'
 import { GameHub } from '@/components/games/GameHub'
 import { RedPenHub } from '@/components/redpen/RedPenHub'
 import { PollsHub } from '@/components/polls/PollsHub'
@@ -722,6 +723,18 @@ function WorkspaceContent() {
   const hasOnlyDataGrid = exploreCards.every(card => card.config.type === 'data-grid')
   const { user, isGuest } = useAuth()
   const [addCardCatalogOpen, setAddCardCatalogOpen] = useState(false)
+  const { toast, show: showToast, hide: hideToast } = useToast()
+
+  // A guest session (continueAsGuest) is a real signed-in Firebase user, just not a durable
+  // one — it can't save, share, open a real dataset, or answer a poll, since none of that
+  // should vanish with the browser tab. Every guard below routes through this so the message
+  // and the escape hatch stay consistent instead of drifting per call site.
+  function guestGate(action: string) {
+    showToast(`Create a free account to ${action}.`, 'error', {
+      label: 'Sign in',
+      onClick: () => { window.location.href = '/' },
+    })
+  }
 
   const upperRegionRef = useRef<HTMLDivElement>(null)
 
@@ -853,11 +866,12 @@ function WorkspaceContent() {
   }
 
   function handleSaveClick() {
+    if (isGuest) { guestGate('save your work'); return }
     setShowSave(true)
   }
 
   function handleShareClick() {
-    if (!user || isGuest) { window.location.href = '/'; return }
+    if (!user || isGuest) { guestGate('share a dataset'); return }
     if (activeDatasetId) {
       setShareDatasetId(activeDatasetId)
       setShareIsPublic(false)
@@ -904,6 +918,8 @@ function WorkspaceContent() {
       setSidebarOpen(false)
       return
     }
+
+    if (isGuest) { guestGate('open this dataset'); return }
 
     try {
       const { meta, grid } = await loadDataset(id)
@@ -1102,6 +1118,7 @@ function WorkspaceContent() {
           }}
         />
       )}
+      {toast && <Toast message={toast.message} type={toast.type} action={toast.action} onClose={hideToast} />}
     </div>
   )
 }

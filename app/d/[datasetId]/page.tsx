@@ -7,7 +7,7 @@ import { loadDataset } from '@/lib/firestore'
 import { getSampleDatasetById } from '@/lib/sampleData'
 import { useStore } from '@/lib/store'
 
-type Status = 'loading' | 'error' | 'done'
+type Status = 'loading' | 'error' | 'guest' | 'done'
 
 function normalizeDatasetId(value: string) {
   try {
@@ -19,7 +19,7 @@ function normalizeDatasetId(value: string) {
 
 export default function ShareLinkPage() {
   const { datasetId } = useParams<{ datasetId: string }>()
-  const { loading: authLoading } = useAuth()
+  const { loading: authLoading, isGuest } = useAuth()
   const router = useRouter()
   const setGrid = useStore(s => s.setGrid)
   const setActiveDatasetId = useStore(s => s.setActiveDatasetId)
@@ -48,6 +48,11 @@ export default function ShareLinkPage() {
       return
     }
 
+    if (isGuest) {
+      setStatus('guest')
+      return
+    }
+
     loadDataset(normalizedDatasetId)
       .then(({ meta, grid }) => {
         // Load as a working copy — activeDatasetId stays null so
@@ -63,7 +68,27 @@ export default function ShareLinkPage() {
         setErrorMsg(msg)
         setStatus('error')
       })
-  }, [authLoading, datasetId, router, setGrid, setActiveDatasetId, setActiveDatasetName])
+  }, [authLoading, isGuest, datasetId, router, setGrid, setActiveDatasetId, setActiveDatasetName])
+
+  if (status === 'guest') {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--color-bg)' }}>
+        <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--shadow-card)] border border-[var(--color-border)] p-8 max-w-sm w-full text-center space-y-4">
+          <div className="text-4xl">🔒</div>
+          <h2 className="font-semibold text-[var(--color-text)]">Create a free account to open this dataset</h2>
+          <p className="text-sm text-[var(--color-muted)]">
+            A guest session can&apos;t open shared datasets — sign in (or create a free account) to get your own copy.
+          </p>
+          <button
+            onClick={() => { window.location.href = '/' }}
+            className="px-4 py-2 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium"
+          >
+            Sign in
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (status === 'error') {
     return (

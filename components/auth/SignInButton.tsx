@@ -12,6 +12,7 @@ type AuthMode = 'signin' | 'signup'
 
 interface SignInButtonProps {
   googleOnly?: boolean
+  initialMode?: AuthMode
 }
 
 function formatAuthError(error: unknown): string {
@@ -38,8 +39,8 @@ function formatAuthError(error: unknown): string {
   }
 }
 
-export function SignInButton({ googleOnly = false }: SignInButtonProps) {
-  const [mode, setMode] = useState<AuthMode>('signin')
+export function SignInButton({ googleOnly = false, initialMode = 'signin' }: SignInButtonProps) {
+  const [mode, setMode] = useState<AuthMode>(initialMode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)

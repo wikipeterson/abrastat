@@ -110,3 +110,14 @@ export function isPollsModerator(identity: PuzzleWeekIdentityLike | null | undef
   const email = identity?.email?.toLowerCase().trim()
   return email === POLLS_MODERATOR_EMAIL
 }
+
+// AbraStat Teacher (paid tier, billing not live yet — see /teacher). Not wired into any gating
+// logic yet: every Teacher-listed feature (public dataset publishing, RedPen, polls, dataset
+// copy links) still works for everyone today. This exists ahead of that so the concept is in
+// code once billing lands, same as isPollsModerator was added ahead of the moderation queue.
+export const ABRASTAT_TEACHER_EMAIL = 'peterson.steve@gmail.com'
+
+export function isAbrastatTeacher(identity: PuzzleWeekIdentityLike | null | undefined): boolean {
+  const email = identity?.email?.toLowerCase().trim()
+  return email === ABRASTAT_TEACHER_EMAIL
+}

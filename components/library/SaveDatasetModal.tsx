@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Modal } from '@/components/ui/Modal'
 import { CoverPicker } from './CoverPicker'
 import { DatasetCoverThumb } from './DatasetCoverThumb'
@@ -126,6 +127,16 @@ export function SaveDatasetModal({ open, onClose, onSaved, saveLabel }: SaveData
                 🌐 Public
               </button>
             </div>
+            <p className="text-xs text-[var(--color-muted)] mt-1.5">
+              <span className="font-mono text-[9.5px] font-bold uppercase tracking-wide text-[var(--color-gold-text)] bg-[var(--color-gold-light)] px-1.5 py-0.5 rounded mr-1.5">
+                Teacher only
+              </span>
+              Publishing publicly will be part of{' '}
+              <Link href="/teacher" className="font-semibold text-[var(--color-accent-strong)] hover:underline">
+                AbraStat Teacher
+              </Link>{' '}
+              — coming soon, still free for now.
+            </p>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

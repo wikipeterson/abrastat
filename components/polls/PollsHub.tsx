@@ -80,6 +80,11 @@ export function PollsHub({ onChromeChange, onSendToLab }: PollsHubProps) {
               }`}
             >
               {tab.label}
+              {tab.id === 'new' && (
+                <span className="ml-1.5 font-mono text-[9px] font-bold uppercase tracking-wide text-[var(--color-gold-text)] bg-[var(--color-gold-light)] px-1.5 py-0.5 rounded align-middle">
+                  Teacher
+                </span>
+              )}
             </button>
           ))}
         </div>

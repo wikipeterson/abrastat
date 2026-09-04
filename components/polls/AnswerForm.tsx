@@ -25,7 +25,7 @@ function isValidAnswer(q: PollQuestion, value: string | number | undefined): boo
  *  public browse-and-answer flow, and the `/p/[token]` share-link route, so a poll is always
  *  answered the same way regardless of how someone reached it. */
 export function AnswerForm({ poll, onDone }: AnswerFormProps) {
-  const { user } = useAuth()
+  const { user, isGuest } = useAuth()
   const [checking, setChecking] = useState(true)
   const [alreadyAnswered, setAlreadyAnswered] = useState(false)
   const [answers, setAnswers] = useState<Record<string, string | number>>({})
@@ -48,6 +48,15 @@ export function AnswerForm({ poll, onDone }: AnswerFormProps) {
 
   if (!user) {
     return <InfoBox tone="danger" text="Sign in to answer this poll." />
+  }
+  if (isGuest) {
+    return (
+      <InfoBox
+        tone="gold"
+        text="Create a free account to answer this poll — a guest session isn't tied to an account, so responses can't be tracked."
+        action={{ label: 'Sign in →', onClick: () => { window.location.href = '/' } }}
+      />
+    )
   }
   if (poll.status === 'closed') {
     return <InfoBox tone="muted" text="This poll has closed and is no longer accepting responses." action={{ label: 'See results →', onClick: onDone }} />

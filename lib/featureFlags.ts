@@ -99,3 +99,14 @@ export function getPuzzleWeekPacketMessage(
 export function getPuzzleWeekEligibilityMessage() {
   return 'Puzzle Week registration is currently limited to @haverfordsd.net accounts.'
 }
+
+// Polls' moderation queue — deliberately a single hard-coded address, not the broader
+// preview-email fragment list above. The Firestore security rule mirrors this exact check
+// (request.auth.token.email == POLLS_MODERATOR_EMAIL) for the real enforcement; this export is
+// only what gates the queue screen/nav item client-side.
+export const POLLS_MODERATOR_EMAIL = 'peterson.steve@gmail.com'
+
+export function isPollsModerator(identity: PuzzleWeekIdentityLike | null | undefined): boolean {
+  const email = identity?.email?.toLowerCase().trim()
+  return email === POLLS_MODERATOR_EMAIL
+}

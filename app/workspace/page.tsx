@@ -13,6 +13,7 @@ import { DatasetCard } from '@/components/library/DatasetCard'
 import { DatasetListSkeleton } from '@/components/ui/Skeleton'
 import { GameHub } from '@/components/games/GameHub'
 import { RedPenHub } from '@/components/redpen/RedPenHub'
+import { PollsHub } from '@/components/polls/PollsHub'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { fetchMyDatasets, fetchPublicDatasets, deleteDataset, loadDataset } from '@/lib/firestore'
 import { SAMPLE_DATASETS, getSampleDatasetById, getSampleDatasetId } from '@/lib/sampleData'
@@ -42,7 +43,7 @@ const PRIMARY_LIBRARY_ITEMS: LibraryItem[] = [
 // Below the "For teachers" divider in the sidebar — tools a teacher administers, not something
 // a student browses/plays directly (that's the primary group above).
 const TEACHER_LIBRARY_ITEMS: LibraryItem[] = [
-  { id: 'polls', label: 'Polls', soon: true },
+  { id: 'polls', label: 'Polls' },
   { id: 'redpen', label: 'RedPen' },
 ]
 
@@ -484,19 +485,6 @@ function DatasetsBrowser({
   )
 }
 
-function PollsPlaceholder() {
-  return (
-    <div className="flex-1 flex items-center justify-center px-6">
-      <div className="max-w-xl text-center space-y-2">
-        <h2 className="text-xl font-serif italic font-semibold text-[var(--color-text)]">Polls</h2>
-        <p className="text-[var(--color-muted)]">
-          Polls will live here in the library shell. For now, this section is still being built.
-        </p>
-      </div>
-    </div>
-  )
-}
-
 function AppletsBrowser() {
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
@@ -721,6 +709,7 @@ function WorkspaceContent() {
   const [librarySection, setLibrarySection] = useState<LibrarySection>(initialLibrarySection)
   const [gameChrome, setGameChrome] = useState<{ title: string; onBack: () => void } | null>(null)
   const [redpenChrome, setRedpenChrome] = useState<{ title: string; onBack: () => void } | null>(null)
+  const [pollsChrome, setPollsChrome] = useState<{ title: string; onBack: () => void } | null>(null)
   const { isDirty, clearGrid, activeDatasetId, activeDatasetName, exploreCards, setGrid, setActiveDatasetId, setActiveDatasetName } = useStore()
   const hasOnlyDataGrid = exploreCards.every(card => card.config.type === 'data-grid')
   const { user, isGuest } = useAuth()
@@ -958,7 +947,7 @@ function WorkspaceContent() {
     if (librarySection === 'redpen') {
       return <RedPenHub onChromeChange={setRedpenChrome} />
     }
-    return <PollsPlaceholder />
+    return <PollsHub onChromeChange={setPollsChrome} onSendToLab={handleOpenDataset} />
   }
 
   const libraryHeaderActions = mode === 'library' && (librarySection === 'all' || librarySection === 'mine')
@@ -988,6 +977,7 @@ function WorkspaceContent() {
         centerTitle={
           mode === 'library' && librarySection === 'games' ? gameChrome?.title ?? null
           : mode === 'library' && librarySection === 'redpen' ? redpenChrome?.title ?? null
+          : mode === 'library' && librarySection === 'polls' ? pollsChrome?.title ?? null
           : null
         }
         leadingNav={
@@ -1004,6 +994,15 @@ function WorkspaceContent() {
             ? (
               <button
                 onClick={redpenChrome.onBack}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors"
+              >
+                Back
+              </button>
+            )
+            : mode === 'library' && librarySection === 'polls' && pollsChrome
+            ? (
+              <button
+                onClick={pollsChrome.onBack}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors"
               >
                 Back

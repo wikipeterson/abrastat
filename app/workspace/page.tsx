@@ -32,7 +32,10 @@ type SortKey = 'newest' | 'oldest' | 'name' | 'rows'
 const SIDEBAR_WIDTH_CLASS = 'md:w-48'
 const LOGIC_PUZZLES_URL = 'https://puzzleweek.abrastat.com/puzzleweek/bonus'
 
-type LibraryItem = { id: LibrarySection; label: string; soon?: boolean }
+// teacherBadge is purely informational (a preview of AbraStat Teacher, /teacher) — it never
+// disables the item, unlike `soon`. RedPen keeps working for everyone; the badge just previews
+// what's coming once billing exists.
+type LibraryItem = { id: LibrarySection; label: string; soon?: boolean; teacherBadge?: boolean }
 
 const PRIMARY_LIBRARY_ITEMS: LibraryItem[] = [
   { id: 'all', label: 'Public Datasets' },
@@ -44,7 +47,7 @@ const PRIMARY_LIBRARY_ITEMS: LibraryItem[] = [
 // a student browses/plays directly (that's the primary group above).
 const TEACHER_LIBRARY_ITEMS: LibraryItem[] = [
   { id: 'polls', label: 'Polls' },
-  { id: 'redpen', label: 'RedPen' },
+  { id: 'redpen', label: 'RedPen', teacherBadge: true },
 ]
 
 const PUBLIC_DATASET_CACHE_KEY = 'abrastat.publicDatasets.v1'
@@ -314,6 +317,11 @@ function LibrarySidebar({
         <span>{item.label}</span>
         {item.soon && (
           <span className="ml-2 text-[10px] uppercase tracking-wide">Soon</span>
+        )}
+        {item.teacherBadge && (
+          <span className="ml-2 font-mono text-[9px] font-bold uppercase tracking-wide text-[var(--color-gold-text)] bg-[var(--color-gold-light)] px-1.5 py-0.5 rounded">
+            Teacher
+          </span>
         )}
       </button>
     )

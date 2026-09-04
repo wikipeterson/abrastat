@@ -1,13 +1,25 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { SignInButton } from '@/components/auth/SignInButton'
 
+const NAV_LINKS = [
+  { label: 'Home', href: '/' },
+  { label: 'Workspace', href: '/workspace' },
+  { label: 'Library', href: '/workspace?mode=library&section=all' },
+  { label: 'Applets', href: '/workspace?mode=library&section=applets' },
+  { label: 'Games', href: '/workspace?mode=library&section=games' },
+]
+
+const SCREENSHOTS = ['/landing/screenshot-1.png', '/landing/screenshot-2.png', '/landing/screenshot-3.png']
+
 export function LandingPage() {
   const { user, loading, isGuest, continueAsGuest } = useAuth()
   const router = useRouter()
+  const [showSignIn, setShowSignIn] = useState(false)
 
   useEffect(() => {
     if (!loading && user) router.replace('/workspace')
@@ -22,63 +34,122 @@ export function LandingPage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
-      {/* Hero */}
-      <section className="flex-1 flex flex-col items-center justify-center text-center px-4 py-20">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.svg" alt="AbraStat" style={{ width: 'clamp(200px, 60vw, 360px)', height: 'auto' }} className="mb-4" />
-        <p className="text-2xl sm:text-3xl font-serif italic font-semibold text-[var(--color-text)] mb-3">
-          Statistics made for students.
-        </p>
-        <p className="text-[var(--color-muted)] max-w-md mb-10">
-          Enter or upload data, run summary stats, build beautiful interactive charts, and save datasets to share with your class.
-        </p>
-        <div className="flex flex-col items-center gap-3">
-          <SignInButton />
+    <main className="min-h-screen" style={{ background: 'var(--color-bg)' }}>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 space-y-3">
+        {/* Nav */}
+        <nav className="flex items-center justify-between gap-4 flex-wrap">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="AbraStat" className="h-7 w-auto" />
+          <div className="flex items-center gap-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-full p-1 flex-wrap">
+            {NAV_LINKS.map(link => (
+              <Link
+                key={link.label}
+                href={link.href}
+                className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  link.label === 'Home'
+                    ? 'bg-[var(--color-text)] text-white'
+                    : 'text-[var(--color-accent-strong)] hover:bg-[var(--color-bg)]'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
           <button
-            onClick={() => continueAsGuest()}
-            className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] underline underline-offset-2 transition-colors"
+            onClick={() => setShowSignIn(true)}
+            className="px-4 py-2 rounded-full bg-[var(--color-text)] text-white text-sm font-semibold hover:brightness-110 transition-all"
           >
-            Continue as guest
+            Sign in
           </button>
-        </div>
-      </section>
+        </nav>
 
-      {/* Feature strip */}
-      <section className="border-t border-[var(--color-border)] bg-white py-10">
-        <div className="max-w-3xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
-          {[
-            { icon: '✏️', title: 'Edit data like a spreadsheet', desc: 'Type, paste, or import CSV and Excel files into a clean editable grid.' },
-            { icon: '📊', title: 'Beautiful interactive charts', desc: 'Histograms, box plots, scatter plots, and more — all interactive and downloadable.' },
-            { icon: '🌐', title: 'Save & share datasets', desc: 'Save your work to a library and share public datasets with classmates.' },
-          ].map(f => (
-            <div key={f.title}>
-              <div className="text-4xl mb-3">{f.icon}</div>
-              <h3 className="font-serif italic font-semibold text-[var(--color-text)] mb-1">{f.title}</h3>
-              <p className="text-sm text-[var(--color-muted)]">{f.desc}</p>
-            </div>
-          ))}
+        {/* Coming-soon Teacher badge */}
+        <div className="flex justify-end">
+          <Link
+            href="/teacher"
+            className="font-mono text-[11px] font-bold uppercase tracking-wide text-[var(--color-gold-text)] bg-[var(--color-gold-light)] px-3 py-1.5 rounded-full hover:brightness-95 transition-all"
+          >
+            ★ Coming soon: AbraStat Teacher →
+          </Link>
         </div>
-      </section>
 
-      {/* How it works */}
-      <section className="py-12 px-4">
-        <h2 className="font-serif italic text-2xl font-bold text-center text-[var(--color-text)] mb-8">How it works</h2>
-        <div className="max-w-2xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
-          {[
-            { step: '1', label: 'Import', desc: 'Paste, upload, or link a Google Sheet' },
-            { step: '2', label: 'Edit', desc: 'Clean and label your data' },
-            { step: '3', label: 'Analyze', desc: 'Run stats and build charts' },
-            { step: '4', label: 'Save', desc: 'Keep it private or share with the class' },
-          ].map(s => (
-            <div key={s.step} className="flex flex-col items-center">
-              <div className="w-10 h-10 rounded-full bg-[var(--color-accent)] text-white font-bold flex items-center justify-center mb-2">{s.step}</div>
-              <p className="font-semibold text-[var(--color-text)] text-sm">{s.label}</p>
-              <p className="text-xs text-[var(--color-muted)] mt-1">{s.desc}</p>
-            </div>
-          ))}
+        {/* Hero */}
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl p-6 sm:p-10 grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-8 items-center shadow-[0_1px_2px_rgba(8,38,33,0.05),0_20px_44px_-28px_rgba(8,38,33,0.30)]">
+          <div>
+            <h1 className="font-sans font-semibold text-[36px] sm:text-[48px] leading-[1.05] tracking-tight text-[var(--color-text)]">
+              Every probability
+              <br />
+              and statistics tool
+              <br />
+              <span className="font-serif italic font-medium text-[var(--color-accent-strong)]">your class needs.</span>
+            </h1>
+            <p className="text-[15.5px] leading-relaxed text-[var(--color-muted)] max-w-md mt-5 mb-6">
+              A real spreadsheet. Ten chart types. Coin flippers, dice, spinners and a Galton board
+              for live demos. Games for guessing correlations and residuals. Save &amp; share datasets
+              so the whole class can riff on the same numbers.
+            </p>
+
+            {showSignIn ? (
+              <SignInButton />
+            ) : (
+              <div className="flex items-center gap-4 flex-wrap">
+                <button
+                  onClick={() => setShowSignIn(true)}
+                  className="px-5 py-3 rounded-xl bg-[var(--color-text)] text-white text-sm font-semibold hover:brightness-110 transition-all"
+                >
+                  Get started — it&apos;s free
+                </button>
+                <button
+                  onClick={() => continueAsGuest()}
+                  className="text-sm font-semibold text-[var(--color-text)] underline underline-offset-2 hover:text-[var(--color-accent-strong)] transition-colors"
+                >
+                  Continue as guest →
+                </button>
+              </div>
+            )}
+          </div>
+          <ScreenshotCycle />
         </div>
-      </section>
+
+        {/* Demo video */}
+        <div className="rounded-3xl overflow-hidden">
+          <video
+            src="/landing/demo.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full block"
+          />
+        </div>
+      </div>
     </main>
+  )
+}
+
+function ScreenshotCycle() {
+  const [i, setI] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setI(v => (v + 1) % SCREENSHOTS.length), 3200)
+    return () => clearInterval(t)
+  }, [])
+  return (
+    <div className="relative w-full aspect-square rounded-2xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-bg)]">
+      {SCREENSHOTS.map((src, idx) => (
+        <div key={src} className="absolute inset-0 transition-opacity duration-500" style={{ opacity: idx === i ? 1 : 0 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt="AbraStat product screenshot" className="w-full h-full object-contain" />
+        </div>
+      ))}
+      <div className="absolute bottom-2.5 left-0 right-0 flex justify-center gap-1.5">
+        {SCREENSHOTS.map((_, idx) => (
+          <div
+            key={idx}
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: idx === i ? 'var(--color-text)' : 'rgba(14,61,56,0.25)' }}
+          />
+        ))}
+      </div>
+    </div>
   )
 }

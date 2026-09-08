@@ -28,10 +28,19 @@ export function aggregateCategorical(question: PollQuestion, responses: PollResp
   })
 }
 
+/** One respondent's numeric answer, kept alongside the raw value so a dotplot dot can be traced
+ *  back to the response it came from (see components/polls/PollResults.tsx's click-a-dot-to-
+ *  correct flow) — everything else here only ever needed the aggregate count. */
+export interface NumericEntry {
+  userId: string
+  value: number
+  submittedAt: string
+}
+
 export interface NumericBucket {
   start: number
   end: number
-  count: number
+  entries: NumericEntry[]
 }
 
 export interface NumericSummary {
@@ -45,11 +54,44 @@ export interface NumericSummary {
 
 const MAX_DOTPLOT_BUCKETS = 60
 
+/** One dotplot column per integer value, same as the original design's fixed 0–20 mock —
+ *  generalized to the actual response range instead of hardcoded, and widened into multi-value
+ *  bins past MAX_DOTPLOT_BUCKETS columns so a poll with a huge numeric range (someone typed a
+ *  stray outlier, or the question's real range is just wide) never renders an unbounded number
+ *  of columns. The one shared bucketing pass both aggregateNumeric's summary and the dotplot's
+ *  clickable dots are built from, so they never disagree with each other. */
+export function bucketNumericResponses(question: PollQuestion, responses: PollResponse[]): NumericBucket[] {
+  const entries = responses
+    .map(r => ({ userId: r.userId, value: r.answers[question.id], submittedAt: r.submittedAt }))
+    .filter((e): e is NumericEntry => typeof e.value === 'number' && Number.isFinite(e.value))
+    .sort((a, b) => a.value - b.value)
+
+  if (entries.length === 0) return []
+
+  const lo = Math.floor(entries[0].value)
+  const hi = Math.ceil(entries[entries.length - 1].value)
+  const range = hi - lo
+  const binWidth = range > MAX_DOTPLOT_BUCKETS ? Math.ceil((range + 1) / MAX_DOTPLOT_BUCKETS) : 1
+
+  const grouped = new Map<number, NumericEntry[]>()
+  for (const e of entries) {
+    const rounded = Math.round(e.value)
+    const binStart = lo + Math.floor((rounded - lo) / binWidth) * binWidth
+    const list = grouped.get(binStart)
+    if (list) list.push(e)
+    else grouped.set(binStart, [e])
+  }
+
+  const buckets: NumericBucket[] = []
+  for (let start = lo; start <= hi; start += binWidth) {
+    buckets.push({ start, end: Math.min(start + binWidth - 1, hi), entries: grouped.get(start) ?? [] })
+  }
+  return buckets
+}
+
 export function aggregateNumeric(question: PollQuestion, responses: PollResponse[]): NumericSummary {
-  const values = responses
-    .map(r => r.answers[question.id])
-    .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
-    .sort((a, b) => a - b)
+  const buckets = bucketNumericResponses(question, responses)
+  const values = buckets.flatMap(b => b.entries.map(e => e.value)).sort((a, b) => a - b)
 
   if (values.length === 0) {
     return { count: 0, mean: null, median: null, min: null, max: null, buckets: [] }
@@ -59,28 +101,13 @@ export function aggregateNumeric(question: PollQuestion, responses: PollResponse
   const mean = sum / values.length
   const mid = Math.floor(values.length / 2)
   const median = values.length % 2 === 0 ? (values[mid - 1] + values[mid]) / 2 : values[mid]
-  const min = values[0]
-  const max = values[values.length - 1]
 
-  // One dotplot column per integer value, same as the design's fixed 0–20 mock — generalized to
-  // the actual response range instead of hardcoded, and widened into multi-value bins past
-  // MAX_DOTPLOT_BUCKETS columns so a poll with a huge numeric range (someone typed a stray
-  // outlier, or the question's real range is just wide) never renders an unbounded number of
-  // columns.
-  const lo = Math.floor(min)
-  const hi = Math.ceil(max)
-  const range = hi - lo
-  const binWidth = range > MAX_DOTPLOT_BUCKETS ? Math.ceil((range + 1) / MAX_DOTPLOT_BUCKETS) : 1
-  const counts = new Map<number, number>()
-  for (const v of values) {
-    const rounded = Math.round(v)
-    const binStart = lo + Math.floor((rounded - lo) / binWidth) * binWidth
-    counts.set(binStart, (counts.get(binStart) ?? 0) + 1)
+  return {
+    count: values.length,
+    mean,
+    median,
+    min: values[0],
+    max: values[values.length - 1],
+    buckets,
   }
-  const buckets: NumericBucket[] = []
-  for (let start = lo; start <= hi; start += binWidth) {
-    buckets.push({ start, end: Math.min(start + binWidth - 1, hi), count: counts.get(start) ?? 0 })
-  }
-
-  return { count: values.length, mean, median, min, max, buckets }
 }

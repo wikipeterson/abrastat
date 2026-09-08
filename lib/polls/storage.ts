@@ -201,6 +201,25 @@ export async function listResponses(pollId: string): Promise<PollResponse[]> {
   return snap.docs.map(d => d.data() as PollResponse)
 }
 
+/** Owner-only correction, for a student who fat-fingered a number — touches just this one
+ *  question's answer, leaving the rest of that respondent's answers untouched. Firestore's dot-
+ *  notation field path updates only the nested key, matching the security rule's affectedKeys
+ *  restriction to the `answers` map. */
+export async function updateResponseAnswer(
+  pollId: string, userId: string, questionId: string, value: string | number,
+): Promise<void> {
+  await updateDoc(doc(db, COLLECTIONS.responses, responseDocId(pollId, userId)), {
+    [`answers.${questionId}`]: value,
+  })
+}
+
+/** Owner-only removal of a single bad/test response (as opposed to resetPoll's wipe-everyone) —
+ *  keeps the poll's responseCount in sync since submitResponse's cap check trusts it. */
+export async function deleteResponse(pollId: string, userId: string): Promise<void> {
+  await deleteDoc(doc(db, COLLECTIONS.responses, responseDocId(pollId, userId)))
+  await updateDoc(doc(db, COLLECTIONS.polls, pollId), { responseCount: increment(-1) })
+}
+
 export type SubmitResponseResult = { ok: true } | { ok: false; error: string }
 
 /** Atomically enforces both the response cap and one-response-per-account: the response doc's

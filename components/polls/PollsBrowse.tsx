@@ -243,7 +243,7 @@ export function PollsBrowse({ onAnswer, onResults, onEdit, onModerate }: PollsBr
                       {copiedId === p.id ? 'Copied' : 'Copy link'}
                     </button>
                     <button onClick={() => setQrPoll(p)} className="text-xs font-semibold text-[var(--color-muted)] hover:text-[var(--color-text)]">
-                      QR code
+                      {p.mode === 'class' ? 'Class Code' : 'QR code'}
                     </button>
                     {p.status === 'published' && (
                       <button

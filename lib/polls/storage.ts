@@ -159,6 +159,21 @@ export async function closePoll(id: string): Promise<void> {
   await updateDoc(doc(db, COLLECTIONS.polls, id), { status: 'closed', updatedAt: new Date().toISOString() })
 }
 
+/** Deletes every response to a poll and zeroes its count — for reusing the same poll (same
+ *  share link / class code, same questions) with a fresh audience instead of recreating it, e.g.
+ *  after answering your own poll once just to try it out. Reopens the poll if it had been
+ *  closed, since the point is handing it out again. Requires the pollResponses security rule's
+ *  owner-delete clause. */
+export async function resetPoll(id: string): Promise<void> {
+  const responses = await listResponses(id)
+  await Promise.all(responses.map(r => deleteDoc(doc(db, COLLECTIONS.responses, responseDocId(id, r.userId)))))
+  await updateDoc(doc(db, COLLECTIONS.polls, id), {
+    responseCount: 0,
+    status: 'published',
+    updatedAt: new Date().toISOString(),
+  })
+}
+
 export async function approvePoll(id: string): Promise<void> {
   await updateDoc(doc(db, COLLECTIONS.polls, id), { status: 'published', updatedAt: new Date().toISOString() })
 }

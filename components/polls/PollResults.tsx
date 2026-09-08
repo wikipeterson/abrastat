@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { Modal } from '@/components/ui/Modal'
 import { saveDataset } from '@/lib/firestore'
 import { exportGridAsCsv } from '@/lib/datasetExport'
 import { buildGridFromPoll } from '@/lib/polls/dataset'
 import { aggregateCategorical, aggregateNumeric } from '@/lib/polls/results'
-import { closePoll, getPoll, listResponses } from '@/lib/polls/storage'
+import { closePoll, getPoll, listResponses, resetPoll } from '@/lib/polls/storage'
 import { Poll, PollQuestion, PollResponse, PollStatus } from '@/lib/polls/types'
 import { PollsError, PollsLoading } from './PollsStatus'
 
@@ -31,6 +32,8 @@ export function PollResults({ pollId, onSendToLab }: PollResultsProps) {
   const [responses, setResponses] = useState<PollResponse[]>([])
   const [closing, setClosing] = useState(false)
   const [sending, setSending] = useState(false)
+  const [confirmingReset, setConfirmingReset] = useState(false)
+  const [resetting, setResetting] = useState(false)
 
   async function refresh() {
     try {
@@ -69,6 +72,18 @@ export function PollResults({ pollId, onSendToLab }: PollResultsProps) {
     }
   }
 
+  async function handleReset() {
+    if (!poll) return
+    setResetting(true)
+    try {
+      await resetPoll(poll.id)
+      setConfirmingReset(false)
+      await refresh()
+    } finally {
+      setResetting(false)
+    }
+  }
+
   function handleExportCsv() {
     if (!poll) return
     exportGridAsCsv(buildGridFromPoll(poll, responses), poll.title)
@@ -98,14 +113,24 @@ export function PollResults({ pollId, onSendToLab }: PollResultsProps) {
       <div className="flex items-center gap-6 flex-wrap">
         <StatBox label="Respondents" value={String(responses.length)} />
         <StatBox label="Status" value={STATUS_LABEL[poll.status]} tone={poll.status === 'published' ? 'accent' : 'muted'} />
-        {isOwner && poll.status === 'published' && (
-          <button
-            onClick={handleClose}
-            disabled={closing}
-            className="ml-auto px-4 py-2 rounded-lg border border-[var(--color-border)] text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] transition-colors disabled:opacity-50"
-          >
-            {closing ? 'Closing…' : 'Close poll'}
-          </button>
+        {isOwner && (poll.status === 'published' || poll.status === 'closed') && (
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={() => setConfirmingReset(true)}
+              className="px-4 py-2 rounded-lg border border-[var(--color-border)] text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] transition-colors"
+            >
+              Reset poll
+            </button>
+            {poll.status === 'published' && (
+              <button
+                onClick={handleClose}
+                disabled={closing}
+                className="px-4 py-2 rounded-lg border border-[var(--color-border)] text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] transition-colors disabled:opacity-50"
+              >
+                {closing ? 'Closing…' : 'Close poll'}
+              </button>
+            )}
+          </div>
         )}
       </div>
       {poll.status === 'closed' && (
@@ -136,6 +161,32 @@ export function PollResults({ pollId, onSendToLab }: PollResultsProps) {
           {sending ? 'Sending…' : '→ Send to the Lab'}
         </button>
       </div>
+
+      <Modal open={confirmingReset} onClose={() => setConfirmingReset(false)} title="Reset poll?">
+        <div className="space-y-4">
+          <p className="text-sm text-[var(--color-muted)]">
+            This permanently deletes all <span className="font-medium text-[var(--color-text)]">{responses.length}</span> current
+            response{responses.length === 1 ? '' : 's'} — including any you submitted yourself — and reopens the poll if it&apos;s
+            closed. The poll itself, its share link, and its questions are unaffected, so you can hand it to a fresh audience
+            without recreating it. This can&apos;t be undone.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setConfirmingReset(false)}
+              className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleReset}
+              disabled={resetting}
+              className="px-4 py-2 rounded-lg text-sm bg-[var(--color-danger)] text-white font-medium hover:brightness-105 transition-all disabled:opacity-60"
+            >
+              {resetting ? 'Resetting…' : 'Reset poll'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

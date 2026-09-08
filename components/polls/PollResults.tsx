@@ -34,6 +34,7 @@ export function PollResults({ pollId, onSendToLab }: PollResultsProps) {
   const [sending, setSending] = useState(false)
   const [confirmingReset, setConfirmingReset] = useState(false)
   const [resetting, setResetting] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
   async function refresh() {
     try {
@@ -60,6 +61,15 @@ export function PollResults({ pollId, onSendToLab }: PollResultsProps) {
   if (!poll) return null
 
   const isOwner = user?.uid === poll.ownerId
+
+  async function handleRefresh() {
+    setRefreshing(true)
+    try {
+      await refresh()
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   async function handleClose() {
     if (!poll) return
@@ -106,32 +116,41 @@ export function PollResults({ pollId, onSendToLab }: PollResultsProps) {
       <div>
         <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)]">Results &amp; export</h2>
         <p className="text-sm text-[var(--color-muted)] mt-1">
-          {poll.title} · live while the poll is open — export includes every question as columns in one dataset for the Lab.
+          {poll.title} · click Refresh to pull in new responses — export includes every question as columns in one dataset for the Lab.
         </p>
       </div>
 
       <div className="flex items-center gap-6 flex-wrap">
         <StatBox label="Respondents" value={String(responses.length)} />
         <StatBox label="Status" value={STATUS_LABEL[poll.status]} tone={poll.status === 'published' ? 'accent' : 'muted'} />
-        {isOwner && (poll.status === 'published' || poll.status === 'closed') && (
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={() => setConfirmingReset(true)}
-              className="px-4 py-2 rounded-lg border border-[var(--color-border)] text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] transition-colors"
-            >
-              Reset poll
-            </button>
-            {poll.status === 'published' && (
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="px-4 py-2 rounded-lg border border-[var(--color-border)] text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-accent)] transition-colors disabled:opacity-50"
+          >
+            {refreshing ? 'Refreshing…' : '↻ Refresh'}
+          </button>
+          {isOwner && (poll.status === 'published' || poll.status === 'closed') && (
+            <>
               <button
-                onClick={handleClose}
-                disabled={closing}
-                className="px-4 py-2 rounded-lg border border-[var(--color-border)] text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] transition-colors disabled:opacity-50"
+                onClick={() => setConfirmingReset(true)}
+                className="px-4 py-2 rounded-lg border border-[var(--color-border)] text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] transition-colors"
               >
-                {closing ? 'Closing…' : 'Close poll'}
+                Reset poll
               </button>
-            )}
-          </div>
-        )}
+              {poll.status === 'published' && (
+                <button
+                  onClick={handleClose}
+                  disabled={closing}
+                  className="px-4 py-2 rounded-lg border border-[var(--color-border)] text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] transition-colors disabled:opacity-50"
+                >
+                  {closing ? 'Closing…' : 'Close poll'}
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
       {poll.status === 'closed' && (
         <div className="text-sm text-[var(--color-muted)] bg-[var(--color-panel)] border border-[var(--color-border)] rounded-lg p-3.5">

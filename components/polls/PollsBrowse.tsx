@@ -13,6 +13,7 @@ import { normalizeCode } from '@/lib/polls/code'
 import { closePoll, getMyResponse, getPollByClassCode, listMyPolls, listPublicPolls } from '@/lib/polls/storage'
 import { Poll, PollStatus } from '@/lib/polls/types'
 import { PollsError, PollsLoading } from './PollsStatus'
+import { pollShareLink, QrCodeModal } from './QrCodeModal'
 
 interface PollsBrowseProps {
   onAnswer: (poll: Poll) => void
@@ -40,6 +41,7 @@ export function PollsBrowse({ onAnswer, onResults, onEdit, onModerate }: PollsBr
   const [myResponseIds, setMyResponseIds] = useState<Set<string>>(new Set())
   const [closingId, setClosingId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [qrPoll, setQrPoll] = useState<Poll | null>(null)
 
   const [codeInput, setCodeInput] = useState('')
   const [checkingCode, setCheckingCode] = useState(false)
@@ -87,10 +89,8 @@ export function PollsBrowse({ onAnswer, onResults, onEdit, onModerate }: PollsBr
   }
 
   async function copyLink(p: Poll) {
-    const origin = typeof window !== 'undefined' ? window.location.origin : ''
-    const link = `${origin}/p/${p.mode === 'class' ? p.classCode : p.id}`
     try {
-      await navigator.clipboard.writeText(link)
+      await navigator.clipboard.writeText(pollShareLink(p))
       setCopiedId(p.id)
       setTimeout(() => setCopiedId(null), 1500)
     } catch { /* clipboard access can fail silently (permissions, insecure context) */ }
@@ -242,6 +242,9 @@ export function PollsBrowse({ onAnswer, onResults, onEdit, onModerate }: PollsBr
                     <button onClick={() => copyLink(p)} className="text-xs font-semibold text-[var(--color-muted)] hover:text-[var(--color-text)]">
                       {copiedId === p.id ? 'Copied' : 'Copy link'}
                     </button>
+                    <button onClick={() => setQrPoll(p)} className="text-xs font-semibold text-[var(--color-muted)] hover:text-[var(--color-text)]">
+                      QR code
+                    </button>
                     {p.status === 'published' && (
                       <button
                         onClick={() => handleClose(p)}
@@ -261,6 +264,8 @@ export function PollsBrowse({ onAnswer, onResults, onEdit, onModerate }: PollsBr
           </div>
         )}
       </div>
+
+      {qrPoll && <QrCodeModal poll={qrPoll} onClose={() => setQrPoll(null)} />}
     </div>
   )
 }

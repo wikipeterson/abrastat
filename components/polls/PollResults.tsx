@@ -6,8 +6,8 @@ import { Modal } from '@/components/ui/Modal'
 import { saveDataset } from '@/lib/firestore'
 import { exportGridAsCsv } from '@/lib/datasetExport'
 import { buildGridFromPoll } from '@/lib/polls/dataset'
-import { aggregateCategorical, aggregateNumeric } from '@/lib/polls/results'
-import { closePoll, getPoll, listResponses, resetPoll } from '@/lib/polls/storage'
+import { aggregateCategorical, aggregateNumeric, NumericEntry } from '@/lib/polls/results'
+import { closePoll, deleteResponse, getPoll, listResponses, resetPoll, updateResponseAnswer } from '@/lib/polls/storage'
 import { Poll, PollQuestion, PollResponse, PollStatus } from '@/lib/polls/types'
 import { PollsError, PollsLoading } from './PollsStatus'
 
@@ -35,6 +35,7 @@ export function PollResults({ pollId, onSendToLab }: PollResultsProps) {
   const [confirmingReset, setConfirmingReset] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [correcting, setCorrecting] = useState<{ question: PollQuestion; entry: NumericEntry } | null>(null)
 
   async function refresh() {
     try {
@@ -160,7 +161,13 @@ export function PollResults({ pollId, onSendToLab }: PollResultsProps) {
 
       <div className="space-y-4">
         {poll.questions.map((q, i) => (
-          <QuestionResultCard key={q.id} index={i} question={q} responses={responses} />
+          <QuestionResultCard
+            key={q.id}
+            index={i}
+            question={q}
+            responses={responses}
+            onCorrect={isOwner ? entry => setCorrecting({ question: q, entry }) : undefined}
+          />
         ))}
       </div>
 
@@ -206,7 +213,129 @@ export function PollResults({ pollId, onSendToLab }: PollResultsProps) {
           </div>
         </div>
       </Modal>
+
+      {correcting && (
+        <CorrectResponseModal
+          poll={poll}
+          question={correcting.question}
+          entry={correcting.entry}
+          onClose={() => setCorrecting(null)}
+          onSaved={() => { setCorrecting(null); refresh() }}
+        />
+      )}
     </div>
+  )
+}
+
+function CorrectResponseModal({
+  poll, question, entry, onClose, onSaved,
+}: {
+  poll: Poll
+  question: PollQuestion
+  entry: NumericEntry
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [value, setValue] = useState<number | undefined>(entry.value)
+  const [saving, setSaving] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const valid = typeof value === 'number' && Number.isFinite(value)
+    && (question.min === undefined || value >= question.min)
+    && (question.max === undefined || value <= question.max)
+
+  async function handleSave() {
+    if (!valid || value === undefined) return
+    setSaving(true)
+    setError(null)
+    try {
+      await updateResponseAnswer(poll.id, entry.userId, question.id, value)
+      onSaved()
+    } catch {
+      setError("Couldn't save that change. Try again.")
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true)
+    setError(null)
+    try {
+      await deleteResponse(poll.id, entry.userId)
+      onSaved()
+    } catch {
+      setError("Couldn't delete that response. Try again.")
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={confirmingDelete ? 'Delete this response?' : 'Correct this response'}>
+      {confirmingDelete ? (
+        <div className="space-y-4">
+          <p className="text-sm text-[var(--color-muted)]">
+            This permanently removes this respondent&apos;s entire answer to the poll — every question, not just this
+            one — and lowers the respondent count by one. This can&apos;t be undone.
+          </p>
+          {error && <div className="text-sm text-[var(--color-danger)]">{error}</div>}
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setConfirmingDelete(false)}
+              className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors"
+            >
+              Back
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-4 py-2 rounded-lg text-sm bg-[var(--color-danger)] text-white font-medium hover:brightness-105 transition-all disabled:opacity-60"
+            >
+              {deleting ? 'Deleting…' : 'Delete response'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <p className="text-xs text-[var(--color-muted)]">
+            Submitted {new Date(entry.submittedAt).toLocaleString()}
+          </p>
+          <div>
+            <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-muted)] mb-1.5">
+              {question.prompt}
+            </label>
+            <input
+              type="number"
+              value={value ?? ''}
+              min={question.min}
+              max={question.max}
+              step={question.decimals ? 1 / Math.pow(10, question.decimals) : 1}
+              onChange={e => setValue(e.target.value === '' ? undefined : Number(e.target.value))}
+              className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] font-mono text-sm"
+            />
+          </div>
+          {error && <div className="text-sm text-[var(--color-danger)]">{error}</div>}
+          <div className="flex items-center justify-between gap-2">
+            <button onClick={() => setConfirmingDelete(true)} className="text-xs font-semibold text-[var(--color-danger)] hover:underline">
+              Delete this response
+            </button>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={!valid || saving}
+                className="px-4 py-2 rounded-lg text-sm bg-[var(--color-accent)] text-white font-medium hover:brightness-105 transition-all disabled:opacity-60"
+              >
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Modal>
   )
 }
 
@@ -220,7 +349,15 @@ function StatBox({ label, value, tone }: { label: string; value: string; tone?: 
   )
 }
 
-function QuestionResultCard({ index, question, responses }: { index: number; question: PollQuestion; responses: PollResponse[] }) {
+function QuestionResultCard({
+  index, question, responses, onCorrect,
+}: {
+  index: number
+  question: PollQuestion
+  responses: PollResponse[]
+  /** Owner-only — passed through from PollResults, undefined for anyone else viewing results. */
+  onCorrect?: (entry: NumericEntry) => void
+}) {
   const answeredCount = responses.filter(r => r.answers[question.id] !== undefined).length
   return (
     <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl overflow-hidden">
@@ -233,7 +370,7 @@ function QuestionResultCard({ index, question, responses }: { index: number; que
         ) : question.type === 'categorical' ? (
           <CategoricalChart question={question} responses={responses} />
         ) : (
-          <NumericChart question={question} responses={responses} />
+          <NumericChart question={question} responses={responses} onCorrect={onCorrect} />
         )}
       </div>
     </div>
@@ -261,21 +398,41 @@ function CategoricalChart({ question, responses }: { question: PollQuestion; res
   )
 }
 
-function NumericChart({ question, responses }: { question: PollQuestion; responses: PollResponse[] }) {
+function NumericChart({
+  question, responses, onCorrect,
+}: {
+  question: PollQuestion
+  responses: PollResponse[]
+  onCorrect?: (entry: NumericEntry) => void
+}) {
   const summary = aggregateNumeric(question, responses)
   const showEvery = Math.max(1, Math.ceil(summary.buckets.length / 14))
   return (
     <div>
+      {onCorrect && (
+        <p className="text-xs text-[var(--color-muted)] mb-2">Click a dot to correct or remove that response.</p>
+      )}
       <div className="flex items-end gap-1 h-32 border-b-2 border-[var(--color-border)] pb-1 mb-1 px-1 overflow-x-auto">
         {summary.buckets.map(b => (
           <div key={b.start} className="flex-1 min-w-[7px] flex flex-col-reverse items-center gap-1">
-            {Array.from({ length: b.count }, (_, i) => (
-              <span
-                key={i}
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ background: summary.median !== null && b.start <= summary.median && summary.median <= b.end ? 'var(--color-gold)' : 'var(--color-accent)' }}
-              />
-            ))}
+            {b.entries.map((e, i) => {
+              const gold = summary.median !== null && b.start <= summary.median && summary.median <= b.end
+              return onCorrect ? (
+                <button
+                  key={e.userId}
+                  onClick={() => onCorrect(e)}
+                  title="Click to correct or remove this response"
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0 hover:ring-2 hover:ring-offset-1 hover:ring-[var(--color-text)] transition-all"
+                  style={{ background: gold ? 'var(--color-gold)' : 'var(--color-accent)' }}
+                />
+              ) : (
+                <span
+                  key={i}
+                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ background: gold ? 'var(--color-gold)' : 'var(--color-accent)' }}
+                />
+              )
+            })}
           </div>
         ))}
       </div>

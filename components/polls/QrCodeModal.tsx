@@ -23,6 +23,7 @@ export function pollShareLink(poll: Poll): string {
 
 export function QrCodeModal({ poll, onClose }: QrCodeModalProps) {
   const link = pollShareLink(poll)
+  const isClass = poll.mode === 'class'
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -33,16 +34,26 @@ export function QrCodeModal({ poll, onClose }: QrCodeModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-xs p-6 flex flex-col items-center gap-4 text-center">
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col items-center gap-4 text-center">
         <button onClick={onClose} className="absolute top-3 right-3 p-1 rounded hover:bg-[var(--color-bg)] transition-colors">
           <X size={18} />
         </button>
         <div className="font-serif italic text-lg font-semibold text-[var(--color-text)] pr-6">{poll.title}</div>
-        <PollQrCanvas value={link} size={220} />
+
+        {/* Displayable for the whole class: the code itself in big letters (project it, students
+         *  type it in) plus the QR code as the scan-instead alternative — either gets them in. */}
+        {isClass && (
+          <div className="font-mono text-5xl font-bold tracking-[0.2em] text-[var(--color-accent-strong)] bg-[var(--color-accent-light)] rounded-xl px-6 py-4">
+            {poll.classCode}
+          </div>
+        )}
+
+        <PollQrCanvas value={link} size={isClass ? 160 : 220} />
         <div className="font-mono text-xs text-[var(--color-muted)] break-all">{link}</div>
         <p className="text-xs text-[var(--color-muted)] leading-relaxed">
-          Scan to open this poll directly
-          {poll.mode === 'class' && ' — class code is baked in, no typing needed.'}
+          {isClass
+            ? 'Display this for the class — students can type the code above or scan the QR code to join.'
+            : 'Scan to open this poll directly.'}
         </p>
       </div>
     </div>

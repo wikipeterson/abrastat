@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { scanPdf, ScanOutcome } from '@/lib/redpen/scanPipeline'
 import {
   getAdministration, getAssessment, listSections, listStudents, saveAdministration, saveResult,
+  saveUnmatchedSheet,
 } from '@/lib/redpen/storage'
 import { RedPenAdministration, RedPenAssessment, RedPenSection, RedPenStudent } from '@/lib/redpen/types'
 import { useAuth } from '@/components/auth/AuthProvider'
@@ -73,7 +74,10 @@ export function ScanAndGrade({ administrationId, onDone, onGraded }: ScanAndGrad
         p => setState({ phase: 'scanning', page: p.page, totalPages: p.totalPages }),
         (page, imageData) => renderedPagesRef.current.set(page, imageData),
       )
-      await Promise.all(outcome.results.map(r => saveResult(user.uid, r)))
+      await Promise.all([
+        ...outcome.results.map(r => saveResult(user.uid, r)),
+        ...outcome.unmatchedSheets.map(u => saveUnmatchedSheet(user.uid, u)),
+      ])
       // Only advance to "graded" once something was actually graded — otherwise a failed scan
       // (e.g. every sheet unreadable) would lock the Assessments list into routing to an empty
       // Results screen instead of letting the teacher retry from here.

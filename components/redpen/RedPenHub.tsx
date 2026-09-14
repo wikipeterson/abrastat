@@ -35,9 +35,10 @@ const TOP_TABS: { id: TopTab; label: string }[] = [
 
 interface RedPenHubProps {
   onChromeChange?: (chrome: { title: string; onBack: () => void } | null) => void
+  onSendToLab: (datasetId: string) => void
 }
 
-export function RedPenHub({ onChromeChange }: RedPenHubProps) {
+export function RedPenHub({ onChromeChange, onSendToLab }: RedPenHubProps) {
   const [view, setView] = useState<View>({ screen: 'about' })
   const { user, isGuest } = useAuth()
   // RedPen's data lives in Firestore under the signed-in teacher's uid (lib/redpen/storage.ts)
@@ -152,6 +153,8 @@ export function RedPenHub({ onChromeChange }: RedPenHubProps) {
         administrationId={view.administrationId}
         onDone={() => setView({ screen: 'assessments' })}
         onPrintForStudents={() => setView({ screen: 'printForStudents', administrationId: view.administrationId })}
+        onSendToLab={onSendToLab}
+        onEditAssessment={assessmentId => setView({ screen: 'build', draft: { assessmentId } })}
       />
     )
   }

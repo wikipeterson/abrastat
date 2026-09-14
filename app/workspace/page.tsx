@@ -974,7 +974,7 @@ function WorkspaceContent() {
       return <AppletsBrowser />
     }
     if (librarySection === 'redpen') {
-      return <RedPenHub onChromeChange={setRedpenChrome} />
+      return <RedPenHub onChromeChange={setRedpenChrome} onSendToLab={handleOpenDataset} />
     }
     // key forces a fresh PollsHub per entry point (Polls vs. the Teacher-only Create Poll) —
     // otherwise switching between them would just update props on the same mounted instance and

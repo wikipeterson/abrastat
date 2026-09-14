@@ -16,7 +16,9 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { shortId } from './id'
-import { RedPenAdministration, RedPenAssessment, RedPenResult, RedPenSection, RedPenStudent } from './types'
+import {
+  RedPenAdministration, RedPenAssessment, RedPenResult, RedPenSection, RedPenStudent, RedPenUnmatchedSheet,
+} from './types'
 
 const COLLECTIONS = {
   assessments: 'redpenAssessments',
@@ -24,6 +26,7 @@ const COLLECTIONS = {
   students: 'redpenStudents',
   administrations: 'redpenAdministrations',
   results: 'redpenResults',
+  unmatchedSheets: 'redpenUnmatchedSheets',
 } as const
 
 async function listOwned<T>(collectionName: string, userId: string): Promise<T[]> {
@@ -53,8 +56,13 @@ export async function deleteAssessment(userId: string, id: string): Promise<void
   const administrations = await listAdministrations(userId, id)
 
   for (const admin of administrations) {
-    const results = await listResults(userId, admin.id)
-    await Promise.all(results.map(r => deleteDoc(doc(db, COLLECTIONS.results, resultDocId(r.administrationId, r.studentId)))))
+    const [results, unmatched] = await Promise.all([
+      listResults(userId, admin.id), listUnmatchedSheets(userId, admin.id),
+    ])
+    await Promise.all([
+      ...results.map(r => deleteDoc(doc(db, COLLECTIONS.results, resultDocId(r.administrationId, r.studentId)))),
+      ...unmatched.map(u => deleteDoc(doc(db, COLLECTIONS.unmatchedSheets, u.id))),
+    ])
   }
   await Promise.all(administrations.map(a => deleteDoc(doc(db, COLLECTIONS.administrations, a.id))))
   await deleteDoc(doc(db, COLLECTIONS.assessments, id))
@@ -81,8 +89,13 @@ export async function deleteSection(userId: string, sectionId: string): Promise<
   const administrations = allAdministrations.filter(a => a.sectionId === sectionId)
 
   for (const admin of administrations) {
-    const results = await listResults(userId, admin.id)
-    await Promise.all(results.map(r => deleteDoc(doc(db, COLLECTIONS.results, resultDocId(r.administrationId, r.studentId)))))
+    const [results, unmatched] = await Promise.all([
+      listResults(userId, admin.id), listUnmatchedSheets(userId, admin.id),
+    ])
+    await Promise.all([
+      ...results.map(r => deleteDoc(doc(db, COLLECTIONS.results, resultDocId(r.administrationId, r.studentId)))),
+      ...unmatched.map(u => deleteDoc(doc(db, COLLECTIONS.unmatchedSheets, u.id))),
+    ])
   }
 
   await Promise.all([
@@ -156,4 +169,19 @@ export async function getResult(userId: string, administrationId: string, studen
  *  never anyone else's. */
 export async function saveResult(userId: string, result: RedPenResult): Promise<void> {
   await setDoc(doc(db, COLLECTIONS.results, resultDocId(result.administrationId, result.studentId)), { ...result, ownerId: userId })
+}
+
+// ── Unmatched sheets (a page that read cleanly but couldn't be tied to a student) ───────────
+
+export async function listUnmatchedSheets(userId: string, administrationId?: string): Promise<RedPenUnmatchedSheet[]> {
+  const all = await listOwned<RedPenUnmatchedSheet>(COLLECTIONS.unmatchedSheets, userId)
+  return administrationId ? all.filter(u => u.administrationId === administrationId) : all
+}
+
+export async function saveUnmatchedSheet(userId: string, sheet: RedPenUnmatchedSheet): Promise<void> {
+  await setDoc(doc(db, COLLECTIONS.unmatchedSheets, sheet.id), { ...sheet, ownerId: userId })
+}
+
+export async function deleteUnmatchedSheet(id: string): Promise<void> {
+  await deleteDoc(doc(db, COLLECTIONS.unmatchedSheets, id))
 }

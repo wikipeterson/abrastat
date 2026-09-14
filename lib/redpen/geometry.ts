@@ -97,13 +97,13 @@ export function rowCenterYIn(row: number): number {
   return CONTENT_ORIGIN_IN + BUBBLE_GRID_TOP_IN + row * BUBBLE_PITCH_IN + BUBBLE_PITCH_IN / 2
 }
 
-/** How many rows fit in one printed column before the bubble grid runs into the footer note /
- *  bottom edge — computed from the real layout constants above, not a guessed number, so it
- *  can't silently drift out of sync if this file's geometry ever changes. */
-function maxRowsPerColumn(): number {
-  const footerTopIn = PAGE_HEIGHT_IN - CONTENT_ORIGIN_IN - 0.15
+/** How many rows fit in one printed column before the bubble grid runs into `usableBottomIn` —
+ *  computed from the real layout constants above, not a guessed number, so it can't silently
+ *  drift out of sync if this file's geometry ever changes. Takes the usable bottom as a
+ *  parameter (rather than always the footer) so a grid-in band's reserved height can shrink it. */
+function maxRowsPerColumnAbove(usableBottomIn: number): number {
   let row = 0
-  while (rowCenterYIn(row) + BUBBLE_DIAMETER_IN / 2 < footerTopIn) row++
+  while (rowCenterYIn(row) + BUBBLE_DIAMETER_IN / 2 < usableBottomIn) row++
   return row
 }
 
@@ -111,8 +111,87 @@ function maxRowsPerColumn(): number {
  *  the physical page (and, since the scan reader computes positions from this same geometry,
  *  those questions would read back as blank for every student with no visible error). Two
  *  columns per sheet, rounded down to a clean step-of-5 with a small safety margin rather than
- *  the exact computed limit, so ordinary print-driver rounding can't tip it over. */
-export const MAX_QUESTIONS_PER_SHEET = Math.floor((maxRowsPerColumn() * 2) / 5) * 5
+ *  the exact computed limit, so ordinary print-driver rounding can't tip it over — plus however
+ *  many grid-in questions are already on the sheet, since those consume a question *number* but
+ *  not MC-grid space (they live in their own band below it, see gridinBandHeightIn). */
+export function maxQuestionsPerSheet(gridinBlockCount: number, maxGridinDigits: number): number {
+  const footerTopIn = PAGE_HEIGHT_IN - CONTENT_ORIGIN_IN - 0.15
+  const bandHeight = gridinBandHeightIn(gridinBlockCount, maxGridinDigits)
+  const usableBottomIn = footerTopIn - (bandHeight > 0 ? bandHeight + GRIDIN_ROW_GAP_IN : 0)
+  const mcRows = Math.max(0, maxRowsPerColumnAbove(usableBottomIn))
+  const maxMcQuestions = Math.floor((mcRows * 2) / 5) * 5
+  return maxMcQuestions + gridinBlockCount
+}
+
+// ── Grid-in questions: a sign column + one column per digit, each an 11-bubble stack
+// (0-9 and a decimal point) with a write-in box above it — the classic SAT layout. Laid out in
+// its own band below the MC grid, wrapping left-to-right; every grid-in block on one sheet
+// shares the widest digit count among this assessment's grid-in questions (a shorter question
+// just doesn't use its block's rightmost columns) so blocks line up in a clean grid instead of
+// a ragged one. ─────────────────────────────────────────────────────────────────────────────
+
+export const DEFAULT_GRIDIN_DIGITS = 4
+export const GRIDIN_SYMBOLS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.']
+/** The single shared sign bubble in front of the digit columns — blank means positive. */
+export const GRIDIN_SIGN_SYMBOL = '−'
+export const GRIDIN_COL_WIDTH_IN = BUBBLE_PITCH_IN
+export const GRIDIN_WRITE_BOX_HEIGHT_IN = 0.28
+export const GRIDIN_LABEL_HEIGHT_IN = 0.16
+export const GRIDIN_BLOCK_GAP_IN = 0.24
+export const GRIDIN_ROW_GAP_IN = 0.2
+export const GRIDIN_BLOCK_HEIGHT_IN = GRIDIN_LABEL_HEIGHT_IN + GRIDIN_WRITE_BOX_HEIGHT_IN + GRIDIN_SYMBOLS.length * BUBBLE_PITCH_IN
+
+/** Sign column + one column per digit. */
+export function gridinBlockWidthIn(maxDigits: number): number {
+  return (1 + maxDigits) * GRIDIN_COL_WIDTH_IN
+}
+
+export function gridinBlocksPerRow(maxDigits: number): number {
+  const w = gridinBlockWidthIn(maxDigits)
+  return Math.max(1, Math.floor((CONTENT_WIDTH_IN + GRIDIN_BLOCK_GAP_IN) / (w + GRIDIN_BLOCK_GAP_IN)))
+}
+
+/** Total vertical space the grid-in band needs, however many rows of blocks that wraps into. */
+export function gridinBandHeightIn(blockCount: number, maxDigits: number): number {
+  if (blockCount === 0) return 0
+  const rows = Math.ceil(blockCount / gridinBlocksPerRow(maxDigits))
+  return rows * GRIDIN_BLOCK_HEIGHT_IN + (rows - 1) * GRIDIN_ROW_GAP_IN
+}
+
+/** Y position (canonical page-inches) where the grid-in band starts — right after however many
+ *  MC rows this assessment's bubble grid actually uses (not the theoretical page maximum), so
+ *  print and scanPipeline agree exactly and a sheet with few MC questions doesn't waste vertical
+ *  space before its grid-in band. `mcRowCount` is the taller of the two MC columns' row counts
+ *  (0 if the assessment has no MC questions at all). */
+export function gridinBandTopIn(mcRowCount: number): number {
+  return CONTENT_ORIGIN_IN + BUBBLE_GRID_TOP_IN + mcRowCount * BUBBLE_PITCH_IN + GRIDIN_ROW_GAP_IN
+}
+
+/** Canonical page-inch top-left of the Nth grid-in block (0-indexed), given the band starts at
+ *  `bandTopIn` (typically right after the MC grid's own reserved space). */
+export function gridinBlockOriginIn(index: number, maxDigits: number, bandTopIn: number): { x: number; y: number } {
+  const perRow = gridinBlocksPerRow(maxDigits)
+  const row = Math.floor(index / perRow)
+  const col = index % perRow
+  const w = gridinBlockWidthIn(maxDigits)
+  return {
+    x: CONTENT_ORIGIN_IN + col * (w + GRIDIN_BLOCK_GAP_IN),
+    y: bandTopIn + row * (GRIDIN_BLOCK_HEIGHT_IN + GRIDIN_ROW_GAP_IN),
+  }
+}
+
+/** Canonical page-inch center of one column's write-in box / bubble stack. `colIndex` is
+ *  0-indexed: 0 is the sign column, 1..maxDigits are the digit columns. */
+export function gridinColumnCenterXIn(blockOrigin: { x: number }, colIndex: number): number {
+  return blockOrigin.x + colIndex * GRIDIN_COL_WIDTH_IN + GRIDIN_COL_WIDTH_IN / 2
+}
+
+/** Canonical page-inch center of one symbol bubble within a column. `symbolIndex` is 0-indexed
+ *  into GRIDIN_SYMBOLS for a digit column, or 0 for the sign column's single bubble. */
+export function gridinBubbleCenterIn(blockOrigin: { y: number }, colCenterXIn: number, symbolIndex: number): { x: number; y: number } {
+  const y = blockOrigin.y + GRIDIN_LABEL_HEIGHT_IN + GRIDIN_WRITE_BOX_HEIGHT_IN + symbolIndex * BUBBLE_PITCH_IN + BUBBLE_PITCH_IN / 2
+  return { x: colCenterXIn, y }
+}
 
 /** Canonical page-inch position of the question-number label's center for a row. */
 export function rowLabelCenterIn(col: 0 | 1, row: number): { x: number; y: number } {

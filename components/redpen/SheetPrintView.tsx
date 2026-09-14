@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   bubbleCenterIn, BUBBLE_DIAMETER_IN, BUBBLE_OUTLINE_GREY, CONTENT_ORIGIN_IN, CONTENT_WIDTH_IN,
-  fiducialCenterIn, FIDUCIAL_SIZE_IN, HEADER_BLOCK_HEIGHT_IN,
+  DEFAULT_GRIDIN_DIGITS, fiducialCenterIn, FIDUCIAL_SIZE_IN, GRIDIN_COL_WIDTH_IN, GRIDIN_LABEL_HEIGHT_IN,
+  GRIDIN_SIGN_SYMBOL, GRIDIN_SYMBOLS, GRIDIN_WRITE_BOX_HEIGHT_IN, gridinBandTopIn, gridinBlockOriginIn,
+  gridinBubbleCenterIn, gridinColumnCenterXIn, HEADER_BLOCK_HEIGHT_IN,
   NUMBER_COL_WIDTH_IN, PAGE_HEIGHT_IN, PAGE_WIDTH_IN, qrRegionIn, rowLabelCenterIn, sheetCode,
 } from '@/lib/redpen/geometry'
-import { bubbleRows, splitIntoColumns } from '@/lib/redpen/layout'
+import { bubbleRows, gridinEntries, splitIntoColumns } from '@/lib/redpen/layout'
 import { getAdministration, listSections, listStudents, saveAdministration } from '@/lib/redpen/storage'
 import { getAssessment } from '@/lib/redpen/storage'
 import { RedPenAdministration, RedPenAssessment, RedPenSection, RedPenStudent } from '@/lib/redpen/types'
@@ -142,6 +144,73 @@ function BubbleGrid({ assessment }: { assessment: RedPenAssessment }) {
   )
 }
 
+/** Sign bubble + one digit column per digit, each an 11-bubble stack (0-9, then a decimal
+ *  point) with a write-in box on top — the classic SAT grid-in look. Positioned entirely from
+ *  lib/redpen/geometry.ts's gridin* functions, the same ones scanPipeline.ts reads back from. */
+function GridInBand({ assessment }: { assessment: RedPenAssessment }) {
+  const entries = gridinEntries(assessment)
+  if (entries.length === 0) return null
+
+  const { colA } = splitIntoColumns(bubbleRows(assessment))
+  const maxDigits = Math.max(0, ...entries.map(e => e.digits ?? DEFAULT_GRIDIN_DIGITS))
+  const bandTop = gridinBandTopIn(colA.length)
+
+  return (
+    <>
+      {entries.map((entry, blockIndex) => {
+        const digits = entry.digits ?? DEFAULT_GRIDIN_DIGITS
+        const origin = gridinBlockOriginIn(blockIndex, maxDigits, bandTop)
+        const columns = [{ symbols: [GRIDIN_SIGN_SYMBOL] }, ...Array.from({ length: digits }, () => ({ symbols: GRIDIN_SYMBOLS }))]
+
+        return (
+          <div key={entry.n}>
+            <div
+              style={{
+                position: 'absolute', left: `${origin.x}in`, top: `${origin.y}in`,
+                fontFamily: 'monospace', fontSize: '8pt', height: `${GRIDIN_LABEL_HEIGHT_IN}in`, lineHeight: `${GRIDIN_LABEL_HEIGHT_IN}in`,
+              }}
+            >
+              {entry.n}
+            </div>
+
+            {columns.map((column, colIndex) => {
+              const colXIn = gridinColumnCenterXIn(origin, colIndex)
+              return (
+                <div key={colIndex}>
+                  <div
+                    style={{
+                      position: 'absolute', left: `${colXIn - GRIDIN_COL_WIDTH_IN / 2 + 0.02}in`,
+                      top: `${origin.y + GRIDIN_LABEL_HEIGHT_IN}in`,
+                      width: `${GRIDIN_COL_WIDTH_IN - 0.04}in`, height: `${GRIDIN_WRITE_BOX_HEIGHT_IN}in`,
+                      border: `1pt solid ${INK}`,
+                    }}
+                  />
+                  {column.symbols.map((symbol, symbolIndex) => {
+                    const c = gridinBubbleCenterIn(origin, colXIn, symbolIndex)
+                    return (
+                      <div
+                        key={symbol}
+                        style={{
+                          position: 'absolute', left: `${c.x - BUBBLE_DIAMETER_IN / 2}in`, top: `${c.y - BUBBLE_DIAMETER_IN / 2}in`,
+                          width: `${BUBBLE_DIAMETER_IN}in`, height: `${BUBBLE_DIAMETER_IN}in`, borderRadius: '50%',
+                          border: `1pt solid ${BUBBLE_OUTLINE_GREY}`, fontFamily: 'monospace', fontSize: '6pt', color: '#999',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                      >
+                        {symbol}
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })}
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
 function StudentSheet({
   assessment, student, sectionLabel, administrationId, date,
 }: {
@@ -202,9 +271,10 @@ function StudentSheet({
       })()}
 
       <BubbleGrid assessment={assessment} />
+      <GridInBand assessment={assessment} />
 
       <div style={{ position: 'absolute', left: `${CONTENT_ORIGIN_IN}in`, right: `${CONTENT_ORIGIN_IN}in`, bottom: `${CONTENT_ORIGIN_IN}in`, fontFamily: 'monospace', fontSize: '7pt', color: '#666', textAlign: 'center' }}>
-        FILL COMPLETELY IN PENCIL · DO NOT FOLD OR STAPLE
+        FILL COMPLETELY IN PENCIL · DO NOT FOLD OR STAPLE · FOR GRID-IN, WRITE YOUR ANSWER LEFT-JUSTIFIED, THEN BUBBLE EACH CHARACTER
       </div>
     </div>
   )

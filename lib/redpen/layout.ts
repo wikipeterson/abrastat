@@ -4,9 +4,9 @@
 // print and read agree on bubble positions arithmetically, which only holds if they also agree
 // on which questions HAVE a bubble row in the first place. A question is skipped here if it's
 // listed unscorable (free-response, no bubble on the sheet) or its key entry is a grid-in
-// (bubble digit-boxes for grid-in are still phase-3, spec §06) — everything else gets a row.
+// (those get their own band via gridinEntries below, not an MC row) — everything else gets a row.
 
-import { RedPenAssessment } from './types'
+import { AnswerEntry, RedPenAssessment } from './types'
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 
@@ -35,4 +35,13 @@ export function bubbleRows(assessment: RedPenAssessment): BubbleRow[] {
 export function splitIntoColumns(rows: BubbleRow[]): { colA: BubbleRow[]; colB: BubbleRow[] } {
   const half = Math.ceil(rows.length / 2)
   return { colA: rows.slice(0, half), colB: rows.slice(half) }
+}
+
+/** The grid-in questions on this sheet, in question-number order — a sibling to bubbleRows()
+ *  for the sign+digit-column band instead of the MC grid. SheetPrintView, scanPipeline, and the
+ *  builder's page-capacity check all call this rather than filtering answerKey themselves. */
+export function gridinEntries(assessment: RedPenAssessment): AnswerEntry[] {
+  return assessment.answerKey
+    .filter(e => e.type === 'gridin')
+    .sort((a, b) => a.n - b.n)
 }

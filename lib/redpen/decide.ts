@@ -120,3 +120,14 @@ export function decideMultiple(fills: BubbleFill[]): Decision {
   // array-typed answer set-wise, and a bare string would fail that comparison by shape alone.
   return { given }
 }
+
+/** A single yes/no bubble with no other candidate in its row to compare against — grid-in's
+ *  sign bubble (lib/redpen/geometry.ts's GRIDIN_SIGN_SYMBOL), where decideSingle's whole
+ *  "compare the top candidate against the runner-up" approach doesn't apply. No gap to lean on,
+ *  so this is a plain threshold check — set from the same real calibration data as everything
+ *  above: unmarked bubbles measured 6-11% fill, genuine marks 19%+ (see the file-level note),
+ *  so a cutoff roughly in the middle of that gap reads clearly on either side of it. */
+const SIGN_FILL_THRESHOLD = 0.15
+export function decideBinary(fill: number): boolean {
+  return fill >= SIGN_FILL_THRESHOLD
+}

@@ -4,11 +4,14 @@
 // stage-by-stage rationale — this file just wires those stages together per page.
 
 import { applyAffine } from './fiducials'
-import { bubbleCenterIn, BUBBLE_DIAMETER_IN } from './geometry'
-import { bubbleRows, splitIntoColumns } from './layout'
+import {
+  bubbleCenterIn, BUBBLE_DIAMETER_IN, DEFAULT_GRIDIN_DIGITS, GRIDIN_SYMBOLS,
+  gridinBandTopIn, gridinBlockOriginIn, gridinBubbleCenterIn, gridinColumnCenterXIn,
+} from './geometry'
+import { bubbleRows, gridinEntries, splitIntoColumns } from './layout'
 import { locateFiducials } from './fiducials'
 import { binarize, otsuThreshold, toGrayscale } from './otsu'
-import { decideMultiple, decideSingle } from './decide'
+import { decideBinary, decideMultiple, decideSingle } from './decide'
 import { sampleBubbleFill } from './bubbleRead'
 import { decodeSheetCode } from './qrRead'
 import { scoreAssessment } from './scoring'
@@ -50,6 +53,12 @@ export async function scanPdf(
 
   const { colA, colB } = splitIntoColumns(bubbleRows(assessment))
   const columns = [colA, colB] as const
+
+  // Grid-in layout is derived the exact same way SheetPrintView derives it, so a bubble the
+  // reader samples always lands on the bubble the printer actually drew there.
+  const gridinList = gridinEntries(assessment)
+  const maxGridinDigits = Math.max(0, ...gridinList.map(e => e.digits ?? DEFAULT_GRIDIN_DIGITS))
+  const gridinBandTop = gridinBandTopIn(colA.length)
 
   const pages = await renderPdfPages(file, DPI, (page, totalPages) => onProgress?.({ page, totalPages }))
 
@@ -128,6 +137,47 @@ export async function scanPdf(
           log.push(entry)
         }
       })
+    })
+
+    // Grid-in: sign bubble (a plain threshold check, see decide.ts's decideBinary — there's no
+    // runner-up bubble in that "row" to compare against) then each digit column read the exact
+    // same way an MC row is (decideSingle over that column's 11 symbol candidates), assembled
+    // left-to-right and stopping at the first blank column (students left-justify their answer,
+    // per the printed instruction — see SheetPrintView.tsx).
+    gridinList.forEach((entry, blockIndex) => {
+      const digits = entry.digits ?? DEFAULT_GRIDIN_DIGITS
+      const origin = gridinBlockOriginIn(blockIndex, maxGridinDigits, gridinBandTop)
+
+      const signXIn = gridinColumnCenterXIn(origin, 0)
+      const signCenterPx = applyAffine(fid.transform, gridinBubbleCenterIn(origin, signXIn, 0))
+      const signFill = sampleBubbleFill(gray, imageData.width, imageData.height, signCenterPx, BUBBLE_DIAMETER_IN * DPI)
+      const negative = decideBinary(signFill)
+
+      let assembled = ''
+      let stopped = false
+      for (let col = 1; col <= digits; col++) {
+        if (stopped) break
+        const colXIn = gridinColumnCenterXIn(origin, col)
+        const fills = GRIDIN_SYMBOLS.map(symbol => {
+          const centerIn = gridinBubbleCenterIn(origin, colXIn, GRIDIN_SYMBOLS.indexOf(symbol))
+          const centerPx = applyAffine(fid.transform, centerIn)
+          const fill = sampleBubbleFill(gray, imageData.width, imageData.height, centerPx, BUBBLE_DIAMETER_IN * DPI)
+          return { letter: symbol, fill }
+        })
+        const decision = decideSingle(fills)
+        if (decision.log) {
+          const logEntry: DecisionLogEntry = {
+            administrationId, page: pageNum, n: entry.n, studentId: student.id,
+            tag: decision.log.tag, detail: `Digit ${col} of ${digits}: ${decision.log.detail}`,
+          }
+          sheetLog.push(logEntry)
+          log.push(logEntry)
+        }
+        if (decision.given === null) { stopped = true; break }
+        assembled += decision.given as string
+      }
+
+      given.set(entry.n, assembled === '' ? null : `${negative ? '-' : ''}${assembled}`)
     })
 
     const { score, maxScore, responses } = scoreAssessment(assessment, given)

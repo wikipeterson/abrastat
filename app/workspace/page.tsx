@@ -22,7 +22,7 @@ import { useStore } from '@/lib/store'
 import { CardConfig } from '@/lib/exploreTypes'
 import { DatasetMeta } from '@/types'
 import { exportGridAsCsv, exportGridAsXlsx } from '@/lib/datasetExport'
-import { canAccessPuzzleWeek } from '@/lib/featureFlags'
+import { canAccessPuzzleWeek, isDatasetAdmin } from '@/lib/featureFlags'
 import { DataDock, DockState, computeSnaps } from '@/components/grid/DataDock'
 import { BuildStamp } from '@/components/dev/BuildStamp'
 
@@ -413,6 +413,12 @@ function DatasetsBrowser({
 
   async function handleDelete(id: string) {
     await deleteDataset(id)
+    // Reflect the deletion immediately rather than leaving it in the list until a reload —
+    // matters more now that an admin can delete a dataset they don't own (Public Datasets is
+    // cached in localStorage across sessions, so that cache needs invalidating too).
+    setPublicDatasets(prev => prev.filter(d => d.id !== id))
+    setMyDatasets(prev => prev.filter(d => d.id !== id))
+    invalidatePublicDatasetCache()
     setConfirmDelete(null)
   }
 
@@ -471,6 +477,7 @@ function DatasetsBrowser({
                 key={dataset.id}
                 dataset={dataset}
                 currentUserId={user?.uid}
+                canDeleteAny={isDatasetAdmin(user)}
                 onOpen={onOpenDataset}
                 onExport={onExportDataset}
                 onDelete={id => setConfirmDelete(id)}

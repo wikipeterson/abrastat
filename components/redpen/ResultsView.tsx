@@ -6,6 +6,7 @@ import {
 } from '@/lib/redpen/storage'
 import { RedPenAdministration, RedPenAssessment, RedPenResult, RedPenSection, RedPenStudent } from '@/lib/redpen/types'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { FlaggedAnswersModal } from './FlaggedAnswersModal'
 import { RedPenError, RedPenLoading } from './RedPenStatus'
 
 interface ResultsViewProps {
@@ -27,6 +28,7 @@ export function ResultsView({ administrationId, onDone, onPrintForStudents }: Re
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState<Loaded | null>(null)
+  const [reviewing, setReviewing] = useState<RedPenResult | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -89,6 +91,11 @@ export function ResultsView({ administrationId, onDone, onPrintForStudents }: Re
   const lowItems = itemStats.filter(i => i.pct < 50).length
 
   const flaggedCount = results.filter(r => r.flagged).length
+
+  function handleReviewSaved(updated: RedPenResult) {
+    setLoaded(prev => prev && { ...prev, results: prev.results.map(r => (r.studentId === updated.studentId ? updated : r)) })
+    setReviewing(null)
+  }
 
   return (
     <div className="max-w-5xl mx-auto py-6 px-4 space-y-5">
@@ -164,8 +171,18 @@ export function ResultsView({ administrationId, onDone, onPrintForStudents }: Re
             return (
               <div key={r.studentId} className="grid grid-cols-[1fr_90px_90px_1fr] gap-4 items-center px-6 py-3 border-b border-[var(--color-panel)] last:border-b-0">
                 <div className="flex items-center gap-2">
-                  {r.flagged && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-gold)] flex-shrink-0" title="Needs a second look" />}
-                  <div className="text-sm font-medium text-[var(--color-text)]">{student?.name ?? r.studentId}</div>
+                  {r.flagged ? (
+                    <button
+                      onClick={() => setReviewing(r)}
+                      className="flex items-center gap-2 text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-accent-strong)] transition-colors"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-gold)] flex-shrink-0" title="Needs a second look" />
+                      {student?.name ?? r.studentId}
+                      <span className="font-mono text-[10px] uppercase tracking-wide text-[var(--color-gold-text)] underline underline-offset-2">review</span>
+                    </button>
+                  ) : (
+                    <div className="text-sm font-medium text-[var(--color-text)]">{student?.name ?? r.studentId}</div>
+                  )}
                 </div>
                 <div className="font-mono text-sm">{r.score} / {r.maxScore}</div>
                 <div className={`font-mono text-sm ${pct < 70 ? 'text-[var(--color-danger)]' : ''}`}>{pct}%</div>
@@ -174,6 +191,17 @@ export function ResultsView({ administrationId, onDone, onPrintForStudents }: Re
             )
           })}
       </div>
+
+      {reviewing && user && (
+        <FlaggedAnswersModal
+          result={reviewing}
+          assessment={assessment}
+          studentName={students.find(s => s.id === reviewing.studentId)?.name ?? reviewing.studentId}
+          userId={user.uid}
+          onClose={() => setReviewing(null)}
+          onSaved={handleReviewSaved}
+        />
+      )}
     </div>
   )
 }

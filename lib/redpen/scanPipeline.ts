@@ -7,6 +7,7 @@ import { applyAffine, AffineTransform } from './fiducials'
 import {
   bubbleCenterIn, BUBBLE_DIAMETER_IN, DEFAULT_GRIDIN_DIGITS, GRIDIN_SYMBOLS,
   gridinBandTopIn, gridinBlockOriginIn, gridinBubbleCenterIn, gridinColumnCenterXIn,
+  VERSION_SYMBOLS, versionBubbleCenterIn,
 } from './geometry'
 import { bubbleRows, gridinEntries, splitIntoColumns } from './layout'
 import { locateFiducials } from './fiducials'
@@ -17,8 +18,9 @@ import { decodeSheetCode } from './qrRead'
 import { scoreAssessment } from './scoring'
 import { renderPdfPages } from './pdfRender'
 import { getAdministration, getAssessment, listStudents } from './storage'
+import { listVersionGroup } from './versions'
 import { shortId } from './id'
-import { AnswerValue, DecisionLogEntry, RedPenResponse, RedPenResult, RedPenUnmatchedSheet } from './types'
+import { AnswerValue, DecisionLogEntry, RedPenAssessment, RedPenResponse, RedPenResult, RedPenUnmatchedSheet } from './types'
 
 const DPI = 200
 
@@ -57,6 +59,13 @@ export async function scanPdf(
   if (!assessment) throw new Error('Assessment not found.')
   const students = await listStudents(userId, admin.sectionId)
 
+  // Multi-version: both versions share one printed shape (same bubble positions), so geometry
+  // below is still derived once, from `assessment` (the administration's primary/Version-A key)
+  // — only which version's answerKey a page's given answers get scored against varies, decided
+  // per page by its own FORM bubble (see the page loop below), never by which student it is.
+  const versionGroup = assessment.versionGroupId ? await listVersionGroup(userId, assessment.versionGroupId) : null
+  const versionsByLabel = new Map((versionGroup ?? []).map(v => [v.versionLabel, v]))
+
   const { colA, colB } = splitIntoColumns(bubbleRows(assessment))
   const columns = [colA, colB] as const
 
@@ -82,7 +91,7 @@ export async function scanPdf(
   // `undefined` field values.
   function readPage(
     gray: Uint8ClampedArray, width: number, height: number, transform: AffineTransform,
-    pageNum: number, studentId?: string,
+    pageNum: number, studentId: string | undefined, scoreAgainst: RedPenAssessment,
   ): { score: number; maxScore: number; responses: RedPenResponse[]; sheetLog: DecisionLogEntry[] } {
     const given = new Map<number, AnswerValue | null>()
     const sheetLog: DecisionLogEntry[] = []
@@ -150,7 +159,7 @@ export async function scanPdf(
       given.set(entry.n, assembled === '' ? null : `${negative ? '-' : ''}${assembled}`)
     })
 
-    const { score, maxScore, responses } = scoreAssessment(assessment!, given)
+    const { score, maxScore, responses } = scoreAssessment(scoreAgainst, given)
     return { score, maxScore, responses, sheetLog }
   }
 
@@ -175,6 +184,34 @@ export async function scanPdf(
     }
     console.log(`[redpen scan] page ${pageNum}: fiducials ok, orientation ${fid.orientation}, transform`, fid.transform)
 
+    // FORM (multi-version) bubble — resolved before identity, since it doesn't depend on it: a
+    // page's version is decided by what the student bubbled, never by who they are. Skipped
+    // entirely (zero added cost) for an ordinary single-version administration.
+    let scoreAgainst = assessment
+    let versionLog: DecisionLogEntry | undefined
+    if (versionGroup && versionGroup.length > 0) {
+      const vFills = VERSION_SYMBOLS.map(symbol => {
+        const centerIn = versionBubbleCenterIn(VERSION_SYMBOLS.indexOf(symbol))
+        const centerPx = applyAffine(fid.transform, centerIn)
+        const fill = sampleBubbleFill(gray, imageData.width, imageData.height, centerPx, BUBBLE_DIAMETER_IN * DPI)
+        return { letter: symbol, fill }
+      })
+      const decision = decideSingle(vFills)
+      const resolved = typeof decision.given === 'string' ? versionsByLabel.get(decision.given) : undefined
+      console.log(`[redpen scan] page ${pageNum}: FORM bubble ${decision.given ?? '(blank)'} → ${resolved ? resolved.versionLabel : `defaulting to ${assessment.versionLabel ?? 'A'}`}`)
+      if (resolved) {
+        scoreAgainst = resolved
+      } else {
+        versionLog = {
+          administrationId, page: pageNum, tag: 'NO_VERSION',
+          detail: decision.given
+            ? `Bubbled form "${decision.given}" doesn't match a known version — scored against Version ${assessment.versionLabel ?? 'A'} by default. Check the scan and correct it if this was actually the other version.`
+            : `No form letter bubbled in — scored against Version ${assessment.versionLabel ?? 'A'} by default. Check the scan and correct it if this was actually the other version.`,
+        }
+        log.push(versionLog)
+      }
+    }
+
     const decoded = decodeSheetCode(imageData)
     console.log(`[redpen scan] page ${pageNum}: QR decode ${decoded ? `OK — ${decoded.administrationId}:${decoded.studentId}` : 'FAILED'}`)
     if (!decoded) {
@@ -183,11 +220,12 @@ export async function scanPdf(
       // dropped outright.
       log.push({ administrationId, page: pageNum, tag: 'NO_QR', detail: "Couldn't read the QR code on this page." })
       unmatchedPages.push(pageNum)
-      const { score, maxScore, responses, sheetLog } = readPage(gray, imageData.width, imageData.height, fid.transform, pageNum)
+      const { score, maxScore, responses, sheetLog } = readPage(gray, imageData.width, imageData.height, fid.transform, pageNum, undefined, scoreAgainst)
       unmatchedSheets.push({
         id: shortId(), administrationId, page: pageNum,
         reason: "QR code on this page couldn't be read — assign it to a student to finish grading it.",
-        score, maxScore, responses, logEntries: sheetLog,
+        score, maxScore, responses, logEntries: versionLog ? [versionLog, ...sheetLog] : sheetLog,
+        ...(scoreAgainst.id !== assessment.id ? { assessmentId: scoreAgainst.id } : {}),
       })
       continue
     }
@@ -206,19 +244,21 @@ export async function scanPdf(
       // are good, so this is scored and held the same way an unreadable QR is.
       log.push({ administrationId, page: pageNum, tag: 'NO_QR', detail: `No student with id ${decoded.studentId} in this class.` })
       unmatchedPages.push(pageNum)
-      const { score, maxScore, responses, sheetLog } = readPage(gray, imageData.width, imageData.height, fid.transform, pageNum)
+      const { score, maxScore, responses, sheetLog } = readPage(gray, imageData.width, imageData.height, fid.transform, pageNum, undefined, scoreAgainst)
       unmatchedSheets.push({
         id: shortId(), administrationId, page: pageNum,
         reason: `Scanned student id "${decoded.studentId}" doesn't match anyone in this class — assign it to a student to finish grading it.`,
-        score, maxScore, responses, logEntries: sheetLog,
+        score, maxScore, responses, logEntries: versionLog ? [versionLog, ...sheetLog] : sheetLog,
+        ...(scoreAgainst.id !== assessment.id ? { assessmentId: scoreAgainst.id } : {}),
       })
       continue
     }
 
-    const { score, maxScore, responses, sheetLog } = readPage(gray, imageData.width, imageData.height, fid.transform, pageNum, student.id)
+    const { score, maxScore, responses, sheetLog } = readPage(gray, imageData.width, imageData.height, fid.transform, pageNum, student.id, scoreAgainst)
     results.push({
       studentId: student.id, administrationId, score, maxScore, responses,
-      flagged: sheetLog.length > 0, logEntries: sheetLog,
+      flagged: !!versionLog || sheetLog.length > 0, logEntries: versionLog ? [versionLog, ...sheetLog] : sheetLog,
+      ...(scoreAgainst.id !== assessment.id ? { assessmentId: scoreAgainst.id } : {}),
     })
   }
 

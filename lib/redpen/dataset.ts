@@ -8,15 +8,20 @@ import { RedPenAssessment, RedPenResult, RedPenStudent } from './types'
 
 export function buildGridFromResults(
   assessment: RedPenAssessment, students: RedPenStudent[], results: RedPenResult[],
+  /** False for a multi-version assessment: a "Q5" column can't honestly mean one thing once
+   *  different sheets in the same export were scored against different versions' Q5. */
+  includeQuestionColumns = true,
 ): GridState {
   const columns: GridColumn[] = [
     { id: 'student', name: 'Student', type: 'categorical' as ColumnType },
     { id: 'score', name: 'Score', type: 'numeric' as ColumnType },
     { id: 'percent', name: 'Percent', type: 'numeric' as ColumnType },
-    ...assessment.answerKey
-      .slice()
-      .sort((a, b) => a.n - b.n)
-      .map(key => ({ id: `q${key.n}`, name: `Q${key.n}`, type: 'numeric' as ColumnType })),
+    ...(includeQuestionColumns
+      ? assessment.answerKey
+        .slice()
+        .sort((a, b) => a.n - b.n)
+        .map(key => ({ id: `q${key.n}`, name: `Q${key.n}`, type: 'numeric' as ColumnType }))
+      : []),
   ]
 
   const rows = results.map(r => {
@@ -27,7 +32,9 @@ export function buildGridFromResults(
       score: r.score,
       percent: pct,
     }
-    for (const resp of r.responses) row[`q${resp.n}`] = resp.correct ? 1 : 0
+    if (includeQuestionColumns) {
+      for (const resp of r.responses) row[`q${resp.n}`] = resp.correct ? 1 : 0
+    }
     return row
   })
 

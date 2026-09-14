@@ -44,6 +44,27 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }).toUpperCase()
 }
 
+/** Assessments sharing a versionGroupId *are* the versions of one multi-version assessment —
+ *  grouped into one card each, sorted so Version A (or an unlabeled single-version assessment)
+ *  leads. An assessment with no versionGroupId is its own singleton group, same as today. */
+interface AssessmentGroup {
+  key: string
+  members: RedPenAssessment[]
+}
+
+function groupAssessments(assessments: RedPenAssessment[]): AssessmentGroup[] {
+  const map = new Map<string, RedPenAssessment[]>()
+  for (const a of assessments) {
+    const key = a.versionGroupId ?? a.id
+    map.set(key, [...(map.get(key) ?? []), a])
+  }
+  return [...map.entries()]
+    .map(([key, members]) => ({
+      key, members: members.slice().sort((x, y) => (x.versionLabel ?? '').localeCompare(y.versionLabel ?? '')),
+    }))
+    .sort((a, b) => (b.members[0]?.createdAt ?? '').localeCompare(a.members[0]?.createdAt ?? ''))
+}
+
 export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditAssessment }: AssessmentsListProps) {
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
@@ -53,9 +74,9 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
   const [sections, setSections] = useState<RedPenSection[]>([])
   const [students, setStudents] = useState<RedPenStudent[]>([])
   const [results, setResults] = useState<RedPenResult[]>([])
-  const [givingToSectionFor, setGivingToSectionFor] = useState<string | null>(null)
-  const [deletingAssessment, setDeletingAssessment] = useState<RedPenAssessment | null>(null)
-  const [deletingAssessmentBusy, setDeletingAssessmentBusy] = useState(false)
+  const [givingToSectionFor, setGivingToSectionFor] = useState<AssessmentGroup | null>(null)
+  const [deletingGroup, setDeletingGroup] = useState<AssessmentGroup | null>(null)
+  const [deletingGroupBusy, setDeletingGroupBusy] = useState(false)
 
   async function refresh(uid: string) {
     try {
@@ -85,26 +106,30 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
   if (loading) return <RedPenLoading />
   if (error) return <RedPenError message={error} />
 
-  async function handleGiveToSection(assessmentId: string, sectionId: string) {
+  async function handleGiveToSection(primaryAssessmentId: string, sectionId: string) {
     if (!user) return
-    await createAdministration(user.uid, assessmentId, sectionId)
+    await createAdministration(user.uid, primaryAssessmentId, sectionId)
     setGivingToSectionFor(null)
     await refresh(user.uid)
   }
 
-  async function handleConfirmDeleteAssessment() {
-    if (!user || !deletingAssessment) return
-    setDeletingAssessmentBusy(true)
+  async function handleConfirmDeleteGroup() {
+    if (!user || !deletingGroup) return
+    setDeletingGroupBusy(true)
     try {
-      await deleteAssessment(user.uid, deletingAssessment.id)
-      setDeletingAssessment(null)
+      // Version A's own delete cleans up every administration/result/unmatched-sheet for the
+      // group (they're all found via the primary's assessmentId — see storage.ts); a sibling
+      // version's delete finds nothing referencing it directly and just removes its own doc.
+      for (const a of deletingGroup.members) await deleteAssessment(user.uid, a.id)
+      setDeletingGroup(null)
       await refresh(user.uid)
     } finally {
-      setDeletingAssessmentBusy(false)
+      setDeletingGroupBusy(false)
     }
   }
 
   const studentCountBySection = (sectionId: string) => students.filter(s => s.sectionId === sectionId).length
+  const groups = groupAssessments(assessments)
 
   return (
     <div className="space-y-6">
@@ -112,7 +137,7 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
         <div>
           <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)]">Assessments</h2>
           <p className="text-sm text-[var(--color-muted)] mt-1">
-            Scan to grade bubble sheets. {assessments.length} assessment{assessments.length === 1 ? '' : 's'} on file.
+            Scan to grade bubble sheets. {groups.length} assessment{groups.length === 1 ? '' : 's'} on file.
           </p>
         </div>
         <button
@@ -123,40 +148,61 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
         </button>
       </div>
 
-      {assessments.length === 0 && (
+      {groups.length === 0 && (
         <div className="text-sm text-[var(--color-muted)] bg-[var(--color-panel)] rounded-lg p-6 text-center">
           No assessments yet. Import one from Claude or build one by hand to get started.
         </div>
       )}
 
       <div className="flex flex-col gap-3.5">
-        {assessments.map(a => {
-          const admins = administrations.filter(admin => admin.assessmentId === a.id)
+        {groups.map(group => {
+          const primary = group.members[0]
+          const multi = group.members.length > 1
+          const admins = administrations.filter(admin => admin.assessmentId === primary.id)
           const availableSections = sections.filter(s => !admins.some(admin => admin.sectionId === s.id))
           return (
-            <div key={a.id} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+            <div key={group.key} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
               <div className="flex justify-between items-baseline mb-3.5 gap-4 flex-wrap">
                 <div>
-                  <div className="text-lg font-semibold text-[var(--color-text)]">{a.title}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-lg font-semibold text-[var(--color-text)]">{primary.title}</div>
+                    {multi && (
+                      <span className="font-mono text-[10px] uppercase tracking-wide px-2 py-0.5 rounded bg-[var(--color-gold-light)] text-[var(--color-gold-text)]">
+                        A/B
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-[var(--color-muted)] mt-0.5">
-                    <span className="font-mono">{a.questionCount}</span> questions · created{' '}
-                    <span className="font-mono">{formatDate(a.createdAt)}</span>
+                    <span className="font-mono">{primary.questionCount}</span> questions · created{' '}
+                    <span className="font-mono">{formatDate(primary.createdAt)}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button onClick={() => onEditAssessment(a.id)} className="text-xs font-medium text-[var(--color-accent-strong)] hover:underline">
-                    Edit key
-                  </button>
+                  {multi ? (
+                    group.members.map(m => (
+                      <button
+                        key={m.id}
+                        onClick={() => onEditAssessment(m.id)}
+                        className="text-xs font-medium text-[var(--color-accent-strong)] hover:underline"
+                      >
+                        Edit key {m.versionLabel ?? '?'}
+                      </button>
+                    ))
+                  ) : (
+                    <button onClick={() => onEditAssessment(primary.id)} className="text-xs font-medium text-[var(--color-accent-strong)] hover:underline">
+                      Edit key
+                    </button>
+                  )}
                   <button
-                    onClick={() => setGivingToSectionFor(a.id)}
+                    onClick={() => setGivingToSectionFor(group)}
                     disabled={availableSections.length === 0}
                     className="font-mono text-[11px] uppercase tracking-wide px-3 py-1.5 rounded border border-dashed border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent-strong)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     + Give to a section
                   </button>
                   <button
-                    onClick={() => setDeletingAssessment(a)}
-                    title="Delete assessment"
+                    onClick={() => setDeletingGroup(group)}
+                    title={multi ? 'Delete both versions' : 'Delete assessment'}
                     className="p-1.5 rounded hover:bg-black/5 text-[var(--color-muted)] hover:text-[var(--color-danger)] transition-colors"
                   >
                     <Trash2 size={14} />
@@ -228,11 +274,11 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
             </div>
           )}
           {sections
-            .filter(s => givingToSectionFor && !administrations.some(admin => admin.assessmentId === givingToSectionFor && admin.sectionId === s.id))
+            .filter(s => givingToSectionFor && !administrations.some(admin => admin.assessmentId === givingToSectionFor.members[0].id && admin.sectionId === s.id))
             .map(s => (
               <button
                 key={s.id}
-                onClick={() => givingToSectionFor && handleGiveToSection(givingToSectionFor, s.id)}
+                onClick={() => givingToSectionFor && handleGiveToSection(givingToSectionFor.members[0].id, s.id)}
                 className="w-full text-left px-4 py-3 rounded-lg border border-[var(--color-border)] hover:border-[var(--color-accent)] transition-colors flex items-center justify-between"
               >
                 <span className="text-sm font-medium text-[var(--color-text)]">{s.label}</span>
@@ -242,26 +288,27 @@ export function AssessmentsList({ onNewAssessment, onOpenAdministration, onEditA
         </div>
       </Modal>
 
-      <Modal open={deletingAssessment !== null} onClose={() => setDeletingAssessment(null)} title="Delete assessment?">
+      <Modal open={deletingGroup !== null} onClose={() => setDeletingGroup(null)} title={deletingGroup && deletingGroup.members.length > 1 ? 'Delete both versions?' : 'Delete assessment?'}>
         <div className="space-y-4">
           <p className="text-sm text-[var(--color-muted)]">
-            This removes <span className="font-medium text-[var(--color-text)]">{deletingAssessment?.title}</span> and
-            every section it was given to — including their printed-sheet status, scans, and results. Your class
-            rosters themselves aren&apos;t affected. This can&apos;t be undone.
+            This removes <span className="font-medium text-[var(--color-text)]">{deletingGroup?.members[0].title}</span>
+            {deletingGroup && deletingGroup.members.length > 1 && ' (both versions)'} and every section it was given to
+            — including their printed-sheet status, scans, and results. Your class rosters themselves aren&apos;t
+            affected. This can&apos;t be undone.
           </p>
           <div className="flex justify-end gap-2">
             <button
-              onClick={() => setDeletingAssessment(null)}
+              onClick={() => setDeletingGroup(null)}
               className="px-4 py-2 rounded-lg text-sm text-[var(--color-muted)] hover:bg-[var(--color-bg)] transition-colors"
             >
               Cancel
             </button>
             <button
-              onClick={handleConfirmDeleteAssessment}
-              disabled={deletingAssessmentBusy}
+              onClick={handleConfirmDeleteGroup}
+              disabled={deletingGroupBusy}
               className="px-4 py-2 rounded-lg text-sm bg-[var(--color-danger)] text-white font-medium hover:brightness-105 transition-all disabled:opacity-60"
             >
-              {deletingAssessmentBusy ? 'Deleting…' : 'Delete assessment'}
+              {deletingGroupBusy ? 'Deleting…' : 'Delete'}
             </button>
           </div>
         </div>

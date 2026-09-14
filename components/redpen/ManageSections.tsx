@@ -171,32 +171,28 @@ export function ManageSections() {
 
       {activeSectionId && (
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg overflow-hidden">
-          <div className="grid grid-cols-[minmax(0,1fr)_160px] gap-4 px-6 py-3 border-b border-[var(--color-border)] font-mono text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
-            <div>Name</div>
-            <div>Sheet code</div>
+          <div className="px-6 py-3 border-b border-[var(--color-border)] font-mono text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
+            Name
           </div>
           {rosterForSection.map(st => (
             <div
               key={st.id}
-              className="grid grid-cols-[minmax(0,1fr)_160px] gap-4 items-center px-6 py-3 border-b border-[var(--color-border)] last:border-b-0"
+              className="flex items-center justify-between gap-4 px-6 py-3 border-b border-[var(--color-border)] last:border-b-0"
             >
               <div className="text-sm font-medium text-[var(--color-text)]">{st.name}</div>
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs text-[var(--color-muted)]">auto per test</span>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => { setRenamingStudent(st); setRenameValue(st.name) }}
-                    className="text-xs text-[var(--color-muted)] hover:underline"
-                  >
-                    Rename
-                  </button>
-                  <button
-                    onClick={() => handleDeleteStudent(st.id)}
-                    className="text-xs text-[var(--color-danger)] hover:underline"
-                  >
-                    Remove
-                  </button>
-                </div>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <button
+                  onClick={() => { setRenamingStudent(st); setRenameValue(st.name) }}
+                  className="text-xs text-[var(--color-muted)] hover:underline"
+                >
+                  Rename
+                </button>
+                <button
+                  onClick={() => handleDeleteStudent(st.id)}
+                  className="text-xs text-[var(--color-danger)] hover:underline"
+                >
+                  Remove
+                </button>
               </div>
             </div>
           ))}

@@ -121,3 +121,15 @@ export function isAbrastatTeacher(identity: PuzzleWeekIdentityLike | null | unde
   const email = identity?.email?.toLowerCase().trim()
   return email === ABRASTAT_TEACHER_EMAIL
 }
+
+// Lets these two accounts delete ANY dataset, not just their own — used to moderate Public
+// Datasets (removing something that shouldn't be there without needing the original owner).
+// The Firestore rule for the `datasets` collection's delete must mirror this exact email set
+// (request.auth.token.email in [...]) for the real enforcement; this export is only what shows
+// the delete button client-side for a dataset the signed-in user doesn't own.
+const DATASET_ADMIN_EMAILS = new Set(['speterson@haverfordsd.edu', 'peterson.steve@gmail.com'])
+
+export function isDatasetAdmin(identity: PuzzleWeekIdentityLike | null | undefined): boolean {
+  const email = identity?.email?.toLowerCase().trim()
+  return !!email && DATASET_ADMIN_EMAILS.has(email)
+}

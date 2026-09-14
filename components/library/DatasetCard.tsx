@@ -20,6 +20,9 @@ function timeAgo(date: Date): string {
 interface DatasetCardProps {
   dataset: DatasetMeta
   currentUserId?: string
+  /** Lets the signed-in user delete ANY dataset, not just their own — set by the caller from
+   *  lib/featureFlags.ts's isDatasetAdmin, for moderating Public Datasets. */
+  canDeleteAny?: boolean
   onOpen: (id: string) => void
   onDelete?: (id: string) => void
   onExport?: (dataset: DatasetMeta, format: 'csv' | 'xlsx') => void | Promise<void>
@@ -111,9 +114,9 @@ function ExportButton({
   )
 }
 
-export function DatasetCard({ dataset, currentUserId, onOpen, onDelete, onExport, view = 'list' }: DatasetCardProps) {
+export function DatasetCard({ dataset, currentUserId, canDeleteAny, onOpen, onDelete, onExport, view = 'list' }: DatasetCardProps) {
   const isOwner = dataset.ownerId === currentUserId
-  const canDelete = isOwner && onDelete
+  const canDelete = (isOwner || canDeleteAny) && onDelete
   const isSample = dataset.id.startsWith('sample:')
 
   if (view === 'card') {

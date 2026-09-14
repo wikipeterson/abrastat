@@ -83,3 +83,19 @@ export interface RedPenResult {
    *  or anywhere — they're shown once, in-memory, right after the scan that produced them. */
   logEntries: DecisionLogEntry[]
 }
+
+/** A page that read cleanly (fiducials located, so every bubble position is known) but couldn't
+ *  be tied to a student — QR didn't decode, or decoded to a student id not in this roster. Same
+ *  shape as RedPenResult minus studentId, plus enough to find the page again (`page`) and explain
+ *  why it's here (`reason`). Kept around so a teacher can assign it after the fact instead of the
+ *  scan being a dead end — see components/redpen/ResultsView.tsx's AssignUnmatchedModal. */
+export interface RedPenUnmatchedSheet {
+  id: string
+  administrationId: string
+  page: number
+  reason: string
+  score: number
+  maxScore: number
+  responses: RedPenResponse[]
+  logEntries: DecisionLogEntry[]
+}

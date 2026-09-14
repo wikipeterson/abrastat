@@ -3,7 +3,7 @@
 // client-side; nothing here touches a server. See the phase-2 plan (§03 in the spec) for the
 // stage-by-stage rationale — this file just wires those stages together per page.
 
-import { applyAffine } from './fiducials'
+import { applyAffine, AffineTransform } from './fiducials'
 import {
   bubbleCenterIn, BUBBLE_DIAMETER_IN, DEFAULT_GRIDIN_DIGITS, GRIDIN_SYMBOLS,
   gridinBandTopIn, gridinBlockOriginIn, gridinBubbleCenterIn, gridinColumnCenterXIn,
@@ -17,7 +17,8 @@ import { decodeSheetCode } from './qrRead'
 import { scoreAssessment } from './scoring'
 import { renderPdfPages } from './pdfRender'
 import { getAdministration, getAssessment, listStudents } from './storage'
-import { AnswerValue, DecisionLogEntry, RedPenResult } from './types'
+import { shortId } from './id'
+import { AnswerValue, DecisionLogEntry, RedPenResponse, RedPenResult, RedPenUnmatchedSheet } from './types'
 
 const DPI = 200
 
@@ -32,6 +33,11 @@ export interface ScanOutcome {
   /** Pages that couldn't be matched to a student at all (missing fiducials, unreadable QR, QR
    *  from a different administration, or an unknown student id). */
   unmatchedPages: number[]
+  /** The subset of unmatchedPages that still read cleanly (fiducials located, so every bubble
+   *  was actually scored) — just missing a student to attach the result to. Persisted so a
+   *  teacher can assign them later instead of the scan being a dead end; see
+   *  components/redpen/ResultsView.tsx's AssignUnmatchedModal. */
+  unmatchedSheets: RedPenUnmatchedSheet[]
   totalPages: number
 }
 
@@ -65,6 +71,88 @@ export async function scanPdf(
   const log: DecisionLogEntry[] = []
   const results: RedPenResult[] = []
   const unmatchedPages: number[] = []
+  const unmatchedSheets: RedPenUnmatchedSheet[] = []
+
+  // Reads every bubble row and every grid-in block against an already-located transform and
+  // scores the result — the one thing a matched page and an unmatched-but-readable page (QR
+  // unreadable, or decoded to a student id not in this roster) both need. Doesn't require
+  // knowing who the student is: `studentId` is only used to tag log entries, and is omitted from
+  // a log entry entirely (not set to `undefined`) when there isn't one yet, since these entries
+  // sometimes get persisted via RedPenUnmatchedSheet.logEntries and Firestore rejects explicit
+  // `undefined` field values.
+  function readPage(
+    gray: Uint8ClampedArray, width: number, height: number, transform: AffineTransform,
+    pageNum: number, studentId?: string,
+  ): { score: number; maxScore: number; responses: RedPenResponse[]; sheetLog: DecisionLogEntry[] } {
+    const given = new Map<number, AnswerValue | null>()
+    const sheetLog: DecisionLogEntry[] = []
+
+    columns.forEach((rows, col) => {
+      rows.forEach((row, rowIndex) => {
+        const key = assessment!.answerKey.find(e => e.n === row.n)
+        const expectMultiple = Array.isArray(key?.answer)
+
+        const fills = row.letters.map((letter, letterIndex) => {
+          const centerIn = bubbleCenterIn(col as 0 | 1, rowIndex, letterIndex)
+          const centerPx = applyAffine(transform, centerIn)
+          const fill = sampleBubbleFill(gray, width, height, centerPx, BUBBLE_DIAMETER_IN * DPI)
+          return { letter, fill }
+        })
+
+        const decision = expectMultiple ? decideMultiple(fills) : decideSingle(fills)
+        given.set(row.n, decision.given)
+        if (decision.log) {
+          const entry: DecisionLogEntry = {
+            administrationId, page: pageNum, n: row.n,
+            ...(studentId ? { studentId } : {}),
+            tag: decision.log.tag, detail: decision.log.detail,
+          }
+          sheetLog.push(entry)
+          log.push(entry)
+        }
+      })
+    })
+
+    gridinList.forEach((entry, blockIndex) => {
+      const digits = entry.digits ?? DEFAULT_GRIDIN_DIGITS
+      const origin = gridinBlockOriginIn(blockIndex, maxGridinDigits, gridinBandTop)
+
+      const signXIn = gridinColumnCenterXIn(origin, 0)
+      const signCenterPx = applyAffine(transform, gridinBubbleCenterIn(origin, signXIn, 0))
+      const signFill = sampleBubbleFill(gray, width, height, signCenterPx, BUBBLE_DIAMETER_IN * DPI)
+      const negative = decideBinary(signFill)
+
+      let assembled = ''
+      let stopped = false
+      for (let col = 1; col <= digits; col++) {
+        if (stopped) break
+        const colXIn = gridinColumnCenterXIn(origin, col)
+        const fills = GRIDIN_SYMBOLS.map(symbol => {
+          const centerIn = gridinBubbleCenterIn(origin, colXIn, GRIDIN_SYMBOLS.indexOf(symbol))
+          const centerPx = applyAffine(transform, centerIn)
+          const fill = sampleBubbleFill(gray, width, height, centerPx, BUBBLE_DIAMETER_IN * DPI)
+          return { letter: symbol, fill }
+        })
+        const decision = decideSingle(fills)
+        if (decision.log) {
+          const logEntry: DecisionLogEntry = {
+            administrationId, page: pageNum, n: entry.n,
+            ...(studentId ? { studentId } : {}),
+            tag: decision.log.tag, detail: `Digit ${col} of ${digits}: ${decision.log.detail}`,
+          }
+          sheetLog.push(logEntry)
+          log.push(logEntry)
+        }
+        if (decision.given === null) { stopped = true; break }
+        assembled += decision.given as string
+      }
+
+      given.set(entry.n, assembled === '' ? null : `${negative ? '-' : ''}${assembled}`)
+    })
+
+    const { score, maxScore, responses } = scoreAssessment(assessment!, given)
+    return { score, maxScore, responses, sheetLog }
+  }
 
   for (const { page: pageNum, imageData } of pages) {
     onPageImage?.(pageNum, imageData)
@@ -90,102 +178,49 @@ export async function scanPdf(
     const decoded = decodeSheetCode(imageData)
     console.log(`[redpen scan] page ${pageNum}: QR decode ${decoded ? `OK — ${decoded.administrationId}:${decoded.studentId}` : 'FAILED'}`)
     if (!decoded) {
+      // The QR itself didn't decode, but fiducials did — every bubble position is still known,
+      // so the page is scored and held for the teacher to assign a student to later rather than
+      // dropped outright.
       log.push({ administrationId, page: pageNum, tag: 'NO_QR', detail: "Couldn't read the QR code on this page." })
       unmatchedPages.push(pageNum)
+      const { score, maxScore, responses, sheetLog } = readPage(gray, imageData.width, imageData.height, fid.transform, pageNum)
+      unmatchedSheets.push({
+        id: shortId(), administrationId, page: pageNum,
+        reason: "QR code on this page couldn't be read — assign it to a student to finish grading it.",
+        score, maxScore, responses, logEntries: sheetLog,
+      })
       continue
     }
     if (decoded.administrationId !== administrationId) {
       // Not a read failure — the QR decoded fine, it's just for a different assessment/section
-      // scan than the one open right now (an old printed sheet, or the wrong PDF uploaded).
+      // scan than the one open right now (an old printed sheet, or the wrong PDF uploaded). It
+      // belongs to a different assessment's own scoring, not this one, so it isn't read here.
       log.push({ administrationId, page: pageNum, tag: 'WRONG_ADMIN', detail: "This sheet is from a different assessment or section — it wasn't scored here." })
       unmatchedPages.push(pageNum)
       continue
     }
     const student = students.find(s => s.id === decoded.studentId)
     if (!student) {
+      // The QR decoded fine and it's the right administration — just no matching roster entry
+      // (a typo'd/edited student id, or a student removed after the sheet was printed). Fiducials
+      // are good, so this is scored and held the same way an unreadable QR is.
       log.push({ administrationId, page: pageNum, tag: 'NO_QR', detail: `No student with id ${decoded.studentId} in this class.` })
       unmatchedPages.push(pageNum)
+      const { score, maxScore, responses, sheetLog } = readPage(gray, imageData.width, imageData.height, fid.transform, pageNum)
+      unmatchedSheets.push({
+        id: shortId(), administrationId, page: pageNum,
+        reason: `Scanned student id "${decoded.studentId}" doesn't match anyone in this class — assign it to a student to finish grading it.`,
+        score, maxScore, responses, logEntries: sheetLog,
+      })
       continue
     }
 
-    const given = new Map<number, AnswerValue | null>()
-    // This sheet's own entries, kept separately from the shared `log` (which the UI shows in
-    // full right after the scan) so they can be attached to just this student's RedPenResult —
-    // that's what makes a later rescan of one student only ever touch that student's own record.
-    const sheetLog: DecisionLogEntry[] = []
-
-    columns.forEach((rows, col) => {
-      rows.forEach((row, rowIndex) => {
-        const key = assessment.answerKey.find(e => e.n === row.n)
-        const expectMultiple = Array.isArray(key?.answer)
-
-        const fills = row.letters.map((letter, letterIndex) => {
-          const centerIn = bubbleCenterIn(col as 0 | 1, rowIndex, letterIndex)
-          const centerPx = applyAffine(fid.transform, centerIn)
-          const fill = sampleBubbleFill(gray, imageData.width, imageData.height, centerPx, BUBBLE_DIAMETER_IN * DPI)
-          return { letter, fill }
-        })
-
-        const decision = expectMultiple ? decideMultiple(fills) : decideSingle(fills)
-        given.set(row.n, decision.given)
-        if (decision.log) {
-          const entry: DecisionLogEntry = {
-            administrationId, page: pageNum, n: row.n, studentId: student.id,
-            tag: decision.log.tag, detail: decision.log.detail,
-          }
-          sheetLog.push(entry)
-          log.push(entry)
-        }
-      })
-    })
-
-    // Grid-in: sign bubble (a plain threshold check, see decide.ts's decideBinary — there's no
-    // runner-up bubble in that "row" to compare against) then each digit column read the exact
-    // same way an MC row is (decideSingle over that column's 11 symbol candidates), assembled
-    // left-to-right and stopping at the first blank column (students left-justify their answer,
-    // per the printed instruction — see SheetPrintView.tsx).
-    gridinList.forEach((entry, blockIndex) => {
-      const digits = entry.digits ?? DEFAULT_GRIDIN_DIGITS
-      const origin = gridinBlockOriginIn(blockIndex, maxGridinDigits, gridinBandTop)
-
-      const signXIn = gridinColumnCenterXIn(origin, 0)
-      const signCenterPx = applyAffine(fid.transform, gridinBubbleCenterIn(origin, signXIn, 0))
-      const signFill = sampleBubbleFill(gray, imageData.width, imageData.height, signCenterPx, BUBBLE_DIAMETER_IN * DPI)
-      const negative = decideBinary(signFill)
-
-      let assembled = ''
-      let stopped = false
-      for (let col = 1; col <= digits; col++) {
-        if (stopped) break
-        const colXIn = gridinColumnCenterXIn(origin, col)
-        const fills = GRIDIN_SYMBOLS.map(symbol => {
-          const centerIn = gridinBubbleCenterIn(origin, colXIn, GRIDIN_SYMBOLS.indexOf(symbol))
-          const centerPx = applyAffine(fid.transform, centerIn)
-          const fill = sampleBubbleFill(gray, imageData.width, imageData.height, centerPx, BUBBLE_DIAMETER_IN * DPI)
-          return { letter: symbol, fill }
-        })
-        const decision = decideSingle(fills)
-        if (decision.log) {
-          const logEntry: DecisionLogEntry = {
-            administrationId, page: pageNum, n: entry.n, studentId: student.id,
-            tag: decision.log.tag, detail: `Digit ${col} of ${digits}: ${decision.log.detail}`,
-          }
-          sheetLog.push(logEntry)
-          log.push(logEntry)
-        }
-        if (decision.given === null) { stopped = true; break }
-        assembled += decision.given as string
-      }
-
-      given.set(entry.n, assembled === '' ? null : `${negative ? '-' : ''}${assembled}`)
-    })
-
-    const { score, maxScore, responses } = scoreAssessment(assessment, given)
+    const { score, maxScore, responses, sheetLog } = readPage(gray, imageData.width, imageData.height, fid.transform, pageNum, student.id)
     results.push({
       studentId: student.id, administrationId, score, maxScore, responses,
       flagged: sheetLog.length > 0, logEntries: sheetLog,
     })
   }
 
-  return { results, log, unmatchedPages, totalPages: pages.length }
+  return { results, log, unmatchedPages, unmatchedSheets, totalPages: pages.length }
 }

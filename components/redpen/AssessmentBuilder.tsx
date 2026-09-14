@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { DEFAULT_GRIDIN_DIGITS, maxQuestionsPerSheet } from '@/lib/redpen/geometry'
-import { getAssessment, saveAssessment } from '@/lib/redpen/storage'
-import { AnswerEntry, RedPenAssessment, UnscorableEntry } from '@/lib/redpen/types'
+import { getAssessment, listAdministrations, listResults, saveAssessment, saveResult } from '@/lib/redpen/storage'
+import { AnswerEntry, AnswerValue, RedPenAssessment, UnscorableEntry } from '@/lib/redpen/types'
 import { ParsedMarksheet } from '@/lib/redpen/schema'
+import { scoreAssessment } from '@/lib/redpen/scoring'
 import { RedPenError, RedPenLoading } from './RedPenStatus'
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
@@ -127,6 +128,10 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
   const [key, setKey] = useState<Record<number, AnswerEntry>>(initial.key)
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  // Set only when saving this key actually regraded existing results (a brand-new assessment, or
+  // one with no administrations yet, has nothing to regrade) — shown next to the Saved
+  // confirmation so a key fix visibly reaches sheets already scored, not just future scans.
+  const [regradedCount, setRegradedCount] = useState<number | null>(null)
 
   // The cap moves with the key itself — each grid-in question reserves space in its own band
   // below the MC grid, so adding/removing one changes how many questions fit on one page.
@@ -218,8 +223,25 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
     }
     try {
       await saveAssessment(user.uid, assessment)
+
+      // Regrade every already-scored sheet against the corrected key — no rescan needed, since
+      // each result already stored exactly what was given for every question
+      // (RedPenResponse.given); scoreAssessment just needs that rebuilt as a Map.
+      const administrations = await listAdministrations(user.uid, assessment.id)
+      let regraded = 0
+      for (const admin of administrations) {
+        const results = await listResults(user.uid, admin.id)
+        for (const r of results) {
+          const given = new Map<number, AnswerValue | null>(r.responses.map(resp => [resp.n, resp.given]))
+          const { score, maxScore, responses } = scoreAssessment(assessment, given)
+          await saveResult(user.uid, { ...r, score, maxScore, responses })
+          regraded++
+        }
+      }
+
+      setRegradedCount(regraded)
       setSaved(true)
-      setTimeout(onSaved, 500)
+      setTimeout(onSaved, regraded > 0 ? 1400 : 500)
     } catch {
       setSaveError("Couldn't save — try again.")
     }
@@ -343,6 +365,11 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
           >
             {saved ? 'Saved ✓' : 'Save assessment'}
           </button>
+          {saved && regradedCount !== null && regradedCount > 0 && (
+            <div className="text-xs text-[var(--color-accent-strong)]">
+              Regraded {regradedCount} already-scored sheet{regradedCount === 1 ? '' : 's'} — no rescan needed.
+            </div>
+          )}
           {saveError && <div className="text-xs text-[var(--color-danger)]">{saveError}</div>}
         </div>
       </div>

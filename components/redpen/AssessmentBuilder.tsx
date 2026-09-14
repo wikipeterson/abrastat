@@ -5,6 +5,7 @@ import { v4 as uuid } from 'uuid'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { DEFAULT_GRIDIN_DIGITS, maxQuestionsPerSheet } from '@/lib/redpen/geometry'
 import { getAssessment, listAdministrations, listResults, saveAssessment, saveResult } from '@/lib/redpen/storage'
+import { listVersionGroup, primaryOfGroup } from '@/lib/redpen/versions'
 import { AnswerEntry, AnswerValue, RedPenAssessment, UnscorableEntry } from '@/lib/redpen/types'
 import { ParsedMarksheet } from '@/lib/redpen/schema'
 import { scoreAssessment } from '@/lib/redpen/scoring'
@@ -32,7 +33,15 @@ export type BuilderDraft = { assessmentId: string } | { parsed: ParsedMarksheet 
 
 interface AssessmentBuilderProps {
   draft: BuilderDraft | null
-  onSaved: () => void
+  onSaved: (assessment: RedPenAssessment) => void
+  /** Set only when creating a version group (via NewAssessmentFlow.tsx) — folded into whatever
+   *  gets saved. Absent when editing an existing assessment, which already carries its own
+   *  versionGroupId/versionLabel through assessmentToInitial below. */
+  versionGroupId?: string
+  versionLabel?: string
+  /** Prefills the title field for a fresh (non-import) Version B, defaulting to Version A's —
+   *  editable, not enforced. */
+  titleOverride?: string
 }
 
 interface Initial {
@@ -43,6 +52,8 @@ interface Initial {
   key: Record<number, AnswerEntry>
   unscorable: UnscorableEntry[]
   createdAt: string | null
+  versionGroupId?: string
+  versionLabel?: string
 }
 
 function draftToInitial(draft: { parsed: ParsedMarksheet } | null): Initial {
@@ -65,6 +76,7 @@ function assessmentToInitial(existing: RedPenAssessment): Initial {
   return {
     id: existing.id, title: existing.title, questionCount: existing.questionCount,
     choiceCount: existing.choiceCount, key, unscorable: existing.unscorable, createdAt: existing.createdAt,
+    versionGroupId: existing.versionGroupId, versionLabel: existing.versionLabel,
   }
 }
 
@@ -72,7 +84,7 @@ function assessmentToInitial(existing: RedPenAssessment): Initial {
  *  fetch — the blank and imported-draft cases have everything in memory already. Renders the
  *  form only once `initial` data actually exists, so the form's own useState initializers never
  *  see stale/blank data get replaced out from under them after the fetch resolves. */
-export function AssessmentBuilder({ draft, onSaved }: AssessmentBuilderProps) {
+export function AssessmentBuilder({ draft, onSaved, versionGroupId, versionLabel, titleOverride }: AssessmentBuilderProps) {
   const isEditingExisting = !!draft && 'assessmentId' in draft
   const [loading, setLoading] = useState(isEditingExisting)
   const [error, setError] = useState<string | null>(null)
@@ -95,7 +107,16 @@ export function AssessmentBuilder({ draft, onSaved }: AssessmentBuilderProps) {
   if (loading) return <RedPenLoading />
   if (error) return <RedPenError message={error} />
 
-  const initial = isEditingExisting ? fetched! : draftToInitial(draft && 'parsed' in draft ? draft : null)
+  const baseInitial = isEditingExisting ? fetched! : draftToInitial(draft && 'parsed' in draft ? draft : null)
+  // Version props only ever apply to a fresh (non-editing) create — an existing assessment
+  // already carries its own versionGroupId/versionLabel through assessmentToInitial above, and
+  // those always win (a saved assessment's version identity doesn't change by being re-opened).
+  const initial: Initial = {
+    ...baseInitial,
+    versionGroupId: baseInitial.versionGroupId ?? versionGroupId,
+    versionLabel: baseInitial.versionLabel ?? versionLabel,
+    title: baseInitial.title || titleOverride || baseInitial.title,
+  }
   return <AssessmentBuilderForm initial={initial} onSaved={onSaved} />
 }
 
@@ -121,7 +142,7 @@ function isAnswered(entry: AnswerEntry | undefined): boolean {
   return true
 }
 
-function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved: () => void }) {
+function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved: (assessment: RedPenAssessment) => void }) {
   const { user } = useAuth()
   const [title, setTitle] = useState(initial.title)
   const [choiceCount, setChoiceCount] = useState(initial.choiceCount)
@@ -132,6 +153,12 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
   // one with no administrations yet, has nothing to regrade) — shown next to the Saved
   // confirmation so a key fix visibly reaches sheets already scored, not just future scans.
   const [regradedCount, setRegradedCount] = useState<number | null>(null)
+  // Set when this key's shape (question/choice counts, per-question type) doesn't match its
+  // sibling version's — not a hard block (there might be a real reason), but the whole point of
+  // the multi-version FORM bubble is that both versions share one printed shape, so a silent
+  // mismatch here is the worst failure mode the feature has. Saving again while this is showing
+  // goes through regardless.
+  const [shapeWarning, setShapeWarning] = useState<string | null>(null)
 
   // The cap moves with the key itself — each grid-in question reserves space in its own band
   // below the MC grid, so adding/removing one changes how many questions fit on one page.
@@ -204,6 +231,20 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
     })
   }
 
+  /** A stable fingerprint of everything that must match between two versions for the FORM-bubble
+   *  design to be correct: same question count, same choice count, and per question the same
+   *  type/multi-select-ness/digit count. Deliberately ignores the actual correct answer(s) —
+   *  that's the one thing versions are supposed to differ on. */
+  function shapeFingerprint(a: RedPenAssessment): string {
+    return JSON.stringify({
+      questionCount: a.questionCount,
+      choiceCount: a.choiceCount,
+      rows: a.answerKey
+        .map(e => ({ n: e.n, type: e.type ?? 'mc', multi: Array.isArray(e.answer), digits: e.digits }))
+        .sort((x, y) => x.n - y.n),
+    })
+  }
+
   async function handleSave() {
     if (!user) return
     const assessment: RedPenAssessment = {
@@ -220,18 +261,43 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
         .sort((a, b) => a.n - b.n),
       unscorable: initial.unscorable,
       createdAt: initial.createdAt ?? new Date().toISOString(),
+      ...(initial.versionGroupId ? { versionGroupId: initial.versionGroupId } : {}),
+      ...(initial.versionLabel ? { versionLabel: initial.versionLabel } : {}),
     }
+
+    // Shape-mismatch check — only meaningful once a sibling version actually exists to compare
+    // against, and only blocks once (shapeWarning showing means the teacher already saw it and
+    // clicked Save again anyway).
+    if (assessment.versionGroupId && !shapeWarning) {
+      const siblings = (await listVersionGroup(user.uid, assessment.versionGroupId)).filter(v => v.id !== assessment.id)
+      const mismatched = siblings.find(v => shapeFingerprint(v) !== shapeFingerprint(assessment))
+      if (mismatched) {
+        setShapeWarning(
+          `This doesn't match Version ${mismatched.versionLabel ?? '?'}'s shape (question count, choice count, or ` +
+          'which questions are grid-in/multi-select) — the printed FORM bubble only works if every version has the ' +
+          'exact same layout. Click Save again to save anyway.',
+        )
+        return
+      }
+    }
+
     try {
       await saveAssessment(user.uid, assessment)
 
       // Regrade every already-scored sheet against the corrected key — no rescan needed, since
       // each result already stored exactly what was given for every question
-      // (RedPenResponse.given); scoreAssessment just needs that rebuilt as a Map.
-      const administrations = await listAdministrations(user.uid, assessment.id)
+      // (RedPenResponse.given); scoreAssessment just needs that rebuilt as a Map. For a version
+      // group, an administration's own assessmentId is always the primary (Version A) — resolve
+      // that first, then only touch results that were actually scored against *this* version.
+      const lookupId = assessment.versionGroupId
+        ? (primaryOfGroup(await listVersionGroup(user.uid, assessment.versionGroupId))?.id ?? assessment.id)
+        : assessment.id
+      const administrations = await listAdministrations(user.uid, lookupId)
       let regraded = 0
       for (const admin of administrations) {
         const results = await listResults(user.uid, admin.id)
         for (const r of results) {
+          if ((r.assessmentId ?? admin.assessmentId) !== assessment.id) continue
           const given = new Map<number, AnswerValue | null>(r.responses.map(resp => [resp.n, resp.given]))
           const { score, maxScore, responses } = scoreAssessment(assessment, given)
           await saveResult(user.uid, { ...r, score, maxScore, responses })
@@ -241,7 +307,7 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
 
       setRegradedCount(regraded)
       setSaved(true)
-      setTimeout(onSaved, regraded > 0 ? 1400 : 500)
+      setTimeout(() => onSaved(assessment), regraded > 0 ? 1400 : 500)
     } catch {
       setSaveError("Couldn't save — try again.")
     }
@@ -363,7 +429,7 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
             onClick={handleSave}
             className="px-5 py-2.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-semibold hover:brightness-105 transition-all whitespace-nowrap"
           >
-            {saved ? 'Saved ✓' : 'Save assessment'}
+            {saved ? 'Saved ✓' : shapeWarning ? 'Save anyway' : 'Save assessment'}
           </button>
           {saved && regradedCount !== null && regradedCount > 0 && (
             <div className="text-xs text-[var(--color-accent-strong)]">
@@ -373,6 +439,12 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
           {saveError && <div className="text-xs text-[var(--color-danger)]">{saveError}</div>}
         </div>
       </div>
+
+      {shapeWarning && (
+        <div className="text-sm text-[var(--color-gold-text)] bg-[var(--color-gold-light)] rounded-lg p-3.5">
+          {shapeWarning}
+        </div>
+      )}
 
       <div className="flex gap-4 flex-wrap">
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4.5 min-w-[200px]">

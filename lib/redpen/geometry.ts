@@ -50,8 +50,18 @@ export const ID_BLOCK_HEIGHT_IN = 0.82
  *  that survives that degradation; see id.ts for the matching short-payload-id side of this. */
 export const QR_SIZE_IN = 0.7
 
+/** FORM (multi-version) bubble band — a fixed-height row reserved unconditionally right after
+ *  the ID block, so print and scan geometry never depends on whether a *particular* sheet
+ *  actually needs it (see lib/redpen/versions.ts and scanPipeline.ts's FORM-bubble read). Drawn
+ *  only when the assessment belongs to a version group; blank reserved space otherwise — a
+ *  fixed, negligible cost on every sheet rather than a second conditional band to keep in sync
+ *  the way the grid-in band already has to be. */
+export const VERSION_SYMBOLS = ['A', 'B']
+export const VERSION_BAND_HEIGHT_IN = BUBBLE_PITCH_IN
+export const VERSION_LABEL_WIDTH_IN = 0.5
+
 /** Y offset (from CONTENT_ORIGIN_IN) where the bubble grid's first row begins. */
-export const BUBBLE_GRID_TOP_IN = HEADER_BLOCK_HEIGHT_IN + ID_BLOCK_HEIGHT_IN
+export const BUBBLE_GRID_TOP_IN = HEADER_BLOCK_HEIGHT_IN + ID_BLOCK_HEIGHT_IN + VERSION_BAND_HEIGHT_IN
 
 /** Canonical page-inch top-left + size of the QR code — an explicit position (not "wherever
  *  flexbox centers it") so the reader can crop to exactly where the printer put it. Centered
@@ -61,6 +71,21 @@ export function qrRegionIn(): { x: number; y: number; size: number } {
     x: CONTENT_ORIGIN_IN,
     y: CONTENT_ORIGIN_IN + HEADER_BLOCK_HEIGHT_IN + (ID_BLOCK_HEIGHT_IN - QR_SIZE_IN) / 2,
     size: QR_SIZE_IN,
+  }
+}
+
+/** Canonical page-inch top of the FORM band, in absolute page-inches (already includes
+ *  CONTENT_ORIGIN_IN, unlike BUBBLE_GRID_TOP_IN which is an offset from it). */
+export function versionBandTopIn(): number {
+  return CONTENT_ORIGIN_IN + HEADER_BLOCK_HEIGHT_IN + ID_BLOCK_HEIGHT_IN
+}
+
+/** Canonical page-inch center of one FORM bubble. `symbolIndex` is 0-indexed into
+ *  VERSION_SYMBOLS ('A' = 0, 'B' = 1). */
+export function versionBubbleCenterIn(symbolIndex: number): { x: number; y: number } {
+  return {
+    x: CONTENT_ORIGIN_IN + VERSION_LABEL_WIDTH_IN + symbolIndex * BUBBLE_PITCH_IN + BUBBLE_PITCH_IN / 2,
+    y: versionBandTopIn() + VERSION_BAND_HEIGHT_IN / 2,
   }
 }
 

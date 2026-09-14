@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react'
 import { AboutRedPen } from './AboutRedPen'
 import { AssessmentsList } from './AssessmentsList'
 import { ManageSections } from './ManageSections'
-import { NewAssessmentChoice } from './NewAssessmentChoice'
-import { ImportAssessment } from './ImportAssessment'
+import { NewAssessmentFlow } from './NewAssessmentFlow'
 import { AssessmentBuilder, BuilderDraft } from './AssessmentBuilder'
 import { SheetPrintView } from './SheetPrintView'
 import { ScanAndGrade } from './ScanAndGrade'
@@ -19,8 +18,7 @@ type View =
   | { screen: 'about' }
   | { screen: 'assessments' }
   | { screen: 'manageSections' }
-  | { screen: 'newChoice' }
-  | { screen: 'import' }
+  | { screen: 'newAssessment' }
   | { screen: 'build'; draft: BuilderDraft | null }
   | { screen: 'sheets'; administrationId: string }
   | { screen: 'scan'; administrationId: string }
@@ -55,8 +53,7 @@ export function RedPenHub({ onChromeChange, onSendToLab }: RedPenHubProps) {
       return
     }
     const titles: Record<Exclude<View['screen'], TopTab>, string> = {
-      newChoice: 'New assessment',
-      import: 'Import an assessment',
+      newAssessment: 'New assessment',
       build: 'Set the answer key',
       sheets: 'Print answer sheets',
       scan: 'Scan to grade',
@@ -86,11 +83,11 @@ export function RedPenHub({ onChromeChange, onSendToLab }: RedPenHubProps) {
           ))}
         </div>
 
-        {view.screen === 'about' && <AboutRedPen onGetStarted={() => setView({ screen: 'newChoice' })} />}
+        {view.screen === 'about' && <AboutRedPen onGetStarted={() => setView({ screen: 'newAssessment' })} />}
         {view.screen !== 'about' && needsSignIn && <SignInNotice />}
         {view.screen === 'assessments' && !needsSignIn && (
           <AssessmentsList
-            onNewAssessment={() => setView({ screen: 'newChoice' })}
+            onNewAssessment={() => setView({ screen: 'newAssessment' })}
             onOpenAdministration={(administrationId, screen) => setView({ screen, administrationId })}
             onEditAssessment={assessmentId => setView({ screen: 'build', draft: { assessmentId } })}
           />
@@ -102,21 +99,8 @@ export function RedPenHub({ onChromeChange, onSendToLab }: RedPenHubProps) {
 
   if (needsSignIn) return <SignInNotice />
 
-  if (view.screen === 'newChoice') {
-    return (
-      <NewAssessmentChoice
-        onImport={() => setView({ screen: 'import' })}
-        onBuildManually={() => setView({ screen: 'build', draft: null })}
-      />
-    )
-  }
-
-  if (view.screen === 'import') {
-    return (
-      <ImportAssessment
-        onImported={draft => setView({ screen: 'build', draft })}
-      />
-    )
+  if (view.screen === 'newAssessment') {
+    return <NewAssessmentFlow onSaved={() => setView({ screen: 'assessments' })} />
   }
 
   if (view.screen === 'build') {

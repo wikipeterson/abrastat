@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import {
   getAdministration, getAssessment, listSections, listStudents, listResults,
 } from '@/lib/redpen/storage'
+import { listVersionGroup } from '@/lib/redpen/versions'
 import {
   AnswerValue, RedPenAdministration, RedPenAssessment, RedPenResult, RedPenSection, RedPenStudent,
 } from '@/lib/redpen/types'
@@ -19,6 +20,11 @@ interface PrintForStudentsProps {
 interface Loaded {
   admin: RedPenAdministration
   assessment: RedPenAssessment
+  /** Every version referenced by this administration — just [assessment] for an ordinary
+   *  single-version one. Each graded result is looked up against its own version (RedPenResult.
+   *  assessmentId), not always the primary, so a wrong answer's "correct answer" reference is
+   *  always drawn from the key it was actually scored against. */
+  versions: RedPenAssessment[]
   section: RedPenSection | null
   students: RedPenStudent[]
   results: RedPenResult[]
@@ -115,7 +121,13 @@ export function PrintForStudents({ administrationId, onDone }: PrintForStudentsP
           listResults(user!.uid, administrationId),
         ])
         if (!assessment) { if (!cancelled) setError("Couldn't find that assessment."); return }
-        if (!cancelled) setLoaded({ admin, assessment, section: sections.find(s => s.id === admin.sectionId) ?? null, students, results })
+        const versions = assessment.versionGroupId ? await listVersionGroup(user!.uid, assessment.versionGroupId) : [assessment]
+        if (!cancelled) {
+          setLoaded({
+            admin, assessment, versions: versions.length > 0 ? versions : [assessment],
+            section: sections.find(s => s.id === admin.sectionId) ?? null, students, results,
+          })
+        }
       } catch {
         if (!cancelled) setError("Couldn't load this report. Try refreshing the page.")
       } finally {
@@ -130,11 +142,17 @@ export function PrintForStudents({ administrationId, onDone }: PrintForStudentsP
   if (loading) return <RedPenLoading />
   if (error) return <RedPenError message={error} />
   if (!loaded) return null
-  const { assessment, section, students, results } = loaded
+  const { assessment, versions, section, students, results } = loaded
   const graded = results
     .map(r => ({ result: r, student: students.find(s => s.id === r.studentId) }))
     .filter((x): x is { result: RedPenResult; student: RedPenStudent } => !!x.student)
     .sort((a, b) => a.student.name.localeCompare(b.student.name))
+
+  // Which version a given result was actually scored against — falls back to the administration's
+  // own assessment for an ordinary single-version one, or if a version's doc somehow went missing.
+  function assessmentFor(result: RedPenResult): RedPenAssessment {
+    return versions.find(v => v.id === (result.assessmentId ?? assessment.id)) ?? assessment
+  }
 
   return (
     <div className="max-w-5xl mx-auto py-6 px-4 space-y-5">
@@ -168,7 +186,7 @@ export function PrintForStudents({ administrationId, onDone }: PrintForStudentsP
           <div style={{ transform: 'scale(0.55)', transformOrigin: 'top center' }}>
             <div style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.25)' }}>
               <StudentReport
-                assessment={assessment} student={graded[0].student} result={graded[0].result}
+                assessment={assessmentFor(graded[0].result)} student={graded[0].student} result={graded[0].result}
                 sectionLabel={section?.label ?? ''} date={loaded.admin.date}
               />
             </div>
@@ -181,7 +199,7 @@ export function PrintForStudents({ administrationId, onDone }: PrintForStudentsP
           {graded.map(({ student, result }) => (
             <StudentReport
               key={student.id}
-              assessment={assessment} student={student} result={result}
+              assessment={assessmentFor(result)} student={student} result={result}
               sectionLabel={section?.label ?? ''} date={loaded.admin.date}
             />
           ))}

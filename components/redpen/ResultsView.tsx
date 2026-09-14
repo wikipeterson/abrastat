@@ -5,6 +5,7 @@ import {
   deleteUnmatchedSheet, getAdministration, getAssessment, listResults, listSections, listStudents,
   listUnmatchedSheets, saveResult,
 } from '@/lib/redpen/storage'
+import { listVersionGroup } from '@/lib/redpen/versions'
 import {
   RedPenAdministration, RedPenAssessment, RedPenResult, RedPenSection, RedPenStudent, RedPenUnmatchedSheet,
 } from '@/lib/redpen/types'
@@ -27,6 +28,9 @@ interface ResultsViewProps {
 interface Loaded {
   admin: RedPenAdministration
   assessment: RedPenAssessment
+  /** Every version referenced by this administration — just [assessment] for an ordinary
+   *  single-version one. */
+  versions: RedPenAssessment[]
   section: RedPenSection | null
   students: RedPenStudent[]
   results: RedPenResult[]
@@ -54,9 +58,11 @@ export function ResultsView({ administrationId, onDone, onPrintForStudents, onSe
           listResults(user!.uid, administrationId), listUnmatchedSheets(user!.uid, administrationId),
         ])
         if (!assessment) { if (!cancelled) setError("Couldn't find that assessment."); return }
+        const versions = assessment.versionGroupId ? await listVersionGroup(user!.uid, assessment.versionGroupId) : [assessment]
         if (!cancelled) {
           setLoaded({
-            admin, assessment, section: sections.find(s => s.id === admin.sectionId) ?? null,
+            admin, assessment, versions: versions.length > 0 ? versions : [assessment],
+            section: sections.find(s => s.id === admin.sectionId) ?? null,
             students, results, unmatchedSheets,
           })
         }
@@ -74,7 +80,8 @@ export function ResultsView({ administrationId, onDone, onPrintForStudents, onSe
   if (loading) return <RedPenLoading />
   if (error) return <RedPenError message={error} />
   if (!loaded) return null
-  const { assessment, section, students, results, unmatchedSheets } = loaded
+  const { assessment, versions, section, students, results, unmatchedSheets } = loaded
+  const multiVersion = versions.length > 1
 
   if (results.length === 0 && unmatchedSheets.length === 0) {
     return (
@@ -91,25 +98,13 @@ export function ResultsView({ administrationId, onDone, onPrintForStudents, onSe
 
   const distribution = summarizeScores(results)
 
-  // Percent correct per question, across every response of that n from every result — topic
-  // carried alongside so the badge/re-teach note below can group by it.
-  const itemStats = assessment.answerKey
-    .filter(key => results.some(r => r.responses.some(resp => resp.n === key.n)))
-    .map(key => {
-      const responses = results.flatMap(r => r.responses.filter(resp => resp.n === key.n))
-      const correctCount = responses.filter(resp => resp.correct).length
-      const pct = responses.length > 0 ? Math.round((correctCount / responses.length) * 100) : 0
-      return { n: key.n, pct, topic: key.topic }
-    })
-    .sort((a, b) => a.n - b.n)
-
-  const lowItems = itemStats.filter(i => i.pct < 60)
-  const reteachTopics = new Map<string, number[]>()
-  for (const item of lowItems) {
-    if (!item.topic) continue
-    reteachTopics.set(item.topic, [...(reteachTopics.get(item.topic) ?? []), item.n])
-  }
-  const reteachNotes = [...reteachTopics.entries()].filter(([, ns]) => ns.length >= 2)
+  // Which version a result was actually scored against — falls back to the administration's own
+  // assessment for an ordinary single-version one. Item analysis is computed per version below
+  // (a shared card would conflate two different Q5s that happen to share a number, not an answer).
+  const resultsByVersion = versions.map(v => ({
+    version: v,
+    results: results.filter(r => (r.assessmentId ?? assessment.id) === v.id),
+  }))
 
   const flaggedResults = results.filter(r => r.flagged)
   const needsReviewCount = flaggedResults.length + unmatchedSheets.length
@@ -133,7 +128,7 @@ export function ResultsView({ administrationId, onDone, onPrintForStudents, onSe
     if (!user) return
     setSendingToLab(true)
     try {
-      const grid = buildGridFromResults(assessment, students, results)
+      const grid = buildGridFromResults(assessment, students, results, !multiVersion)
       const id = await saveDataset(user, assessment.title, `Results for "${assessment.title}" from AbraStat RedPen.`, '📝', false, grid)
       onSendToLab(id)
     } finally {
@@ -149,18 +144,37 @@ export function ResultsView({ administrationId, onDone, onPrintForStudents, onSe
 
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)]">{assessment.title}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-serif italic text-2xl font-semibold text-[var(--color-text)]">{assessment.title}</h2>
+            {multiVersion && (
+              <span className="font-mono text-[10px] uppercase tracking-wide px-2 py-0.5 rounded bg-[var(--color-gold-light)] text-[var(--color-gold-text)]">
+                A/B
+              </span>
+            )}
+          </div>
           <p className="text-sm text-[var(--color-muted)] mt-1">
             {section?.label ?? 'Unknown section'} · <span className="font-mono">{assessment.questionCount}</span> questions
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => onEditAssessment(assessment.id)}
-            className="px-4 py-2.5 rounded-lg border border-[var(--color-border)] text-[var(--color-muted)] text-sm font-medium hover:border-[var(--color-accent)] hover:text-[var(--color-accent-strong)] transition-colors whitespace-nowrap"
-          >
-            Edit answer key
-          </button>
+          {multiVersion ? (
+            versions.map(v => (
+              <button
+                key={v.id}
+                onClick={() => onEditAssessment(v.id)}
+                className="px-4 py-2.5 rounded-lg border border-[var(--color-border)] text-[var(--color-muted)] text-sm font-medium hover:border-[var(--color-accent)] hover:text-[var(--color-accent-strong)] transition-colors whitespace-nowrap"
+              >
+                Edit key {v.versionLabel ?? '?'}
+              </button>
+            ))
+          ) : (
+            <button
+              onClick={() => onEditAssessment(assessment.id)}
+              className="px-4 py-2.5 rounded-lg border border-[var(--color-border)] text-[var(--color-muted)] text-sm font-medium hover:border-[var(--color-accent)] hover:text-[var(--color-accent-strong)] transition-colors whitespace-nowrap"
+            >
+              Edit answer key
+            </button>
+          )}
           <button
             onClick={onPrintForStudents}
             className="px-5 py-2.5 rounded-lg border border-[var(--color-accent)] text-[var(--color-accent-strong)] text-sm font-semibold hover:bg-[var(--color-accent-light)] transition-colors whitespace-nowrap"
@@ -213,46 +227,14 @@ export function ResultsView({ administrationId, onDone, onPrintForStudents, onSe
         </div>
       )}
 
-      {itemStats.length > 0 && (
-        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-6">
-          <div className="flex justify-between items-baseline mb-1">
-            <div className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-muted)]">
-              Item analysis — percent correct by question
-            </div>
-            {lowItems.length > 0 && (
-              <div className="font-mono text-[11px] text-[var(--color-danger)]">{lowItems.length} question{lowItems.length === 1 ? '' : 's'} under 60%</div>
-            )}
-          </div>
-          <div className="flex items-end gap-1.5 h-36 mt-3">
-            {itemStats.map(item => (
-              <div
-                key={item.n}
-                title={item.topic ? `Q${item.n} — ${item.topic}` : `Q${item.n}`}
-                className="flex-1 flex flex-col justify-end items-center gap-1.5 h-full"
-              >
-                <div className="font-mono text-[9px] text-[var(--color-muted)]">{item.pct}%</div>
-                <div
-                  className="w-full rounded-t"
-                  style={{
-                    height: `${Math.max(2, item.pct)}%`,
-                    background: item.pct < 60 ? 'var(--color-danger)' : item.pct < 75 ? 'var(--color-gold)' : 'var(--color-accent)',
-                  }}
-                />
-                <div className="font-mono text-[9px] text-[var(--color-muted)]">{item.n}</div>
-              </div>
-            ))}
-          </div>
-          {reteachNotes.length > 0 && (
-            <div className="mt-4 space-y-1.5">
-              {reteachNotes.map(([topic, ns]) => (
-                <div key={topic} className="text-xs text-[var(--color-muted)] bg-[var(--color-panel)] border border-[var(--color-border)] rounded-lg px-3.5 py-2.5">
-                  Q{ns.join(', Q')} share the topic <span className="font-medium text-[var(--color-text)]">{topic}</span> and all scored under 60% — worth a re-teach before the next assessment.
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {resultsByVersion.map(({ version, results: versionResults }) => (
+        <ItemAnalysisCard
+          key={version.id}
+          assessment={version}
+          results={versionResults}
+          label={multiVersion ? `Version ${version.versionLabel ?? '?'}` : undefined}
+        />
+      ))}
 
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-6">
         <div className="flex items-center justify-between mb-1">
@@ -369,7 +351,7 @@ export function ResultsView({ administrationId, onDone, onPrintForStudents, onSe
       {reviewing && (
         <FlaggedAnswersModal
           result={reviewing}
-          assessment={assessment}
+          assessment={versions.find(v => v.id === (reviewing.assessmentId ?? assessment.id)) ?? assessment}
           studentName={students.find(s => s.id === reviewing.studentId)?.name ?? reviewing.studentId}
           userId={user.uid}
           onClose={() => setReviewing(null)}
@@ -386,6 +368,72 @@ export function ResultsView({ administrationId, onDone, onPrintForStudents, onSe
           onClose={() => setAssigning(null)}
           onSaved={handleAssignSaved}
         />
+      )}
+    </div>
+  )
+}
+
+/** Percent correct by question for one version's results, with a topic-driven re-teach note.
+ *  Rendered once per version under multi-version (a shared card would conflate two different
+ *  Q5s that happen to share a number, not an answer) or once, unlabeled, otherwise. */
+function ItemAnalysisCard({ assessment, results, label }: { assessment: RedPenAssessment; results: RedPenResult[]; label?: string }) {
+  const itemStats = assessment.answerKey
+    .filter(key => results.some(r => r.responses.some(resp => resp.n === key.n)))
+    .map(key => {
+      const responses = results.flatMap(r => r.responses.filter(resp => resp.n === key.n))
+      const correctCount = responses.filter(resp => resp.correct).length
+      const pct = responses.length > 0 ? Math.round((correctCount / responses.length) * 100) : 0
+      return { n: key.n, pct, topic: key.topic }
+    })
+    .sort((a, b) => a.n - b.n)
+
+  if (itemStats.length === 0) return null
+
+  const lowItems = itemStats.filter(i => i.pct < 60)
+  const reteachTopics = new Map<string, number[]>()
+  for (const item of lowItems) {
+    if (!item.topic) continue
+    reteachTopics.set(item.topic, [...(reteachTopics.get(item.topic) ?? []), item.n])
+  }
+  const reteachNotes = [...reteachTopics.entries()].filter(([, ns]) => ns.length >= 2)
+
+  return (
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-6">
+      <div className="flex justify-between items-baseline mb-1">
+        <div className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-muted)]">
+          Item analysis — percent correct by question{label ? ` — ${label}` : ''}
+        </div>
+        {lowItems.length > 0 && (
+          <div className="font-mono text-[11px] text-[var(--color-danger)]">{lowItems.length} question{lowItems.length === 1 ? '' : 's'} under 60%</div>
+        )}
+      </div>
+      <div className="flex items-end gap-1.5 h-36 mt-3">
+        {itemStats.map(item => (
+          <div
+            key={item.n}
+            title={item.topic ? `Q${item.n} — ${item.topic}` : `Q${item.n}`}
+            className="flex-1 flex flex-col justify-end items-center gap-1.5 h-full"
+          >
+            <div className="font-mono text-[9px] text-[var(--color-muted)]">{item.pct}%</div>
+            <div
+              className="w-full rounded-t"
+              style={{
+                height: `${Math.max(2, item.pct)}%`,
+                background: item.pct < 60 ? 'var(--color-danger)' : item.pct < 75 ? 'var(--color-gold)' : 'var(--color-accent)',
+              }}
+            />
+            <div className="font-mono text-[9px] text-[var(--color-muted)]">{item.n}</div>
+          </div>
+        ))}
+      </div>
+      {reteachNotes.length > 0 && (
+        <div className="mt-4 space-y-1.5">
+          {reteachNotes.map(([topic, ns]) => (
+            <div key={topic} className="text-xs text-[var(--color-muted)] bg-[var(--color-panel)] border border-[var(--color-border)] rounded-lg px-3.5 py-2.5">
+              Q{ns.join(', Q')} share the topic <span className="font-medium text-[var(--color-text)]">{topic}</span> and all scored under 60% — worth a re-teach before the next assessment.
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -424,6 +472,7 @@ function AssignUnmatchedModal({
       const result: RedPenResult = {
         studentId, administrationId: sheet.administrationId, score: sheet.score, maxScore: sheet.maxScore,
         responses: sheet.responses, flagged: sheet.logEntries.length > 0, logEntries: sheet.logEntries,
+        ...(sheet.assessmentId ? { assessmentId: sheet.assessmentId } : {}),
       }
       await saveResult(userId, result)
       await deleteUnmatchedSheet(sheet.id)

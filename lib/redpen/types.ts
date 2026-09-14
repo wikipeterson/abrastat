@@ -15,6 +15,10 @@ export interface AnswerEntry {
   digits?: number
 }
 
+/** A single uppercase letter — 'A' or 'B' today, but the type stays a plain string rather than a
+ *  union so a future third version doesn't need a type change everywhere it's threaded through. */
+export type VersionLabel = string
+
 export interface UnscorableEntry {
   n: number
   reason: string
@@ -28,6 +32,11 @@ export interface RedPenAssessment {
   answerKey: AnswerEntry[]
   unscorable: UnscorableEntry[]
   createdAt: string
+  /** Multi-version only: two assessment docs sharing a versionGroupId *are* the two versions —
+   *  same printed shape (question/choice counts, per-question type), different correct answers.
+   *  Both absent on an ordinary single-version assessment. See lib/redpen/versions.ts. */
+  versionGroupId?: string
+  versionLabel?: VersionLabel
 }
 
 export interface RedPenSection {
@@ -58,7 +67,7 @@ export interface RedPenResponse {
   correct: boolean
 }
 
-export type DecisionTag = 'FAINT' | 'DOUBLE' | 'ERASURE' | 'NO_MARK' | 'NO_QR' | 'NO_FIDUCIALS' | 'WRONG_ADMIN'
+export type DecisionTag = 'FAINT' | 'DOUBLE' | 'ERASURE' | 'NO_MARK' | 'NO_QR' | 'NO_FIDUCIALS' | 'WRONG_ADMIN' | 'NO_VERSION'
 
 export interface DecisionLogEntry {
   administrationId: string
@@ -82,6 +91,11 @@ export interface RedPenResult {
    *  level failures (NO_QR/NO_FIDUCIALS) have no student to attach to and aren't persisted here
    *  or anywhere — they're shown once, in-memory, right after the scan that produced them. */
   logEntries: DecisionLogEntry[]
+  /** Multi-version only: which assessment (of the administration's version group) this sheet was
+   *  actually scored against, decided by its own FORM bubble at scan time — not necessarily the
+   *  administration's own `assessmentId`. Absent for an ordinary single-version result, where the
+   *  administration's assessmentId is the whole story. */
+  assessmentId?: string
 }
 
 /** A page that read cleanly (fiducials located, so every bubble position is known) but couldn't
@@ -98,4 +112,7 @@ export interface RedPenUnmatchedSheet {
   maxScore: number
   responses: RedPenResponse[]
   logEntries: DecisionLogEntry[]
+  /** Same meaning as RedPenResult.assessmentId — which version this page's FORM bubble resolved
+   *  to, carried through once it's assigned to a student. */
+  assessmentId?: string
 }

@@ -8,6 +8,7 @@ import {
   GRIDIN_SIGN_SYMBOL, GRIDIN_SYMBOLS, GRIDIN_WRITE_BOX_HEIGHT_IN, gridinBandTopIn, gridinBlockOriginIn,
   gridinBubbleCenterIn, gridinColumnCenterXIn, HEADER_BLOCK_HEIGHT_IN,
   NUMBER_COL_WIDTH_IN, PAGE_HEIGHT_IN, PAGE_WIDTH_IN, qrRegionIn, rowLabelCenterIn, sheetCode,
+  VERSION_BAND_HEIGHT_IN, VERSION_SYMBOLS, versionBandTopIn, versionBubbleCenterIn,
 } from '@/lib/redpen/geometry'
 import { bubbleRows, gridinEntries, splitIntoColumns } from '@/lib/redpen/layout'
 import { getAdministration, listSections, listStudents, saveAdministration } from '@/lib/redpen/storage'
@@ -211,6 +212,45 @@ function GridInBand({ assessment }: { assessment: RedPenAssessment }) {
   )
 }
 
+/** Which physical quiz paper (A or B) the student was actually handed — RedPen only ever prints
+ *  the answer sheet, never question text, so there's no way to know this in advance; the student
+ *  bubbles it in themselves, same as any other answer. Only drawn for a version-group assessment
+ *  — the band's space is reserved unconditionally (see geometry.ts) but left blank otherwise. */
+function VersionBand({ assessment }: { assessment: RedPenAssessment }) {
+  if (!assessment.versionGroupId) return null
+  const top = versionBandTopIn()
+
+  return (
+    <>
+      <div
+        style={{
+          position: 'absolute', left: `${CONTENT_ORIGIN_IN}in`, top: `${top}in`,
+          height: `${VERSION_BAND_HEIGHT_IN}in`, lineHeight: `${VERSION_BAND_HEIGHT_IN}in`,
+          fontFamily: 'monospace', fontSize: '8pt', fontWeight: 700,
+        }}
+      >
+        FORM
+      </div>
+      {VERSION_SYMBOLS.map((symbol, i) => {
+        const c = versionBubbleCenterIn(i)
+        return (
+          <div
+            key={symbol}
+            style={{
+              position: 'absolute', left: `${c.x - BUBBLE_DIAMETER_IN / 2}in`, top: `${c.y - BUBBLE_DIAMETER_IN / 2}in`,
+              width: `${BUBBLE_DIAMETER_IN}in`, height: `${BUBBLE_DIAMETER_IN}in`, borderRadius: '50%',
+              border: `1pt solid ${BUBBLE_OUTLINE_GREY}`, fontFamily: 'monospace', fontSize: '7pt', color: '#999',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            {symbol}
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
 function StudentSheet({
   assessment, student, sectionLabel, administrationId, date,
 }: {
@@ -270,11 +310,13 @@ function StudentSheet({
         )
       })()}
 
+      <VersionBand assessment={assessment} />
       <BubbleGrid assessment={assessment} />
       <GridInBand assessment={assessment} />
 
       <div style={{ position: 'absolute', left: `${CONTENT_ORIGIN_IN}in`, right: `${CONTENT_ORIGIN_IN}in`, bottom: `${CONTENT_ORIGIN_IN}in`, fontFamily: 'monospace', fontSize: '7pt', color: '#666', textAlign: 'center' }}>
         FILL COMPLETELY IN PENCIL · DO NOT FOLD OR STAPLE · FOR GRID-IN, WRITE YOUR ANSWER LEFT-JUSTIFIED, THEN BUBBLE EACH CHARACTER
+        {assessment.versionGroupId && ' · BUBBLE THE FORM LETTER OF THE QUIZ PAPER YOU WERE GIVEN'}
       </div>
     </div>
   )

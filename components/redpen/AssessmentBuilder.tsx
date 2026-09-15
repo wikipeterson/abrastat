@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { DEFAULT_GRIDIN_DIGITS, maxQuestionsPerSheet } from '@/lib/redpen/geometry'
+import { LETTERS } from '@/lib/redpen/letters'
 import { getAssessment, listAdministrations, listResults, saveAssessment, saveResult } from '@/lib/redpen/storage'
 import { listVersionGroup, primaryOfGroup } from '@/lib/redpen/versions'
 import { AnswerEntry, AnswerValue, RedPenAssessment, UnscorableEntry } from '@/lib/redpen/types'
@@ -11,7 +12,6 @@ import { ParsedMarksheet } from '@/lib/redpen/schema'
 import { scoreAssessment } from '@/lib/redpen/scoring'
 import { RedPenError, RedPenLoading } from './RedPenStatus'
 
-const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 /** Same shape schema.ts's import parser validates a grid-in answer against. */
 const GRIDIN_ANSWER_RE = /^-?\d+(\.\d+)?$/
 const GRIDIN_MIN_DIGITS = 1
@@ -506,20 +506,28 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
           <div className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-muted)] mb-2.5">
             Choices per question
           </div>
+          {/* Every letter up through the one clicked lights up — there's no way to end up with a
+              gap (A, C, F picked but not B, D, E), since every MC row on a sheet always prints
+              A through the Nth letter in order, never an arbitrary subset. Clamped to 2 so a
+              stray click on A alone can't leave a question with just one choice. */}
           <div className="flex gap-1.5">
-            {[4, 5, 6, 7, 8].map(c => (
-              <button
-                key={c}
-                onClick={() => setChoiceCount(c)}
-                className={`font-mono text-xs px-3.5 py-2 rounded border transition-colors ${
-                  c === choiceCount
-                    ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-white'
-                    : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-muted)]'
-                }`}
-              >
-                A–{LETTERS[c - 1]}
-              </button>
-            ))}
+            {LETTERS.map((letter, i) => {
+              const selected = i < choiceCount
+              return (
+                <button
+                  key={letter}
+                  onClick={() => setChoiceCount(Math.max(2, i + 1))}
+                  title={`A–${letter}`}
+                  className={`w-8 h-8 rounded-full border font-mono text-xs flex items-center justify-center transition-colors ${
+                    selected
+                      ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-white'
+                      : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-accent)]'
+                  }`}
+                >
+                  {letter}
+                </button>
+              )
+            })}
           </div>
         </div>
 

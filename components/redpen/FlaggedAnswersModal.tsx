@@ -9,11 +9,10 @@
 
 import { useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
+import { LETTERS } from '@/lib/redpen/letters'
 import { scoreAssessment } from '@/lib/redpen/scoring'
 import { saveResult } from '@/lib/redpen/storage'
 import { AnswerValue, DecisionLogEntry, RedPenAssessment, RedPenResult } from '@/lib/redpen/types'
-
-const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 
 const TAG_STYLE: Record<string, string> = {
   FAINT: 'bg-[var(--color-gold-light)] text-[var(--color-gold-text)]',

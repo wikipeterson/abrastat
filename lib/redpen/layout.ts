@@ -7,8 +7,7 @@
 // (those get their own band via gridinEntries below, not an MC row) — everything else gets a row.
 
 import { AnswerEntry, RedPenAssessment } from './types'
-
-const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+import { LETTERS } from './letters'
 
 export interface BubbleRow {
   n: number

@@ -11,6 +11,7 @@
 // doesn't parse, etc).
 
 import { AnswerEntry, AnswerValue, UnscorableEntry } from './types'
+import { LETTERS } from './letters'
 
 export interface ParsedMarksheet {
   title: string
@@ -23,7 +24,6 @@ export type ParseResult =
   | { ok: true; data: ParsedMarksheet; warnings: string[] }
   | { ok: false; errors: string[] }
 
-const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 const DEFAULT_CHOICE_COUNT = 4
 
 function letterIndex(letter: string): number {
@@ -34,8 +34,9 @@ function isLetterAnswer(value: unknown): value is string {
   return typeof value === 'string' && letterIndex(value) !== -1
 }
 
-/** Validates shape only, against the full A–F range — choiceCount isn't known yet at this
- *  point when it wasn't provided, so range-checking against a declared count happens later. */
+/** Validates shape only, against the full letter range (see letters.ts) — choiceCount isn't
+ *  known yet at this point when it wasn't provided, so range-checking against a declared count
+ *  happens later. */
 function validateAnswer(n: number, answer: unknown): { value?: AnswerValue; error?: string } {
   if (Array.isArray(answer)) {
     if (answer.length === 0 || !answer.every(isLetterAnswer)) {

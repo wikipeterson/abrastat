@@ -179,6 +179,13 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
     .filter(n => isAnswered(key[n])).length
   const keyPct = questionCount > 0 ? Math.round((totalAnswered / questionCount) * 100) : 0
 
+  // Entries beyond the current question count only ever exist right after loading an import or
+  // a previously-saved key that had more questions than this sheet's limit allows — ordinary
+  // editing can't create one, since the stepper itself is clamped to questionCap. Surfaced as a
+  // warning rather than silently dropped on save (handleSave already filters these out via
+  // `e.n <= questionCount`), so a teacher sees exactly what got cut instead of finding out later.
+  const droppedEntries = Object.values(key).filter(e => e.n > questionCount).sort((a, b) => a.n - b.n)
+
   /** Sets both the real count and the field's text together — used by the +/- buttons so the
    *  typed field never drifts out of sync with what they set. */
   function setQuestionCountClamped(n: number) {
@@ -446,6 +453,15 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
         </div>
       )}
 
+      {droppedEntries.length > 0 && (
+        <div className="text-sm text-[var(--color-danger)] bg-[var(--color-danger-light)] rounded-lg p-3.5">
+          Q{droppedEntries.map(e => e.n).join(', Q')} won&apos;t be saved — {droppedEntries.length === 1 ? 'it goes' : 'they go'}{' '}
+          past question {questionCount}, this sheet&apos;s limit{gridinCount > 0 ? ` with ${gridinCount} grid-in question${gridinCount === 1 ? '' : 's'} on it` : ''}.{' '}
+          Remove a grid-in question (each reserves extra space) or trim the key to fit them — see the limit explained
+          below the question count.
+        </div>
+      )}
+
       <div className="flex gap-4 flex-wrap">
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4.5 min-w-[200px]">
           <div className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-muted)] mb-2.5">Questions</div>
@@ -477,6 +493,12 @@ function AssessmentBuilderForm({ initial, onSaved }: { initial: Initial; onSaved
             >
               +
             </button>
+          </div>
+          <div className="text-xs text-[var(--color-muted)] mt-2.5 leading-relaxed">
+            Up to <span className="font-mono">{questionCap}</span> questions fit on one printed sheet
+            {gridinCount > 0
+              ? ` — ${gridinCount} grid-in question${gridinCount === 1 ? '' : 's'} each reserve extra space below the bubble grid, so the limit is lower than if it were all multiple choice.`
+              : '.'}
           </div>
         </div>
 
